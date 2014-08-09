@@ -5,8 +5,6 @@ package RDF 0.001 {
 	use IRI 0.002;
 	use RDF::API;
 	
-	use RDF::TermType;
-	
 	use RDF::Blank;
 	use RDF::Literal;
 	use RDF::Variable;

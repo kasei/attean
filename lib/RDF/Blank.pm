@@ -13,7 +13,7 @@ package RDF::Blank 0.001 {
 		my $orig 	= shift;
 		my $class	= shift;
 		if (scalar(@_) == 1) {
-			return $class->$orig(value => shift, type => RDF::TermType::Blank->new());
+			return $class->$orig(value => shift);
 		}
 		return $class->$orig(@_);
 	};

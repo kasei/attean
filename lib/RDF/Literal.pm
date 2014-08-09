@@ -6,7 +6,6 @@ package RDF::Literal 0.001 {
 	use Moose;
 	use IRI;
 	
-	has 'type'	=> ( is => 'ro', isa => 'RDF::TermType', required => 1, handles => [qw(language)] );
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 
 	with 'RDF::API::Literal';
@@ -15,49 +14,45 @@ package RDF::Literal 0.001 {
 		my $orig 	= shift;
 		my $class	= shift;
 		if (scalar(@_) == 1) {
-			my $dt	= RDF::TermType::DatatypeLiteral->new('http://www.w3.org/2001/XMLSchema#string');
-			return $class->$orig(value => shift, type => $dt);
+			my $dt	= IRI->new('http://www.w3.org/2001/XMLSchema#string');
+			return $class->$orig(value => shift, datatype => $dt);
 		}
 		
 		my %args	= @_;
-		if (exists($args{datatype})) {
-			my $dt	= delete $args{datatype};
-			$args{type}	= RDF::TermType::DatatypeLiteral->new($dt);
-		} elsif (exists($args{language})) {
-			my $lang	= delete $args{language};
-			$args{type}	= RDF::TermType::LanguageLiteral->new($lang);
-		}
 		return $class->$orig(%args);
 	};
 	
-	sub datatype {
+	sub BUILD {
 		my $self	= shift;
-		my $type	= $self->type;
-		if ($type->isa('RDF::TermType::LanguageLiteral')) {
-			return IRI->new('http://www.w3.org/2001/XMLSchema#string');
-		} else {
-			return $type->datatype;
-		}
+		die unless ($self->has_language or length($self->datatype->as_string));
 	}
+	
+	around 'datatype'	=> sub {
+		my $orig	= shift;
+		my $self	= shift;
+		if ($self->has_language) {
+			return IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
+		} else {
+			return $self->$orig(@_);
+		}
+	};
 	
 	sub _ntriples_string {
 		my $self	= shift;
-		my $type	= $self->type;
 		my $value	= $self->value;
 		$value		=~ s/\\/\\\\/g;
 		$value		=~ s/\n/\\n/g;
 		$value		=~ s/\r/\\r/g;
 		$value		=~ s/"/\\"/g;
-		if ($type->isa('RDF::TermType::DatatypeLiteral')) {
-			my $dt	= $type->datatype->as_string;
+		if ($self->has_language) {
+			return sprintf('"%s"@%s', $value, $self->language);
+		} else {
+			my $dt	= $self->datatype->as_string;
 			if ($dt eq 'http://www.w3.org/2001/XMLSchema#string') {
 				return sprintf('"%s"', $self->value);
 			} else {
 				return sprintf('"%s"^^<%s>', $value, $dt);
 			}
-		} else {
-			my $lang	= $type->language;
-			return sprintf('"%s"@%s', $value, $lang);
 		}
 	}
 }

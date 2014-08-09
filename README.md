@@ -1,4 +1,4 @@
-PerlRDF NG Development Repository
+PerlRDF-NG Development Repository
 =================================
 
 This repo contains in-development work on the next-generation PerlRDF APIs.

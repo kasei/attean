@@ -16,7 +16,7 @@ package RDF::IRI 0.001 {
 		my $orig 	= shift;
 		my $class	= shift;
 		if (scalar(@_) == 1) {
-			return $class->$orig(value => shift, type => RDF::TermType::IRI->new());
+			return $class->$orig(value => shift);
 		}
 		return $class->$orig(@_);
 	};
