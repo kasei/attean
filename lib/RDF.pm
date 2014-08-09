@@ -15,6 +15,8 @@ package RDF 0.001 {
 	
 	use RDF::ListIterator;
 	use RDF::NTriplesSerializer;
+	
+	use RDF::TurtleParser;
 }
 
 1;

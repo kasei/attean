@@ -1,0 +1,531 @@
+# RDF::TurtleParser
+# -----------------------------------------------------------------------------
+
+=head1 NAME
+
+RDF::TurtleParser - Turtle RDF Parser
+
+=head1 VERSION
+
+This document describes RDF::TurtleParser version 1.007
+
+=head1 SYNOPSIS
+
+ use RDF::TurtleParser;
+ my $parser	= RDF::TurtleParser->new();
+ $parser->parse_cb_from_io( $fh, $base_uri, \&handler );
+
+=head1 DESCRIPTION
+
+This module implements a parser for the Turtle RDF format.
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
+package RDF::TurtleParser;
+
+use utf8;
+use 5.010;
+use strict;
+use warnings;
+use Scalar::Util qw(blessed);
+use RDF::Trine::Error qw(:try);
+use Data::Dumper;
+use RDF::TurtleParser::Constants;
+use RDF::TurtleParser::Lexer;
+use RDF::TurtleParser::Token;
+
+# TODO: Remove all references to RDF::Trine code (e.g. RDF::Trine::Error)
+# TODO: Instance variables that need to be moosified:
+# 	baseURI
+# 	stack
+# 	handle_triple
+# 	map
+# 	namespaces
+# 	canonicalize
+
+our $VERSION;
+BEGIN {
+	$VERSION				= '1.007';
+# 	foreach my $ext (qw(ttl)) {
+# 		$RDF::Trine::Parser::file_extensions{ $ext }	= __PACKAGE__;
+# 	}
+# 	$RDF::Trine::Parser::parser_names{ 'turtle' }	= __PACKAGE__;
+# 	my $class										= __PACKAGE__;
+# 	$RDF::Trine::Parser::encodings{ $class }		= 'utf8';
+# 	$RDF::Trine::Parser::format_uris{ 'http://www.w3.org/ns/formats/Turtle' }	= __PACKAGE__;
+# 	$RDF::Trine::Parser::canonical_media_types{ $class }	= 'text/turtle';
+# 	foreach my $type (qw(application/x-turtle application/turtle text/turtle)) {
+# 		$RDF::Trine::Parser::media_types{ $type }	= __PACKAGE__;
+# 	}
+}
+
+my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+my $XSD	= 'http://www.w3.org/2001/XMLSchema#';
+
+=item C<< new ( [ namespaces => $map ] ) >>
+
+Returns a new Turtle parser.
+
+=cut
+
+sub new {
+	my $class	= shift;
+	my %args	= @_;
+	return bless({ %args, stack => [] }, $class);
+}
+
+sub parse_cb_from_io {
+	my $self	= shift;
+	my $fh		= shift;
+	local($self->{baseURI})	= shift;
+	local($self->{handle_triple}) = shift;
+
+	unless (ref($fh)) {
+		my $filename	= $fh;
+		undef $fh;
+		open( $fh, '<', $filename ) or throw RDF::Trine::Error::ParserError -text => $!;
+	}
+	
+	binmode($fh, ':encoding(UTF-8)');
+	my $l	= RDF::TurtleParser::Lexer->new($fh);
+	$self->_parse($l);
+}
+
+sub parse_cb_from_bytes {
+	my $self	= shift;
+	my $data	= shift;
+	local($self->{baseURI})	= shift;
+	local($self->{handle_triple}) = shift;
+	
+	$data	= Encode::encode("utf-8", $data);
+	open(my $fh, '<:encoding(UTF-8)', \$data);
+	my $l	= RDF::TurtleParser::Lexer->new($fh);
+	$self->_parse($l);
+}
+
+=item C<< parse_node ( $string, $base ) >>
+
+Returns the RDF::API::Term object corresponding to the node whose N-Triples
+serialization is found at the beginning of C<< $string >>.
+
+=cut
+
+sub parse_node {
+	my $self	= shift;
+	my $string	= shift;
+	local($self->{baseURI})	= shift;
+	my %args	= @_;
+	
+	open(my $fh, '<:encoding(UTF-8)', \$string);
+	my $l	= RDF::TurtleParser::Lexer->new($fh);
+	my $t = $self->_next_nonws($l);
+	my $node	= $self->_object($l, $t);
+	return $node;
+}
+
+sub _parse {
+	my $self	= shift;
+	my $l		= shift;
+	$l->check_for_bom;
+	$self->{map}	= {};
+	while (my $t = $self->_next_nonws($l)) {
+		$self->_statement($l, $t);
+	}
+}
+
+################################################################################
+
+sub _unget_token {
+	my $self	= shift;
+	my $t		= shift;
+	push(@{ $self->{ stack } }, $t);
+}
+
+sub _next_nonws {
+	my $self	= shift;
+	my $l		= shift;
+	if (scalar(@{ $self->{ stack } })) {
+		return pop(@{ $self->{ stack } });
+	}
+	while (1) {
+		my $t	= $l->get_token;
+		return unless ($t);
+		my $type = $t->type;
+# 		next if ($type == WS or $type == COMMENT);
+# 		warn decrypt_constant($type) . "\n";
+		return $t;
+	}
+}
+
+sub _get_token_type {
+	my $self	= shift;
+	my $l		= shift;
+	my $type	= shift;
+	my $t		= $self->_next_nonws($l);
+	unless ($t) {
+		$l->_throw_error(sprintf("Expecting %s but got EOF", decrypt_constant($type)));
+		return;
+	}
+	unless ($t->type eq $type) {
+		$self->_throw_error(sprintf("Expecting %s but got %s", decrypt_constant($type), decrypt_constant($t->type)), $t, $l);
+	}
+	return $t;
+}
+
+sub _statement {
+	my $self	= shift;
+	my $l		= shift;
+	my $t		= shift;
+	my $type	= $t->type;
+# 		when (WS) {}
+	if ($type == PREFIX or $type == SPARQLPREFIX) {
+		$t	= $self->_get_token_type($l, PREFIXNAME);
+		my $name	= $t->value;
+		$name		=~ s/:$//;
+		$t	= $self->_get_token_type($l, IRI);
+		my %args	= (value => $t->value);
+		$args{base}	= $self->{baseURI} if (defined($self->{baseURI}));
+		my $r	= RDF::IRI->new(%args);
+		my $iri	= $r->as_string;
+		if ($type == PREFIX) {
+			$t	= $self->_get_token_type($l, DOT);
+# 			$t	= $self->_next_nonws($l);
+# 			if ($t and $t->type != DOT) {
+# 				$self->_unget_token($t);
+# 			}
+		}
+		$self->{map}{$name}	= $iri;
+		if (my $ns = $self->{namespaces}) {
+			unless ($ns->namespace_uri($name)) {
+				$ns->{$name}	= $iri;
+			}
+		}
+	}
+	elsif ($type == BASE or $type == SPARQLBASE) {
+		$t	= $self->_get_token_type($l, IRI);
+		my %args	= (value => $t->value);
+		$args{base}	= $self->{baseURI} if (defined($self->{baseURI}));
+		my $r	= RDF::IRI->new(%args);
+		my $iri	= $r->as_string;
+		if ($type == BASE) {
+			$t	= $self->_get_token_type($l, DOT);
+# 			$t	= $self->_next_nonws($l);
+# 			if ($t and $t->type != DOT) {
+# 				$self->_unget_token($t);
+# 			}
+		}
+		$self->{baseURI}	= $iri;
+	}
+	else {
+		$self->_triple( $l, $t );
+		$t	= $self->_get_token_type($l, DOT);
+	}
+# 	}
+}
+
+sub _triple {
+	my $self	= shift;
+	my $l		= shift;
+	my $t		= shift;
+	my $type	= $t->type;
+	# subject
+	my $subj;
+	my $bnode_plist	= 0;
+	if ($type == LBRACKET) {
+		$bnode_plist	= 1;
+		$subj	= RDF::Blank->new();
+		my $t	= $self->_next_nonws($l);
+		if ($t->type != RBRACKET) {
+			$self->_unget_token($t);
+			$self->_predicateObjectList( $l, $subj );
+			$t	= $self->_get_token_type($l, RBRACKET);
+		}
+	} elsif ($type == LPAREN) {
+		my $t	= $self->_next_nonws($l);
+		if ($t->type == RPAREN) {
+			$subj	= RDF::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+		} else {
+			$subj	= RDF::Blank->new();
+			my @objects	= $self->_object($l, $t);
+			
+			while (1) {
+				my $t	= $self->_next_nonws($l);
+				if ($t->type == RPAREN) {
+					last;
+				} else {
+					push(@objects, $self->_object($l, $t));
+				}
+			}
+			$self->_assert_list($subj, @objects);
+		}
+	} elsif (not($type==IRI or $type==PREFIXNAME or $type==BNODE)) {
+		$self->_throw_error("Expecting resource or bnode but got " . decrypt_constant($type), $t, $l);
+	} else {
+		$subj	= $self->_token_to_node($t);
+	}
+# 	warn "Subject: $subj\n";	# XXX
+	
+	if ($bnode_plist) {
+		#predicateObjectList?
+		$t	= $self->_next_nonws($l);
+		$self->_unget_token($t);
+		if ($t->type != DOT) {
+			$self->_predicateObjectList($l, $subj);
+		}
+	} else {
+		#predicateObjectList
+		$self->_predicateObjectList($l, $subj);
+	}
+}
+
+sub _assert_list {
+	my $self	= shift;
+	my $subj	= shift;
+	my @objects	= @_;
+	my $head	= $subj;
+	while (@objects) {
+		my $obj	= shift(@objects);
+		$self->_assert_triple($head, RDF::IRI->new("${RDF}first"), $obj);
+		my $next	= scalar(@objects) ? RDF::Blank->new() : RDF::IRI->new("${RDF}nil");
+		$self->_assert_triple($head, RDF::IRI->new("${RDF}rest"), $next);
+		$head		= $next;
+	}
+}
+
+sub _predicateObjectList {
+	my $self	= shift;
+	my $l		= shift;
+	my $subj	= shift;
+	my $t		= $self->_next_nonws($l);
+	while (1) {
+		my $type = $t->type;
+		unless ($type==IRI or $type==PREFIXNAME or $type==A) {
+			$self->_throw_error("Expecting verb but got " . decrypt_constant($type), $t, $l);
+		}
+		my $pred	= $self->_token_to_node($t);
+		$self->_objectList($l, $subj, $pred);
+		
+		$t		= $self->_next_nonws($l);
+		last unless ($t);
+		if ($t->type == SEMICOLON) {
+			my $sc	= $t;
+SEMICOLON_REPEAT:			
+			$t		= $self->_next_nonws($l);
+			unless ($t) {
+				$l->_throw_error("Expecting token after semicolon, but got EOF");
+			}
+			goto SEMICOLON_REPEAT if ($t->type == SEMICOLON);
+			if ($t->type == IRI or $t->type == PREFIXNAME or $t->type == A) {
+				next;
+			} else {
+				$self->_unget_token($t);
+				return;
+			}
+		} else {
+			$self->_unget_token($t);
+			return;
+		}
+	}
+}
+
+sub _objectList {
+	my $self	= shift;
+	my $l		= shift;
+	my $subj	= shift;
+	my $pred	= shift;
+# 	warn "objectList: " . Dumper($subj, $pred);	# XXX
+	while (1) {
+		my $t		= $self->_next_nonws($l);
+		last unless ($t);
+		my $obj		= $self->_object($l, $t);
+		$self->_assert_triple($subj, $pred, $obj);
+		
+		$t	= $self->_next_nonws($l);
+		if ($t and $t->type == COMMA) {
+			next;
+		} else {
+			$self->_unget_token($t);
+			return;
+		}
+	}
+}
+
+sub _assert_triple {
+	my $self	= shift;
+	my $subj	= shift;
+	my $pred	= shift;
+	my $obj		= shift;
+	if ($self->{canonicalize} and blessed($obj) and $obj->does('RDF::API::Literal')) {
+		$obj	= $obj->canonicalize;
+	}
+	
+	my $t		= RDF::Triple->new($subj, $pred, $obj);
+	if ($self->{handle_triple}) {
+		$self->{handle_triple}->( $t );
+	}
+}
+
+
+sub _object {
+	my $self	= shift;
+	my $l		= shift;
+	my $t		= shift;
+	my $tcopy	= $t;
+	my $obj;
+	my $type	= $t->type;
+	if ($type==LBRACKET) {
+		$obj	= RDF::Blank->new();
+		my $t	= $self->_next_nonws($l);
+		unless ($t) {
+			$self->_throw_error("Expecting object but got only opening bracket", $tcopy, $l);
+		}
+		if ($t->type != RBRACKET) {
+			$self->_unget_token($t);
+			$self->_predicateObjectList( $l, $obj );
+			$t	= $self->_get_token_type($l, RBRACKET);
+		}
+	} elsif ($type == LPAREN) {
+		my $t	= $self->_next_nonws($l);
+		unless ($t) {
+			$self->_throw_error("Expecting object but got only opening paren", $tcopy, $l);
+		}
+		if ($t->type == RPAREN) {
+			$obj	= RDF::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+		} else {
+			$obj	= RDF::Blank->new();
+			my @objects	= $self->_object($l, $t);
+			
+			while (1) {
+				my $t	= $self->_next_nonws($l);
+				if ($t->type == RPAREN) {
+					last;
+				} else {
+					push(@objects, $self->_object($l, $t));
+				}
+			}
+			$self->_assert_list($obj, @objects);
+		}
+	} elsif (not($type==IRI or $type==PREFIXNAME or $type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN)) {
+		$self->_throw_error("Expecting object but got " . decrypt_constant($type), $t, $l);
+	} else {
+		if ($type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S) {
+			my $value	= $t->value;
+			my $t		= $self->_next_nonws($l);
+			my $dt;
+			my $lang;
+			if ($t) {
+				if ($t->type == HATHAT) {
+					my $t		= $self->_next_nonws($l);
+					if ($t->type == IRI or $t->type == PREFIXNAME) {
+						$dt	= $self->_token_to_node($t);
+					}
+				} elsif ($t->type == LANG) {
+					$lang	= $t->value;
+				} else {
+					$self->_unget_token($t);
+				}
+			}
+			my %args	= (value => $value);
+			$args{language}	= $lang if (defined($lang));
+			$args{datatype}	= $dt if (defined($dt));
+			$obj	= RDF::Literal->new(%args);
+		} else {
+			$obj	= $self->_token_to_node($t, $type);
+		}
+	}
+	return $obj;
+}
+
+sub _token_to_node {
+	my $self	= shift;
+	my $t		= shift;
+	my $type	= shift || $t->type;
+	if ($type eq A) {
+		return RDF::IRI->new("${RDF}type");
+	}
+	elsif ($type eq IRI) {
+		my %args	= (value => $t->value);
+		$args{base}	= $self->{baseURI} if (defined($self->{baseURI}));
+		return RDF::IRI->new(%args);
+	}
+	elsif ($type eq INTEGER) {
+		return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}integer"));
+	}
+	elsif ($type eq DECIMAL) {
+		return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}decimal"));
+	}
+	elsif ($type eq DOUBLE) {
+		return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}double"));
+	}
+	elsif ($type eq BOOLEAN) {
+		return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}boolean"));
+	}
+	elsif ($type eq PREFIXNAME) {
+		my ($ns, $local)	= @{ $t->args };
+		$ns		=~ s/:$//;
+		unless (exists $self->{map}{$ns}) {
+			$self->_throw_error("Use of undeclared prefix '$ns'", $t);
+		}
+		my $prefix			= $self->{map}{$ns};
+		no warnings 'uninitialized';
+		my $iri				= RDF::IRI->new("${prefix}${local}");
+		return $iri;
+	}
+	elsif ($type eq BNODE) {
+		return RDF::Blank->new($t->value);
+	}
+	elsif ($type eq STRING1D) {
+		return RDF::Literal->new($t->value);
+	}
+	elsif ($type eq STRING1S) {
+		return RDF::Literal->new($t->value);
+	}
+	else {
+		$self->_throw_error("Converting $type to node not implemented", $t);
+	}
+}
+
+sub _throw_error {
+	my $self	= shift;
+	my $message	= shift;
+	my $t		= shift;
+	my $l		= shift;
+	my $line	= $t->start_line;
+	my $col		= $t->start_column;
+# 	Carp::cluck "$message at $line:$col";
+	my $text	= "$message at $line:$col";
+	if (defined($t->value)) {
+		$text	.= " (near '" . $t->value . "')";
+	}
+	RDF::Trine::Error::ParserError::Tokenized->throw(
+		-text => $text,
+		-object => $t,
+	);
+}
+
+1;
+
+__END__
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/perlrdf/issues>.
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2006-2012 Gregory Todd Williams. This
+program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
