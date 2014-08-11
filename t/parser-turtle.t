@@ -34,7 +34,7 @@ foreach my $file (@good) {
 	lives_ok {
 		my $parser	= RDF::TurtleParser->new();
 		open(my $fh, '<', $file);
-		$parser->parse_cb_from_io($fh, undef, sub{
+		$parser->parse_cb_from_io($fh, sub{
 			my $t	= shift;
 # 			warn "parsed triple: " . $t->tuples_string . "\n";
 		});
@@ -50,7 +50,7 @@ foreach my $file (@bad) {
 		my $parser	= RDF::TurtleParser->new();
 		open(my $fh, '<', $file);
 		my $url	= 'file://' . $file;
-		$parser->parse_cb_from_io($fh, undef, sub{});
+		$parser->parse_cb_from_io($fh);
 	} $test;
 }
 
