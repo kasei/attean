@@ -24,6 +24,22 @@ sub literal {
 	return RDF::IRI->new(%args);
 }
 
+
+{
+	my $map		= URI::NamespaceMap->new();
+	my $parser	= RDF::TurtleParser->new( namespaces => $map );
+	my $content	= <<'END';
+@prefix ex: <http://example.org/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+_:x a foaf:Person .
+END
+	$parser->parse_cb_from_bytes($content, sub {});
+	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);
+	my $foaf	= $map->namespace_uri('foaf');
+	isa_ok($foaf, 'URI::Namespace');
+	is($foaf->as_string, 'http://xmlns.com/foaf/0.1/');
+}
+
 my $path	= File::Spec->catfile( $Bin, 'data', 'turtle' );
 my @good	= bsd_glob("${path}/test*.ttl");
 my @bad		= bsd_glob("${path}/bad*.ttl");

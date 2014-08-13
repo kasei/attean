@@ -56,10 +56,7 @@ package RDF::TurtleParser 0.001 {
 		}
 	);
 	
-	# TODO :conform to RDF::API::Parser::AbbreviatingParser, change APIs to parse_cb_* methods to use ->base
 	# TODO: Remove all references to RDF::Trine code (e.g. RDF::Trine::Error)
-	# TODO: Instance variables that need to be moosified:
-	# 	namespaces
 
 	our $VERSION;
 	BEGIN {
@@ -203,7 +200,7 @@ serialization is found at the beginning of C<< $string >>.
 			if ($self->has_namespaces) {
 				my $ns	= $self->namespaces;
 				unless ($ns->namespace_uri($name)) {
-					$ns->{$name}	= $iri;
+					$ns->add_mapping($name, $iri);
 				}
 			}
 		}

@@ -16,7 +16,6 @@ package RDF::API::Literal 0.001 {
 	use Moose::Util::TypeConstraints;
 	
 	with 'RDF::API::Term';
-	coerce 'IRI' => from 'Str' => via { IRI->new(value => $_) };
 	
 	has 'language'			=> (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	has 'datatype'			=> (is => 'ro', isa => 'IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });

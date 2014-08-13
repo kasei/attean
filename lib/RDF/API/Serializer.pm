@@ -31,7 +31,7 @@ package RDF::API::AbbreviatingSerializer 0.001 {
 	with 'RDF::API::Serializer';
 
 	has base		=> (is => 'ro', isa => 'IRI', predicate => 'has_base');
-	has namespaces	=> (is => 'ro', isa => 'HashRef[IRI]', predicate => 'has_namespaces');
+	has namespaces	=> (is => 'ro', isa => 'Maybe[URI::NamespaceMap]', predicate => 'has_namespaces');
 }
 
 package RDF::API::TermSerializer 0.001 {

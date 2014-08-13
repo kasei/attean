@@ -11,10 +11,11 @@ package RDF::API::Parser 0.001 {
 
 package RDF::API::Parser::AbbreviatingParser 0.001 {
 	use Moose::Role;
+	use URI::NamespaceMap;
 	
 	with 'RDF::API::Parser';
 	has 'base' 		=> (is => 'rw', isa => 'IRI', coerce => 1, predicate => 'has_base');
-	has 'namespaces'	=> (is => 'ro', isa => 'HashRef');
+	has 'namespaces'	=> (is => 'ro', isa => 'Maybe[URI::NamespaceMap]');
 }
 
 package RDF::API::PushParser 0.001 {
