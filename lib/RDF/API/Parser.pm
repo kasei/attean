@@ -7,6 +7,7 @@ package RDF::API::Parser 0.001 {
 	has 'handler' => (is => 'rw', isa => 'CodeRef', default => sub { sub {} });
 	has 'canonical_media_type' => (is => 'ro', isa => 'Str', init_arg => undef);
 	has 'media_types' => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
+	has 'handled_type' => (is => 'ro', isa => 'Moose::Meta::TypeConstraint', init_arg => undef);
 }
 
 package RDF::API::Parser::AbbreviatingParser 0.001 {

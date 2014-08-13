@@ -2,7 +2,6 @@ use v5.14;
 use warnings;
 
 package RDF 0.001 {
-	use IRI 0.003;
 	use RDF::API;
 	
 	use RDF::Blank;

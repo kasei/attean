@@ -3,7 +3,7 @@ use warnings;
 
 package RDF::IRI 0.001 {
 	use Moose;
-	use IRI;
+	use IRI 0.003;
 	
 	extends 'IRI';
 	

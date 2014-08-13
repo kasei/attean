@@ -41,6 +41,15 @@ package RDF::X::Parser::Turtle 0.001 {
 	use Moose;
 	with 'RDF::API::Parser::AbbreviatingParser';
 	
+	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'RDF::API::Triple');
+
+	has 'handled_type' => (
+		is => 'ro',
+		isa => 'Moose::Meta::TypeConstraint',
+		init_arg => undef,
+		default => sub { $ITEM_TYPE },
+	);
+
 	has 'canonicalize'	=> (is => 'rw', isa => 'Bool', default => 0);
 	has 'map' => (is => 'ro', isa => 'HashRef[Str]', default => sub { +{} });
 	has 'namespaces' => (is => 'rw', isa => 'Maybe[URI::NamespaceMap]', predicate => 'has_namespaces');
