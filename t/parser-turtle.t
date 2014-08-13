@@ -24,10 +24,9 @@ sub literal {
 	return RDF::IRI->new(%args);
 }
 
-
 {
 	my $map		= URI::NamespaceMap->new();
-	my $parser	= RDF::TurtleParser->new( namespaces => $map );
+	my $parser	= RDF->get_parser('Turtle')->new( namespaces => $map );
 	my $content	= <<'END';
 @prefix ex: <http://example.org/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -48,7 +47,7 @@ foreach my $file (@good) {
 	my $data	= do { open( my $fh, '<', $file ); local($/) = undef; <$fh> };
 	my (undef, undef, $test)	= File::Spec->splitpath( $file );
 	lives_ok {
-		my $parser	= RDF::TurtleParser->new();
+		my $parser	= RDF->get_parser('Turtle')->new();
 		open(my $fh, '<', $file);
 		$parser->parse_cb_from_io($fh, sub{
 			my $t	= shift;
@@ -63,7 +62,7 @@ foreach my $file (@bad) {
 	my $data	= do { open( my $fh, '<', $file ); local($/) = undef; <$fh> };
 	my (undef, undef, $test)	= File::Spec->splitpath( $file );
 	dies_ok {
-		my $parser	= RDF::TurtleParser->new();
+		my $parser	= RDF->get_parser('Turtle')->new();
 		open(my $fh, '<', $file);
 		my $url	= 'file://' . $file;
 		$parser->parse_cb_from_io($fh);

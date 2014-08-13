@@ -1,4 +1,4 @@
-package RDF::TurtleParser::Token;
+package RDF::X::Parser::Turtle::Token;
 
 use 5.010;
 use strict;

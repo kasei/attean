@@ -1,17 +1,17 @@
-# RDF::TurtleParser::Constants
+# RDF::X::Parser::Turtle::Constants
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-RDF::TurtleParser::Constants - Constant definitions for use in parsing Turtle, TriG, and N-Triples
+RDF::X::Parser::Turtle::Constants - Constant definitions for use in parsing Turtle, TriG, and N-Triples
 
 =head1 VERSION
 
-This document describes RDF::TurtleParser::Constants version 1.007
+This document describes RDF::X::Parser::Turtle::Constants version 1.007
 
 =head1 SYNOPSIS
 
- use RDF::TurtleParser::Constants;
+ use RDF::X::Parser::Turtle::Constants;
 
 =head1 METHODS
 
@@ -19,7 +19,7 @@ This document describes RDF::TurtleParser::Constants version 1.007
 
 =cut
 
-package RDF::TurtleParser::Constants;
+package RDF::X::Parser::Turtle::Constants;
 
 use strict;
 use warnings;

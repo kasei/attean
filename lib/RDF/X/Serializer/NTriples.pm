@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF::NTriplesSerializer 0.001 {
+package RDF::X::Serializer::NTriples 0.001 {
 	use Moose;
 	use Encode qw(encode);
 	use RDF::ListIterator;

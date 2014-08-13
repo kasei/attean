@@ -1,21 +1,21 @@
 use v5.14;
 use warnings;
 
-# RDF::TurtleParser
+# RDF::X::Parser::Turtle
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-RDF::TurtleParser - Turtle RDF Parser
+RDF::X::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes RDF::TurtleParser version 1.007
+This document describes RDF::X::Parser::Turtle version 1.007
 
 =head1 SYNOPSIS
 
- use RDF::TurtleParser;
- my $parser	= RDF::TurtleParser->new( handler => sub {...} );
+ use RDF::X::Parser::Turtle;
+ my $parser	= RDF::X::Parser::Turtle->new( handler => sub {...} );
  $parser->parse_cb_from_io( $fh, $base_uri );
 
 =head1 DESCRIPTION
@@ -28,13 +28,14 @@ This module implements a parser for the Turtle RDF format.
 
 =cut
 
-package RDF::TurtleParser 0.001 {
+package RDF::X::Parser::Turtle 0.001 {
 	use utf8;
+	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use Data::Dumper;
-	use RDF::TurtleParser::Constants;
-	use RDF::TurtleParser::Lexer;
-	use RDF::TurtleParser::Token;
+	use RDF::X::Parser::Turtle::Constants;
+	use RDF::X::Parser::Turtle::Lexer;
+	use RDF::X::Parser::Turtle::Token;
 	use RDF::API::Parser;
 	
 	use Moose;
@@ -88,7 +89,7 @@ package RDF::TurtleParser 0.001 {
 		}
 	
 		binmode($fh, ':encoding(UTF-8)');
-		my $l	= RDF::TurtleParser::Lexer->new($fh);
+		my $l	= RDF::X::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
 
@@ -98,7 +99,7 @@ package RDF::TurtleParser 0.001 {
 	
 		$data	= Encode::encode("utf-8", $data);
 		open(my $fh, '<:encoding(UTF-8)', \$data);
-		my $l	= RDF::TurtleParser::Lexer->new($fh);
+		my $l	= RDF::X::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
 
@@ -115,7 +116,7 @@ serialization is found at the beginning of C<< $string >>.
 		my %args	= @_;
 	
 		open(my $fh, '<:encoding(UTF-8)', \$string);
-		my $l	= RDF::TurtleParser::Lexer->new($fh);
+		my $l	= RDF::X::Parser::Turtle::Lexer->new($fh);
 		my $t = $self->_next_nonws($l);
 		my $node	= $self->_object($l, $t);
 		return $node;

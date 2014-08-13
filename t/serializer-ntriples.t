@@ -19,10 +19,10 @@ my $t1	= RDF::Triple->new($s, $p, $o1);
 my $t2	= RDF::Triple->new($s, $p, $o2);
 my @triples	= ($t1, $t2);
 
-my $ser	= RDF::NTriplesSerializer->new();
+my $ser	= RDF->get_serializer('NTriples')->new();
 does_ok($ser, 'RDF::API::Serializer');
 does_ok($ser, 'RDF::API::TripleSerializer');
-isa_ok($ser, 'RDF::NTriplesSerializer');
+isa_ok($ser, 'RDF::X::Serializer::NTriples');
 
 my $expected	= <<"END";
 _:x <http://example.org/p> "1"^^<http://www.w3.org/2001/XMLSchema#integer> .

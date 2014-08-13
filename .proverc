@@ -1,0 +1,2 @@
+# -l --state=hot,fast,save -j8
+-l -j8
