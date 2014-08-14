@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF 0.001 {
+package Attean 0.001 {
 	use Attean::API;
 	
 	use Attean::Blank;

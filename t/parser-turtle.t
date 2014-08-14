@@ -25,7 +25,7 @@ sub literal {
 }
 
 {
-	my $parser	= RDF->get_parser('Turtle')->new();
+	my $parser	= Attean->get_parser('Turtle')->new();
 	isa_ok($parser, 'AtteanX::Parser::Turtle');
 	my $type	= $parser->handled_type;
 	isa_ok($type, 'Moose::Meta::TypeConstraint::Role');
@@ -34,7 +34,7 @@ sub literal {
 
 {
 	my $map		= URI::NamespaceMap->new();
-	my $parser	= RDF->get_parser('Turtle')->new( namespaces => $map );
+	my $parser	= Attean->get_parser('Turtle')->new( namespaces => $map );
 	my $content	= <<'END';
 @prefix ex: <http://example.org/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -55,7 +55,7 @@ foreach my $file (@good) {
 	my $data	= do { open( my $fh, '<', $file ); local($/) = undef; <$fh> };
 	my (undef, undef, $test)	= File::Spec->splitpath( $file );
 	lives_ok {
-		my $parser	= RDF->get_parser('Turtle')->new();
+		my $parser	= Attean->get_parser('Turtle')->new();
 		open(my $fh, '<', $file);
 		$parser->parse_cb_from_io($fh, sub{
 			my $t	= shift;
@@ -70,7 +70,7 @@ foreach my $file (@bad) {
 	my $data	= do { open( my $fh, '<', $file ); local($/) = undef; <$fh> };
 	my (undef, undef, $test)	= File::Spec->splitpath( $file );
 	dies_ok {
-		my $parser	= RDF->get_parser('Turtle')->new();
+		my $parser	= Attean->get_parser('Turtle')->new();
 		open(my $fh, '<', $file);
 		my $url	= 'file://' . $file;
 		$parser->parse_cb_from_io($fh);

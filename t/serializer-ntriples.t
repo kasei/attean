@@ -19,7 +19,7 @@ my $t1	= Attean::Triple->new($s, $p, $o1);
 my $t2	= Attean::Triple->new($s, $p, $o2);
 my @triples	= ($t1, $t2);
 
-my $ser	= RDF->get_serializer('NTriples')->new();
+my $ser	= Attean->get_serializer('NTriples')->new();
 does_ok($ser, 'Attean::API::Serializer');
 does_ok($ser, 'Attean::API::TripleSerializer');
 isa_ok($ser, 'AtteanX::Serializer::NTriples');
