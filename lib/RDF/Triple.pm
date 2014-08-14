@@ -21,6 +21,12 @@ package RDF::Triple 0.001 {
 		}
 		return $class->$orig(@_);
 	};
+	
+	sub as_string {
+		my $self	= shift;
+		my @terms	= map { $self->$_()->ntriples_string() } qw(subject predicate object);
+		return join(' ', @terms) . ' .';
+	}
 }
 
 1;
