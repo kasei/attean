@@ -25,6 +25,14 @@ sub literal {
 }
 
 {
+	my $parser	= RDF->get_parser('Turtle')->new();
+	isa_ok($parser, 'RDF::X::Parser::Turtle');
+	my $type	= $parser->handled_type;
+	isa_ok($type, 'Moose::Meta::TypeConstraint::Role');
+	is($type->role, 'RDF::API::Triple');
+}
+
+{
 	my $map		= URI::NamespaceMap->new();
 	my $parser	= RDF->get_parser('Turtle')->new( namespaces => $map );
 	my $content	= <<'END';
