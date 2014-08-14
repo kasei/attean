@@ -1,17 +1,17 @@
-# Attean::X::Parser::Turtle::Constants
+# AtteanX::Parser::Turtle::Constants
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-Attean::X::Parser::Turtle::Constants - Constant definitions for use in parsing Turtle, TriG, and N-Triples
+AtteanX::Parser::Turtle::Constants - Constant definitions for use in parsing Turtle, TriG, and N-Triples
 
 =head1 VERSION
 
-This document describes Attean::X::Parser::Turtle::Constants version 1.007
+This document describes AtteanX::Parser::Turtle::Constants version 1.007
 
 =head1 SYNOPSIS
 
- use Attean::X::Parser::Turtle::Constants;
+ use AtteanX::Parser::Turtle::Constants;
 
 =head1 METHODS
 
@@ -19,7 +19,7 @@ This document describes Attean::X::Parser::Turtle::Constants version 1.007
 
 =cut
 
-package Attean::X::Parser::Turtle::Constants;
+package AtteanX::Parser::Turtle::Constants;
 
 use strict;
 use warnings;

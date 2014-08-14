@@ -26,7 +26,7 @@ sub literal {
 
 {
 	my $parser	= RDF->get_parser('Turtle')->new();
-	isa_ok($parser, 'Attean::X::Parser::Turtle');
+	isa_ok($parser, 'AtteanX::Parser::Turtle');
 	my $type	= $parser->handled_type;
 	isa_ok($type, 'Moose::Meta::TypeConstraint::Role');
 	is($type->role, 'Attean::API::Triple');

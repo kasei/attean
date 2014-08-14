@@ -1,21 +1,21 @@
 use v5.14;
 use warnings;
 
-# Attean::X::Parser::Turtle
+# AtteanX::Parser::Turtle
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-Attean::X::Parser::Turtle - Turtle RDF Parser
+AtteanX::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes Attean::X::Parser::Turtle version 1.007
+This document describes AtteanX::Parser::Turtle version 1.007
 
 =head1 SYNOPSIS
 
- use Attean::X::Parser::Turtle;
- my $parser	= Attean::X::Parser::Turtle->new( handler => sub {...} );
+ use AtteanX::Parser::Turtle;
+ my $parser	= AtteanX::Parser::Turtle->new( handler => sub {...} );
  $parser->parse_cb_from_io( $fh, $base_uri );
 
 =head1 DESCRIPTION
@@ -28,14 +28,14 @@ This module implements a parser for the Turtle RDF format.
 
 =cut
 
-package Attean::X::Parser::Turtle 0.001 {
+package AtteanX::Parser::Turtle 0.001 {
 	use utf8;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use Data::Dumper;
-	use Attean::X::Parser::Turtle::Constants;
-	use Attean::X::Parser::Turtle::Lexer;
-	use Attean::X::Parser::Turtle::Token;
+	use AtteanX::Parser::Turtle::Constants;
+	use AtteanX::Parser::Turtle::Lexer;
+	use AtteanX::Parser::Turtle::Token;
 	use Attean::API::Parser;
 	
 	use Moose;
@@ -98,7 +98,7 @@ package Attean::X::Parser::Turtle 0.001 {
 		}
 	
 		binmode($fh, ':encoding(UTF-8)');
-		my $l	= Attean::X::Parser::Turtle::Lexer->new($fh);
+		my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
 
@@ -108,7 +108,7 @@ package Attean::X::Parser::Turtle 0.001 {
 	
 		$data	= Encode::encode("utf-8", $data);
 		open(my $fh, '<:encoding(UTF-8)', \$data);
-		my $l	= Attean::X::Parser::Turtle::Lexer->new($fh);
+		my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
 
@@ -125,7 +125,7 @@ serialization is found at the beginning of C<< $string >>.
 		my %args	= @_;
 	
 		open(my $fh, '<:encoding(UTF-8)', \$string);
-		my $l	= Attean::X::Parser::Turtle::Lexer->new($fh);
+		my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
 		my $t = $self->_next_nonws($l);
 		my $node	= $self->_object($l, $t);
 		return $node;

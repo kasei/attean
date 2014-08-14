@@ -16,8 +16,8 @@ package RDF 0.001 {
 	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
-	use Module::Pluggable search_path => 'Attean::X::Parser', sub_name => 'parsers', max_depth => 4;
-	use Module::Pluggable search_path => 'Attean::X::Serializer', sub_name => 'serializers', max_depth => 4;
+	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;
+	use Module::Pluggable search_path => 'AtteanX::Serializer', sub_name => 'serializers', max_depth => 3;
 	
 	sub get_serializer {
 		my $self	= shift;

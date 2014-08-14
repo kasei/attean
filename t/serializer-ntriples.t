@@ -22,7 +22,7 @@ my @triples	= ($t1, $t2);
 my $ser	= RDF->get_serializer('NTriples')->new();
 does_ok($ser, 'Attean::API::Serializer');
 does_ok($ser, 'Attean::API::TripleSerializer');
-isa_ok($ser, 'Attean::X::Serializer::NTriples');
+isa_ok($ser, 'AtteanX::Serializer::NTriples');
 
 my $expected	= <<"END";
 _:x <http://example.org/p> "1"^^<http://www.w3.org/2001/XMLSchema#integer> .

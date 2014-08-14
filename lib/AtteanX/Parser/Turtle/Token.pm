@@ -1,4 +1,4 @@
-package Attean::X::Parser::Turtle::Token;
+package AtteanX::Parser::Turtle::Token;
 
 use 5.010;
 use strict;

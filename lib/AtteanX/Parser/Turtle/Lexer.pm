@@ -1,18 +1,18 @@
-# Attean::X::Parser::Turtle::Lexer
+# AtteanX::Parser::Turtle::Lexer
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-Attean::X::Parser::Turtle::Lexer - Tokenizer for parsing Turtle, TriG, and N-Triples
+AtteanX::Parser::Turtle::Lexer - Tokenizer for parsing Turtle, TriG, and N-Triples
 
 =head1 VERSION
 
-This document describes Attean::X::Parser::Turtle::Lexer version 1.007
+This document describes AtteanX::Parser::Turtle::Lexer version 1.007
 
 =head1 SYNOPSIS
 
- use Attean::X::Parser::Turtle::Lexer;
- my $l = Attean::X::Parser::Turtle::Lexer->new( file => $fh );
+ use AtteanX::Parser::Turtle::Lexer;
+ my $l = AtteanX::Parser::Turtle::Lexer->new( file => $fh );
  while (my $t = $l->get_token) {
    ...
  }
@@ -23,9 +23,9 @@ This document describes Attean::X::Parser::Turtle::Lexer version 1.007
 
 =cut
 
-package Attean::X::Parser::Turtle::Lexer;
+package AtteanX::Parser::Turtle::Lexer;
 
-use Attean::X::Parser::Turtle::Constants;
+use AtteanX::Parser::Turtle::Constants;
 use 5.010;
 use strict;
 use warnings;
@@ -126,7 +126,7 @@ sub new_token {
 	my $start_col	= $self->start_column;
 	my $line		= $self->line;
 	my $col			= $self->column;
-	return Attean::X::Parser::Turtle::Token->fast_constructor(
+	return AtteanX::Parser::Turtle::Token->fast_constructor(
 			$type,
 			$start_line,
 			$start_col,

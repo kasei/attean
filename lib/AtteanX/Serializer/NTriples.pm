@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package Attean::X::Serializer::NTriples 0.001 {
+package AtteanX::Serializer::NTriples 0.001 {
 	use Moose;
 	use Encode qw(encode);
 	use Attean::ListIterator;

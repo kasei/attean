@@ -10,6 +10,6 @@ use File::Spec;
 use Attean;
 
 my $p	= RDF->get_parser('Turtle');
-is($p, 'Attean::X::Parser::Turtle');
+is($p, 'AtteanX::Parser::Turtle');
 
 done_testing();
