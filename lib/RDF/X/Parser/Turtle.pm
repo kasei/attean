@@ -40,9 +40,9 @@ package RDF::X::Parser::Turtle 0.001 {
 	
 	use Moose;
 	with 'RDF::API::Parser::AbbreviatingParser';
+	with 'RDF::API::PushParser';
 	
 	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'RDF::API::Triple');
-
 	has 'handled_type' => (
 		is => 'ro',
 		isa => 'Moose::Meta::TypeConstraint',
