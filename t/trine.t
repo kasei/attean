@@ -6,12 +6,12 @@ use strict;
 use warnings;
 no warnings 'redefine';
 
-use RDF;
-use RDF::TrineCompatibility;
+use Attean;
+use Attean::TrineCompatibility;
 
 {
-	note('RDF::Literal (lang)');
-	my $a	= RDF::Literal->new(value => 'foo', language => 'en-US');
+	note('Attean::Literal (lang)');
+	my $a	= Attean::Literal->new(value => 'foo', language => 'en-US');
 	is($a->literal_value, 'foo', 'value');
 	is($a->literal_value_language, 'en-US', 'language');
 	isa_ok($a->literal_datatype, 'IRI', 'datatype IRI');
@@ -20,8 +20,8 @@ use RDF::TrineCompatibility;
 }
 
 {
-	note('RDF::Literal (typed)');
-	my $a	= RDF::Literal->new(value => '123', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+	note('Attean::Literal (typed)');
+	my $a	= Attean::Literal->new(value => '123', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 	is($a->literal_value, '123', 'value');
 	lives_ok { $a->language } 'typed literal has language method';
 	is(eval { $a->language }, undef, 'language returns undef for typed literal');

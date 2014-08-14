@@ -1,21 +1,21 @@
 use v5.14;
 use warnings;
 
-# RDF::X::Parser::Turtle
+# Attean::X::Parser::Turtle
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-RDF::X::Parser::Turtle - Turtle RDF Parser
+Attean::X::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes RDF::X::Parser::Turtle version 1.007
+This document describes Attean::X::Parser::Turtle version 1.007
 
 =head1 SYNOPSIS
 
- use RDF::X::Parser::Turtle;
- my $parser	= RDF::X::Parser::Turtle->new( handler => sub {...} );
+ use Attean::X::Parser::Turtle;
+ my $parser	= Attean::X::Parser::Turtle->new( handler => sub {...} );
  $parser->parse_cb_from_io( $fh, $base_uri );
 
 =head1 DESCRIPTION
@@ -28,21 +28,21 @@ This module implements a parser for the Turtle RDF format.
 
 =cut
 
-package RDF::X::Parser::Turtle 0.001 {
+package Attean::X::Parser::Turtle 0.001 {
 	use utf8;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use Data::Dumper;
-	use RDF::X::Parser::Turtle::Constants;
-	use RDF::X::Parser::Turtle::Lexer;
-	use RDF::X::Parser::Turtle::Token;
-	use RDF::API::Parser;
+	use Attean::X::Parser::Turtle::Constants;
+	use Attean::X::Parser::Turtle::Lexer;
+	use Attean::X::Parser::Turtle::Token;
+	use Attean::API::Parser;
 	
 	use Moose;
-	with 'RDF::API::Parser::AbbreviatingParser';
-	with 'RDF::API::PushParser';
+	with 'Attean::API::Parser::AbbreviatingParser';
+	with 'Attean::API::PushParser';
 	
-	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'RDF::API::Triple');
+	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
 	has 'handled_type' => (
 		is => 'ro',
 		isa => 'Moose::Meta::TypeConstraint',
@@ -98,7 +98,7 @@ package RDF::X::Parser::Turtle 0.001 {
 		}
 	
 		binmode($fh, ':encoding(UTF-8)');
-		my $l	= RDF::X::Parser::Turtle::Lexer->new($fh);
+		my $l	= Attean::X::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
 
@@ -108,13 +108,13 @@ package RDF::X::Parser::Turtle 0.001 {
 	
 		$data	= Encode::encode("utf-8", $data);
 		open(my $fh, '<:encoding(UTF-8)', \$data);
-		my $l	= RDF::X::Parser::Turtle::Lexer->new($fh);
+		my $l	= Attean::X::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
 
 =item C<< parse_node ( $string, $base ) >>
 
-Returns the RDF::API::Term object corresponding to the node whose N-Triples
+Returns the Attean::API::Term object corresponding to the node whose N-Triples
 serialization is found at the beginning of C<< $string >>.
 
 =cut
@@ -125,7 +125,7 @@ serialization is found at the beginning of C<< $string >>.
 		my %args	= @_;
 	
 		open(my $fh, '<:encoding(UTF-8)', \$string);
-		my $l	= RDF::X::Parser::Turtle::Lexer->new($fh);
+		my $l	= Attean::X::Parser::Turtle::Lexer->new($fh);
 		my $t = $self->_next_nonws($l);
 		my $node	= $self->_object($l, $t);
 		return $node;
@@ -197,7 +197,7 @@ serialization is found at the beginning of C<< $string >>.
 			if ($self->has_base) {
 				$args{base}	= $self->base;
 			}
-			my $r	= RDF::IRI->new(%args);
+			my $r	= Attean::IRI->new(%args);
 			my $iri	= $r->as_string;
 			if ($type == PREFIX) {
 				$t	= $self->_get_token_type($l, DOT);
@@ -220,7 +220,7 @@ serialization is found at the beginning of C<< $string >>.
 			if ($self->has_base) {
 				$args{base}	= $self->base;
 			}
-			my $r	= RDF::IRI->new(%args);
+			my $r	= Attean::IRI->new(%args);
 			my $iri	= $r->as_string;
 			if ($type == BASE) {
 				$t	= $self->_get_token_type($l, DOT);
@@ -248,7 +248,7 @@ serialization is found at the beginning of C<< $string >>.
 		my $bnode_plist	= 0;
 		if ($type == LBRACKET) {
 			$bnode_plist	= 1;
-			$subj	= RDF::Blank->new();
+			$subj	= Attean::Blank->new();
 			my $t	= $self->_next_nonws($l);
 			if ($t->type != RBRACKET) {
 				$self->_unget_token($t);
@@ -258,9 +258,9 @@ serialization is found at the beginning of C<< $string >>.
 		} elsif ($type == LPAREN) {
 			my $t	= $self->_next_nonws($l);
 			if ($t->type == RPAREN) {
-				$subj	= RDF::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+				$subj	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 			} else {
-				$subj	= RDF::Blank->new();
+				$subj	= Attean::Blank->new();
 				my @objects	= $self->_object($l, $t);
 			
 				while (1) {
@@ -300,9 +300,9 @@ serialization is found at the beginning of C<< $string >>.
 		my $head	= $subj;
 		while (@objects) {
 			my $obj	= shift(@objects);
-			$self->_assert_triple($head, RDF::IRI->new("${RDF}first"), $obj);
-			my $next	= scalar(@objects) ? RDF::Blank->new() : RDF::IRI->new("${RDF}nil");
-			$self->_assert_triple($head, RDF::IRI->new("${RDF}rest"), $next);
+			$self->_assert_triple($head, Attean::IRI->new("${RDF}first"), $obj);
+			my $next	= scalar(@objects) ? Attean::Blank->new() : Attean::IRI->new("${RDF}nil");
+			$self->_assert_triple($head, Attean::IRI->new("${RDF}rest"), $next);
 			$head		= $next;
 		}
 	}
@@ -370,11 +370,11 @@ serialization is found at the beginning of C<< $string >>.
 		my $subj	= shift;
 		my $pred	= shift;
 		my $obj		= shift;
-		if ($self->canonicalize and blessed($obj) and $obj->does('RDF::API::Literal')) {
+		if ($self->canonicalize and blessed($obj) and $obj->does('Attean::API::Literal')) {
 			$obj	= $obj->canonicalize;
 		}
 	
-		my $t		= RDF::Triple->new($subj, $pred, $obj);
+		my $t		= Attean::Triple->new($subj, $pred, $obj);
 		$self->handler->($t);
 	}
 
@@ -387,7 +387,7 @@ serialization is found at the beginning of C<< $string >>.
 		my $obj;
 		my $type	= $t->type;
 		if ($type==LBRACKET) {
-			$obj	= RDF::Blank->new();
+			$obj	= Attean::Blank->new();
 			my $t	= $self->_next_nonws($l);
 			unless ($t) {
 				$self->_throw_error("Expecting object but got only opening bracket", $tcopy, $l);
@@ -403,9 +403,9 @@ serialization is found at the beginning of C<< $string >>.
 				$self->_throw_error("Expecting object but got only opening paren", $tcopy, $l);
 			}
 			if ($t->type == RPAREN) {
-				$obj	= RDF::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+				$obj	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 			} else {
-				$obj	= RDF::Blank->new();
+				$obj	= Attean::Blank->new();
 				my @objects	= $self->_object($l, $t);
 			
 				while (1) {
@@ -441,7 +441,7 @@ serialization is found at the beginning of C<< $string >>.
 				my %args	= (value => $value);
 				$args{language}	= $lang if (defined($lang));
 				$args{datatype}	= $dt if (defined($dt));
-				$obj	= RDF::Literal->new(%args);
+				$obj	= Attean::Literal->new(%args);
 			} else {
 				$obj	= $self->_token_to_node($t, $type);
 			}
@@ -454,26 +454,26 @@ serialization is found at the beginning of C<< $string >>.
 		my $t		= shift;
 		my $type	= shift || $t->type;
 		if ($type eq A) {
-			return RDF::IRI->new("${RDF}type");
+			return Attean::IRI->new("${RDF}type");
 		}
 		elsif ($type eq IRI) {
 			my %args	= (value => $t->value);
 			if ($self->has_base) {
 				$args{base}	= $self->base;
 			}
-			return RDF::IRI->new(%args);
+			return Attean::IRI->new(%args);
 		}
 		elsif ($type eq INTEGER) {
-			return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}integer"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}integer"));
 		}
 		elsif ($type eq DECIMAL) {
-			return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}decimal"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}decimal"));
 		}
 		elsif ($type eq DOUBLE) {
-			return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}double"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}double"));
 		}
 		elsif ($type eq BOOLEAN) {
-			return RDF::Literal->new(value => $t->value, datatype => RDF::IRI->new("${XSD}boolean"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}boolean"));
 		}
 		elsif ($type eq PREFIXNAME) {
 			my ($ns, $local)	= @{ $t->args };
@@ -483,17 +483,17 @@ serialization is found at the beginning of C<< $string >>.
 			}
 			my $prefix			= $self->map->{$ns};
 			no warnings 'uninitialized';
-			my $iri				= RDF::IRI->new("${prefix}${local}");
+			my $iri				= Attean::IRI->new("${prefix}${local}");
 			return $iri;
 		}
 		elsif ($type eq BNODE) {
-			return RDF::Blank->new($t->value);
+			return Attean::Blank->new($t->value);
 		}
 		elsif ($type eq STRING1D) {
-			return RDF::Literal->new($t->value);
+			return Attean::Literal->new($t->value);
 		}
 		elsif ($type eq STRING1S) {
-			return RDF::Literal->new($t->value);
+			return Attean::Literal->new($t->value);
 		}
 		else {
 			$self->_throw_error("Converting $type to node not implemented", $t);

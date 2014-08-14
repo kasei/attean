@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF::API::TripleStore 0.001 {
+package Attean::API::TripleStore 0.001 {
 	use Moose::Role;
 	
 	requires 'get_triples';
@@ -17,22 +17,22 @@ package RDF::API::TripleStore 0.001 {
 	}
 }
 
-package RDF::API::MutableTripleStore 0.001 {
+package Attean::API::MutableTripleStore 0.001 {
 	use Moose::Role;
-	with 'RDF::API::TripleStore';
+	with 'Attean::API::TripleStore';
 	
 	requires 'add_triple';
 	requires 'remove_triple';
 }
 
-package RDF::API::CacheableTripleStore 0.001 {
+package Attean::API::CacheableTripleStore 0.001 {
 	use Moose::Role;
-	with 'RDF::API::TripleStore';
+	with 'Attean::API::TripleStore';
 	
 	requires 'last_modified_date_for_triples';
 }
 
-package RDF::API::QuadStore 0.001 {
+package Attean::API::QuadStore 0.001 {
 	use Moose::Role;
 	
 	requires 'get_quads';
@@ -59,17 +59,17 @@ package RDF::API::QuadStore 0.001 {
 	}
 }
 
-package RDF::API::MutableQuadStore 0.001 {
+package Attean::API::MutableQuadStore 0.001 {
 	use Moose::Role;
-	with 'RDF::API::QuadStore';
+	with 'Attean::API::QuadStore';
 	
 	requires 'add_quad';
 	requires 'remove_quad';
 }
 
-package RDF::API::CacheableQuadStore 0.001 {
+package Attean::API::CacheableQuadStore 0.001 {
 	use Moose::Role;
-	with 'RDF::API::QuadStore';
+	with 'Attean::API::QuadStore';
 	
 	requires 'last_modified_date_for_quads';
 }

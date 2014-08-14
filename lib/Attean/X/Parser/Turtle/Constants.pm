@@ -1,17 +1,17 @@
-# RDF::X::Parser::Turtle::Constants
+# Attean::X::Parser::Turtle::Constants
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-RDF::X::Parser::Turtle::Constants - Constant definitions for use in parsing Turtle, TriG, and N-Triples
+Attean::X::Parser::Turtle::Constants - Constant definitions for use in parsing Turtle, TriG, and N-Triples
 
 =head1 VERSION
 
-This document describes RDF::X::Parser::Turtle::Constants version 1.007
+This document describes Attean::X::Parser::Turtle::Constants version 1.007
 
 =head1 SYNOPSIS
 
- use RDF::X::Parser::Turtle::Constants;
+ use Attean::X::Parser::Turtle::Constants;
 
 =head1 METHODS
 
@@ -19,7 +19,7 @@ This document describes RDF::X::Parser::Turtle::Constants version 1.007
 
 =cut
 
-package RDF::X::Parser::Turtle::Constants;
+package Attean::X::Parser::Turtle::Constants;
 
 use strict;
 use warnings;

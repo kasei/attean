@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF::API::Binding 0.001 {
+package Attean::API::Binding 0.001 {
 	use Moose::Role;
 	
 	requires 'value';
@@ -15,10 +15,10 @@ package RDF::API::Binding 0.001 {
 	}
 }
 
-package RDF::API::Triple 0.001 {
+package Attean::API::Triple 0.001 {
 	use Moose::Role;
 	
-	with 'RDF::API::Binding';
+	with 'Attean::API::Binding';
 	
 	sub variables { return qw(subject predicate object) }
 	sub value {
@@ -31,15 +31,15 @@ package RDF::API::Triple 0.001 {
 		}
 	}
 	
-	requires 'subject';		# TODO: type constrain to RDF::BlankOrIRI
-	requires 'predicate';	# TODO: type constrain to RDF::IRI
-	requires 'object';		# TODO: type constrain to RDF::API::Term
+	requires 'subject';		# TODO: type constrain to Attean::BlankOrIRI
+	requires 'predicate';	# TODO: type constrain to Attean::IRI
+	requires 'object';		# TODO: type constrain to Attean::API::Term
 }
 
-package RDF::API::Quad 0.001 {
+package Attean::API::Quad 0.001 {
 	use Moose::Role;
 	
-	with 'RDF::API::Binding';
+	with 'Attean::API::Binding';
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -52,16 +52,16 @@ package RDF::API::Quad 0.001 {
 		}
 	}
 	
-	requires 'subject';		# TODO: type constrain to RDF::BlankOrIRI
-	requires 'predicate';	# TODO: type constrain to RDF::IRI
-	requires 'object';		# TODO: type constrain to RDF::API::Term
-	requires 'graph';		# TODO: type constrain to RDF::IRI
+	requires 'subject';		# TODO: type constrain to Attean::BlankOrIRI
+	requires 'predicate';	# TODO: type constrain to Attean::IRI
+	requires 'object';		# TODO: type constrain to Attean::API::Term
+	requires 'graph';		# TODO: type constrain to Attean::IRI
 }
 
-package RDF::API::Result 0.001 {
+package Attean::API::Result 0.001 {
 	use Moose::Role;
 	
-	with 'RDF::API::Binding';
+	with 'Attean::API::Binding';
 	
 	sub join {
 		my $self	= shift;
@@ -83,7 +83,7 @@ package RDF::API::Result 0.001 {
 		}
 	
 		my $row	= { (map { $_ => $self->value($_) } grep { defined($self->value($_)) } $self->variables), (map { $_ => $rowb->value($_) } grep { defined($rowb->value($_)) } $rowb->variables) };
-		my $joined	= RDF::Result->new( $row );
+		my $joined	= Attean::Result->new( $row );
 		return $joined;
 	}
 }

@@ -1,18 +1,18 @@
-# RDF::X::Parser::Turtle::Lexer
+# Attean::X::Parser::Turtle::Lexer
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-RDF::X::Parser::Turtle::Lexer - Tokenizer for parsing Turtle, TriG, and N-Triples
+Attean::X::Parser::Turtle::Lexer - Tokenizer for parsing Turtle, TriG, and N-Triples
 
 =head1 VERSION
 
-This document describes RDF::X::Parser::Turtle::Lexer version 1.007
+This document describes Attean::X::Parser::Turtle::Lexer version 1.007
 
 =head1 SYNOPSIS
 
- use RDF::X::Parser::Turtle::Lexer;
- my $l = RDF::X::Parser::Turtle::Lexer->new( file => $fh );
+ use Attean::X::Parser::Turtle::Lexer;
+ my $l = Attean::X::Parser::Turtle::Lexer->new( file => $fh );
  while (my $t = $l->get_token) {
    ...
  }
@@ -23,9 +23,9 @@ This document describes RDF::X::Parser::Turtle::Lexer version 1.007
 
 =cut
 
-package RDF::X::Parser::Turtle::Lexer;
+package Attean::X::Parser::Turtle::Lexer;
 
-use RDF::X::Parser::Turtle::Constants;
+use Attean::X::Parser::Turtle::Constants;
 use 5.010;
 use strict;
 use warnings;
@@ -126,7 +126,7 @@ sub new_token {
 	my $start_col	= $self->start_column;
 	my $line		= $self->line;
 	my $col			= $self->column;
-	return RDF::X::Parser::Turtle::Token->fast_constructor(
+	return Attean::X::Parser::Turtle::Token->fast_constructor(
 			$type,
 			$start_line,
 			$start_col,

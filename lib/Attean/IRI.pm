@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF::IRI 0.001 {
+package Attean::IRI 0.001 {
 	use Moose;
 	use IRI 0.003;
 	
@@ -9,8 +9,8 @@ package RDF::IRI 0.001 {
 	
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 
-	with 'RDF::API::IRI';
-	with 'RDF::BlankOrIRI';
+	with 'Attean::API::IRI';
+	with 'Attean::BlankOrIRI';
 
 	around BUILDARGS => sub {
 		my $orig 	= shift;

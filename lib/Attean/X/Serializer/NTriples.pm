@@ -1,15 +1,15 @@
 use v5.14;
 use warnings;
 
-package RDF::X::Serializer::NTriples 0.001 {
+package Attean::X::Serializer::NTriples 0.001 {
 	use Moose;
 	use Encode qw(encode);
-	use RDF::ListIterator;
+	use Attean::ListIterator;
 	use List::MoreUtils qw(any);
 	
-	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'RDF::API::Triple');
+	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
 	
-	with 'RDF::API::TripleSerializer';
+	with 'Attean::API::TripleSerializer';
 	has 'canonical_media_type' => (is => 'ro', isa => 'Str', init_arg => undef, default => 'application/n-triples');
 	has 'media_types' => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef, default => sub { ['application/n-triples'] });
 	has 'handled_type' => (

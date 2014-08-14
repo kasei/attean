@@ -1,11 +1,11 @@
 use v5.14;
 use warnings;
 
-package RDF::ListIterator 0.001 {
+package Attean::ListIterator 0.001 {
 	use Moose;
 	use Moose::Util::TypeConstraints;
 	
-	with 'RDF::API::Iterator';
+	with 'Attean::API::Iterator';
 	
 	has values => (is => 'ro', isa => 'ArrayRef', required => 1);
 	

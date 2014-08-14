@@ -2,31 +2,31 @@ use v5.14;
 use warnings;
 
 package RDF 0.001 {
-	use RDF::API;
+	use Attean::API;
 	
-	use RDF::Blank;
-	use RDF::Literal;
-	use RDF::Variable;
-	use RDF::IRI;
+	use Attean::Blank;
+	use Attean::Literal;
+	use Attean::Variable;
+	use Attean::IRI;
 	
-	use RDF::Triple;
-	use RDF::Quad;
+	use Attean::Triple;
+	use Attean::Quad;
 	
-	use RDF::ListIterator;
+	use Attean::ListIterator;
 	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
-	use Module::Pluggable search_path => 'RDF::X::Parser', sub_name => 'parsers', max_depth => 4;
-	use Module::Pluggable search_path => 'RDF::X::Serializer', sub_name => 'serializers', max_depth => 4;
+	use Module::Pluggable search_path => 'Attean::X::Parser', sub_name => 'parsers', max_depth => 4;
+	use Module::Pluggable search_path => 'Attean::X::Serializer', sub_name => 'serializers', max_depth => 4;
 	
 	sub get_serializer {
 		my $self	= shift;
-		return $self->get_plugin('serializers', shift, 'RDF::API::Serializer');
+		return $self->get_plugin('serializers', shift, 'Attean::API::Serializer');
 	}
 	
 	sub get_parser {
 		my $self	= shift;
-		return $self->get_plugin('parsers', shift, 'RDF::API::Parser');
+		return $self->get_plugin('parsers', shift, 'Attean::API::Parser');
 	}
 	
 	sub get_plugin {

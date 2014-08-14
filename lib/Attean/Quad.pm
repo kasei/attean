@@ -1,16 +1,16 @@
 use v5.14;
 use warnings;
 
-package RDF::Quad 0.001 {
+package Attean::Quad 0.001 {
 	use Moose;
-	use RDF::API::Binding;
+	use Attean::API::Binding;
 	
-	has 'subject'	=> (is => 'ro', isa => 'RDF::BlankOrIRI', required => 1);
-	has 'predicate'	=> (is => 'ro', isa => 'RDF::IRI', required => 1);
-	has 'object'	=> (is => 'ro', isa => 'RDF::API::Term', required => 1);
-	has 'graph'		=> (is => 'ro', isa => 'RDF::IRI', required => 1);
+	has 'subject'	=> (is => 'ro', isa => 'Attean::BlankOrIRI', required => 1);
+	has 'predicate'	=> (is => 'ro', isa => 'Attean::IRI', required => 1);
+	has 'object'	=> (is => 'ro', isa => 'Attean::API::Term', required => 1);
+	has 'graph'		=> (is => 'ro', isa => 'Attean::IRI', required => 1);
 	
-	with 'RDF::API::Quad';
+	with 'Attean::API::Quad';
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;

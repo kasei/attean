@@ -6,23 +6,23 @@ use v5.14;
 use warnings;
 no warnings 'redefine';
 
-use RDF;
+use Attean;
 
-my $constraint	= Moose::Meta::TypeConstraint::Role->new(role => 'RDF::API::Triple');
+my $constraint	= Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
 
-my $s	= RDF::Blank->new('x');
-my $p	= RDF::IRI->new('http://example.org/p');
-my $o1	= RDF::Literal->new(value => '1', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
-my $o2	= RDF::Literal->new(value => '2', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+my $s	= Attean::Blank->new('x');
+my $p	= Attean::IRI->new('http://example.org/p');
+my $o1	= Attean::Literal->new(value => '1', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+my $o2	= Attean::Literal->new(value => '2', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 
-my $t1	= RDF::Triple->new($s, $p, $o1);
-my $t2	= RDF::Triple->new($s, $p, $o2);
+my $t1	= Attean::Triple->new($s, $p, $o1);
+my $t2	= Attean::Triple->new($s, $p, $o2);
 my @triples	= ($t1, $t2);
 
 my $ser	= RDF->get_serializer('NTriples')->new();
-does_ok($ser, 'RDF::API::Serializer');
-does_ok($ser, 'RDF::API::TripleSerializer');
-isa_ok($ser, 'RDF::X::Serializer::NTriples');
+does_ok($ser, 'Attean::API::Serializer');
+does_ok($ser, 'Attean::API::TripleSerializer');
+isa_ok($ser, 'Attean::X::Serializer::NTriples');
 
 my $expected	= <<"END";
 _:x <http://example.org/p> "1"^^<http://www.w3.org/2001/XMLSchema#integer> .
@@ -30,7 +30,7 @@ _:x <http://example.org/p> "2"^^<http://www.w3.org/2001/XMLSchema#integer> .
 END
 	
 {
-	my $i	= RDF::ListIterator->new(values => [@triples], item_type => $constraint);
+	my $i	= Attean::ListIterator->new(values => [@triples], item_type => $constraint);
 	my $data1	= $ser->serialize_iter_to_bytes($i);
 	my $data2	= $ser->serialize_list_to_bytes(@triples);
 	
@@ -39,7 +39,7 @@ END
 }
 
 {
-	my $i	= RDF::ListIterator->new(values => [@triples], item_type => $constraint);
+	my $i	= Attean::ListIterator->new(values => [@triples], item_type => $constraint);
 	my $data	= '';
 	open(my $fh, '>', \$data);
 	$ser->serialize_iter_to_io($fh, $i);
@@ -49,7 +49,7 @@ END
 }
 
 {
-	my $i	= RDF::ListIterator->new(values => [@triples], item_type => $constraint);
+	my $i	= Attean::ListIterator->new(values => [@triples], item_type => $constraint);
 	my $data	= '';
 	open(my $fh, '>', \$data);
 	$ser->serialize_list_to_io($fh, @triples);

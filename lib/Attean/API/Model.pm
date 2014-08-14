@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF::API::Model 0.001 {
+package Attean::API::Model 0.001 {
 	use Moose::Role;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
@@ -10,7 +10,7 @@ package RDF::API::Model 0.001 {
 	
 	sub get_bindings {
 		my $self	= shift;
-		my @vars	= uniq map { $_->value } grep { blessed($_) and $_->isa('RDF::Variable') } @_;
+		my @vars	= uniq map { $_->value } grep { blessed($_) and $_->isa('Attean::Variable') } @_;
 		my $iter	= $self->get_quads(@_);
 		# TODO
 	}
@@ -37,7 +37,7 @@ package RDF::API::Model 0.001 {
 	}
 }
 
-package RDF::API::MutableModel 0.001 {
+package Attean::API::MutableModel 0.001 {
 	use Moose::Role;
 	
 	requires 'add_quad';
@@ -47,16 +47,16 @@ package RDF::API::MutableModel 0.001 {
 	requires 'clear_graph';
 }
 
-package RDF::API::CacheableModel 0.001 {
+package Attean::API::CacheableModel 0.001 {
 	use Moose::Role;
 	
 	requires 'last_modified_date_for_quads';
 }
 
-package RDF::API::BulkUpdatableModel 0.001 {
+package Attean::API::BulkUpdatableModel 0.001 {
 	use Moose::Role;
 	
-	with 'RDF::API::MutableModel';
+	with 'Attean::API::MutableModel';
 	
 	requires 'begin_bulk_updates';
 	requires 'end_bulk_updates';

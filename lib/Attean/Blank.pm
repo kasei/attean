@@ -1,14 +1,14 @@
 use v5.14;
 use warnings;
 
-package RDF::Blank 0.001 {
+package Attean::Blank 0.001 {
 	use Moose;
 	use Data::UUID;
 	
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 	
-	with 'RDF::API::Term';
-	with 'RDF::BlankOrIRI';
+	with 'Attean::API::Term';
+	with 'Attean::BlankOrIRI';
 
 	around BUILDARGS => sub {
 		my $orig 	= shift;

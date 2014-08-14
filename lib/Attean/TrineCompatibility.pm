@@ -1,11 +1,11 @@
 use v5.14;
 use warnings;
 
-package RDF::TrineCompatibility::Literal 0.001 {
+package Attean::TrineCompatibility::Literal 0.001 {
 	use Moose::Role;
 	use MooseX::Aliases;
 	
-	with 'RDF::API::Literal';
+	with 'Attean::API::Literal';
 
 	# This seems to be required to allow the aliasing below
 	sub value {}
@@ -356,11 +356,11 @@ Returns the numeric value of the literal (even if the literal isn't a known nume
 	}
 }
 
-package RDF::TrineCompatibility 0.001 {
+package Attean::TrineCompatibility 0.001 {
 	use Moose::Util qw(apply_all_roles);
 	sub import {
 		warn "Making literals Trine-compatible...";
-		apply_all_roles('RDF::Literal', 'RDF::TrineCompatibility::Literal');
+		apply_all_roles('Attean::Literal', 'Attean::TrineCompatibility::Literal');
 	}
 }
 

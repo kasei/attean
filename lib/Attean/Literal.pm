@@ -1,14 +1,14 @@
 use v5.14;
 use warnings;
 
-package RDF::Literal 0.001 {
-	use RDF::API::Term;
+package Attean::Literal 0.001 {
+	use Attean::API::Term;
 	use Moose;
 	use IRI;
 	
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 
-	with 'RDF::API::Literal';
+	with 'Attean::API::Literal';
 
 	around BUILDARGS => sub {
 		my $orig 	= shift;

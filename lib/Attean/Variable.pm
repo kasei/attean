@@ -1,13 +1,13 @@
 use v5.14;
 use warnings;
 
-package RDF::Variable 0.001 {
+package Attean::Variable 0.001 {
 	use Moose;
 	
 	has 'value' => (is => 'ro', isa => 'Str', required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 
-	with 'RDF::TermOrVariable';
+	with 'Attean::TermOrVariable';
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;

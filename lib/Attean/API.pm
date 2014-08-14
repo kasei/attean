@@ -1,27 +1,27 @@
 use v5.14;
 use warnings;
 
-package RDF::BlankOrIRI 0.001 {
+package Attean::BlankOrIRI 0.001 {
 	use Moose::Role;
 }
 
-package RDF::TermOrVariable 0.001 {
+package Attean::TermOrVariable 0.001 {
 	use Moose::Role;
 }
 
-package RDF::API 0.001 {
+package Attean::API 0.001 {
 	use Moose::Util::TypeConstraints;
 
-	use RDF::API::Term;
-	use RDF::API::Store;
-	use RDF::API::Model;
-	use RDF::API::Iterator;
-	use RDF::API::Parser;
-	use RDF::API::Serializer;
+	use Attean::API::Term;
+	use Attean::API::Store;
+	use Attean::API::Model;
+	use Attean::API::Iterator;
+	use Attean::API::Parser;
+	use Attean::API::Serializer;
 
-	use RDF::Variable;
-	use RDF::Blank;
-	use RDF::IRI;
+	use Attean::Variable;
+	use Attean::Blank;
+	use Attean::IRI;
 }
 
 1;

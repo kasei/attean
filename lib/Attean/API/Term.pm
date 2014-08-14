@@ -1,32 +1,32 @@
 use v5.14;
 use warnings;
 
-package RDF::API::Term 0.001 {
+package Attean::API::Term 0.001 {
 	use Moose::Role;
 	
-	with 'RDF::TermOrVariable';
+	with 'Attean::TermOrVariable';
 
 	has 'value' => (is => 'ro', isa => 'Str', required => 1);
 	requires 'ntriples_string';
 }
 
-package RDF::API::Literal 0.001 {
+package Attean::API::Literal 0.001 {
 	use Moose::Role;
 	use IRI;
 	use Moose::Util::TypeConstraints;
 	
-	with 'RDF::API::Term';
+	with 'Attean::API::Term';
 	
 	has 'language'			=> (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	has 'datatype'			=> (is => 'ro', isa => 'IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
 }
 
-package RDF::API::IRI 0.001 {
+package Attean::API::IRI 0.001 {
 	use Moose::Role;
 	use IRI;
 	use Moose::Util::TypeConstraints;
 	
-	with 'RDF::API::Term';
+	with 'Attean::API::Term';
 	
 	sub _ntriples_string {
 		my $self	= shift;

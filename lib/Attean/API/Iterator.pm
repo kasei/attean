@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package RDF::API::Iterator 0.001 {
+package Attean::API::Iterator 0.001 {
 	use Moose::Role;
 	use Moose::Util::TypeConstraints;
 	

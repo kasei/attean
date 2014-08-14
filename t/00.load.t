@@ -1,7 +1,7 @@
 use Test::More tests => 1;
 
 BEGIN {
-use_ok( 'RDF' );
+use_ok( 'Attean' );
 }
 
-note( "Testing RDF $RDF::VERSION" );
+note( "Testing RDF $Attean::VERSION" );

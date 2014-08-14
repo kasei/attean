@@ -7,11 +7,11 @@ use FindBin qw($Bin);
 use File::Glob qw(bsd_glob);
 use File::Spec;
 
-use RDF;
+use Attean;
 
 sub iri {
 	my $value	= shift;
-	return RDF::IRI->new(value => $value);
+	return Attean::IRI->new(value => $value);
 }
 
 sub literal {
@@ -21,15 +21,15 @@ sub literal {
 	my %args	= (value => $value);
 	$args{language}	= $lang if (defined($lang));
 	$args{datatype}	= $dt if (defined($dt));
-	return RDF::IRI->new(%args);
+	return Attean::IRI->new(%args);
 }
 
 {
 	my $parser	= RDF->get_parser('Turtle')->new();
-	isa_ok($parser, 'RDF::X::Parser::Turtle');
+	isa_ok($parser, 'Attean::X::Parser::Turtle');
 	my $type	= $parser->handled_type;
 	isa_ok($type, 'Moose::Meta::TypeConstraint::Role');
-	is($type->role, 'RDF::API::Triple');
+	is($type->role, 'Attean::API::Triple');
 }
 
 {
