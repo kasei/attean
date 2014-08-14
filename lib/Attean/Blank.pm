@@ -5,6 +5,7 @@ package Attean::Blank 0.001 {
 	use Moose;
 	use Data::UUID;
 	
+	has 'value' => (is => 'ro', isa => 'Str', required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 	
 	with 'Attean::API::Term';

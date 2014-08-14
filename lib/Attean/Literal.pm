@@ -6,6 +6,9 @@ package Attean::Literal 0.001 {
 	use Moose;
 	use IRI;
 	
+	has 'value' => (is => 'ro', isa => 'Str', required => 1);
+	has 'language'			=> (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
+	has 'datatype'			=> (is => 'ro', isa => 'IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 
 	with 'Attean::API::Literal';

@@ -39,10 +39,12 @@ package AtteanX::Parser::Turtle 0.001 {
 	use Attean::API::Parser;
 	
 	use Moose;
-	with 'Attean::API::Parser::AbbreviatingParser';
-	with 'Attean::API::PushParser';
-	
 	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
+	
+	sub canonical_media_type { return "text/turtle" }
+	sub media_types {
+		return [qw(application/x-turtle application/turtle text/turtle)];
+	}
 	has 'handled_type' => (
 		is => 'ro',
 		isa => 'Moose::Meta::TypeConstraint',
@@ -65,6 +67,9 @@ package AtteanX::Parser::Turtle 0.001 {
 			stack_pop	=> 'pop',
 		}
 	);
+
+	with 'Attean::API::Parser::AbbreviatingParser';
+	with 'Attean::API::PushParser';
 	
 	# TODO: Remove all references to RDF::Trine code (e.g. RDF::Trine::Error)
 
