@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package Attean::BlankOrIRI 0.001 {
+package Attean::API::BlankOrIRI 0.001 {
 	use Moose::Role;
 }
 
