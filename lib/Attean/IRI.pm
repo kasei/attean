@@ -10,7 +10,7 @@ package Attean::IRI 0.001 {
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 
 	with 'Attean::API::IRI';
-	with 'Attean::BlankOrIRI';
+	with 'Attean::API::BlankOrIRI';
 
 	around BUILDARGS => sub {
 		my $orig 	= shift;

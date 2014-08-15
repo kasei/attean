@@ -68,7 +68,7 @@ use Attean;
 	does_ok($t, 'Attean::API::Triple');
 	isa_ok($t, 'Attean::Triple');
 	
-	does_ok($t->subject, 'Attean::BlankOrIRI');
+	does_ok($t->subject, 'Attean::API::BlankOrIRI');
 	isa_ok($t->predicate, 'Attean::IRI');
 	does_ok($t->object, 'Attean::API::Term');
 	
