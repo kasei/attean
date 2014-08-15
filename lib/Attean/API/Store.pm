@@ -71,7 +71,7 @@ package Attean::API::CacheableQuadStore 0.001 {
 	use Moose::Role;
 	with 'Attean::API::QuadStore';
 	
-	requires 'last_modified_date_for_quads';
+	requires 'etag_value_for_quads';
 }
 
 1;
