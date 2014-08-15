@@ -12,6 +12,7 @@ package Attean 0.001 {
 	use Attean::Triple;
 	use Attean::Quad;
 	
+	use Attean::CodeIterator;
 	use Attean::ListIterator;
 	
 	use List::MoreUtils qw(any all);

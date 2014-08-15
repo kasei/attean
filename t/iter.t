@@ -49,6 +49,57 @@ use Attean;
 	};
 }
 
+{
+	note('CodeIterator[Int]->map<Int>');
+	my $value	= 0;
+	my $code	= sub { return ++$value };
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => Moose::Meta::TypeConstraint->new(name => 'Int') );
+	is($iter->next, 1, 'expected value');
+	is($iter->next, 2, 'expected value');
+	is($iter->next, 3, 'expected value');
+	my $double	= $iter->map(sub { $_ * 2 });
+	does_ok($double, 'Attean::API::Iterator');
+	isa_ok($double->item_type, 'Moose::Meta::TypeConstraint');
+	is($double->item_type->name, 'Int', 'expected item_type');
+	is($double->next, 8, 'expected value');
+	is($double->next, 10, 'expected value');
+}
 
+{
+	note('CodeIterator[Int]->map<Literal>');
+	my $value	= 0;
+	my $code	= sub { return ++$value };
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => Moose::Meta::TypeConstraint->new(name => 'Int') );
+	my $ints	= $iter->map(
+		sub { Attean::Literal->new(value => $_, datatype => 'http://www.w3.org/2001/XMLSchema#integer') },
+		Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Literal')
+	);
+	does_ok($ints, 'Attean::API::Iterator');
+	isa_ok($ints->item_type, 'Moose::Meta::TypeConstraint::Role');
+	is($ints->item_type->role, 'Attean::API::Literal', 'expected item_type');
+	
+	my $l1	= $ints->next;
+	does_ok($l1, 'Attean::API::Literal');
+	is($l1->value, '1', 'expected value');
+	is($l1->datatype->value, 'http://www.w3.org/2001/XMLSchema#integer', 'expected literal datatype');
+	
+	my $l2	= $ints->next;
+	does_ok($l2, 'Attean::API::Literal');
+	is($l2->value, '2', 'expected value');
+}
+
+{
+	note('ListIterator[Int]->grep');
+	my $value	= 0;
+	my $code	= sub { return ++$value };
+	my $iter	= Attean::ListIterator->new(values => [1, 2, 3, 4, 5], item_type => Moose::Meta::TypeConstraint->new(name => 'Int'));
+	my $evens	= $iter->grep(sub { $_ % 2 == 0 });
+	does_ok($evens, 'Attean::API::Iterator');
+	isa_ok($evens->item_type, 'Moose::Meta::TypeConstraint');
+	is($evens->item_type->name, 'Int', 'expected item_type');
+	is($evens->next, 2, 'expected value');
+	is($evens->next, 4, 'expected value');
+	is($evens->next, undef, 'expected eof');
+}
 
 done_testing();
