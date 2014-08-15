@@ -55,7 +55,7 @@ package Attean::API::Literal 0.001 {
 	with 'Attean::API::Term';
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
-	requires 'datatype'; # => (is => 'ro', isa => 'IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
+	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
 	sub _ntriples_string {
 		my $self	= shift;
 		return sprintf('"%s"', $self->__ntriples_string);

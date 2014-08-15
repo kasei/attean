@@ -33,7 +33,7 @@ use Attean;
 	does_ok($a, 'Attean::TermOrVariable');
 	is($a->value, 'foo', 'value');
 	is($a->language, 'en-US', 'language');
-	isa_ok($a->datatype, 'IRI', 'datatype IRI');
+	does_ok($a->datatype, 'Attean::API::IRI', 'datatype IRI');
 	is($a->datatype->as_string, 'http://www.w3.org/2001/XMLSchema#string', 'language literal datatype is xsd:string');
 	is($a->ntriples_string, '"foo"@en-US', 'ntriples_string');
 }
@@ -46,7 +46,7 @@ use Attean;
 	does_ok($a, 'Attean::TermOrVariable');
 	is($a->value, '123', 'value');
 	is($a->language, undef, 'no language method on typed literals');
-	isa_ok($a->datatype, 'IRI', 'datatype IRI');
+	does_ok($a->datatype, 'Attean::API::IRI', 'datatype IRI');
 	is($a->datatype->as_string, 'http://www.w3.org/2001/XMLSchema#integer', 'language literal datatype is xsd:integer');
 	is($a->ntriples_string, '"123"^^<http://www.w3.org/2001/XMLSchema#integer>', 'ntriples_string');
 }
