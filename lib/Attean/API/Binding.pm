@@ -6,12 +6,18 @@ package Attean::API::Binding 0.001 {
 	
 	requires 'value';
 	requires 'variables';
+	sub values {
+		my $self	= shift;
+		return map { $self->value($_) } $self->variables;
+	}
 	
 	sub tuples_string {
 		my $self	= shift;
-		my @terms	= map { $self->value($_) } $self->variables;
-		my @strs	= map { $_->ntriples_string } @terms;
+		my @strs	= map { $_->ntriples_string } $self->values;
 		return join(' ', @strs);
+	}
+	sub as_string {
+		shift->tuples_string();
 	}
 }
 

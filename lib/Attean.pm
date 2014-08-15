@@ -19,6 +19,12 @@ package Attean 0.001 {
 	use Module::Load::Conditional qw(can_load);
 	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;
 	use Module::Pluggable search_path => 'AtteanX::Serializer', sub_name => 'serializers', max_depth => 3;
+	use Module::Pluggable search_path => 'AtteanX::Store', sub_name => 'stores', max_depth => 3;
+	
+	sub get_store {
+		my $self	= shift;
+		return $self->get_plugin('stores', shift);
+	}
 	
 	sub get_serializer {
 		my $self	= shift;

@@ -8,6 +8,10 @@ package Attean::API::Term 0.001 {
 	
 	requires 'value'; # => (is => 'ro', isa => 'Str', required => 1);
 	requires 'ntriples_string';
+	sub as_string {
+		shift->ntriples_string();
+	}
+	
 	sub __ntriples_string {
 		my $self	= shift;
 		my $value	= $self->value;
