@@ -102,4 +102,18 @@ use Attean;
 	is($evens->next, undef, 'expected eof');
 }
 
+{
+	note('ListIterator[Int] reset');
+	my $value	= 0;
+	my $code	= sub { return ++$value };
+	my $iter	= Attean::ListIterator->new(values => [1, 2], item_type => Moose::Meta::TypeConstraint->new(name => 'Int'));
+	does_ok($iter, 'Attean::API::RepeatableIterator');
+	is($iter->next, 1, 'expected value');
+	is($iter->next, 2, 'expected value');
+	$iter->reset;
+	is($iter->next, 1, 'expected value after reset');
+	is($iter->next, 2, 'expected value');
+	is($iter->next, undef, 'expected eof');
+}
+
 done_testing();

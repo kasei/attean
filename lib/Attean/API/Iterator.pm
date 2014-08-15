@@ -46,4 +46,12 @@ package Attean::API::Iterator 0.001 {
 
 }
 
+package Attean::API::RepeatableIterator 0.001 {
+	use Moose::Role;
+	use Moose::Util::TypeConstraints;
+	
+	requires 'reset';
+	with 'Attean::API::Iterator';
+}
+
 1;
