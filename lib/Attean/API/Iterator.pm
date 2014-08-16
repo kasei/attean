@@ -13,7 +13,7 @@ package Attean::API::Iterator 0.001 {
 		my $block	= shift;
 		my $type	= shift || $self->item_type;
 		
-		Attean::CodeIterator->new(
+		return Attean::CodeIterator->new(
 			item_type => $type,
 			generator => sub {
 				my $item	= $self->next();

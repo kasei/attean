@@ -13,6 +13,7 @@ package Attean::API::Model 0.001 {
 		my @vars	= uniq map { $_->value } grep { blessed($_) and $_->isa('Attean::Variable') } @_;
 		my $iter	= $self->get_quads(@_);
 		# TODO
+		die 'unimplemented';
 	}
 	
 	sub count_quads {
