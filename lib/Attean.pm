@@ -12,6 +12,8 @@ package Attean 0.001 {
 	use Attean::Triple;
 	use Attean::Quad;
 	
+	use Attean::QuadModel;
+	
 	use Attean::CodeIterator;
 	use Attean::ListIterator;
 	
