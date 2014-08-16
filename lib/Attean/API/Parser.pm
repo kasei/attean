@@ -24,8 +24,8 @@ package Attean::API::PushParser 0.001 {
 	use Moose::Role;
 	with 'Attean::API::Parser';
 
-	requires 'parse_cb_from_io';		# parse_cb_from_io($io, \&handler)
-	requires 'parse_cb_from_bytes';		# parse_cb_from_bytes($data, \&handler)
+	requires 'parse_cb_from_io';		# parse_cb_from_io($io)
+	requires 'parse_cb_from_bytes';		# parse_cb_from_bytes($data)
 	# TODO: add default implementations for pullparser methods
 	# TODO: add default implementations for atonceparser methods
 }
@@ -37,8 +37,39 @@ package Attean::API::PullParser 0.001 {
 	requires 'parse_iter_from_io';		# $iter = parse_iter_from_io($io)
 	requires 'parse_iter_from_bytes';	# $iter = parse_iter_from_bytes($data)
 	
-	# TODO: add default implementations for pushparser methods
-	# TODO: add default implementations for atonceparser methods
+	sub parse_cb_from_io {
+		my $self	= shift;
+		my $io		= shift;
+		my $handler	= $self->handler;
+		my $iter	= $self->parse_iter_from_io($io);
+		while (my $item = $iter->next) { $handler->( $item ) }
+	}
+	
+	sub parse_cb_from_bytes {
+		my $self	= shift;
+		my $data	= shift;
+		my $handler	= $self->handler;
+		my $iter	= $self->parse_iter_from_bytes($data);
+		while (defined(my $item = $iter->next)) { $handler->( $item ) }
+	}
+	
+	sub parse_list_from_io {
+		my $self	= shift;
+		my $io		= shift;
+		my $iter	= $self->parse_iter_from_io($io);
+		my @list;
+		while (defined(my $item = $iter->next)) { push(@list, $item); }
+		return @list;
+	}
+	
+	sub parse_list_from_bytes {
+		my $self	= shift;
+		my $data	= shift;
+		my $iter	= $self->parse_iter_from_bytes($data);
+		my @list;
+		while (defined(my $item = $iter->next)) { push(@list, $item); }
+		return @list;
+	}
 }
 
 package Attean::API::AtOnceParser 0.001 {
