@@ -15,6 +15,7 @@ package Attean::API::TripleStore 0.001 {
 		}
 		return $count;
 	}
+	
 	sub size {
 		my $self	= shift;
 		return $self->count_triples();
@@ -77,6 +78,18 @@ package Attean::API::MutableQuadStore 0.001 {
 	requires 'create_graph';
 	requires 'drop_graph';
 	requires 'clear_graph';
+	sub add_iter {
+		my $self	= shift;
+		my $iter	= shift;
+		my $type	= $iter->item_type;
+		use Data::Dumper;
+		die "Iterator type isn't quads: " . Dumper($type) unless $type->equals(
+			Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad')
+		);
+		while (my $q = $iter->next) {
+			$self->add_quad($q);
+		}
+	}
 }
 
 package Attean::API::CacheableQuadStore 0.001 {
