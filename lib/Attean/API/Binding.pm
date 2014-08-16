@@ -40,12 +40,18 @@ package Attean::API::Triple 0.001 {
 	requires 'subject';		# TODO: type constrain to Attean::BlankOrIRI
 	requires 'predicate';	# TODO: type constrain to Attean::IRI
 	requires 'object';		# TODO: type constrain to Attean::API::Term
+	
+	sub as_quad {
+		my $self	= shift;
+		my $graph	= shift;
+		return Attean::Quad->new($self->values, $graph);
+	}
 }
 
 package Attean::API::Quad 0.001 {
 	use Moose::Role;
 	
-	with 'Attean::API::Binding';
+	with 'Attean::API::Triple';
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
