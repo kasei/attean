@@ -54,7 +54,7 @@ has predicate => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, 
 has object => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
 has graph => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
 has graph_nodes	=> (is => 'rw', isa => 'HashRef[Attean::API::IRI]', init_arg => undef, default => sub { +{} });
-has hash		=> (is => 'ro', isa => 'Digest::SHA', default => sub { Digest::SHA->new });
+has hash		=> (is => 'rw', isa => 'Digest::SHA', default => sub { Digest::SHA->new });
 
 sub size {
 	shift->_size()
@@ -247,6 +247,28 @@ sub remove_quads {
 	my $iter	= $self->get_quads( $subj, $pred, $obj, $graph );
 	while (my $st = $iter->next) {
 		$self->remove_quad( $st );
+	}
+}
+
+sub create_graph {
+	# no-op on a quad-store
+}
+
+sub drop_graph {
+	my $self	= shift;
+	return $self->clear_graph(@_);
+}
+
+sub clear_graph {
+	my $self	= shift;
+	my $g		= shift;
+	my $string	= $g->as_string;
+	my $set		= $self->graph()->{ $string };
+	return unless (blessed($set));
+	
+	my @quads	= @{ $self->statements}[ $set->elements ];
+	foreach my $q (@quads) {
+		$self->remove_quad($q);
 	}
 }
 

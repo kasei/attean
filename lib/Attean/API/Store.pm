@@ -74,7 +74,9 @@ package Attean::API::MutableQuadStore 0.001 {
 	
 	requires 'add_quad';
 	requires 'remove_quad';
-	# TODO: create_graph, drop_graph, clear_graph
+	requires 'create_graph';
+	requires 'drop_graph';
+	requires 'clear_graph';
 }
 
 package Attean::API::CacheableQuadStore 0.001 {
