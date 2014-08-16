@@ -46,7 +46,7 @@ Returns a new memory-backed storage object.
 
 =cut
 
-has size => (is => 'rw', isa => 'Int', init_arg => undef, default => 0);
+has _size => (is => 'rw', isa => 'Int', init_arg => undef, default => 0);
 has statements => (is => 'rw', isa => 'ArrayRef[Attean::API::Quad]', init_arg => undef, default => sub { [] });
 
 has subject => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
@@ -55,6 +55,10 @@ has object => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, def
 has graph => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
 has graph_nodes	=> (is => 'rw', isa => 'HashRef[Attean::API::IRI]', init_arg => undef, default => sub { +{} });
 has hash		=> (is => 'ro', isa => 'Digest::SHA', default => sub { Digest::SHA->new });
+
+sub size {
+	shift->_size()
+}
 
 =item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
 
@@ -169,7 +173,7 @@ sub add_quad {
 	
 	my $count	= $self->count_quads( $st->values );
 	if ($count == 0) {
-		$self->size($self->size + 1);
+		$self->_size($self->_size + 1);
 		my $id	= scalar(@{ $self->statements });
 		$self->hash->add('+' . encode_utf8($st->as_string));
 		push( @{ $self->statements }, $st );
@@ -207,7 +211,7 @@ sub remove_quad {
 	my @nodes	= $st->values;
 	my $count	= $self->count_quads( @nodes[ 0..3 ] );
 	if ($count > 0) {
-		$self->size( $self->size - 1 );
+		$self->_size( $self->_size - 1 );
 		my $id	= $self->_statement_id( $st->values );
 		$self->hash->add('-' . encode_utf8($st->as_string));
 		$self->statements->[ $id ]	= undef;
@@ -269,7 +273,7 @@ sub count_quads {
 	}
 	
 	if ($bound == 0) {
-		return $self->size;
+		return $self->_size;
 	} elsif ($bound == 1) {
 		my ($pos)	= keys %bound;
 		my $name	= $pos_names[ $pos ];

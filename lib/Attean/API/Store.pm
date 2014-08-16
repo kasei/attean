@@ -15,6 +15,10 @@ package Attean::API::TripleStore 0.001 {
 		}
 		return $count;
 	}
+	sub size {
+		my $self	= shift;
+		return $self->count_triples();
+	}
 }
 
 package Attean::API::MutableTripleStore 0.001 {
@@ -57,6 +61,11 @@ package Attean::API::QuadStore 0.001 {
 		}
 		return keys %graphs;
 	}
+	
+	sub size {
+		my $self	= shift;
+		return $self->count_quads();
+	}
 }
 
 package Attean::API::MutableQuadStore 0.001 {
@@ -65,6 +74,7 @@ package Attean::API::MutableQuadStore 0.001 {
 	
 	requires 'add_quad';
 	requires 'remove_quad';
+	# TODO: create_graph, drop_graph, clear_graph
 }
 
 package Attean::API::CacheableQuadStore 0.001 {

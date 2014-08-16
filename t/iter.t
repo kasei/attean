@@ -31,14 +31,11 @@ use Attean;
 }
 
 {
-	note('ListIterator[Quad != Triple]');
-	my $s	= Attean::Blank->new('x');
+	note('ListIterator[Term != Triple]');
 	my $p	= Attean::IRI->new('http://example.org/p');
-	my $o	= Attean::Literal->new(value => '1', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 	my $g	= Attean::IRI->new('http://example.org/g');
-	my $q	= Attean::Quad->new($s, $p, $o, $g);
 	dies_ok {
-		my $i	= Attean::ListIterator->new(values => [$q], item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple'));
+		my $i	= Attean::ListIterator->new(values => [$p, $g], item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple'));
 	};
 }
 
