@@ -1,18 +1,18 @@
-# AtteanX::Parser::NTriples
+# AtteanX::Parser::NQuads
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-AtteanX::Parser::NTriples - N-Triples Parser
+AtteanX::Parser::NQuads - N-Quads Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTriples version 1.009
+This document describes AtteanX::Parser::NQuads version 1.009
 
 =head1 SYNOPSIS
 
  use Attean;
- my $parser = Attean->get_parser('NTriples')->new();
+ my $parser = Attean->get_parser('NQuads')->new();
  $parser->parse_cb_from_io( $fh );
 
 =head1 DESCRIPTION
@@ -28,7 +28,7 @@ This document describes AtteanX::Parser::NTriples version 1.009
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::NTriples 0.001 {
+package AtteanX::Parser::NQuads 0.001 {
 	use utf8;
 	
 	use Attean;
@@ -51,12 +51,13 @@ package AtteanX::Parser::NTriples 0.001 {
 		my $lineno	= shift;
 		if (scalar(@$nodes) == 3) {
 			return Attean::Triple->new(@$nodes);
+		} elsif (scalar(@$nodes) == 4) {
+			return Attean::Quad->new(@$nodes);
 		} else {
-			die qq[Not valid N-Triples data at line $lineno];
+			die qq[Not valid N-Quads data at line $lineno];
 		}
 	}
 }
-
 
 1;
 

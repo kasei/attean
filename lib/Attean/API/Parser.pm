@@ -93,24 +93,40 @@ package Attean::API::TripleParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Triple
 	use Moose::Role;
 	with 'Attean::API::Parser';
+	sub handled_type {
+		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
+		return $ITEM_TYPE;
+	}
 }
 
 package Attean::API::QuadParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Quad
 	use Moose::Role;
 	with 'Attean::API::Parser';
+	sub handled_type {
+		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad');
+		return $ITEM_TYPE;
+	}
 }
 
 package Attean::API::MixedStatementParser 0.001 {
 	# Parser returns objects that conform to either Attean::API::Triple or Attean::API::Quad
 	use Moose::Role;
 	with 'Attean::API::Parser';
+	sub handled_type {
+		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::TripleOrQuad');
+		return $ITEM_TYPE;
+	}
 }
 
 package Attean::API::ResultParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Result
 	use Moose::Role;
 	with 'Attean::API::Parser';
+	sub handled_type {
+		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Result');
+		return $ITEM_TYPE;
+	}
 }
 
 1;

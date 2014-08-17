@@ -1,6 +1,10 @@
 use v5.14;
 use warnings;
 
+package Attean::API::TripleOrQuad {
+	use Moose::Role;
+}
+
 package Attean::API::Binding 0.001 {
 	use Moose::Role;
 	
@@ -25,6 +29,7 @@ package Attean::API::Triple 0.001 {
 	use Moose::Role;
 	
 	with 'Attean::API::Binding';
+	with 'Attean::API::TripleOrQuad';
 	
 	sub variables { return qw(subject predicate object) }
 	sub value {
@@ -52,6 +57,7 @@ package Attean::API::Quad 0.001 {
 	use Moose::Role;
 	
 	with 'Attean::API::Triple';
+	with 'Attean::API::TripleOrQuad';
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -67,7 +73,7 @@ package Attean::API::Quad 0.001 {
 	requires 'subject';		# TODO: type constrain to Attean::BlankOrIRI
 	requires 'predicate';	# TODO: type constrain to Attean::IRI
 	requires 'object';		# TODO: type constrain to Attean::API::Term
-	requires 'graph';		# TODO: type constrain to Attean::IRI
+	requires 'graph';		# TODO: type constrain to Attean::BlankOrIRI
 }
 
 package Attean::API::Result 0.001 {
@@ -99,6 +105,5 @@ package Attean::API::Result 0.001 {
 		return $joined;
 	}
 }
-
 
 1;

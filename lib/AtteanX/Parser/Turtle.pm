@@ -39,18 +39,10 @@ package AtteanX::Parser::Turtle 0.001 {
 	use Attean::API::Parser;
 	
 	use Moose;
-	my $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
-	
 	sub canonical_media_type { return "text/turtle" }
 	sub media_types {
 		return [qw(application/x-turtle application/turtle text/turtle)];
 	}
-	has 'handled_type' => (
-		is => 'ro',
-		isa => 'Moose::Meta::TypeConstraint',
-		init_arg => undef,
-		default => sub { $ITEM_TYPE },
-	);
 
 	has 'canonicalize'	=> (is => 'rw', isa => 'Bool', default => 0);
 	has 'map' => (is => 'ro', isa => 'HashRef[Str]', default => sub { +{} });
@@ -68,26 +60,11 @@ package AtteanX::Parser::Turtle 0.001 {
 		}
 	);
 
+	with 'Attean::API::TripleParser';
 	with 'Attean::API::Parser::AbbreviatingParser';
 	with 'Attean::API::PushParser';
 	
 	# TODO: Remove all references to RDF::Trine code (e.g. RDF::Trine::Error)
-
-	our $VERSION;
-	BEGIN {
-		$VERSION				= '1.007';
-	# 	foreach my $ext (qw(ttl)) {
-	# 		$RDF::Trine::Parser::file_extensions{ $ext }	= __PACKAGE__;
-	# 	}
-	# 	$RDF::Trine::Parser::parser_names{ 'turtle' }	= __PACKAGE__;
-	# 	my $class										= __PACKAGE__;
-	# 	$RDF::Trine::Parser::encodings{ $class }		= 'utf8';
-	# 	$RDF::Trine::Parser::format_uris{ 'http://www.w3.org/ns/formats/Turtle' }	= __PACKAGE__;
-	# 	$RDF::Trine::Parser::canonical_media_types{ $class }	= 'text/turtle';
-	# 	foreach my $type (qw(application/x-turtle application/turtle text/turtle)) {
-	# 		$RDF::Trine::Parser::media_types{ $type }	= __PACKAGE__;
-	# 	}
-	}
 
 	my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 	my $XSD	= 'http://www.w3.org/2001/XMLSchema#';
