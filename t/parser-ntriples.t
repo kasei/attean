@@ -52,10 +52,7 @@ END
 END
 	my $iter	= $parser->parse_iter_from_bytes($ntriples);
 	my $graph	= Attean::IRI->new('http://example.org/graph');
-	my $quads	= $iter->map(
-		sub { $_->as_quad($graph) },
-		Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad')
-	);
+	my $quads	= $iter->as_quads($graph);
 	$store->add_iter($quads);
 	
 	is( $store->size, 2, 'expected model size after ntriples parse' );

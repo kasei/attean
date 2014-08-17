@@ -42,7 +42,7 @@ package AtteanX::Parser::NTriples 0.001 {
 		return [qw(application/n-quads text/nquads)];
 	}
 	
-	with 'Attean::API::MixedStatementParser';
+	with 'Attean::API::TripleParser';
 	with 'Attean::API::PullParser';
 
 	sub _binding {
