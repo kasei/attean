@@ -1,5 +1,6 @@
 use v5.14;
 use warnings;
+use Moose::Util::TypeConstraints;
 
 package Attean::API::TripleOrQuad {
 	use Moose::Role;
@@ -105,5 +106,7 @@ package Attean::API::Result 0.001 {
 		return $joined;
 	}
 }
+
+union 'Attean::API::SPARQLResult', [qw( Bool Attean::API::Result )];
 
 1;
