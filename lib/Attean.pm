@@ -11,6 +11,7 @@ package Attean 0.001 {
 	
 	use Attean::Triple;
 	use Attean::Quad;
+	use Attean::Result;
 	
 	use Attean::QuadModel;
 	

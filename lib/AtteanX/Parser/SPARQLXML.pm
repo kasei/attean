@@ -1,0 +1,85 @@
+# AtteanX::Parser::SPARQLXML
+# -----------------------------------------------------------------------------
+
+=head1 NAME
+
+AtteanX::Parser::SPARQLXML - SPARQL XML Parser
+
+=head1 VERSION
+
+This document describes AtteanX::Parser::SPARQLXML version 1.009
+
+=head1 SYNOPSIS
+
+ use Attean;
+ my $parser = Attean->get_parser('SPARQLXML')->new();
+ $parser->parse_cb_from_io( $fh );
+
+=head1 DESCRIPTION
+
+...
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
+use v5.14;
+use warnings;
+
+package AtteanX::Parser::SPARQLXML 0.001 {
+	use XML::SAX::ParserFactory;
+	use Attean;
+	use Moose;
+	use AtteanX::Parser::SPARQLXML::SAXHandler;
+	
+	sub canonical_media_type { return "application/sparql-results+xml" }
+	sub media_types {
+		return [qw(application/sparql-results+xml)];
+	}
+	
+	with 'Attean::API::ResultParser';
+	with 'Attean::API::PushParser';
+
+	sub parse_cb_from_io {
+		my $self	= shift;
+		my $fh		= shift;
+		my $handler	= AtteanX::Parser::SPARQLXML::SAXHandler->new();
+		my $p		= XML::SAX::ParserFactory->parser(Handler => $self->handler);
+		$p->parse_file( $fh );
+	}
+
+	sub parse_cb_from_bytes {
+		my $self	= shift;
+		my $data	= shift;
+	
+		my $handler	= AtteanX::Parser::SPARQLXML::SAXHandler->new($self->handler);
+		my $p		= XML::SAX::ParserFactory->parser(Handler => $handler);
+		$p->parse_string( $data );
+	}
+}
+
+
+1;
+
+__END__
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/perlrdf/issues>.
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2006-2012 Gregory Todd Williams. This
+program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
