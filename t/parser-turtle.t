@@ -55,12 +55,12 @@ foreach my $file (@good) {
 	my $data	= do { open( my $fh, '<', $file ); local($/) = undef; <$fh> };
 	my (undef, undef, $test)	= File::Spec->splitpath( $file );
 	lives_ok {
-		my $parser	= Attean->get_parser('Turtle')->new();
-		open(my $fh, '<', $file);
-		$parser->parse_cb_from_io($fh, sub{
+		my $parser	= Attean->get_parser('Turtle')->new( handler => sub {
 			my $t	= shift;
 # 			warn "parsed triple: " . $t->tuples_string . "\n";
-		});
+		} );
+		open(my $fh, '<', $file);
+		$parser->parse_cb_from_io($fh);
 	} $test;
 }
 
