@@ -8,7 +8,7 @@ package Attean::Blank 0.001 {
 	has 'value' => (is => 'ro', isa => 'Str', required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
 	
-	with 'Attean::API::Term';
+	with 'Attean::API::Blank';
 	with 'Attean::API::BlankOrIRI';
 
 	around BUILDARGS => sub {
