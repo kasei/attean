@@ -27,6 +27,13 @@ package Attean::API::Iterator 0.001 {
 		}
 	};
 	
+	sub elements {
+		my $self	= shift;
+		my @elements;
+		while (my $item = $self->next) { push(@elements, $item); }
+		return @elements;
+	}
+	
 	sub map {
 		my $self	= shift;
 		my $block	= shift;
