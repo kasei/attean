@@ -26,8 +26,38 @@ package Attean::API::PushParser 0.001 {
 
 	requires 'parse_cb_from_io';		# parse_cb_from_io($io)
 	requires 'parse_cb_from_bytes';		# parse_cb_from_bytes($data)
-	# TODO: add default implementations for pullparser methods
-	# TODO: add default implementations for atonceparser methods
+	
+	sub parse_iter_from_io {
+		my $self	= shift;
+		my @values	= $self->parse_list_from_io(@_);
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+	}
+	
+	sub parse_iter_from_bytes {
+		my $self	= shift;
+		my @values	= $self->parse_list_from_bytes(@_);
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+	}
+	
+	sub parse_list_from_io {
+		my $self	= shift;
+		my @values;
+		$self->handler(sub {
+			push(@values, shift);
+		});
+		$self->parse_cb_from_io(@_);
+		return @values;
+	}
+	
+	sub parse_list_from_bytes {
+		my $self	= shift;
+		my @values;
+		$self->handler(sub {
+			push(@values, shift);
+		});
+		$self->parse_cb_from_bytes(@_);
+		return @values;
+	}
 }
 
 package Attean::API::PullParser 0.001 {
@@ -79,8 +109,34 @@ package Attean::API::AtOnceParser 0.001 {
 	requires 'parse_list_from_io';		# @list = parse_list_from_io($io)
 	requires 'parse_list_from_bytes';	# @list = parse_list_from_bytes($data)
 	
-	# TODO: add default implementations for pushparser methods
-	# TODO: add default implementations for pullparser methods
+	sub parse_cb_from_io {
+		my $self	= shift;
+		my $io		= shift;
+		my $handler	= $self->handler;
+		my $iter	= $self->parse_iter_from_io($io);
+		while (my $item = $iter->next) { $handler->( $item ) }
+	}
+	
+	sub parse_cb_from_bytes {
+		my $self	= shift;
+		my $data	= shift;
+		my $handler	= $self->handler;
+		my $iter	= $self->parse_iter_from_bytes($data);
+		while (defined(my $item = $iter->next)) { $handler->( $item ) }
+	}
+	
+	sub parse_iter_from_io {
+		my $self	= shift;
+		my @values	= $self->parse_list_from_io(@_);
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+	}
+	
+	sub parse_iter_from_bytes {
+		my $self	= shift;
+		my @values	= $self->parse_list_from_bytes(@_);
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+	}
+	
 }
 
 package Attean::API::TermParser 0.001 {
