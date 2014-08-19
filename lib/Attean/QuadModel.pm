@@ -1,14 +1,14 @@
 use v5.14;
 use warnings;
 
-package Attean::MutableQuadModel 0.001 {
+package Attean::QuadModel 0.001 {
 	use Moose;
 	use Scalar::Util qw(reftype);
 	has 'store'	=> (
 		is => 'ro',
-		isa => 'Attean::API::MutableQuadStore',
+		isa => 'Attean::API::QuadStore',
 		required => 1,
-		handles	=> [qw(size count_quads add_quad remove_quad get_graphs create_graph drop_graph clear_graph add_iter)],
+		handles	=> [qw(size count_quads get_graphs)],
 	);
 	
 	sub get_quads {
@@ -38,6 +38,22 @@ package Attean::MutableQuadModel 0.001 {
 		}
 	}
 	
+	with 'Attean::API::Model';
+}
+
+
+package Attean::MutableQuadModel 0.001 {
+	use Moose;
+	use Scalar::Util qw(reftype);
+	extends 'Attean::QuadModel';
+	
+	has 'store'	=> (
+		is => 'ro',
+		isa => 'Attean::API::MutableQuadStore',
+		required => 1,
+		handles	=> [qw(size count_quads add_quad remove_quad get_graphs create_graph drop_graph clear_graph add_iter)],
+	);
+
 	with 'Attean::API::MutableModel';
 }
 
