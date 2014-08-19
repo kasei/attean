@@ -3,9 +3,13 @@ use warnings;
 
 package Attean::API::Model 0.001 {
 	use Moose::Role;
+	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
 	
+	# get_quads($s, $p, $o, $g)
+	# or:
+	# get_quads([$s1, $s2, ...], \@p, \@o, \@g)
 	requires 'get_quads';
 	
 	sub get_bindings {
@@ -36,6 +40,68 @@ package Attean::API::Model 0.001 {
 		}
 		return keys %graphs;
 	}
+	
+	sub get_list {
+		my $self	= shift;
+		my $head	= shift;
+		my $rdf		= URI::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		my @elements;
+		my %seen;
+		while (blessed($head) and not($head->does('Attean::API::IRI') and $head->value eq $rdf->nil->value)) {
+			if ($seen{ $head->as_string }++) {
+				die "Loop found during rdf:List traversal";
+			}
+			my @n		= $self->objects( $head, $rdf->first )->elements;
+			if (scalar(@n) != 1) {
+				die "Invalid structure found during rdf:List traversal";
+			}
+			push(@elements, @n);
+			($head)	= $self->objects( $head, $rdf->rest )->elements;
+		}
+		return Attean::ListIterator->new(values => \@elements, item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term') );
+	}
+
+	sub get_sequence {
+		my $self	= shift;
+		my $head	= shift;
+		my $rdf		= URI::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		my @elements;
+		my $i		= 1;
+		while (1) {
+			my $method	= '_' . $i;
+			my @elem	= $self->objects( $head, $rdf->$method() )->elements;
+			last unless (scalar(@elem));
+			if (scalar(@elem) > 1) {
+				my $count	= scalar(@elem);
+				die "Invalid structure found during rdf:Seq access: $count elements found for element $i";
+			}
+			my $elem	= $elem[0];
+			last unless (blessed($elem));
+			push(@elements, $elem);
+			$i++;
+		}
+		return Attean::ListIterator->new(values => \@elements, item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term') );
+	}
+
+	{
+		my $meta	= Moose::Util::find_meta(__PACKAGE__);
+		my @pos		= qw(subject predicate object graph);
+		my %pos		= map { $pos[$_] => $_ } (0 .. $#pos);
+		for my $method (@pos) {
+			$meta->add_method("${method}s", sub {
+				my $self	= shift;
+				my @nodes	= @_;
+				$#nodes		= 3;
+				splice(@nodes, $pos{$method}, 0, undef);
+				my $iter	= $self->get_quads(@nodes);
+				my $nodes	= $iter->map(
+					sub { $_->$method() },
+					Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term'),
+				);
+				return $nodes;
+			});
+		}
+	}
 }
 
 package Attean::API::MutableModel 0.001 {
@@ -46,6 +112,26 @@ package Attean::API::MutableModel 0.001 {
 	requires 'create_graph';
 	requires 'drop_graph';
 	requires 'clear_graph';
+	requires 'add_iter';
+	
+	with 'Attean::API::Model';
+	
+	sub add_list {
+		my $self	= shift;
+		my $graph	= shift;
+		my @elements	= @_;
+		my $rdf		= URI::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		if (scalar(@elements) == 0) {
+			return $rdf->nil;
+		} else {
+			my $head		= Attean::Blank->new();
+			my $node		= shift(@elements);
+			my $rest		= $self->add_list( @elements );
+			$self->add_quad( Attean::Quad->new($head, $rdf->first, $node, $graph) );
+			$self->add_quad( Attean::Quad->new($head, $rdf->rest, $rest, $graph) );
+			return $head;
+		}
+	}
 }
 
 package Attean::API::CacheableModel 0.001 {
@@ -61,6 +147,12 @@ package Attean::API::BulkUpdatableModel 0.001 {
 	
 	requires 'begin_bulk_updates';
 	requires 'end_bulk_updates';
+	
+	# End bulk updates the moment a read operation is performed...
+	before [qw(get_quads get_bindings count_quads get_graphs subject predicate object graph)] => sub {
+		my $self	= shift;
+		$self->end_bulk_updates();
+	};
 }
 
 1;
