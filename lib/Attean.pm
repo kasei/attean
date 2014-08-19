@@ -17,6 +17,7 @@ package Attean 0.001 {
 	
 	use Attean::CodeIterator;
 	use Attean::ListIterator;
+	use Attean::IteratorSequence;
 	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
