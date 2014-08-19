@@ -34,7 +34,7 @@ package Attean::API::CacheableTripleStore 0.001 {
 	use Moose::Role;
 	with 'Attean::API::TripleStore';
 	
-	requires 'last_modified_date_for_triples';
+	requires 'etag_value_for_triples';
 }
 
 package Attean::API::QuadStore 0.001 {

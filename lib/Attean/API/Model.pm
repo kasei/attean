@@ -137,7 +137,7 @@ package Attean::API::MutableModel 0.001 {
 package Attean::API::CacheableModel 0.001 {
 	use Moose::Role;
 	
-	requires 'last_modified_date_for_quads';
+	requires 'etag_value_for_quads';
 }
 
 package Attean::API::BulkUpdatableModel 0.001 {
