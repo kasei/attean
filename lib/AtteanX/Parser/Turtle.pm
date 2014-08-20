@@ -32,7 +32,6 @@ package AtteanX::Parser::Turtle 0.001 {
 	use utf8;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
-	use Data::Dumper;
 	use AtteanX::Parser::Turtle::Constants;
 	use AtteanX::Parser::Turtle::Lexer;
 	use AtteanX::Parser::Turtle::Token;
@@ -64,8 +63,6 @@ package AtteanX::Parser::Turtle 0.001 {
 	with 'Attean::API::Parser::AbbreviatingParser';
 	with 'Attean::API::PushParser';
 	
-	# TODO: Remove all references to RDF::Trine code (e.g. RDF::Trine::Error)
-
 	my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 	my $XSD	= 'http://www.w3.org/2001/XMLSchema#';
 
@@ -76,7 +73,7 @@ package AtteanX::Parser::Turtle 0.001 {
 		unless (ref($fh)) {
 			my $filename	= $fh;
 			undef $fh;
-			open( $fh, '<', $filename ) or throw RDF::Trine::Error::ParserError -text => $!;
+			open( $fh, '<', $filename ) or die $!;
 		}
 	
 		binmode($fh, ':encoding(UTF-8)');
@@ -330,7 +327,6 @@ serialization is found at the beginning of C<< $string >>.
 		my $l		= shift;
 		my $subj	= shift;
 		my $pred	= shift;
-	# 	warn "objectList: " . Dumper($subj, $pred);	# XXX
 		while (1) {
 			my $t		= $self->_next_nonws($l);
 			last unless ($t);
@@ -494,10 +490,7 @@ serialization is found at the beginning of C<< $string >>.
 		if (defined($t->value)) {
 			$text	.= " (near '" . $t->value . "')";
 		}
-		RDF::Trine::Error::ParserError::Tokenized->throw(
-			-text => $text,
-			-object => $t,
-		);
+		die $text;
 	}
 }
 

@@ -26,12 +26,10 @@ This document describes AtteanX::Parser::Turtle::Lexer version 1.007
 package AtteanX::Parser::Turtle::Lexer;
 
 use AtteanX::Parser::Turtle::Constants;
-use 5.010;
+use v5.14;
 use strict;
 use warnings;
 use Moose;
-use Data::Dumper;
-use RDF::Trine::Error;
 
 our $VERSION;
 BEGIN {
@@ -172,7 +170,6 @@ sub get_token {
 		unless (length($self->{buffer})) {
 			$self->fill_buffer;
 		}
-# 		warn "getting token with buffer: " . Dumper($self->{buffer});
 		my $c	= $self->_peek_char();
 		return unless (defined($c) and length($c));
 		
@@ -222,7 +219,7 @@ sub get_token {
 # 			Carp::cluck sprintf("Unexpected byte '$c' (0x%02x)", ord($c));
 			return $self->_throw_error(sprintf("Unexpected byte '%s' (0x%02x)", $c, ord($c)));
 		}
-		warn 'byte: ' . Dumper($c);
+		warn sprintf('byte: 0x%x', ord($c));
 	}
 }
 
@@ -706,11 +703,7 @@ sub _throw_error {
 	my $error	= shift;
 	my $line	= $self->line;
 	my $col		= $self->column;
-# 	Carp::cluck "$line:$col: $error: " . Dumper($self->{buffer});
-	RDF::Trine::Error::ParserError::Positioned->throw(
-		-text => "$error at $line:$col",
-		-value => [$line, $col],
-	);
+	die "$error at $line:$col";
 }
 
 __PACKAGE__->meta->make_immutable;

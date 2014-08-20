@@ -26,7 +26,6 @@ with 'Attean::API::QuadStore';
 
 use Encode;
 use Set::Scalar;
-use Data::Dumper;
 use Digest::SHA;
 use List::Util qw(first);
 use Scalar::Util qw(refaddr reftype blessed);

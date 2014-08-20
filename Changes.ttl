@@ -1,0 +1,30 @@
+# -*-n3-*-
+
+@prefix dc:      <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix doap:    <http://usefulinc.com/ns/doap#> .
+@prefix asc:     <http://aaronland.info/ns/changefile/> .
+                                     
+<>
+        dc:description          "Changes for Attean" ;
+        dcterms:references      <http://kasei.us/code/attean/#project> .
+
+
+<http://kasei.us/code/files/Attean-0.001.tar.gz>
+        dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
+#        dcterms:replaces    <http://kasei.us/code/files/Attean-0.001.tar.gz> ;
+
+        doap:Version    [
+                        doap:revision     "0.001" ;
+                        doap:created      "2014-XX-XX" ;
+                        ];
+        asc:changes     [
+                        asc:addition    "" ;
+                        asc:update      "" ;
+                        ] .
+
+
+<http://kasei.us/code/attean/#project>
+        a doap:Project ;
+        doap:download-page      <http://search.cpan.org/dist/Attean/> ;
+        doap:download-mirror    <http://kasei.us/code/files/> .

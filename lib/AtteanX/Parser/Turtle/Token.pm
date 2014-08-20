@@ -1,6 +1,6 @@
 package AtteanX::Parser::Turtle::Token;
 
-use 5.010;
+use v5.14;
 use strict;
 use warnings;
 use MooseX::ArrayRef;
