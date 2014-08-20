@@ -1,6 +1,43 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::QuadModel - RDF model backed by a quad-store
+
+=head1 VERSION
+
+This document describes Attean::QuadModel version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+  my $model = Attean::QuadModel->new( store => $store );
+
+=head1 DESCRIPTION
+
+The Attean::QuadModel class represents a model that is backed by a single
+L<Attean::API::QuadStore|Attean::API::Store> object.
+It conforms to the L<Attean::API::Model> role.
+
+The Attean::QuadModel constructor requires one named argument:
+
+=over 4
+
+=item store
+
+A L<Attean::API::QuadStore|Attean::API::Store> object representing the backing
+quad-store.
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
 package Attean::QuadModel 0.001 {
 	use Moose;
 	use Scalar::Util qw(reftype);
@@ -11,6 +48,18 @@ package Attean::QuadModel 0.001 {
 		handles	=> [qw(size count_quads get_graphs)],
 	);
 	
+=item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
+
+Returns an iterator for quads in the model that match the supplied
+C<< $subject >>, C<< $predicate >>, C<< $object >>, and C<< $graph >>.
+Any of these terms may be undefined or a
+L<Attean::API::Blank|Attean::API::Term> object, in which case that term will be
+considered as a wildcard for the purposes of matching.
+
+The returned iterator conforms to both L<Attean::API::Iterator> and L<Attean::API::QuadIterator>.
+
+=cut
+
 	sub get_quads {
 		my $self	= shift;
 		my @nodes	= @_[0..3];
@@ -58,3 +107,26 @@ package Attean::MutableQuadModel 0.001 {
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

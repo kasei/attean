@@ -1,6 +1,33 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Parser - Parser role
+
+=head1 VERSION
+
+This document describes Attean::API::Parser version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::Parser role defines a common API for all parsers of typed
+objects from data (either a byte string or a filehandle).
+
+=head1 REQUIRED METHODS
+
+The following methods are required by the L<Attean::API::Serializer> role:
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=item C<< media_types >>
+
+=item C<< handled_type >>
+
+=cut
+
 package Attean::API::Parser 0.001 {
 	use Moose::Role;
 	
@@ -186,3 +213,28 @@ package Attean::API::ResultParser 0.001 {
 }
 
 1;
+
+__END__
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

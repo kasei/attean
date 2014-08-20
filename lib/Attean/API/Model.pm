@@ -1,6 +1,59 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Model - RDF Model
+
+=head1 VERSION
+
+This document describes Attean::API::Model version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::Model role defines a common API for all RDF models to conform
+to. It is provides a consistent interface for probing, counting, and retrieving
+L<Attean::API::Quad|Attean::API::Binding>s matching a pattern, as well as
+related functionality such as enumerating the graph names, and extracting
+structured data from the models' quads.
+
+=head1 REQUIRED METHODS
+
+The following methods are required by the L<Attean::API::Model> role:
+
+=over 4
+
+=item C<< get_quads( $subject, $predicate, $object, $graph ) >>
+
+=back
+
+=head1 METHODS
+
+The L<Attean::API::Model> role role provides default implementations of the
+following methods:
+
+=over 4
+
+=item C<< get_bindings( $subject, $predicate, $object, $graph ) >>
+
+=item C<< count_quads( $subject, $predicate, $object, $graph ) >>
+
+=item C<< get_graphs >>
+
+=item C<< get_list( $head ) >>
+
+=item C<< get_sequence( $head ) >>
+
+=item C<< subjects( $predicate, $object, $graph ) >>
+
+=item C<< predicates( $subject, $object, $graph ) >>
+
+=item C<< objects( $subject, $predicate, $graph ) >>
+
+=item C<< graphs( $subject, $predicate, $object ) >>
+
+=cut
+
 package Attean::API::Model 0.001 {
 	use Moose::Role;
 	use URI::Namespace;

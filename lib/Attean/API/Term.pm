@@ -1,6 +1,41 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Term - RDF Terms
+
+=head1 VERSION
+
+This document describes Attean::API::Term version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::Term role defines a common API for all RDF terms.
+
+=head1 REQUIRED METHODS
+
+The following methods are required by the L<Attean::API::Term> role:
+
+=over 4
+
+=item C<< value >>
+
+=item C<< ntriples_string >>
+
+=back
+
+=head1 METHODS
+
+The L<Attean::API::Term> role role provides default implementations of the
+following methods:
+
+=over 4
+
+=item C<< as_string >>
+
+=cut
+
 package Attean::API::Term 0.001 {
 	use Moose::Role;
 	
@@ -88,3 +123,26 @@ package Attean::API::IRI 0.001 {
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

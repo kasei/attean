@@ -1,6 +1,27 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::Triple - RDF Triples
+
+=head1 VERSION
+
+This document describes Attean::Triple version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+  my $triple = Attean::Triple->new( $s, $p, $o );
+
+=head1 DESCRIPTION
+
+The Attean::Triple class represents an RDF triple.
+It conforms to the L<Attean::API::Triple|Attean::API::Binding> role.
+
+=cut
+
 package Attean::Triple 0.001 {
 	use Moose;
 	use Attean::API::Binding;
@@ -21,12 +42,29 @@ package Attean::Triple 0.001 {
 		}
 		return $class->$orig(@_);
 	};
-	
-	sub as_string {
-		my $self	= shift;
-		my @terms	= map { $self->$_()->ntriples_string() } qw(subject predicate object);
-		return join(' ', @terms) . ' .';
-	}
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

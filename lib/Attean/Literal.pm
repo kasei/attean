@@ -1,6 +1,31 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::Literal - RDF Literals
+
+=head1 VERSION
+
+This document describes Attean::Literal version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+  my $langterm = Attean::Literal->new(value => 'foo', language => 'en-US');
+  $langterm->ntriples_string; # "foo"@en-US
+
+  my $typeterm = Attean::Literal->new(value => '123', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+  $langterm->ntriples_string; # "123"^^<http://www.w3.org/2001/XMLSchema#integer>
+
+=head1 DESCRIPTION
+
+The Attean::Literal class represents RDF literals.
+It conforms to the L<Attean::API::Literal|Attean::API::Term> role.
+
+=cut
+
 package Attean::Literal 0.001 {
 	use Attean::API::Term;
 	use Moose;
@@ -62,3 +87,26 @@ package Attean::Literal 0.001 {
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

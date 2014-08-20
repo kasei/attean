@@ -1,5 +1,47 @@
 use v5.14;
 use warnings;
+
+=head1 NAME
+
+Attean::API::Binding - Name to term bindings
+
+=head1 VERSION
+
+This document describes Attean::API::Binding version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::Binding role defines a common API for all objects that map
+names to L<Attean::API::Term> objects. This includes triples, quads, and
+SPARQL results (variable bindings).
+
+=head1 REQUIRED METHODS
+
+The following methods are required by the L<Attean::API::Binding> role:
+
+=over 4
+
+=item C<< value( $name ) >>
+
+=item C<< variables >>
+
+=back
+
+=head1 METHODS
+
+The L<Attean::API::Binding> role role provides default implementations of the
+following methods:
+
+=over 4
+
+=item C<< values >>
+
+=item C<< tuples_string >>
+
+=item C<< as_string >>
+
+=cut
+
 use Moose::Util::TypeConstraints;
 
 package Attean::API::TripleOrQuad {
@@ -110,3 +152,26 @@ package Attean::API::Result 0.001 {
 union 'Attean::API::SPARQLResult', [qw( Bool Attean::API::Result )];
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

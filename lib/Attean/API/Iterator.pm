@@ -1,6 +1,43 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Iterator - Typed iterator
+
+=head1 VERSION
+
+This document describes Attean::API::Iterator version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::Iterator role defines a common API for typed iterators.
+
+=head1 REQUIRED METHODS
+
+The following methods are required by the L<Attean::API::Iterator> role:
+
+=over 4
+
+=item C<< next >>
+
+=back
+
+=head1 METHODS
+
+The L<Attean::API::Iterator> role role provides default implementations of the
+following methods:
+
+=over 4
+
+=item C<< elements >>
+
+=item C<< map( \&mapper, $result_type ) >>
+
+=item C<< grep( \&filter ) >>
+
+=cut
+
 package Attean::API::Iterator 0.001 {
 	use Moose::Role;
 	use Moose::Util::TypeConstraints;
@@ -17,6 +54,7 @@ package Attean::API::Iterator 0.001 {
 		my $type	= $self->item_type;
 		if ($type->isa('Moose::Meta::TypeConstraint::Role')) {
 			my $role	= $type->role;
+			return unless defined($role);
 			if ($role eq 'Attean::API::Triple') {
 				apply_all_roles($self, 'Attean::API::TripleIterator');
 			} elsif ($role eq 'Attean::API::Quad') {
@@ -106,3 +144,26 @@ package Attean::API::MixedStatementIterator 0.001 {
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

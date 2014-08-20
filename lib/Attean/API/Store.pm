@@ -1,9 +1,30 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Store - Triple/quad store role
+
+=head1 VERSION
+
+This document describes Attean::Store version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::Store role is an empty role that more specialized roles conform to.
+
+=over 4
+
+=cut
+
+package Attean::API::Store 0.001 {
+	use Moose::Role;
+}
+
 package Attean::API::TripleStore 0.001 {
 	use Moose::Role;
-	
+	with 'Attean::API::Store';
+
 	requires 'get_triples';
 
 	sub count_triples {
@@ -39,7 +60,8 @@ package Attean::API::CacheableTripleStore 0.001 {
 
 package Attean::API::QuadStore 0.001 {
 	use Moose::Role;
-	
+	with 'Attean::API::Store';
+
 	requires 'get_quads';
 
 	sub count_quads {
@@ -100,3 +122,26 @@ package Attean::API::CacheableQuadStore 0.001 {
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
