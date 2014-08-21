@@ -77,14 +77,26 @@ package Attean::API::Iterator 0.001 {
 		my $block	= shift;
 		my $type	= shift || $self->item_type;
 		
-		return Attean::CodeIterator->new(
-			item_type => $type,
-			generator => sub {
+		my $generator;
+		if (blessed($block) and $block->does('Attean::Mapper')) {
+			$generator	= sub {
+				my $item	= $self->next();
+				return unless defined($item);
+				my $new		= $block->map($item);
+				return $new;
+			}
+		} else {
+			$generator	= sub {
 				my $item	= $self->next();
 				return unless defined($item);
 				local($_)	= $item;
 				return $block->($item);
 			}
+		}
+		
+		return Attean::CodeIterator->new(
+			item_type => $type,
+			generator => $generator,
 		);
 	}
 
@@ -146,6 +158,8 @@ package Attean::API::MixedStatementIterator 0.001 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

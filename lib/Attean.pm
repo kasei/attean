@@ -52,6 +52,8 @@ package Attean 0.001 {
 	use Attean::ListIterator;
 	use Attean::IteratorSequence;
 	
+	use Attean::TermMap;
+	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
 	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;

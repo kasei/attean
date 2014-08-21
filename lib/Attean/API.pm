@@ -29,6 +29,11 @@ package Attean::TermOrVariable 0.001 {
 	use Moose::Role;
 }
 
+package Attean::Mapper 0.001 {
+	use Moose::Role;
+	requires 'map'; # my $that = $object->map($this)
+}
+
 package Attean::API 0.001 {
 	use Moose::Util::TypeConstraints;
 

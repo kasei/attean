@@ -25,6 +25,8 @@ The following methods are required by the L<Attean::API::Binding> role:
 
 =item C<< variables >>
 
+=item C<< map( $mapper ) >>
+
 =back
 
 =head1 METHODS
@@ -46,6 +48,14 @@ use Moose::Util::TypeConstraints;
 
 package Attean::API::TripleOrQuad {
 	use Moose::Role;
+	sub apply_map {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $mapper	= shift;
+		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
+		return $class->new( %values );
+	}
+
 }
 
 package Attean::API::Binding 0.001 {
@@ -53,6 +63,7 @@ package Attean::API::Binding 0.001 {
 	
 	requires 'value';
 	requires 'variables';
+	requires 'apply_map';
 	sub values {
 		my $self	= shift;
 		return map { $self->value($_) } $self->variables;
@@ -70,9 +81,6 @@ package Attean::API::Binding 0.001 {
 
 package Attean::API::Triple 0.001 {
 	use Moose::Role;
-	
-	with 'Attean::API::Binding';
-	with 'Attean::API::TripleOrQuad';
 	
 	sub variables { return qw(subject predicate object) }
 	sub value {
@@ -94,13 +102,13 @@ package Attean::API::Triple 0.001 {
 		my $graph	= shift;
 		return Attean::Quad->new($self->values, $graph);
 	}
+
+	with 'Attean::API::TripleOrQuad';
+	with 'Attean::API::Binding';
 }
 
 package Attean::API::Quad 0.001 {
 	use Moose::Role;
-	
-	with 'Attean::API::Triple';
-	with 'Attean::API::TripleOrQuad';
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -117,12 +125,13 @@ package Attean::API::Quad 0.001 {
 	requires 'predicate';	# TODO: type constrain to Attean::IRI
 	requires 'object';		# TODO: type constrain to Attean::API::Term
 	requires 'graph';		# TODO: type constrain to Attean::BlankOrIRI
+
+	with 'Attean::API::TripleOrQuad';
+	with 'Attean::API::Triple';
 }
 
 package Attean::API::Result 0.001 {
 	use Moose::Role;
-	
-	with 'Attean::API::Binding';
 	
 	sub join {
 		my $self	= shift;
@@ -147,6 +156,16 @@ package Attean::API::Result 0.001 {
 		my $joined	= Attean::Result->new( $row );
 		return $joined;
 	}
+
+	sub apply_map {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $mapper	= shift;
+		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
+		return $class->new( \%values );
+	}
+
+	with 'Attean::API::Binding';
 }
 
 union 'Attean::API::SPARQLResult', [qw( Bool Attean::API::Result )];
@@ -154,6 +173,8 @@ union 'Attean::API::SPARQLResult', [qw( Bool Attean::API::Result )];
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 
