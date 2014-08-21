@@ -36,9 +36,23 @@ package AtteanX::Parser::Turtle 0.001 {
 	use AtteanX::Parser::Turtle::Lexer;
 	use AtteanX::Parser::Turtle::Token;
 	use Attean::API::Parser;
-	
 	use Moose;
+
+=item C<< canonical_media_type >>
+
+Returns the canonical media type for Turtle: text/turtle.
+
+=cut
+
 	sub canonical_media_type { return "text/turtle" }
+
+=item C<< media_types >>
+
+Returns a list of media types that may be parsed with the Turtle parser:
+text/turtle.
+
+=cut
+
 	sub media_types {
 		return [qw(application/x-turtle application/turtle text/turtle)];
 	}
@@ -66,6 +80,14 @@ package AtteanX::Parser::Turtle 0.001 {
 	my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 	my $XSD	= 'http://www.w3.org/2001/XMLSchema#';
 
+=item C<< parse_cb_from_io( $fh ) >>
+
+Calls the C<< $parser->handler >> function once for each
+L<Attean::API::Binding> object that result from parsing
+the data read from the L<IO::Handle> object C<< $fh >>.
+
+=cut
+
 	sub parse_cb_from_io {
 		my $self	= shift;
 		my $fh		= shift;
@@ -80,6 +102,14 @@ package AtteanX::Parser::Turtle 0.001 {
 		my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
 	}
+
+=item C<< parse_cb_from_bytes( $data ) >>
+
+Calls the C<< $parser->handler >> function once for each
+L<Attean::API::Binding> object that result from parsing
+the data read from the UTF-8 encoded byte string C<< $data >>.
+
+=cut
 
 	sub parse_cb_from_bytes {
 		my $self	= shift;

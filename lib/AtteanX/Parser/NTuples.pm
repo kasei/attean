@@ -1,5 +1,5 @@
-# AtteanX::Parser::NTuples
-# -----------------------------------------------------------------------------
+use v5.14;
+use warnings;
 
 =head1 NAME
 
@@ -23,16 +23,19 @@ This document describes AtteanX::Parser::NTuples version 1.009
 
 =cut
 
-use v5.14;
-use warnings;
-
 package AtteanX::Parser::NTuples 0.001 {
 	use utf8;
 	use Attean;
-	use Carp;
 	use Encode qw(decode);
 	use Moose;
 	
+=item C<< parse_iter_from_bytes( $data ) >>
+
+Returns an iterator of L<Attean::API::Binding> objects that result from parsing
+the data read from the UTF-8 encoded byte string C<< $data >>.
+
+=cut
+
 	sub parse_iter_from_bytes {
 		my $self	= shift;
 		my $data	= shift;
@@ -41,6 +44,13 @@ package AtteanX::Parser::NTuples 0.001 {
 		open(my $fh, '<:encoding(UTF-8)', \$data);
 		return $self->parse_iter_from_io($fh);
 	}
+
+=item C<< parse_iter_from_io( $fh ) >>
+
+Returns an iterator of L<Attean::API::Binding> objects that result from parsing
+the data read from the L<IO::Handle> object C<< $fh >>.
+
+=cut
 
 	sub parse_iter_from_io {
 		my $self	= shift;

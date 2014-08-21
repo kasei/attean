@@ -1,6 +1,3 @@
-# AtteanX::Parser::NTriples
-# -----------------------------------------------------------------------------
-
 =head1 NAME
 
 AtteanX::Parser::NTriples - N-Triples Parser
@@ -32,14 +29,26 @@ package AtteanX::Parser::NTriples 0.001 {
 	use utf8;
 	
 	use Attean;
-	use Carp;
-	use Encode qw(decode);
 	use Moose;
 	extends 'AtteanX::Parser::NTuples';
 	
-	sub canonical_media_type { return "application/n-quads" }
+=item C<< canonical_media_type >>
+
+Returns the canonical media type for N-Triples: application/n-triples.
+
+=cut
+
+	sub canonical_media_type { return "application/n-triples" }
+
+=item C<< media_types >>
+
+Returns a list of media types that may be parsed with the N-Triples parser:
+application/n-triples.
+
+=cut
+
 	sub media_types {
-		return [qw(application/n-quads text/nquads)];
+		return [qw(application/n-triples)];
 	}
 	
 	with 'Attean::API::TripleParser';

@@ -126,6 +126,8 @@ package Attean::API::IRI 0.001 {
 
 __END__
 
+=back
+
 =head1 BUGS
 
 Please report any bugs or feature requests to through the GitHub web interface

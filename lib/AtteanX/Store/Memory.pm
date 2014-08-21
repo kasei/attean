@@ -55,6 +55,12 @@ has graph => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, defa
 has graph_nodes	=> (is => 'rw', isa => 'HashRef[Attean::API::IRI]', init_arg => undef, default => sub { +{} });
 has hash		=> (is => 'rw', isa => 'Digest::SHA', default => sub { Digest::SHA->new });
 
+=item C<< size >>
+
+Returns the number of quads in the store.
+
+=cut
+
 sub size {
 	shift->_size()
 }
@@ -249,14 +255,32 @@ sub remove_quads {
 	}
 }
 
+=item C<< create_graph( $graph ) >>
+
+This is a no-op function for the memory quad-store.
+
+=cut
+
 sub create_graph {
 	# no-op on a quad-store
 }
+
+=item C<< drop_graph( $graph ) >>
+
+Removes all quads with the given C<< $graph >>.
+
+=cut
 
 sub drop_graph {
 	my $self	= shift;
 	return $self->clear_graph(@_);
 }
+
+=item C<< clear_graph( $graph ) >>
+
+Removes all quads with the given C<< $graph >>.
+
+=cut
 
 sub clear_graph {
 	my $self	= shift;

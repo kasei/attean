@@ -93,7 +93,6 @@ The returned iterator conforms to both L<Attean::API::Iterator> and L<Attean::AP
 
 package Attean::MutableQuadModel 0.001 {
 	use Moose;
-	use Scalar::Util qw(reftype);
 	extends 'Attean::QuadModel';
 	
 	has 'store'	=> (
@@ -109,6 +108,8 @@ package Attean::MutableQuadModel 0.001 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

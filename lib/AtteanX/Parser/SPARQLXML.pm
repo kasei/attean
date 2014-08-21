@@ -34,13 +34,35 @@ package AtteanX::Parser::SPARQLXML 0.001 {
 	use Moose;
 	use AtteanX::Parser::SPARQLXML::SAXHandler;
 	
+=item C<< canonical_media_type >>
+
+Returns the canonical media type for SPARQL XML: application/sparql-results+xml.
+
+=cut
+
 	sub canonical_media_type { return "application/sparql-results+xml" }
+
+=item C<< media_types >>
+
+Returns a list of media types that may be parsed with the SPARQL XML parser:
+application/sparql-results+xml.
+
+=cut
+
 	sub media_types {
 		return [qw(application/sparql-results+xml)];
 	}
 	
 	with 'Attean::API::ResultParser';
 	with 'Attean::API::PushParser';
+
+=item C<< parse_cb_from_io( $fh ) >>
+
+Calls the C<< $parser->handler >> function once for each
+L<Attean::API::Binding> object that result from parsing
+the data read from the L<IO::Handle> object C<< $fh >>.
+
+=cut
 
 	sub parse_cb_from_io {
 		my $self	= shift;
@@ -49,6 +71,14 @@ package AtteanX::Parser::SPARQLXML 0.001 {
 		my $p		= XML::SAX::ParserFactory->parser(Handler => $self->handler);
 		$p->parse_file( $fh );
 	}
+
+=item C<< parse_cb_from_bytes( $data ) >>
+
+Calls the C<< $parser->handler >> function once for each
+L<Attean::API::Binding> object that result from parsing
+the data read from the UTF-8 encoded byte string C<< $data >>.
+
+=cut
 
 	sub parse_cb_from_bytes {
 		my $self	= shift;
