@@ -42,7 +42,11 @@ package Attean::Triple 0.001 {
 		}
 		return $class->$orig(@_);
 	};
+
+	no Moose;
+	__PACKAGE__->meta->make_immutable;
 }
+
 
 1;
 

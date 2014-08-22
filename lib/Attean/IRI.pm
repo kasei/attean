@@ -63,6 +63,9 @@ Returns the IRI value.
 		my $self	= shift;
 		return $self->abs;
 	}
+
+	no Moose;
+	__PACKAGE__->meta->make_immutable;
 }
 
 1;
