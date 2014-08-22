@@ -78,6 +78,12 @@ package Attean::API::AbbreviatingSerializer 0.001 {
 	has namespaces	=> (is => 'ro', isa => 'Maybe[URI::NamespaceMap]', predicate => 'has_namespaces');
 }
 
+package Attean::API::AppendableSerializer 0.001 {
+	# Serializer for a format that allows multiple serialization calls to be appended and remain syntactically valid
+	use Moose::Role;
+	with 'Attean::API::Serializer';
+}
+
 package Attean::API::TermSerializer 0.001 {
 	use Moose::Role;
 	with 'Attean::API::Serializer';

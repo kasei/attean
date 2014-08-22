@@ -35,6 +35,7 @@ package AtteanX::Serializer::NTriples 0.001 {
 	has 'canonical_media_type' => (is => 'ro', isa => 'Str', init_arg => undef, default => 'application/n-triples');
 	has 'media_types' => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef, default => sub { ['application/n-triples'] });
 	with 'Attean::API::TripleSerializer';
+	with 'Attean::API::AppendableSerializer';
 }
 
 1;
