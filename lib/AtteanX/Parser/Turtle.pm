@@ -238,7 +238,7 @@ serialization is found at the beginning of C<< $string >>.
 	# 				$self->_unget_token($t);
 	# 			}
 			}
-			$self->set_base($iri);
+			$self->base($iri);
 		}
 		else {
 			$self->_triple( $l, $t );
