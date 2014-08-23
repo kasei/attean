@@ -157,6 +157,7 @@ package Attean::API::Model 0.001 {
 	}
 }
 
+
 package Attean::API::MutableModel 0.001 {
 	use Moose::Role;
 	
@@ -187,11 +188,13 @@ package Attean::API::MutableModel 0.001 {
 	}
 }
 
+
 package Attean::API::CacheableModel 0.001 {
 	use Moose::Role;
 	
 	requires 'etag_value_for_quads';
 }
+
 
 package Attean::API::BulkUpdatableModel 0.001 {
 	use Moose::Role;
@@ -207,6 +210,7 @@ package Attean::API::BulkUpdatableModel 0.001 {
 		$self->end_bulk_updates();
 	};
 }
+
 
 1;
 

@@ -60,9 +60,12 @@ package Attean::ListIterator 0.001 {
 	
 	sub BUILD {
 		my $self	 = shift;
-		my $constraint	= $self->item_type;
-		foreach my $item (@{ $self->values }) {
-			$constraint->assert_valid($item);
+		if (0) {
+			# type check the list values
+			my $constraint	= $self->item_type;
+			foreach my $item (@{ $self->values }) {
+				$constraint->assert_valid($item);
+			}
 		}
 	}
 	
@@ -93,6 +96,9 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		$self->current(1+$index);
 		return $item;
 	}
+
+	no Moose;
+	__PACKAGE__->meta->make_immutable;
 }
 
 1;

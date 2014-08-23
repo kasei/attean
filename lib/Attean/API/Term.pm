@@ -50,6 +50,10 @@ package Attean::API::Term 0.001 {
 	sub __ntriples_string {
 		my $self	= shift;
 		my $value	= $self->value;
+		if ($value =~ m/^[\x20\x23-\x5a\x5d-\x7e]*$/o) {
+			return $value;
+		}
+		
 		my @chars	= split(//, $value);
 		my $string	= '';
 		while (scalar(@chars)) {

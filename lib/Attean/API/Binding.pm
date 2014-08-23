@@ -55,8 +55,8 @@ package Attean::API::TripleOrQuad {
 		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
 		return $class->new( %values );
 	}
-
 }
+
 
 package Attean::API::Binding 0.001 {
 	use Moose::Role;
@@ -78,6 +78,7 @@ package Attean::API::Binding 0.001 {
 		shift->tuples_string();
 	}
 }
+
 
 package Attean::API::Triple 0.001 {
 	use Moose::Role;
@@ -107,6 +108,7 @@ package Attean::API::Triple 0.001 {
 	with 'Attean::API::Binding';
 }
 
+
 package Attean::API::Quad 0.001 {
 	use Moose::Role;
 	
@@ -129,6 +131,7 @@ package Attean::API::Quad 0.001 {
 	with 'Attean::API::TripleOrQuad';
 	with 'Attean::API::Triple';
 }
+
 
 package Attean::API::Result 0.001 {
 	use Moose::Role;
@@ -167,6 +170,7 @@ package Attean::API::Result 0.001 {
 
 	with 'Attean::API::Binding';
 }
+
 
 union 'Attean::API::SPARQLResult', [qw( Bool Attean::API::Result )];
 

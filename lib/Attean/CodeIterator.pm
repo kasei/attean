@@ -75,6 +75,9 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		$constraint->assert_valid($item);
 		return $item;
 	}
+
+	no Moose;
+	__PACKAGE__->meta->make_immutable;
 }
 
 1;

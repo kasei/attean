@@ -38,26 +38,26 @@ BEGIN {
 
 my $r_nameChar_extra		= qr'[-0-9\x{B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]'o;
 my $r_nameStartChar_minus_underscore	= qr'[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{00010000}-\x{000EFFFF}]'o;
-my $r_nameStartChar			= qr/[A-Za-z_\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/;
-my $r_nameChar				= qr/${r_nameStartChar}|[-0-9\x{b7}\x{0300}-\x{036f}\x{203F}-\x{2040}]/;
-my $r_prefixName			= qr/(?:(?!_)${r_nameStartChar})(?:$r_nameChar)*/;
-my $r_nameChar_test			= qr"(?:$r_nameStartChar|$r_nameChar_extra)";
-my $r_double				= qr'[+-]?([0-9]+\.[0-9]*[eE][+-]?[0-9]+|\.[0-9]+[eE][+-]?[0-9]+|[0-9]+[eE][+-]?[0-9]+)';
-my $r_decimal				= qr'[+-]?(([0-9]+\.[0-9]+)|\.([0-9])+)';
-my $r_integer				= qr'[+-]?[0-9]+';
-my $r_PN_CHARS_U			= qr/[_A-Za-z_\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/;
-my $r_PN_CHARS				= qr"${r_PN_CHARS_U}|[-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]";
-my $r_bnode_id				= qr"(?:${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?";
+my $r_nameStartChar			= qr/[A-Za-z_\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o;
+my $r_nameChar				= qr/${r_nameStartChar}|[-0-9\x{b7}\x{0300}-\x{036f}\x{203F}-\x{2040}]/o;
+my $r_prefixName			= qr/(?:(?!_)${r_nameStartChar})(?:$r_nameChar)*/o;
+my $r_nameChar_test			= qr"(?:$r_nameStartChar|$r_nameChar_extra)"o;
+my $r_double				= qr'[+-]?([0-9]+\.[0-9]*[eE][+-]?[0-9]+|\.[0-9]+[eE][+-]?[0-9]+|[0-9]+[eE][+-]?[0-9]+)'o;
+my $r_decimal				= qr'[+-]?(([0-9]+\.[0-9]+)|\.([0-9])+)'o;
+my $r_integer				= qr'[+-]?[0-9]+'o;
+my $r_PN_CHARS_U			= qr/[_A-Za-z_\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o;
+my $r_PN_CHARS				= qr"${r_PN_CHARS_U}|[-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]"o;
+my $r_bnode_id				= qr"(?:${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?"o;
 
-my $r_PN_CHARS_BASE			= qr/([A-Z]|[a-z]|[\x{00C0}-\x{00D6}]|[\x{00D8}-\x{00F6}]|[\x{00F8}-\x{02FF}]|[\x{0370}-\x{037D}]|[\x{037F}-\x{1FFF}]|[\x{200C}-\x{200D}]|[\x{2070}-\x{218F}]|[\x{2C00}-\x{2FEF}]|[\x{3001}-\x{D7FF}]|[\x{F900}-\x{FDCF}]|[\x{FDF0}-\x{FFFD}]|[\x{10000}-\x{EFFFF}])/;
+my $r_PN_CHARS_BASE			= qr/([A-Z]|[a-z]|[\x{00C0}-\x{00D6}]|[\x{00D8}-\x{00F6}]|[\x{00F8}-\x{02FF}]|[\x{0370}-\x{037D}]|[\x{037F}-\x{1FFF}]|[\x{200C}-\x{200D}]|[\x{2070}-\x{218F}]|[\x{2C00}-\x{2FEF}]|[\x{3001}-\x{D7FF}]|[\x{F900}-\x{FDCF}]|[\x{FDF0}-\x{FFFD}]|[\x{10000}-\x{EFFFF}])/o;
 # my $r_PN_CHARS_U			= qr/([_]|${r_PN_CHARS_BASE})/;
 # my $r_PN_CHARS				= qr/${r_PN_CHARS_U}|-|[0-9]|\x{00B7}|[\x{0300}-\x{036F}]|[\x{203F}-\x{2040}]/;
-my $r_PN_PREFIX				= qr/(${r_PN_CHARS_BASE}((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/;
-my $r_PN_LOCAL_ESCAPED		= qr{(\\([-~.!&'()*+,;=/?#@%_\$]))|%[0-9A-Fa-f]{2}};
-my $r_PN_LOCAL				= qr/((${r_PN_CHARS_U}|[:0-9]|${r_PN_LOCAL_ESCAPED})((${r_PN_CHARS}|${r_PN_LOCAL_ESCAPED}|[:.])*(${r_PN_CHARS}|[:]|${r_PN_LOCAL_ESCAPED}))?)/;
-my $r_PN_LOCAL_BNODE		= qr/((${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/;
-my $r_PNAME_NS				= qr/((${r_PN_PREFIX})?:)/;
-my $r_PNAME_LN				= qr/(${r_PNAME_NS}${r_PN_LOCAL})/;
+my $r_PN_PREFIX				= qr/(${r_PN_CHARS_BASE}((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
+my $r_PN_LOCAL_ESCAPED		= qr{(\\([-~.!&'()*+,;=/?#@%_\$]))|%[0-9A-Fa-f]{2}}o;
+my $r_PN_LOCAL				= qr/((${r_PN_CHARS_U}|[:0-9]|${r_PN_LOCAL_ESCAPED})((${r_PN_CHARS}|${r_PN_LOCAL_ESCAPED}|[:.])*(${r_PN_CHARS}|[:]|${r_PN_LOCAL_ESCAPED}))?)/o;
+my $r_PN_LOCAL_BNODE		= qr/((${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
+my $r_PNAME_NS				= qr/((${r_PN_PREFIX})?:)/o;
+my $r_PNAME_LN				= qr/(${r_PNAME_NS}${r_PN_LOCAL})/o;
 
 has file => (
 	is => 'ro',
@@ -190,8 +190,8 @@ sub get_token {
 			$self->_get_comment();
 			next;
 		}
-		elsif ($c =~ /[ \r\n\t]/) {
-			while (defined($c) and length($c) and $c =~ /[\t\r\n ]/) {
+		elsif ($c =~ /[ \r\n\t]/o) {
+			while (defined($c) and length($c) and $c =~ /[\t\r\n ]/o) {
 				$self->_get_char;
 				$c		= $self->_peek_char;
 			}
@@ -200,17 +200,17 @@ sub get_token {
 # 			return $self->new_token(WS);
 			next;
 		}
-		elsif ($c =~ /[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/) {
-			if ($self->{buffer} =~ /^a(?!:)\s/) {
+		elsif ($c =~ /[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o) {
+			if ($self->{buffer} =~ /^a(?!:)\s/o) {
 				$self->_get_char;
 				return $self->new_token(A, $start_line, $start_column);
-			} elsif ($self->{buffer} =~ /^(?:true|false)(?!:)\b/) {
+			} elsif ($self->{buffer} =~ /^(?:true|false)(?!:)\b/o) {
 				my $bool	= $self->_read_length($+[0]);
 				return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
-			} elsif ($self->{buffer} =~ /^BASE(?!:)\b/i) {
+			} elsif ($self->{buffer} =~ /^BASE(?!:)\b/oi) {
 				$self->_read_length(4);
 				return $self->new_token(SPARQLBASE, $start_line, $start_column);
-			} elsif ($self->{buffer} =~ /^PREFIX(?!:)\b/i) {
+			} elsif ($self->{buffer} =~ /^PREFIX(?!:)\b/io) {
 				$self->_read_length(6);
 				return $self->new_token(SPARQLPREFIX, $start_line, $start_column);
 			} else {
@@ -365,7 +365,7 @@ sub _get_pname {
 	
 	if ($self->{buffer} =~ $r_PNAME_LN) {
 		my $ln	= $self->_read_length($+[0]);
-		my ($ns,$local)	= ($ln =~ /^([^:]*:)(.*)$/);
+		my ($ns,$local)	= ($ln =~ /^([^:]*:)(.*)$/o);
 		no warnings 'uninitialized';
 		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 		return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns, $local);
@@ -379,10 +379,18 @@ sub _get_pname {
 sub _get_iriref {
 	my $self	= shift;
 	$self->_get_char_safe(q[<]);
+	if ($self->{buffer} =~ m/^[\x23-\x3d\x3f-\x5a\x5d-\x7e]*>/o) {
+		my $iri	.= $self->_read_length($+[0]);
+		chop($iri);
+		return $self->new_token(IRI, $self->start_line, $self->start_column, $iri);
+	}
+	
 	my $iri	= '';
 	while (1) {
-		my $c	= $self->_peek_char;
-		last unless defined($c);
+		if (length($self->{buffer}) == 0) {
+			my $c	= $self->_peek_char;
+			last unless defined($c);
+		}
 		if (substr($self->{buffer}, 0, 1) eq '\\') {
 			$self->_get_char_safe('\\');
 			my $esc	= $self->_get_char;
@@ -390,28 +398,29 @@ sub _get_iriref {
 				$iri	.= "\\";
 			} elsif ($esc eq 'U') {
 				my $codepoint	= $self->_read_length(8);
-				unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+				unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 					$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 				}
 				$iri .= chr(hex($codepoint));
 			} elsif ($esc eq 'u') {
 				my $codepoint	= $self->_read_length(4);
-				unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+				unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 					$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 				}
 				my $char	= chr(hex($codepoint));
-				if ($char =~ /[<>" {}|\\^`]/) {
+				if ($char =~ /[<>" {}|\\^`]/o) {
 					$self->_throw_error(sprintf("Bad IRI character: '%s' (0x%x)", $char, ord($char)));
 				}
 				$iri .= $char;
 			} else {
 				$self->_throw_error("Unrecognized iri escape '$esc'");
 			}
-		} elsif ($self->{buffer} =~ /^[^<>\x00-\x20\\"{}|^`]+/) {
+		} elsif ($self->{buffer} =~ /^[^<>\x00-\x20\\"{}|^`]+/o) {
 			$iri	.= $self->_read_length($+[0]);
 		} elsif (substr($self->{buffer}, 0, 1) eq '>') {
 			last;
 		} else {
+			my $c	= $self->_peek_char;
 			$self->_throw_error("Got '$c' while expecting IRI character");
 		}
 	}
@@ -432,11 +441,11 @@ sub _get_bnode {
 
 sub _get_number {
 	my $self	= shift;
-	if ($self->{buffer} =~ /^${r_double}/) {
+	if ($self->{buffer} =~ /^${r_double}/o) {
 		return $self->new_token(DOUBLE, $self->start_line, $self->start_column, $self->_read_length($+[0]));
-	} elsif ($self->{buffer} =~ /^${r_decimal}/) {
+	} elsif ($self->{buffer} =~ /^${r_decimal}/o) {
 		return $self->new_token(DECIMAL, $self->start_line, $self->start_column, $self->_read_length($+[0]));
-	} elsif ($self->{buffer} =~ /^${r_integer}/) {
+	} elsif ($self->{buffer} =~ /^${r_integer}/o) {
 		return $self->new_token(INTEGER, $self->start_line, $self->start_column, $self->_read_length($+[0]));
 	} else {
 		$self->_throw_error("Expected number");
@@ -448,11 +457,11 @@ sub _get_comment {
 	$self->_get_char_safe('#');
 	my $comment	= '';
 	my $c		= $self->_peek_char;
-	while (length($c) and $c !~ /[\r\n]/) {
+	while (length($c) and $c !~ /[\r\n]/o) {
 		$comment	.= $self->_get_char;
 		$c			= $self->_peek_char;
 	}
-	if (length($c) and $c =~ /[\r\n]/) {
+	if (length($c) and $c =~ /[\r\n]/o) {
 		$self->_get_char;
 	}
 	return $self->new_token(COMMENT, $self->start_line, $self->start_column, $comment);
@@ -460,7 +469,7 @@ sub _get_comment {
 
 sub _get_double_literal {
 	my $self	= shift;
-	my $c		= $self->_peek_char();
+# 	my $c		= $self->_peek_char();
 	$self->_get_char_safe(q["]);
 	if (substr($self->{buffer}, 0, 2) eq q[""]) {
 		# #x22 #x22 #x22 lcharacter* #x22 #x22 #x22
@@ -501,14 +510,14 @@ sub _get_double_literal {
 					elsif ($esc eq '>'){ $string .= ">" }
 					elsif ($esc eq 'U'){
 						my $codepoint	= $self->_read_length(8);
-						unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+						unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 							$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 						}
 						$string .= chr(hex($codepoint));
 					}
 					elsif ($esc eq 'u'){
 						my $codepoint	= $self->_read_length(4);
-						unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+						unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 							$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 						}
 						$string .= chr(hex($codepoint));
@@ -528,7 +537,6 @@ sub _get_double_literal {
 		my $string	= '';
 		while (1) {
 			if (substr($self->{buffer}, 0, 1) eq '\\') {
-				my $c	= $self->_peek_char;
 				$self->_get_char_safe('\\');
 				my $esc	= $self->_get_char;
 				if ($esc eq '\\'){ $string .= "\\" }
@@ -542,14 +550,14 @@ sub _get_double_literal {
 				elsif ($esc eq '>'){ $string .= ">" }
 				elsif ($esc eq 'U'){
 					my $codepoint	= $self->_read_length(8);
-					unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+					unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 						$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 					}
 					$string .= chr(hex($codepoint));
 				}
 				elsif ($esc eq 'u'){
 					my $codepoint	= $self->_read_length(4);
-					unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+					unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 						$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 					}
 					$string .= chr(hex($codepoint));
@@ -557,11 +565,12 @@ sub _get_double_literal {
 				else {
 					$self->_throw_error("Unrecognized string escape '$esc'");
 				}
-			} elsif ($self->{buffer} =~ /^[^"\\]+/) {
+			} elsif ($self->{buffer} =~ /^[^"\\]+/o) {
 				$string	.= $self->_read_length($+[0]);
 			} elsif (substr($self->{buffer}, 0, 1) eq '"') {
 				last;
 			} else {
+				my $c	= $self->_peek_char;
 				$self->_throw_error("Got '$c' while expecting string character");
 			}
 		}
@@ -572,7 +581,6 @@ sub _get_double_literal {
 
 sub _get_single_literal {
 	my $self	= shift;
-	my $c		= $self->_peek_char();
 	$self->_get_char_safe("'");
 	if (substr($self->{buffer}, 0, 2) eq q['']) {
 		# #x22 #x22 #x22 lcharacter* #x22 #x22 #x22
@@ -613,14 +621,14 @@ sub _get_single_literal {
 					elsif ($esc eq '>'){ $string .= ">" }
 					elsif ($esc eq 'U'){
 						my $codepoint	= $self->_read_length(8);
-						unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+						unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 							$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 						}
 						$string .= chr(hex($codepoint));
 					}
 					elsif ($esc eq 'u'){
 						my $codepoint	= $self->_read_length(4);
-						unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+						unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 							$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 						}
 						$string .= chr(hex($codepoint));
@@ -654,14 +662,14 @@ sub _get_single_literal {
 				elsif ($esc eq '>'){ $string .= ">" }
 				elsif ($esc eq 'U'){
 					my $codepoint	= $self->_read_length(8);
-					unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+					unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 						$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 					}
 					$string .= chr(hex($codepoint));
 				}
 				elsif ($esc eq 'u'){
 					my $codepoint	= $self->_read_length(4);
-					unless ($codepoint =~ /^[0-9A-Fa-f]+$/) {
+					unless ($codepoint =~ /^[0-9A-Fa-f]+$/o) {
 						$self->_throw_error("Bad unicode escape codepoint '$codepoint'");
 					}
 					$string .= chr(hex($codepoint));
@@ -669,11 +677,12 @@ sub _get_single_literal {
 				else {
 					$self->_throw_error("Unrecognized string escape '$esc'");
 				}
-			} elsif ($self->{buffer} =~ /^[^'\\]+/) {
+			} elsif ($self->{buffer} =~ /^[^'\\]+/o) {
 				$string	.= $self->_read_length($+[0]);
 			} elsif (substr($self->{buffer}, 0, 1) eq "'") {
 				last;
 			} else {
+				my $c		= $self->_peek_char();
 				$self->_throw_error("Got '$c' while expecting string character");
 			}
 		}
@@ -685,14 +694,14 @@ sub _get_single_literal {
 sub _get_keyword {
 	my $self	= shift;
 	$self->_get_char_safe('@');
-	if ($self->{buffer} =~ /^base/) {
+	if ($self->{buffer} =~ /^base/o) {
 		$self->_read_word('base');
 		return $self->new_token(BASE, $self->start_line, $self->start_column);
-	} elsif ($self->{buffer} =~ /^prefix/) {
+	} elsif ($self->{buffer} =~ /^prefix/o) {
 		$self->_read_word('prefix');
 		return $self->new_token(PREFIX, $self->start_line, $self->start_column);
 	} else {
-		if ($self->{buffer} =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/) {
+		if ($self->{buffer} =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
 			my $lang	= $self->_read_length($+[0]);
 			return $self->new_token(LANG, $self->start_line, $self->start_column, $lang);
 		} else {

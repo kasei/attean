@@ -35,6 +35,8 @@ package Attean::IRI 0.001 {
 
 	extends 'IRI';
 	
+	class_type('URI');
+	class_type('IRI');
 	coerce 'Attean::IRI' => from 'Str' => via { Attean::IRI->new( value => $_ ) };
 	coerce 'Attean::IRI' => from 'URI' => via { Attean::IRI->new( value => $_->as_string ) };
 	coerce 'Attean::IRI' => from 'IRI' => via { Attean::IRI->new( value => $_->value ) };

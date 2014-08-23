@@ -135,6 +135,9 @@ objects by mapping their constituent mapped L<Attean::API::Term> objects.
 			return $binding->apply_map($self);
 		}
 	}
+
+	no Moose;
+	__PACKAGE__->meta->make_immutable;
 }
 
 1;
