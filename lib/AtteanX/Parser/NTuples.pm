@@ -106,7 +106,18 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		if ($char eq '<') {
 			my ($uri)	= $_[0] =~ m/^<([^>]*)>/;
 			substr($_[0], 0, length($uri)+2)	= '';
-			return Attean::IRI->new( _unescape($uri, $lineno) );
+			state %cache;
+			if (my $i = $cache{$uri}) {
+				return $i;
+			} else {
+				if (rand() < 0.02) {
+					# clear out the cache roughly every 50 IRIs
+					%cache	= ();
+				}
+				my $iri	= Attean::IRI->new( _unescape($uri, $lineno) );
+				$cache{$uri}	= $iri;
+				return $iri;
+			}
 		} elsif ($char eq '_') {
 			my ($name)	= $_[0] =~ m/^_:([A-Za-z][A-Za-z0-9]*)/;
 			substr($_[0], 0, length($name)+2)	= '';

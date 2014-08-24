@@ -122,8 +122,8 @@ sub new_token {
 	my $type		= shift;
 	my $start_line	= shift;
 	my $start_col	= shift;
-	my $line		= $self->line;
-	my $col			= $self->column;
+	my $line		= $self->{line};
+	my $col			= $self->{column};
 	return AtteanX::Parser::Turtle::Token->fast_constructor(
 			$type,
 			$start_line,
@@ -170,11 +170,25 @@ sub get_token {
 		unless (length($self->{buffer})) {
 			$self->fill_buffer;
 		}
+
+		if ($self->{buffer} =~ /^[ \r\n\t]+/o) {
+			$self->_read_length($+[0]);
+			# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
+# 			return $self->new_token(WS);
+			next;
+		}
+
 		my $c	= $self->_peek_char();
-		return unless (defined($c) and length($c));
+		return unless (defined($c));
+
+		if ($c eq '#') {
+			# we're ignoring comment tokens, but we could return them here instead of falling through to the 'next':
+			$self->_get_comment();
+			next;
+		}
 		
-		my $start_column	= $self->column;
-		my $start_line		= $self->line;
+		my $start_column	= $self->{column};
+		my $start_line		= $self->{line};
 		
 		$self->start_column( $start_column );
 		$self->start_line( $start_line );
@@ -185,21 +199,6 @@ sub get_token {
 		
 		if (defined(my $name = $CHAR_TOKEN{$c})) { $self->_get_char; return $self->new_token($name, $start_line, $start_column); }
 		elsif (defined(my $method = $METHOD_TOKEN{$c})) { return $self->$method() }
-		elsif ($c eq '#') {
-			# we're ignoring comment tokens, but we could return them here instead of falling through to the 'next':
-			$self->_get_comment();
-			next;
-		}
-		elsif ($c =~ /[ \r\n\t]/o) {
-			while (defined($c) and length($c) and $c =~ /[\t\r\n ]/o) {
-				$self->_get_char;
-				$c		= $self->_peek_char;
-			}
-			
-			# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
-# 			return $self->new_token(WS);
-			next;
-		}
 		elsif ($c =~ /[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o) {
 			if ($self->{buffer} =~ /^a(?!:)\s/o) {
 				$self->_get_char;
@@ -368,11 +367,11 @@ sub _get_pname {
 		my ($ns,$local)	= ($ln =~ /^([^:]*:)(.*)$/o);
 		no warnings 'uninitialized';
 		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
-		return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns, $local);
+		return $self->new_token(PREFIXNAME, $self->{start_line}, $self->{start_column}, $ns, $local);
 	} else {
 		$self->{buffer} =~ $r_PNAME_NS;
 		my $ns	= $self->_read_length($+[0]);
-		return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns);
+		return $self->new_token(PREFIXNAME, $self->{start_line}, $self->{start_column}, $ns);
 	}
 }
 
@@ -382,7 +381,7 @@ sub _get_iriref {
 	if ($self->{buffer} =~ m/^[\x23-\x3d\x3f-\x5a\x5d-\x7e]*>/o) {
 		my $iri	.= $self->_read_length($+[0]);
 		chop($iri);
-		return $self->new_token(IRI, $self->start_line, $self->start_column, $iri);
+		return $self->new_token(IRI, $self->{start_line}, $self->{start_column}, $iri);
 	}
 	
 	my $iri	= '';
@@ -425,7 +424,7 @@ sub _get_iriref {
 		}
 	}
 	$self->_get_char_safe(q[>]);
-	return $self->new_token(IRI, $self->start_line, $self->start_column, $iri);
+	return $self->new_token(IRI, $self->{start_line}, $self->{start_column}, $iri);
 }
 
 sub _get_bnode {
@@ -436,17 +435,17 @@ sub _get_bnode {
 	}
 	my $name	= substr($self->{buffer}, 0, $+[0]);
 	$self->_read_word($name);
-	return $self->new_token(BNODE, $self->start_line, $self->start_column, $name);
+	return $self->new_token(BNODE, $self->{start_line}, $self->{start_column}, $name);
 }
 
 sub _get_number {
 	my $self	= shift;
 	if ($self->{buffer} =~ /^${r_double}/o) {
-		return $self->new_token(DOUBLE, $self->start_line, $self->start_column, $self->_read_length($+[0]));
+		return $self->new_token(DOUBLE, $self->{start_line}, $self->{start_column}, $self->_read_length($+[0]));
 	} elsif ($self->{buffer} =~ /^${r_decimal}/o) {
-		return $self->new_token(DECIMAL, $self->start_line, $self->start_column, $self->_read_length($+[0]));
+		return $self->new_token(DECIMAL, $self->{start_line}, $self->{start_column}, $self->_read_length($+[0]));
 	} elsif ($self->{buffer} =~ /^${r_integer}/o) {
-		return $self->new_token(INTEGER, $self->start_line, $self->start_column, $self->_read_length($+[0]));
+		return $self->new_token(INTEGER, $self->{start_line}, $self->{start_column}, $self->_read_length($+[0]));
 	} else {
 		$self->_throw_error("Expected number");
 	}
@@ -464,7 +463,7 @@ sub _get_comment {
 	if (length($c) and $c =~ /[\r\n]/o) {
 		$self->_get_char;
 	}
-	return $self->new_token(COMMENT, $self->start_line, $self->start_column, $comment);
+	return $self->new_token(COMMENT, $self->{start_line}, $self->{start_column}, $comment);
 }
 
 sub _get_double_literal {
@@ -531,7 +530,7 @@ sub _get_double_literal {
 				}
 			}
 		}
-		return $self->new_token(STRING3D, $self->start_line, $self->start_column, $string);
+		return $self->new_token(STRING3D, $self->{start_line}, $self->{start_column}, $string);
 	} else {
 		### #x22 scharacter* #x22
 		my $string	= '';
@@ -575,7 +574,7 @@ sub _get_double_literal {
 			}
 		}
 		$self->_get_char_safe(q["]);
-		return $self->new_token(STRING1D, $self->start_line, $self->start_column, $string);
+		return $self->new_token(STRING1D, $self->{start_line}, $self->{start_column}, $string);
 	}
 }
 
@@ -642,7 +641,7 @@ sub _get_single_literal {
 				}
 			}
 		}
-		return $self->new_token(STRING3S, $self->start_line, $self->start_column, $string);
+		return $self->new_token(STRING3S, $self->{start_line}, $self->{start_column}, $string);
 	} else {
 		### #x22 scharacter* #x22
 		my $string	= '';
@@ -687,7 +686,7 @@ sub _get_single_literal {
 			}
 		}
 		$self->_get_char_safe(q[']);
-		return $self->new_token(STRING1S, $self->start_line, $self->start_column, $string);
+		return $self->new_token(STRING1S, $self->{start_line}, $self->{start_column}, $string);
 	}
 }
 
@@ -696,14 +695,14 @@ sub _get_keyword {
 	$self->_get_char_safe('@');
 	if ($self->{buffer} =~ /^base/o) {
 		$self->_read_word('base');
-		return $self->new_token(BASE, $self->start_line, $self->start_column);
+		return $self->new_token(BASE, $self->{start_line}, $self->{start_column});
 	} elsif ($self->{buffer} =~ /^prefix/o) {
 		$self->_read_word('prefix');
-		return $self->new_token(PREFIX, $self->start_line, $self->start_column);
+		return $self->new_token(PREFIX, $self->{start_line}, $self->{start_column});
 	} else {
 		if ($self->{buffer} =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
 			my $lang	= $self->_read_length($+[0]);
-			return $self->new_token(LANG, $self->start_line, $self->start_column, $lang);
+			return $self->new_token(LANG, $self->{start_line}, $self->{start_column}, $lang);
 		} else {
 			$self->_throw_error("Expected keyword or language tag");
 		}

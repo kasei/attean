@@ -72,7 +72,7 @@ text/turtle.
 			stack_pop	=> 'pop',
 		}
 	);
-
+	
 	with 'Attean::API::TripleParser';
 	with 'Attean::API::Parser::AbbreviatingParser';
 	with 'Attean::API::PushParser';
@@ -160,16 +160,14 @@ serialization is found at the beginning of C<< $string >>.
 
 	sub _next_nonws {
 		my $self	= shift;
-		my $l		= shift;
 		if ($self->stack_size) {
-# 		if (scalar(@{ $self->{ stack } })) {
 			return $self->stack_pop;
-# 			return pop(@{ $self->{ stack } });
 		}
+		my $l		= shift;
 		while (1) {
 			my $t	= $l->get_token;
 			return unless ($t);
-			my $type = $t->type;
+	# 		my $type = $t->type;
 	# 		next if ($type == WS or $type == COMMENT);
 	# 		warn decrypt_constant($type) . "\n";
 			return $t;
@@ -462,14 +460,31 @@ serialization is found at the beginning of C<< $string >>.
 		my $t		= shift;
 		my $type	= shift || $t->type;
 		if ($type eq A) {
-			return Attean::IRI->new("${RDF}type");
+			state $rdftype	= Attean::IRI->new("${RDF}type");
+			return $rdftype;
 		}
 		elsif ($type eq IRI) {
-			my %args	= (value => $t->value);
+			my $value	= $t->value;
+			my %args	= (value => $value);
+			my $iri;
 			if ($self->has_base) {
 				$args{base}	= $self->base;
+				my $iri	= Attean::IRI->new(%args);
+				return $iri;
 			}
-			return Attean::IRI->new(%args);
+			
+			state %cache;
+			 if (my $n = $cache{$value}) {
+				return $n;
+			} else {
+				my $iri	= Attean::IRI->new(%args);
+				if (rand() < 0.02) {
+					# clear out the cache roughly every 50 IRIs
+					%cache	= ();
+				}
+				$cache{$value}	= $iri;
+				return $iri;
+			}
 		}
 		elsif ($type eq INTEGER) {
 			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}integer"));

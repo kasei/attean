@@ -26,7 +26,7 @@ sub value {
 	return $args->[0];
 }
 
-=item C<< fast_constructor ( $type, $line, $col, \@args ) >>
+=item C<< fast_constructor ( $type, $start_line, $start_col, $line, $col, \@args ) >>
 
 Returns a new token object.
 
