@@ -7,6 +7,13 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+use Type::Tiny;
+
+my $Int = Type::Tiny->new(
+	name       => "Int",
+	constraint => sub { /^(\d+)$/ },
+	message    => sub { "$_ isn't an integer" },
+);
 
 {
 	note('ListIterator[Attean::Triple]');
@@ -17,7 +24,7 @@ use Attean;
 	
 	my $t1	= Attean::Triple->new($s, $p, $o1);
 	my $t2	= Attean::Triple->new($s, $p, $o2);
-	my $i	= Attean::ListIterator->new(values => [$t1, $t2], item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple'));
+	my $i	= Attean::ListIterator->new(values => [$t1, $t2], item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple'));
 	does_ok($i, 'Attean::API::Iterator');
 	isa_ok($i, 'Attean::ListIterator');
 	
@@ -35,14 +42,14 @@ use Attean;
 	my $p	= Attean::IRI->new('http://example.org/p');
 	my $g	= Attean::IRI->new('http://example.org/g');
 	dies_ok {
-		my $i	= Attean::ListIterator->new(values => [$p, $g], item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple'));
+		my $i	= Attean::ListIterator->new(values => [$p, $g], item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple'));
 	};
 }
 
 {
 	note('ListIterator[Int != Triple]');
 	dies_ok {
-		my $i	= Attean::ListIterator->new(values => [1, 2, 3], item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple'));
+		my $i	= Attean::ListIterator->new(values => [1, 2, 3], item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple'));
 	};
 }
 
@@ -50,13 +57,13 @@ use Attean;
 	note('CodeIterator[Int]->map<Int>');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => Moose::Meta::TypeConstraint->new(name => 'Int') );
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => $Int );
 	is($iter->next, 1, 'expected value');
 	is($iter->next, 2, 'expected value');
 	is($iter->next, 3, 'expected value');
 	my $double	= $iter->map(sub { $_ * 2 });
 	does_ok($double, 'Attean::API::Iterator');
-	isa_ok($double->item_type, 'Moose::Meta::TypeConstraint');
+	isa_ok($double->item_type, 'Type::Tiny');
 	is($double->item_type->name, 'Int', 'expected item_type');
 	is($double->next, 8, 'expected value');
 	is($double->next, 10, 'expected value');
@@ -66,13 +73,13 @@ use Attean;
 	note('CodeIterator[Int]->map<Literal>');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => Moose::Meta::TypeConstraint->new(name => 'Int') );
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => $Int );
 	my $ints	= $iter->map(
 		sub { Attean::Literal->new(value => $_, datatype => 'http://www.w3.org/2001/XMLSchema#integer') },
-		Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Literal')
+		Type::Tiny::Role->new(role => 'Attean::API::Literal')
 	);
 	does_ok($ints, 'Attean::API::Iterator');
-	isa_ok($ints->item_type, 'Moose::Meta::TypeConstraint::Role');
+	isa_ok($ints->item_type, 'Type::Tiny::Role');
 	is($ints->item_type->role, 'Attean::API::Literal', 'expected item_type');
 	
 	my $l1	= $ints->next;
@@ -89,10 +96,10 @@ use Attean;
 	note('ListIterator[Int]->grep');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::ListIterator->new(values => [1, 2, 3, 4, 5], item_type => Moose::Meta::TypeConstraint->new(name => 'Int'));
+	my $iter	= Attean::ListIterator->new(values => [1, 2, 3, 4, 5], item_type => $Int);
 	my $evens	= $iter->grep(sub { $_ % 2 == 0 });
 	does_ok($evens, 'Attean::API::Iterator');
-	isa_ok($evens->item_type, 'Moose::Meta::TypeConstraint');
+	isa_ok($evens->item_type, 'Type::Tiny');
 	is($evens->item_type->name, 'Int', 'expected item_type');
 	is($evens->next, 2, 'expected value');
 	is($evens->next, 4, 'expected value');
@@ -103,7 +110,7 @@ use Attean;
 	note('ListIterator[Int] reset');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::ListIterator->new(values => [1, 2], item_type => Moose::Meta::TypeConstraint->new(name => 'Int'));
+	my $iter	= Attean::ListIterator->new(values => [1, 2], item_type => $Int);
 	does_ok($iter, 'Attean::API::RepeatableIterator');
 	is($iter->next, 1, 'expected value');
 	is($iter->next, 2, 'expected value');

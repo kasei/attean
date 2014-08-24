@@ -56,6 +56,7 @@ following methods:
 
 package Attean::API::Model 0.001 {
 	use Moose::Role;
+	use Type::Tiny::Role;
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
@@ -111,7 +112,7 @@ package Attean::API::Model 0.001 {
 			push(@elements, @n);
 			($head)	= $self->objects( $head, $rdf->rest )->elements;
 		}
-		return Attean::ListIterator->new(values => \@elements, item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term') );
+		return Attean::ListIterator->new(values => \@elements, item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
 	}
 
 	sub get_sequence {
@@ -133,7 +134,7 @@ package Attean::API::Model 0.001 {
 			push(@elements, $elem);
 			$i++;
 		}
-		return Attean::ListIterator->new(values => \@elements, item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term') );
+		return Attean::ListIterator->new(values => \@elements, item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
 	}
 
 	{
@@ -149,7 +150,7 @@ package Attean::API::Model 0.001 {
 				my $iter	= $self->get_quads(@nodes);
 				my $nodes	= $iter->map(
 					sub { $_->$method() },
-					Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term'),
+					Type::Tiny::Role->new(role => 'Attean::API::Term'),
 				);
 				return $nodes;
 			});

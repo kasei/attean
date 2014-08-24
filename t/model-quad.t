@@ -7,6 +7,7 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+use Type::Tiny::Role;
 
 {
 	my $store	= Attean->get_store('Memory')->new();
@@ -85,7 +86,7 @@ use Attean;
 		note('objects() matching');
 		my $objects	= $model->objects();
 		does_ok($objects, 'Attean::API::Iterator');
-		isa_ok($objects->item_type, 'Moose::Meta::TypeConstraint::Role');
+		isa_ok($objects->item_type, 'Type::Tiny::Role');
 		is($objects->item_type->role, 'Attean::API::Term', 'expected item_type');
 		my $count	= 0;
 		while (my $obj = $objects->next) {

@@ -7,8 +7,9 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+use Type::Tiny::Role;
 
-my $constraint	= Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::TripleOrQuad');
+my $constraint	= Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad');
 
 my $s	= Attean::Blank->new('x');
 my $p	= Attean::IRI->new('http://example.org/p');

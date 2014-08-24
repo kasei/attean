@@ -8,6 +8,7 @@ use File::Glob qw(bsd_glob);
 use File::Spec;
 
 use Attean;
+use Type::Tiny::Role;
 
 sub iri {
 	my $value	= shift;
@@ -28,7 +29,7 @@ sub literal {
 	my $parser	= Attean->get_parser('Turtle')->new();
 	isa_ok($parser, 'AtteanX::Parser::Turtle');
 	my $type	= $parser->handled_type;
-	isa_ok($type, 'Moose::Meta::TypeConstraint::Role');
+	can_ok($type, 'role');
 	is($type->role, 'Attean::API::Triple');
 }
 

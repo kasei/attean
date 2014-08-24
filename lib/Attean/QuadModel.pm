@@ -88,9 +88,6 @@ The returned iterator conforms to both L<Attean::API::Iterator> and L<Attean::AP
 	}
 	
 	with 'Attean::API::Model';
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 
@@ -106,9 +103,6 @@ package Attean::MutableQuadModel 0.001 {
 	);
 
 	with 'Attean::API::MutableModel';
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 1;

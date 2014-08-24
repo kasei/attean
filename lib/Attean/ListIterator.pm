@@ -16,7 +16,7 @@ This document describes Attean::ListIterator version 0.001
   my @values = map { Attean::Literal->new($_) } (1,2,3);
   my $iter = Attean::ListIterator->new(
     values => \@values,
-    item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term'),
+    item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'),
   );
   
   say $iter->next->value; # 1
@@ -51,6 +51,7 @@ that will be returned from the iterator
 
 package Attean::ListIterator 0.001 {
 	use Moo;
+	use Type::Tiny::Role;
 	use MooX::Types::MooseLike::Base qw(ArrayRef Int);
 	
 	with 'Attean::API::RepeatableIterator';
@@ -96,9 +97,6 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		$self->current(1+$index);
 		return $item;
 	}
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 1;

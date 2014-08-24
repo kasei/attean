@@ -18,7 +18,7 @@ This document describes Attean::CodeIterator version 0.001
       state $value = 0;
       Attean::Literal->new(++$value)
     },
-    item_type => Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term'),
+    item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'),
   );
   
   say $iter->next->value; # 1
@@ -54,6 +54,7 @@ that will be returned from the iterator
 
 package Attean::CodeIterator 0.001 {
 	use Moo;
+	use Type::Tiny::Role;
 	use MooX::Types::MooseLike::Base qw(CodeRef);
 	
 	with 'Attean::API::Iterator';
@@ -75,9 +76,6 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		$constraint->assert_valid($item);
 		return $item;
 	}
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 1;

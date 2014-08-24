@@ -93,6 +93,7 @@ package Attean::API::QuadStore 0.001 {
 
 package Attean::API::MutableQuadStore 0.001 {
 	use Moo::Role;
+	use Type::Tiny::Role;
 	with 'Attean::API::QuadStore';
 	
 	requires 'add_quad';
@@ -106,7 +107,7 @@ package Attean::API::MutableQuadStore 0.001 {
 		my $type	= $iter->item_type;
 		use Data::Dumper;
 		die "Iterator type isn't quads: " . Dumper($type) unless $type->equals(
-			Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad')
+			Type::Tiny::Role->new(role => 'Attean::API::Quad')
 		);
 		while (my $q = $iter->next) {
 			$self->add_quad($q);

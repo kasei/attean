@@ -38,12 +38,14 @@ following methods:
 
 =cut
 
+use Type::Tiny::Role;
+
 package Attean::API::Iterator 0.001 {
 	use Moose::Role;
 	use Moose::Util::TypeConstraints;
 	use Moose::Util qw(apply_all_roles);
 	
-	has 'item_type' => (is => 'ro', isa => 'Moose::Meta::TypeConstraint', required => 1);
+	has 'item_type' => (is => 'ro', isa => 'Object', required => 1); # TODO: isa Moose::Meta::TypeConstraint or Type::Tiny
 	requires 'next';
 	
 	sub BUILD {}
@@ -52,7 +54,7 @@ package Attean::API::Iterator 0.001 {
 		my $self	= shift;
 		$self->$orig(@_);
 		my $type	= $self->item_type;
-		if ($type->isa('Moose::Meta::TypeConstraint::Role')) {
+		if ($type->can('role')) {	# TODO: simplify
 			my $role	= $type->role;
 			return unless defined($role);
 			if ($role eq 'Attean::API::Triple') {
@@ -135,7 +137,7 @@ package Attean::API::TripleIterator 0.001 {
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;
-		return $self->map(sub { $_->as_quad($graph) }, Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad'));
+		return $self->map(sub { $_->as_quad($graph) }, Type::Tiny::Role->new(role => 'Attean::API::Quad'));
 	}
 }
 
@@ -150,7 +152,7 @@ package Attean::API::MixedStatementIterator 0.001 {
 		my $graph	= shift;
 		return $self->map(
 			sub { $_->does('Attean::API::Quad') ? $_ : $_->as_quad($graph) },
-			Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad')
+			Type::Tiny::Role->new(role => 'Attean::API::Quad')
 		);
 	}
 }

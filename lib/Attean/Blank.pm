@@ -51,9 +51,6 @@ package Attean::Blank 0.001 {
 		my $self	= shift;
 		return '_:' . $self->value;
 	}
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 1;

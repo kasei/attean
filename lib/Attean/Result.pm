@@ -60,9 +60,6 @@ object.
 		my $self	= shift;
 		return keys %{ $self->bindings };
 	}
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 1;
