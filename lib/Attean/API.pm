@@ -22,21 +22,19 @@ in the Attean::API:: namespace.
 =cut
 
 package Attean::API::BlankOrIRI 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 }
 
 package Attean::TermOrVariable 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 }
 
 package Attean::Mapper 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	requires 'map'; # my $that = $object->map($this)
 }
 
 package Attean::API 0.001 {
-	use Moose::Util::TypeConstraints;
-
 	use Attean::API::Term;
 	use Attean::API::Store;
 	use Attean::API::Model;

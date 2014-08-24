@@ -37,7 +37,7 @@ following methods:
 =cut
 
 package Attean::API::Term 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	with 'Attean::TermOrVariable';
 	
@@ -92,7 +92,7 @@ package Attean::API::Term 0.001 {
 }
 
 package Attean::API::Literal 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	use IRI;
 	
 	with 'Attean::API::Term';
@@ -106,16 +106,15 @@ package Attean::API::Literal 0.001 {
 }
 
 package Attean::API::Blank 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
 }
 
 package Attean::API::IRI 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	use IRI;
-	use Moose::Util::TypeConstraints;
 	
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
