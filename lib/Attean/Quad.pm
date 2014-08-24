@@ -26,10 +26,10 @@ package Attean::Quad 0.001 {
 	use Moose;
 	use Attean::API;
 	
-	has 'subject'	=> (is => 'ro', isa => 'Attean::API::BlankOrIRI', required => 1);
-	has 'predicate'	=> (is => 'ro', isa => 'Attean::API::IRI', required => 1);
-	has 'object'	=> (is => 'ro', isa => 'Attean::API::Term', required => 1);
-	has 'graph'		=> (is => 'ro', isa => 'Attean::API::BlankOrIRI', required => 1);
+	has 'subject'	=> (is => 'ro', does => 'Attean::API::BlankOrIRI', required => 1);
+	has 'predicate'	=> (is => 'ro', does => 'Attean::API::IRI', required => 1);
+	has 'object'	=> (is => 'ro', does => 'Attean::API::Term', required => 1);
+	has 'graph'		=> (is => 'ro', does => 'Attean::API::BlankOrIRI', required => 1);
 	
 	with 'Attean::API::Quad';
 	
