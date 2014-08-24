@@ -60,7 +60,7 @@ package Attean::ListIterator 0.001 {
 	
 	sub BUILD {
 		my $self	 = shift;
-		if (0) {
+		if (1) {
 			# type check the list values
 			my $constraint	= $self->item_type;
 			foreach my $item (@{ $self->values }) {
