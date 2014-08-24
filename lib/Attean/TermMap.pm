@@ -32,14 +32,13 @@ It conforms to the L<Attean::API::Mapper> role.
 =cut
 
 package Attean::TermMap 0.001 {
-	use Moose;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(CodeRef);
 	use Attean::API::Binding;
 	use Data::UUID;
-	use Moose::Util::TypeConstraints;
 	
 	with 'Attean::Mapper';
-	coerce 'Attean::TermMap' => from 'CodeRef' => via { Attean::TermMap->new( $_ ) };
-	has 'mapper'	=> (is => 'ro', isa => 'CodeRef', default => sub { shift }, required => 1);
+	has 'mapper'	=> (is => 'ro', isa => CodeRef, default => sub { shift }, required => 1);
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;

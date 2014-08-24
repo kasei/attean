@@ -29,7 +29,8 @@ use AtteanX::Parser::Turtle::Constants;
 use v5.14;
 use strict;
 use warnings;
-use Moose;
+use Moo;
+use MooX::Types::MooseLike::Base qw(Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 
 our $VERSION;
 BEGIN {
@@ -61,43 +62,43 @@ my $r_PNAME_LN				= qr/(${r_PNAME_NS}${r_PN_LOCAL})/o;
 
 has file => (
 	is => 'ro',
-	isa => 'FileHandle',
+	isa => Ref, # TODO: InstanceOf['FileHandle'],
 	required => 1,
 );
 
 has linebuffer => (
 	is => 'rw',
-	isa => 'Str',
+	isa => Str,
 	default => '',
 );
 
 has line => (
 	is => 'rw',
-	isa => 'Int',
+	isa => Int,
 	default => 1,
 );
 
 has column => (
 	is => 'rw',
-	isa => 'Int',
+	isa => Int,
 	default => 1,
 );
 
 has buffer => (
 	is => 'rw',
-	isa => 'Str',
+	isa => Str,
 	default => '',
 );
 
 has start_column => (
 	is => 'rw',
-	isa => 'Int',
+	isa => Int,
 	default => -1,
 );
 
 has start_line => (
 	is => 'rw',
-	isa => 'Int',
+	isa => Int,
 	default => -1,
 );
 

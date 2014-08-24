@@ -24,10 +24,11 @@ It conforms to the L<Attean::TermOrVariable|Attean::API> role.
 =cut
 
 package Attean::Variable 0.001 {
-	use Moose;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(Str);
 	
-	has 'value' => (is => 'ro', isa => 'Str', required => 1);
-	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
+	has 'value' => (is => 'ro', isa => Str, required => 1);
+	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
 	with 'Attean::TermOrVariable';
 	

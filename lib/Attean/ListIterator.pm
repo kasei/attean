@@ -50,13 +50,13 @@ that will be returned from the iterator
 =cut
 
 package Attean::ListIterator 0.001 {
-	use Moose;
-	use Moose::Util::TypeConstraints;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(ArrayRef Int);
 	
 	with 'Attean::API::RepeatableIterator';
 	
-	has values => (is => 'ro', isa => 'ArrayRef', required => 1);
-	has current => (is => 'rw', isa => 'Int', init_arg => undef, default => 0);
+	has values => (is => 'ro', isa => ArrayRef, required => 1);
+	has current => (is => 'rw', isa => Int, init_arg => undef, default => 0);
 	
 	sub BUILD {
 		my $self	 = shift;

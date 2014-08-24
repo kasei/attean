@@ -20,7 +20,8 @@ use v5.14;
 use warnings;
 
 package AtteanX::Store::Memory 0.001 {
-use Moose;
+use Moo;
+use MooX::Types::MooseLike::Base qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
 with 'Attean::API::MutableQuadStore';
 with 'Attean::API::QuadStore';
 
@@ -45,15 +46,14 @@ Returns a new memory-backed storage object.
 
 =cut
 
-has _size => (is => 'rw', isa => 'Int', init_arg => undef, default => 0);
-has statements => (is => 'rw', isa => 'ArrayRef[Attean::API::Quad]', init_arg => undef, default => sub { [] });
-
-has subject => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
-has predicate => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
-has object => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
-has graph => (is => 'ro', isa => 'HashRef[Set::Scalar]', init_arg => undef, default => sub { +{} });
-has graph_nodes	=> (is => 'rw', isa => 'HashRef[Attean::API::IRI]', init_arg => undef, default => sub { +{} });
-has hash		=> (is => 'rw', isa => 'Digest::SHA', default => sub { Digest::SHA->new });
+has _size => (is => 'rw', isa => Int, init_arg => undef, default => 0);
+has statements => (is => 'rw', isa => ArrayRef[ConsumerOf['Attean::API::Quad']], init_arg => undef, default => sub { [] });
+has subject => (is => 'ro', isa => HashRef[InstanceOf['Set::Scalar']], init_arg => undef, default => sub { +{} });
+has predicate => (is => 'ro', isa => HashRef[InstanceOf['Set::Scalar']], init_arg => undef, default => sub { +{} });
+has object => (is => 'ro', isa => HashRef[InstanceOf['Set::Scalar']], init_arg => undef, default => sub { +{} });
+has graph => (is => 'ro', isa => HashRef[InstanceOf['Set::Scalar']], init_arg => undef, default => sub { +{} });
+has graph_nodes	=> (is => 'rw', isa => HashRef[ConsumerOf['Attean::API::IRI']], init_arg => undef, default => sub { +{} });
+has hash		=> (is => 'rw', isa => InstanceOf['Digest::SHA'], default => sub { Digest::SHA->new });
 
 =item C<< size >>
 

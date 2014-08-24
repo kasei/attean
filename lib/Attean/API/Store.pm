@@ -18,11 +18,11 @@ The Attean::Store role is an empty role that more specialized roles conform to.
 =cut
 
 package Attean::API::Store 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 }
 
 package Attean::API::TripleStore 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Store';
 
 	requires 'get_triples';
@@ -44,7 +44,7 @@ package Attean::API::TripleStore 0.001 {
 }
 
 package Attean::API::MutableTripleStore 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'add_triple';
@@ -52,14 +52,14 @@ package Attean::API::MutableTripleStore 0.001 {
 }
 
 package Attean::API::CacheableTripleStore 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'etag_value_for_triples';
 }
 
 package Attean::API::QuadStore 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Store';
 
 	requires 'get_quads';
@@ -92,7 +92,7 @@ package Attean::API::QuadStore 0.001 {
 }
 
 package Attean::API::MutableQuadStore 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::QuadStore';
 	
 	requires 'add_quad';
@@ -115,7 +115,7 @@ package Attean::API::MutableQuadStore 0.001 {
 }
 
 package Attean::API::CacheableQuadStore 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::QuadStore';
 	
 	requires 'etag_value_for_quads';

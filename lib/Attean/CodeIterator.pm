@@ -53,12 +53,12 @@ that will be returned from the iterator
 =cut
 
 package Attean::CodeIterator 0.001 {
-	use Moose;
-	use Moose::Util::TypeConstraints;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(CodeRef);
 	
 	with 'Attean::API::Iterator';
 	
-	has generator => (is => 'ro', isa => 'CodeRef', required => 1);
+	has generator => (is => 'ro', isa => CodeRef, required => 1);
 	
 =item C<< next >>
 

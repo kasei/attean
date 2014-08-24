@@ -27,7 +27,7 @@ package AtteanX::Parser::NTuples 0.001 {
 	use utf8;
 	use Attean;
 	use Encode qw(decode);
-	use Moose;
+	use Moo;
 	
 =item C<< parse_iter_from_bytes( $data ) >>
 

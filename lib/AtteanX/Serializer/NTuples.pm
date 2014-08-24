@@ -26,7 +26,7 @@ use v5.14;
 use warnings;
 
 package AtteanX::Serializer::NTuples 0.001 {
-	use Moose;
+	use Moo;
 	use Encode qw(encode);
 	use Attean::ListIterator;
 	use List::MoreUtils qw(any);

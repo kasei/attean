@@ -30,11 +30,12 @@ It conforms to the L<Attean::API::Result|Attean::API::Binding> role.
 =cut
 
 package Attean::Result 0.001 {
-	use Moose;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(HashRef);
 	use Attean::API::Binding;
 	
 	with 'Attean::API::Result';
-	has 'bindings' => (is => 'ro', isa => 'HashRef[Attean::API::Term]');
+	has 'bindings' => (is => 'ro', isa => HashRef); # TODO: HashRef[Attean::API::Term]
 	
 =item C<< value( $name ) >>
 

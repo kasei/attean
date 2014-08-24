@@ -44,12 +44,12 @@ that will be returned from the iterator
 =cut
 
 package Attean::IteratorSequence 0.001 {
-	use Moose;
-	use Moose::Util::TypeConstraints;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(ArrayRef ConsumerOf);
 	
 	with 'Attean::API::Iterator';
 	
-	has iterators => (is => 'ro', isa => 'ArrayRef[Attean::API::Iterator]', required => 1);
+	has iterators => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Iterator']], required => 1);
 	
 =item C<< next >>
 

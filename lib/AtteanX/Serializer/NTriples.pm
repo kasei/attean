@@ -30,10 +30,11 @@ package AtteanX::Serializer::NTriples 0.001 {
 	use Attean::ListIterator;
 	use List::MoreUtils qw(any);
 
-	use Moose;
+	use Moo;
+	use MooX::Types::MooseLike::Base qw(Str ArrayRef);
 	extends 'AtteanX::Serializer::NTuples';
-	has 'canonical_media_type' => (is => 'ro', isa => 'Str', init_arg => undef, default => 'application/n-triples');
-	has 'media_types' => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef, default => sub { ['application/n-triples'] });
+	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/n-triples');
+	has 'media_types' => (is => 'ro', isa => ArrayRef[Str], init_arg => undef, default => sub { ['application/n-triples'] });
 	with 'Attean::API::TripleSerializer';
 	with 'Attean::API::AppendableSerializer';
 }
