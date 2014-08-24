@@ -39,7 +39,7 @@ quad-store.
 =cut
 
 package Attean::QuadModel 0.001 {
-	use Moose;
+	use Moo;
 	use Scalar::Util qw(reftype);
 	has 'store'	=> (
 		is => 'ro',
@@ -95,7 +95,7 @@ The returned iterator conforms to both L<Attean::API::Iterator> and L<Attean::AP
 
 
 package Attean::MutableQuadModel 0.001 {
-	use Moose;
+	use Moo;
 	extends 'Attean::QuadModel';
 	
 	has 'store'	=> (

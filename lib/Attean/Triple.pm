@@ -23,7 +23,7 @@ It conforms to the L<Attean::API::Triple|Attean::API::Binding> role.
 =cut
 
 package Attean::Triple 0.001 {
-	use Moose;
+	use Moo;
 	use Attean::API::Binding;
 	
 	has 'subject'	=> (is => 'ro', does => 'Attean::API::BlankOrIRI', required => 1);

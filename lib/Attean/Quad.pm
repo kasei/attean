@@ -23,7 +23,7 @@ It conforms to the L<Attean::API::Quad|Attean::API::Binding> role.
 =cut
 
 package Attean::Quad 0.001 {
-	use Moose;
+	use Moo;
 	use Attean::API;
 	
 	has 'subject'	=> (is => 'ro', does => 'Attean::API::BlankOrIRI', required => 1);
