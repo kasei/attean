@@ -74,7 +74,7 @@ package Attean::API::AbbreviatingSerializer 0.001 {
 	use Moose::Role;
 	with 'Attean::API::Serializer';
 
-	has base		=> (is => 'ro', isa => 'Attean::API::IRI', predicate => 'has_base');
+	has base		=> (is => 'ro', does => 'Attean::API::IRI', predicate => 'has_base');
 	has namespaces	=> (is => 'ro', isa => 'Maybe[URI::NamespaceMap]', predicate => 'has_namespaces');
 }
 
