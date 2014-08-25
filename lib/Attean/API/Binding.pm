@@ -44,6 +44,7 @@ following methods:
 
 =cut
 
+use Type::Tiny::Role;
 use Moose::Util::TypeConstraints;
 
 package Attean::API::TripleOrQuad {
@@ -94,9 +95,32 @@ package Attean::API::Triple 0.001 {
 		}
 	}
 	
-	requires 'subject';		# TODO: type constrain to Attean::BlankOrIRI
-	requires 'predicate';	# TODO: type constrain to Attean::IRI
-	requires 'object';		# TODO: type constrain to Attean::API::Term
+	requires 'subject';
+	requires 'predicate';
+	requires 'object';
+
+	if ($ENV{ATTEAN_TYPECHECK}) {
+		my %map	= (
+			subject		=> 'Attean::API::BlankOrIRI',
+			predicate	=> 'Attean::API::IRI',
+			object		=> 'Attean::API::Term'
+		);
+		foreach my $method (keys %map) {
+			my $role	= $map{$method};
+			around $method => sub {
+				my $orig	= shift;
+				my $self	= shift;
+				my $class	= ref($self);
+				my $term	= $self->$orig(@_);
+				my $type	= Type::Tiny::Role->new( role => $role );
+				my $err		= $type->validate($term);
+				if ($err) {
+					die "${class}'s $method failed conformance check for role $role";
+				}
+				return $term;
+			};
+		}
+	}
 	
 	sub as_quad {
 		my $self	= shift;
@@ -123,10 +147,32 @@ package Attean::API::Quad 0.001 {
 		}
 	}
 	
-	requires 'subject';		# TODO: type constrain to Attean::BlankOrIRI
-	requires 'predicate';	# TODO: type constrain to Attean::IRI
-	requires 'object';		# TODO: type constrain to Attean::API::Term
-	requires 'graph';		# TODO: type constrain to Attean::BlankOrIRI
+	requires 'subject';
+	requires 'predicate';
+	requires 'object';
+	requires 'graph';
+
+	if ($ENV{ATTEAN_TYPECHECK}) {
+		my %map	= (
+			# subject, predicate, and graph type checking is done by the Attean::API::Triple method modifiers
+			graph		=> 'Attean::API::BlankOrIRI',
+		);
+		foreach my $method (keys %map) {
+			my $role	= $map{$method};
+			around $method => sub {
+				my $orig	= shift;
+				my $self	= shift;
+				my $class	= ref($self);
+				my $term	= $self->$orig(@_);
+				my $type	= Type::Tiny::Role->new( role => $role );
+				my $err		= $type->validate($term);
+				if ($err) {
+					die "${class}'s $method failed conformance check for role $role";
+				}
+				return $term;
+			};
+		}
+	}
 
 	with 'Attean::API::TripleOrQuad';
 	with 'Attean::API::Triple';
