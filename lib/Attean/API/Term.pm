@@ -99,6 +99,30 @@ package Attean::API::Literal 0.001 {
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
+	
+	if ($ENV{ATTEAN_TYPECHECK}) {
+		use Types::Standard qw(Maybe Str ConsumerOf);
+		my %map	= (
+			language	=> Maybe[Str],
+			datatype	=> ConsumerOf['Attean::API::IRI'],
+		);
+		foreach my $method (keys %map) {
+			my $type	= $map{$method};
+			around $method => sub {
+				my $orig	= shift;
+				my $self	= shift;
+				my $class	= ref($self);
+				my $value	= $self->$orig(@_);
+				my $err		= $type->validate($value);
+				if ($err) {
+					my $name	= $type->display_name;
+					die "${class}'s $method failed conformance check for $name: $value";
+				}
+				return $value;
+			};
+		}
+	}
+	
 	sub _ntriples_string {
 		my $self	= shift;
 		return sprintf('"%s"', $self->__ntriples_string);

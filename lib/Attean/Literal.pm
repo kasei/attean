@@ -27,15 +27,23 @@ It conforms to the L<Attean::API::Literal|Attean::API::Term> role.
 =cut
 
 package Attean::Literal 0.001 {
+	use Moo;
+	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;
-	use Moose;
 	use IRI;
+	use Scalar::Util qw(blessed);
 	
 	my $XSD_STRING	= IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
-	has 'value' => (is => 'ro', isa => 'Str', required => 1);
-	has 'language'			=> (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
-	has 'datatype'			=> (is => 'ro', does => 'Attean::IRI', required => 1, coerce => 1, default => sub { $XSD_STRING });
-	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
+	has 'value'				=> (is => 'ro', isa => Str, required => 1);
+	has 'language'			=> (is => 'ro', isa => Maybe[Str], predicate => 'has_language');
+	has 'datatype'			=> (
+		is => 'ro',
+		isa => InstanceOf['Attean::IRI'],
+		required => 1,
+		coerce => sub { blessed($_[0]) ? Attean::IRI->new($_[0]->as_string) : Attean::IRI->new($_[0]) },
+		default => sub { $XSD_STRING }
+	);
+	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
 	with 'Attean::API::Literal';
 

@@ -31,7 +31,7 @@ use warnings;
 package AtteanX::Parser::SPARQLXML 0.001 {
 	use XML::SAX::ParserFactory;
 	use Attean;
-	use Moose;
+	use Moo;
 	use AtteanX::Parser::SPARQLXML::SAXHandler;
 	
 =item C<< canonical_media_type >>

@@ -41,11 +41,12 @@ following methods:
 use Type::Tiny::Role;
 
 package Attean::API::Iterator 0.001 {
-	use Moose::Role;
-	use Moose::Util::TypeConstraints;
+	use Moo::Role;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Object);
 	use Moose::Util qw(apply_all_roles);
 	
-	has 'item_type' => (is => 'ro', isa => 'Object', required => 1); # TODO: isa Moose::Meta::TypeConstraint or Type::Tiny
+	has 'item_type' => (is => 'ro', isa => Object, required => 1); # TODO: isa Moose::Meta::TypeConstraint or Type::Tiny
 	requires 'next';
 	
 	sub BUILD {}
@@ -145,15 +146,14 @@ package Attean::API::Iterator 0.001 {
 }
 
 package Attean::API::RepeatableIterator 0.001 {
-	use Moose::Role;
-	use Moose::Util::TypeConstraints;
+	use Moo::Role;
 	
 	requires 'reset';
 	with 'Attean::API::Iterator';
 }
 
 package Attean::API::TripleIterator 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;
@@ -162,11 +162,11 @@ package Attean::API::TripleIterator 0.001 {
 }
 
 package Attean::API::QuadIterator 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 }
 
 package Attean::API::MixedStatementIterator 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;

@@ -48,7 +48,7 @@ use Type::Tiny::Role;
 use Moose::Util::TypeConstraints;
 
 package Attean::API::TripleOrQuad {
-	use Moose::Role;
+	use Moo::Role;
 	sub apply_map {
 		my $self	= shift;
 		my $class	= ref($self);
@@ -60,7 +60,7 @@ package Attean::API::TripleOrQuad {
 
 
 package Attean::API::Binding 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	requires 'value';
 	requires 'variables';
@@ -82,7 +82,7 @@ package Attean::API::Binding 0.001 {
 
 
 package Attean::API::Triple 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object) }
 	sub value {
@@ -134,7 +134,7 @@ package Attean::API::Triple 0.001 {
 
 
 package Attean::API::Quad 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -180,7 +180,7 @@ package Attean::API::Quad 0.001 {
 
 
 package Attean::API::Result 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	sub join {
 		my $self	= shift;

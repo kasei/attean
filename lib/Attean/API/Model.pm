@@ -55,7 +55,8 @@ following methods:
 =cut
 
 package Attean::API::Model 0.001 {
-	use Moose::Role;
+	use Moo::Role;
+	use Moose::Util;
 	use Type::Tiny::Role;
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
@@ -160,7 +161,7 @@ package Attean::API::Model 0.001 {
 
 
 package Attean::API::MutableModel 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	requires 'add_quad';
 	requires 'remove_quad';
@@ -191,14 +192,14 @@ package Attean::API::MutableModel 0.001 {
 
 
 package Attean::API::CacheableModel 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
 package Attean::API::BulkUpdatableModel 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';
 	

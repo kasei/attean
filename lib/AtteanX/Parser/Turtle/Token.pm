@@ -1,9 +1,10 @@
 package AtteanX::Parser::Turtle::Token;
 
 use v5.14;
-use strict;
 use warnings;
-use MooseX::ArrayRef;
+use List::MoreUtils qw(zip);
+
+use Moo;
 
 has type => ( is => 'ro', );
 has start_line => ( is => 'ro', );
@@ -33,9 +34,14 @@ Returns a new token object.
 =cut
 
 # This constructor relies on the list of attributes not changing order!
+my @KEYS	= qw(type start_line start_column line column args);
 sub fast_constructor {
 	my $class = shift;
-	bless \@_, $class;
+# # If using MooseX::ArrayRef, this is the constructor:
+# 	return bless \@_, $class;
+	return $class->new(
+		zip @KEYS, @_
+	);
 }
 
 __PACKAGE__->meta->make_immutable;

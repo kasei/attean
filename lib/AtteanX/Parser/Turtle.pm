@@ -36,7 +36,8 @@ package AtteanX::Parser::Turtle 0.001 {
 	use AtteanX::Parser::Turtle::Lexer;
 	use AtteanX::Parser::Turtle::Token;
 	use Attean::API::Parser;
-	use Moose;
+	use Moo;
+	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 
 =item C<< canonical_media_type >>
 
@@ -57,20 +58,14 @@ text/turtle.
 		return [qw(application/x-turtle application/turtle text/turtle)];
 	}
 
-	has 'canonicalize'	=> (is => 'rw', isa => 'Bool', default => 0);
-	has 'map' => (is => 'ro', isa => 'HashRef[Str]', default => sub { +{} });
-	has 'namespaces' => (is => 'rw', isa => 'Maybe[URI::NamespaceMap]', predicate => 'has_namespaces');
+	has 'canonicalize'	=> (is => 'rw', isa => Bool, default => 0);
+	has 'map' => (is => 'ro', isa => HashRef[Str], default => sub { +{} });
+	has 'namespaces' => (is => 'rw', isa => Maybe[InstanceOf['URI::NamespaceMap']], predicate => 'has_namespaces');
 	has	'stack'	=> (
 		is => 'ro',
-		isa => 'ArrayRef',
+		isa => ArrayRef,
 		default => sub { [] },
 		init_arg => undef,
-		traits  => ['Array'],
-		handles => {
-			stack_size	=> 'count',
-			stack_push	=> 'push',
-			stack_pop	=> 'pop',
-		}
 	);
 	
 	with 'Attean::API::TripleParser';
@@ -154,14 +149,14 @@ serialization is found at the beginning of C<< $string >>.
 	sub _unget_token {
 		my $self	= shift;
 		my $t		= shift;
-		$self->stack_push($t);
+		push(@{ $self->stack }, $t);
 # 		push(@{ $self->{ stack } }, $t);
 	}
 
 	sub _next_nonws {
 		my $self	= shift;
-		if ($self->stack_size) {
-			return $self->stack_pop;
+		if (scalar(@{ $self->stack })) {
+			return pop(@{ $self->stack });
 		}
 		my $l		= shift;
 		while (1) {

@@ -29,7 +29,8 @@ and extends the L<IRI> class.
 =cut
 
 package Attean::IRI 0.001 {
-	use Moose;
+	use Moo;
+	use Types::Standard qw(Str);
 	use IRI 0.003;
 	use Moose::Util::TypeConstraints;
 
@@ -41,7 +42,7 @@ package Attean::IRI 0.001 {
 	coerce 'Attean::IRI' => from 'URI' => via { Attean::IRI->new( value => $_->as_string ) };
 	coerce 'Attean::IRI' => from 'IRI' => via { Attean::IRI->new( value => $_->value ) };
 
-	has 'ntriples_string'	=> (is => 'ro', isa => 'Str', lazy => 1, builder => '_ntriples_string');
+	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
 	with 'Attean::API::IRI';
 	with 'Attean::API::BlankOrIRI';
@@ -65,9 +66,6 @@ Returns the IRI value.
 		my $self	= shift;
 		return $self->abs;
 	}
-
-	no Moose;
-	__PACKAGE__->meta->make_immutable;
 }
 
 1;

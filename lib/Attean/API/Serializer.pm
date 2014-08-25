@@ -45,8 +45,10 @@ following methods:
 
 =cut
 
+use Type::Tiny;
+
 package Attean::API::Serializer 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	
 	requires 'canonical_media_type'; # => (is => 'ro', isa => 'Str', init_arg => undef);
 	requires 'media_types'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
@@ -71,66 +73,67 @@ package Attean::API::Serializer 0.001 {
 
 package Attean::API::AbbreviatingSerializer 0.001 {
 	# Serializer that can make use of a base IRI and/or prefix IRI mappings
-	use Moose::Role;
+	use Moo::Role;
+	use Types::Standard qw(InstanceOf ConsumerOf Maybe);
 	with 'Attean::API::Serializer';
 
-	has base		=> (is => 'ro', does => 'Attean::API::IRI', predicate => 'has_base');
-	has namespaces	=> (is => 'ro', isa => 'Maybe[URI::NamespaceMap]', predicate => 'has_namespaces');
+	has base		=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], predicate => 'has_base');
+	has namespaces	=> (is => 'ro', isa => Maybe[InstanceOf['URI::NamespaceMap']], predicate => 'has_namespaces');
 }
 
 package Attean::API::AppendableSerializer 0.001 {
 	# Serializer for a format that allows multiple serialization calls to be appended and remain syntactically valid
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Serializer';
 }
 
 package Attean::API::TermSerializer 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Serializer';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Term');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Term');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::TripleSerializer 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Serializer';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Triple');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::QuadSerializer 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Serializer';
 	
 	# TODO: add default implementations for serialize_model_to_io
 	# TODO: add default implementations for serialize_model_to_bytes
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Quad');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::MixedStatementSerializer 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Serializer';
 	
 	# TODO: add default implementations for serialize_model_to_io_with_default_graph
 	# TODO: add default implementations for serialize_model_to_bytes_with_default_graph
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::TripleOrQuad');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::ResultSerializer 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Serializer';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Result');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Result');
 		return $ITEM_TYPE;
 	}
 }

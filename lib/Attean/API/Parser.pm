@@ -28,10 +28,13 @@ The following methods are required by the L<Attean::API::Serializer> role:
 
 =cut
 
+use Type::Tiny::Role;
+
 package Attean::API::Parser 0.001 {
-	use Moose::Role;
+	use Moo::Role;
+	use Types::Standard qw(CodeRef);
 	
-	has 'handler' => (is => 'rw', isa => 'CodeRef', default => sub { sub {} });
+	has 'handler' => (is => 'rw', isa => CodeRef, default => sub { sub {} });
 	
 	requires 'canonical_media_type'; # => (is => 'ro', isa => 'Str', init_arg => undef);
 	requires 'media_types'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
@@ -39,16 +42,18 @@ package Attean::API::Parser 0.001 {
 }
 
 package Attean::API::Parser::AbbreviatingParser 0.001 {
-	use Moose::Role;
+	use Moo::Role;
+	use Types::Standard qw(InstanceOf Maybe);
 	use URI::NamespaceMap;
+	use Scalar::Util qw(blessed);
 	
 	with 'Attean::API::Parser';
-	has 'base' 		=> (is => 'rw', isa => 'IRI', coerce => 1, predicate => 'has_base');
-	has 'namespaces'	=> (is => 'ro', isa => 'Maybe[URI::NamespaceMap]');
+	has 'base' 		=> (is => 'rw', isa => InstanceOf['IRI'], coerce => sub { blessed($_[0]) ? IRI->new($_[0]->as_string) : IRI->new($_[0]) }, predicate => 'has_base');
+	has 'namespaces'	=> (is => 'ro', isa => Maybe[InstanceOf['URI::NamespaceMap']]);
 }
 
 package Attean::API::PushParser 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 
 	requires 'parse_cb_from_io';		# parse_cb_from_io($io)
@@ -88,7 +93,7 @@ package Attean::API::PushParser 0.001 {
 }
 
 package Attean::API::PullParser 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 	
 	requires 'parse_iter_from_io';		# $iter = parse_iter_from_io($io)
@@ -130,7 +135,7 @@ package Attean::API::PullParser 0.001 {
 }
 
 package Attean::API::AtOnceParser 0.001 {
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 	
 	requires 'parse_list_from_io';		# @list = parse_list_from_io($io)
@@ -168,46 +173,46 @@ package Attean::API::AtOnceParser 0.001 {
 
 package Attean::API::TermParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Term
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 }
 
 package Attean::API::TripleParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Triple
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Triple');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Triple');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::QuadParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Quad
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Quad');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Quad');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::MixedStatementParser 0.001 {
 	# Parser returns objects that conform to either Attean::API::Triple or Attean::API::Quad
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::TripleOrQuad');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad');
 		return $ITEM_TYPE;
 	}
 }
 
 package Attean::API::ResultParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Result
-	use Moose::Role;
+	use Moo::Role;
 	with 'Attean::API::Parser';
 	sub handled_type {
-		state $ITEM_TYPE = Moose::Meta::TypeConstraint::Role->new(role => 'Attean::API::Result');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Result');
 		return $ITEM_TYPE;
 	}
 }

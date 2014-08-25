@@ -29,7 +29,7 @@ package AtteanX::Parser::NQuads 0.001 {
 	use utf8;
 	
 	use Attean;
-	use Moose;
+	use Moo;
 	extends 'AtteanX::Parser::NTuples';
 	
 =item C<< canonical_media_type >>
