@@ -25,7 +25,7 @@ It conforms to the L<Attean::API::Blank|Attean::API::Term> role.
 
 package Attean::Blank 0.001 {
 	use Moo;
-	use MooX::Types::MooseLike::Base qw(Str);
+	use Types::Standard qw(Str);
 	use Data::UUID;
 	
 	has 'value' => (is => 'ro', isa => Str, required => 1);

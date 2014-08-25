@@ -55,7 +55,7 @@ that will be returned from the iterator
 package Attean::CodeIterator 0.001 {
 	use Moo;
 	use Type::Tiny::Role;
-	use MooX::Types::MooseLike::Base qw(CodeRef);
+	use Types::Standard qw(CodeRef);
 	
 	with 'Attean::API::Iterator';
 	

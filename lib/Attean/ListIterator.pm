@@ -52,7 +52,7 @@ that will be returned from the iterator
 package Attean::ListIterator 0.001 {
 	use Moo;
 	use Type::Tiny::Role;
-	use MooX::Types::MooseLike::Base qw(ArrayRef Int);
+	use Types::Standard qw(ArrayRef Int);
 	
 	with 'Attean::API::RepeatableIterator';
 	

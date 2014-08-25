@@ -14,13 +14,15 @@ build_requires	'Test::Moose'				=> 0;
 
 perl_version	'5.014';
 
-requires		'Digest::SHA'		=> 0;
-requires		'Encode'			=> 0;
-requires		'List::Util'		=> 0;
-requires		'Moose'				=> 0;
-requires		'MooseX::ArrayRef'	=> 0;
-requires		'Scalar::Util'		=> 0;
-requires		'Set::Scalar'		=> 0;
+requires		'Digest::SHA'				=> 0;
+requires		'Encode'					=> 0;
+requires		'List::Util'				=> 0;
+requires		'Moose'						=> 0;
+requires		'MooseX::ArrayRef'			=> 0;
+requires		'Scalar::Util'				=> 0;
+requires		'Set::Scalar'				=> 0;
+requires		'Type::Tiny'				=> 0;
+requires		'Moo'						=> 0;
 
 resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",

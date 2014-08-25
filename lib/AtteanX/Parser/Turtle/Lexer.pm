@@ -30,7 +30,7 @@ use v5.14;
 use strict;
 use warnings;
 use Moo;
-use MooX::Types::MooseLike::Base qw(Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
+use Types::Standard qw(Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 
 our $VERSION;
 BEGIN {

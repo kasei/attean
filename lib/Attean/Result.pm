@@ -31,7 +31,7 @@ It conforms to the L<Attean::API::Result|Attean::API::Binding> role.
 
 package Attean::Result 0.001 {
 	use Moo;
-	use MooX::Types::MooseLike::Base qw(HashRef);
+	use Types::Standard qw(HashRef);
 	use Attean::API::Binding;
 	
 	with 'Attean::API::Result';

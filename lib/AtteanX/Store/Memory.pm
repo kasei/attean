@@ -22,7 +22,7 @@ use warnings;
 package AtteanX::Store::Memory 0.001 {
 use Moo;
 use Type::Tiny::Role;
-use MooX::Types::MooseLike::Base qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
+use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
 with 'Attean::API::MutableQuadStore';
 with 'Attean::API::QuadStore';
 

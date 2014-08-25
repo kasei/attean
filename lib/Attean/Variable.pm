@@ -25,7 +25,7 @@ It conforms to the L<Attean::TermOrVariable|Attean::API> role.
 
 package Attean::Variable 0.001 {
 	use Moo;
-	use MooX::Types::MooseLike::Base qw(Str);
+	use Types::Standard qw(Str);
 	
 	has 'value' => (is => 'ro', isa => Str, required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');

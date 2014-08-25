@@ -33,7 +33,7 @@ It conforms to the L<Attean::API::Mapper> role.
 
 package Attean::TermMap 0.001 {
 	use Moo;
-	use MooX::Types::MooseLike::Base qw(CodeRef);
+	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;
 	use Data::UUID;
 	

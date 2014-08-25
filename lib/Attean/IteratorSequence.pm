@@ -45,7 +45,7 @@ that will be returned from the iterator
 
 package Attean::IteratorSequence 0.001 {
 	use Moo;
-	use MooX::Types::MooseLike::Base qw(ArrayRef ConsumerOf);
+	use Types::Standard qw(ArrayRef ConsumerOf);
 	
 	with 'Attean::API::Iterator';
 	
