@@ -67,6 +67,26 @@ package Attean::API::Iterator 0.001 {
 		}
 	};
 	
+	if ($ENV{ATTEAN_TYPECHECK}) {
+		around 'next' => sub {
+			my $orig	= shift;
+			my $self	= shift;
+			my $type	= $self->item_type;
+			my $class	= ref($self);
+			my $term	= $self->$orig(@_);
+			return unless defined($term);
+			my $err		= $type->validate($term);
+			if ($err) {
+				my $name	= $type->name;
+				if ($type->can('role')) {
+					my $role	= $type->role;
+					$name		= "role $role";
+				}
+				die "${class} returned an element that failed conformance check for $name";
+			}
+			return $term;
+		};
+	}
 	sub elements {
 		my $self	= shift;
 		my @elements;
