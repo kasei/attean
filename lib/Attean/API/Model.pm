@@ -69,10 +69,23 @@ package Attean::API::Model 0.001 {
 	
 	sub get_bindings {
 		my $self	= shift;
-		my @vars	= uniq map { $_->value } grep { blessed($_) and $_->isa('Attean::Variable') } @_;
-		my $iter	= $self->get_quads(@_);
-		# TODO
-		die 'unimplemented';
+		my @nodes	= @_;
+		my @pos		= qw(subject predicate object graph);
+		my %vars;
+		foreach my $i (0 .. $#nodes) {
+			my $n	= $nodes[$i];
+			if (blessed($n) and $n->isa('Attean::Variable')) {
+				my $name	= $n->value;
+				$vars{ $pos[ $i ] }	= $name;
+			}
+		}
+		my $quads		= $self->get_quads(@nodes);
+		return $quads->map(sub {
+			my $q			= $_;
+			return unless blessed($q);
+			my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
+			return Attean::Result->new( bindings => \%bindings );
+		}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
 	}
 	
 	sub count_quads {

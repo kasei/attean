@@ -51,12 +51,41 @@ use Type::Tiny::Role;
 	is($model->count_quads(undef, $p), 2);
 
 	{
-		note('get_quads single-term matching');
+		note('get_quads single-term matching with undef placeholders');
 		my $iter	= $model->get_quads($s2);
 		while (my $q = $iter->next()) {
 			my $o	= $q->object->value;
 			like($o, qr/^[123]$/, "Literal value: $o");
 		}
+	}
+	
+	{
+		note('get_quads single-term matching with variable object placeholders');
+		my @vars	= map { Attean::Variable->new($_) } qw(p o g);
+		my $iter	= $model->get_quads($s2, @vars);
+		does_ok($iter, 'Attean::API::Iterator');
+		while (my $q = $iter->next()) {
+			my $o	= $q->object->value;
+			like($o, qr/^[123]$/, "Literal value: $o");
+		}
+	}
+	
+	{
+		note('get_bindings single-term matching');
+		my $v		= Attean::Variable->new('pred');
+		my $iter	= $model->get_bindings($s2, $v);
+		does_ok($iter, 'Attean::API::Iterator');
+		my $count	= 0;
+		while (my $b = $iter->next()) {
+			$count++;
+			does_ok($b, 'Attean::API::Result');
+			is_deeply([$b->variables], [qw(pred)], 'expected binding variables');
+			my $p	= $b->value('pred');
+			my $v	= $p->value;
+			does_ok($p, 'Attean::API::Term');
+			like($v, qr<^http://example.org/p[123]$>, "Predicate value: $v");
+		}
+		is($count, 3, 'expected binding count');
 	}
 	
 	{
