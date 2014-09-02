@@ -38,8 +38,8 @@ An array reference containing the items to iterate over.
 
 =item item_type
 
-A L<Moose::Meta::TypeConstraint> object representing the type of the items
-that will be returned from the iterator
+A L<Type::Tiny> object representing the type of the items
+that will be returned from the iterator.
 
 =back
 

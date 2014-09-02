@@ -52,7 +52,7 @@ package Attean::API::Serializer 0.001 {
 	
 	requires 'canonical_media_type'; # => (is => 'ro', isa => 'Str', init_arg => undef);
 	requires 'media_types'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
-	requires 'handled_type'; # => (is => 'ro', isa => 'Moose::Meta::TypeConstraint', init_arg => undef);
+	requires 'handled_type'; # => (is => 'ro', isa => 'Type::Tiny', init_arg => undef);
 	
 	requires 'serialize_iter_to_io';		# serialize_iter_to_io($io, $iter)
 	requires 'serialize_iter_to_bytes';		# $data = serialize_iter_to_bytes($iter)

@@ -45,7 +45,6 @@ following methods:
 =cut
 
 use Type::Tiny::Role;
-use Moose::Util::TypeConstraints;
 
 package Attean::API::TripleOrQuad {
 	use Moo::Role;
@@ -216,9 +215,6 @@ package Attean::API::Result 0.001 {
 
 	with 'Attean::API::Binding';
 }
-
-
-union 'Attean::API::SPARQLResult', [qw( Bool Attean::API::Result )];
 
 1;
 

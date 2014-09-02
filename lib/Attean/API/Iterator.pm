@@ -43,10 +43,10 @@ use Type::Tiny::Role;
 package Attean::API::Iterator 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
-	use Types::Standard qw(Object);
+	use Types::Standard qw(Object InstanceOf);
 	use Moose::Util qw(apply_all_roles);
 	
-	has 'item_type' => (is => 'ro', isa => Object, required => 1); # TODO: isa Moose::Meta::TypeConstraint or Type::Tiny
+	has 'item_type' => (is => 'ro', isa => InstanceOf['Type::Tiny'], required => 1);
 	requires 'next';
 	
 	sub BUILD {}

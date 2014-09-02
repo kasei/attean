@@ -53,6 +53,7 @@ application/n-triples.
 	
 	with 'Attean::API::TripleParser';
 	with 'Attean::API::PullParser';
+	with 'Attean::API::Parser';
 
 	sub _binding {
 		my $self	= shift;

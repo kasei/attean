@@ -32,16 +32,9 @@ package Attean::IRI 0.001 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use IRI 0.003;
-	use Moose::Util::TypeConstraints;
 
 	extends 'IRI';
 	
-	class_type('URI');
-	class_type('IRI');
-	coerce 'Attean::IRI' => from 'Str' => via { Attean::IRI->new( value => $_ ) };
-	coerce 'Attean::IRI' => from 'URI' => via { Attean::IRI->new( value => $_->as_string ) };
-	coerce 'Attean::IRI' => from 'IRI' => via { Attean::IRI->new( value => $_->value ) };
-
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
 	with 'Attean::API::IRI';

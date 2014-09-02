@@ -16,7 +16,7 @@ This document describes Attean::API version 0.001
 
 =head1 DESCRIPTION
 
-This is a utility package that will load all the Attean-related Moose roles
+This is a utility package that will load all the Attean-related Moo roles
 in the Attean::API:: namespace.
 
 =cut
