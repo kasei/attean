@@ -25,13 +25,18 @@ package Attean::API::BlankOrIRI 0.001 {
 	use Moo::Role;
 }
 
-package Attean::TermOrVariable 0.001 {
+package Attean::API::TermOrVariable 0.001 {
 	use Moo::Role;
 }
 
 package Attean::Mapper 0.001 {
 	use Moo::Role;
 	requires 'map'; # my $that = $object->map($this)
+}
+
+package Attean::API::Variable 0.001 {
+	use Moo::Role;
+	with 'Attean::API::TermOrVariable';
 }
 
 package Attean::API 0.001 {

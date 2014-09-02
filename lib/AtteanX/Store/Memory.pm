@@ -81,7 +81,11 @@ sub get_quads {
 	
 	foreach my $pos (0 .. 3) {
 		my $n	= $nodes[ $pos ];
-		if (blessed($n) and not($n->does('Attean::API::Variable'))) {
+		if (blessed($n) and $n->does('Attean::API::Variable')) {
+			$n	= undef;
+			$nodes[$pos]	= undef;
+		}
+		if (blessed($n)) {
 			$bound++;
 			$bound{ $pos }	= $n;
 		}

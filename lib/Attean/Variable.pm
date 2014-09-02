@@ -19,7 +19,7 @@ This document describes Attean::Variable version 0.001
 =head1 DESCRIPTION
 
 The Attean::Variable class represents variables for use in pattern matching.
-It conforms to the L<Attean::TermOrVariable|Attean::API> role.
+It conforms to the L<Attean::API::TermOrVariable|Attean::API> role.
 
 =cut
 
@@ -30,7 +30,8 @@ package Attean::Variable 0.001 {
 	has 'value' => (is => 'ro', isa => Str, required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
-	with 'Attean::TermOrVariable';
+	with 'Attean::API::TermOrVariable';
+	with 'Attean::API::Variable';
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;

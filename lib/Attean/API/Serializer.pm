@@ -109,8 +109,6 @@ package Attean::API::QuadSerializer 0.001 {
 	use Moo::Role;
 	with 'Attean::API::Serializer';
 	
-	# TODO: add default implementations for serialize_model_to_io
-	# TODO: add default implementations for serialize_model_to_bytes
 	sub handled_type {
 		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Quad');
 		return $ITEM_TYPE;
@@ -121,8 +119,6 @@ package Attean::API::MixedStatementSerializer 0.001 {
 	use Moo::Role;
 	with 'Attean::API::Serializer';
 	
-	# TODO: add default implementations for serialize_model_to_io_with_default_graph
-	# TODO: add default implementations for serialize_model_to_bytes_with_default_graph
 	sub handled_type {
 		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad');
 		return $ITEM_TYPE;

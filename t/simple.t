@@ -11,7 +11,7 @@ use Attean;
 {
 	note('Attean::Variable');
 	my $a	= Attean::Variable->new('foo');
-	does_ok($a, 'Attean::TermOrVariable');
+	does_ok($a, 'Attean::API::TermOrVariable');
 	is($a->value, 'foo', 'value');
 	is($a->ntriples_string, '?foo', 'ntriples_string');
 }
@@ -20,7 +20,7 @@ use Attean;
 	note('Attean::Blank');
 	my $a	= Attean::Blank->new('foo');
 	does_ok($a, 'Attean::API::Term');
-	does_ok($a, 'Attean::TermOrVariable');
+	does_ok($a, 'Attean::API::TermOrVariable');
 	is($a->value, 'foo', 'value');
 	is($a->ntriples_string, '_:foo', 'ntriples_string');
 }
@@ -30,7 +30,7 @@ use Attean;
 	my $a	= Attean::Literal->new(value => 'foo', language => 'en-US');
 	does_ok($a, 'Attean::API::Term');
 	does_ok($a, 'Attean::API::Literal');
-	does_ok($a, 'Attean::TermOrVariable');
+	does_ok($a, 'Attean::API::TermOrVariable');
 	is($a->value, 'foo', 'value');
 	is($a->language, 'en-US', 'language');
 	does_ok($a->datatype, 'Attean::API::IRI', 'datatype IRI');
@@ -43,7 +43,7 @@ use Attean;
 	my $a	= Attean::Literal->new(value => '123', datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 	does_ok($a, 'Attean::API::Term');
 	does_ok($a, 'Attean::API::Literal');
-	does_ok($a, 'Attean::TermOrVariable');
+	does_ok($a, 'Attean::API::TermOrVariable');
 	is($a->value, '123', 'value');
 	is($a->language, undef, 'no language method on typed literals');
 	does_ok($a->datatype, 'Attean::API::IRI', 'datatype IRI');
