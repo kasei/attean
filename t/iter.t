@@ -1,6 +1,5 @@
 use Test::More;
 use Test::Exception;
-use Test::Moose;
 
 use v5.14;
 use warnings;
@@ -121,3 +120,11 @@ my $Int = Type::Tiny->new(
 }
 
 done_testing();
+
+
+sub does_ok {
+    my ($class_or_obj, $does, $message) = @_;
+    $message ||= "The object does $does";
+    ok(eval { $class_or_obj->does($does) }, $message);
+}
+

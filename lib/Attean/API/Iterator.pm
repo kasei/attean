@@ -44,7 +44,7 @@ package Attean::API::Iterator 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Object InstanceOf);
-	use Moose::Util qw(apply_all_roles);
+	use Role::Tiny;
 	
 	has 'item_type' => (is => 'ro', isa => InstanceOf['Type::Tiny'], required => 1);
 	requires 'next';
@@ -59,11 +59,11 @@ package Attean::API::Iterator 0.001 {
 			my $role	= $type->role;
 			return unless defined($role);
 			if ($role eq 'Attean::API::Triple') {
-				apply_all_roles($self, 'Attean::API::TripleIterator');
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
 			} elsif ($role eq 'Attean::API::Quad') {
-				apply_all_roles($self, 'Attean::API::QuadIterator');
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
 			} elsif ($role eq 'Attean::API::TripleOrQuad') {
-				apply_all_roles($self, 'Attean::API::MixedStatementIterator');
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 			}
 		}
 	};
