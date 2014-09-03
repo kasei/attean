@@ -37,7 +37,7 @@ package Attean::Triple 0.001 {
 		my $class	= shift;
 		if (scalar(@_) == 3) {
 			my %args;
-			@args{qw(subject predicate object)}	= @_;
+			@args{ $class->variables }	= @_;
 			return $class->$orig(%args);
 		}
 		return $class->$orig(@_);

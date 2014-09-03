@@ -38,7 +38,7 @@ package Attean::Quad 0.001 {
 		my $class	= shift;
 		if (scalar(@_) == 4) {
 			my %args;
-			@args{qw(subject predicate object graph)}	= @_;
+			@args{ $class->variables }	= @_;
 			return $class->$orig(%args);
 		}
 		return $class->$orig(@_);

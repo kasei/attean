@@ -32,7 +32,7 @@ use Digest::SHA;
 use List::Util qw(first);
 use Scalar::Util qw(refaddr reftype blessed);
 
-my @pos_names	= qw(subject predicate object graph);
+my @pos_names	= Attean::API::Quad->variables;
 
 =head1 METHODS
 
