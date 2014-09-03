@@ -54,9 +54,12 @@ following methods:
 
 =cut
 
+use Attean::API::Binding;
+
 package Attean::API::Model 0.001 {
 	use Moo::Role;
-	use Moose::Util;
+	use Sub::Install;
+	use Sub::Name;
 	use Type::Tiny::Role;
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
@@ -70,7 +73,7 @@ package Attean::API::Model 0.001 {
 	sub get_bindings {
 		my $self	= shift;
 		my @nodes	= @_;
-		my @pos		= qw(subject predicate object graph);
+		my @pos		= Attean::API::Quad->variables;
 		my %vars;
 		foreach my $i (0 .. $#nodes) {
 			my $n	= $nodes[$i];
@@ -152,11 +155,10 @@ package Attean::API::Model 0.001 {
 	}
 
 	{
-		my $meta	= Moose::Util::find_meta(__PACKAGE__);
-		my @pos		= qw(subject predicate object graph);
+		my @pos		= Attean::API::Quad->variables;
 		my %pos		= map { $pos[$_] => $_ } (0 .. $#pos);
 		for my $method (@pos) {
-			$meta->add_method("${method}s", sub {
+			my $code	= sub {
 				my $self	= shift;
 				my @nodes	= @_;
 				$#nodes		= 3;
@@ -167,6 +169,10 @@ package Attean::API::Model 0.001 {
 					Type::Tiny::Role->new(role => 'Attean::API::Term'),
 				);
 				return $nodes;
+			};
+			Sub::Install::install_sub({
+				code	=> subname("${method}s", $code),
+				as		=> "${method}s"
 			});
 		}
 	}
