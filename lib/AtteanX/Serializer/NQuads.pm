@@ -4,7 +4,7 @@ AtteanX::Serializer::NQuads - N-Triples Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::NQuads version 1.009
+This document describes AtteanX::Serializer::NQuads version 0.001
 
 =head1 SYNOPSIS
 

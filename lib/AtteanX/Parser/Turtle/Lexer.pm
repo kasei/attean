@@ -7,7 +7,7 @@ AtteanX::Parser::Turtle::Lexer - Tokenizer for parsing Turtle, TriG, and N-Tripl
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle::Lexer version 1.007
+This document describes AtteanX::Parser::Turtle::Lexer version 0.001
 
 =head1 SYNOPSIS
 
@@ -34,7 +34,7 @@ use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf Instan
 
 our $VERSION;
 BEGIN {
-	$VERSION				= '1.007';
+	$VERSION				= '0.001';
 }
 
 my $r_nameChar_extra		= qr'[-0-9\x{B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]'o;

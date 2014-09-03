@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLXML::SAXHandler - XML parser for SPARQL XML Results forma
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 1.009
+This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 0.001
 
 =head1 STATUS
 
