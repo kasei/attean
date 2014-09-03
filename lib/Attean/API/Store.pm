@@ -106,7 +106,7 @@ package Attean::API::MutableQuadStore 0.001 {
 		my $iter	= shift;
 		my $type	= $iter->item_type;
 		use Data::Dumper;
-		die "Iterator type isn't quads: " . Dumper($type) unless $type->equals(
+		die "Iterator type isn't quads: " . Dumper($type) unless $type->is_a_type_of(
 			Type::Tiny::Role->new(role => 'Attean::API::Quad')
 		);
 		while (my $q = $iter->next) {

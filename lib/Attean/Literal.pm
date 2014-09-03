@@ -50,13 +50,12 @@ package Attean::Literal 0.001 {
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;
+		return $class->$orig(@_) if (scalar(@_) == 1 and ref($_[0]) eq "HASH");
 		if (scalar(@_) == 1) {
 			my $dt	= IRI->new('http://www.w3.org/2001/XMLSchema#string');
 			return $class->$orig(value => shift, datatype => $dt);
 		}
-		
-		my %args	= @_;
-		return $class->$orig(%args);
+		return $class->$orig(@_);
 	};
 	
 	sub BUILD {
