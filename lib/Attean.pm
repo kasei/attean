@@ -121,8 +121,9 @@ returns undef.
 				}
 				
 				foreach (@roles) {
-					my $err	= Moose::Meta::TypeConstraint::Role->new(role => $_)->validate($p);
-					die  ucfirst($type) . " class $p failed validation for role $_" if ($err);
+					unless ($p->does($_)) {
+						die ucfirst($type) . " class $p failed validation for role $_";
+					}
 				}
 				return $p;
 			}
