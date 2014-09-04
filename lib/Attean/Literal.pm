@@ -91,6 +91,21 @@ package Attean::Literal 0.001 {
 			}
 		}
 	}
+
+	sub true {
+		state $v	= Attean::Literal->new( value => 'true', datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
+		return $v;
+	}
+	
+	sub false {
+		state $v	= Attean::Literal->new( value => 'false', datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
+		return $v;
+	}
+	
+	sub integer {
+		my $class	= shift;
+		return $class->new( value => shift, datatype => 'http://www.w3.org/2001/XMLSchema#integer' );
+	}
 }
 
 1;
