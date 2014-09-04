@@ -38,6 +38,16 @@ package Attean::RDF 0.001 {
 	our @ISA	= qw(Exporter);
 	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad);
 
+=item C<< variable( $value ) >>
+
+C<< Attean::Variable->new($value) >>
+
+=cut
+
+	sub variable {
+		return Attean::Variable->new(@_);
+	}
+
 =item C<< iri( $value ) >>
 
 C<< Attean::IRI->new($value) >>
