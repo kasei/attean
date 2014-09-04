@@ -46,6 +46,8 @@ package Attean::API 0.001 {
 	use Attean::API::Iterator;
 	use Attean::API::Parser;
 	use Attean::API::Serializer;
+	use Attean::API::Query;
+	use Attean::API::Expression;
 
 	use Attean::Variable;
 	use Attean::Blank;
