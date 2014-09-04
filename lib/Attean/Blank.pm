@@ -32,7 +32,6 @@ package Attean::Blank 0.001 {
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 	
 	with 'Attean::API::Blank';
-	with 'Attean::API::BlankOrIRI';
 
 	around BUILDARGS => sub {
 		my $orig 	= shift;
