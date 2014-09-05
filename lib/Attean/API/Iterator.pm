@@ -55,16 +55,12 @@ package Attean::API::Iterator 0.001 {
 		my $self	= shift;
 		$self->$orig(@_);
 		my $type	= $self->item_type;
-		if ($type->can('role')) {	# TODO: simplify
-			my $role	= $type->role;
-			return unless defined($role);
-			if ($role eq 'Attean::API::Triple') {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
-			} elsif ($role eq 'Attean::API::Quad') {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
-			} elsif ($role eq 'Attean::API::TripleOrQuad') {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
-			}
+		if ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Triple'))) {
+			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Quad'))) {
+			Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad'))) {
+			Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 		}
 	};
 	
