@@ -7,6 +7,7 @@ package Attean::API::Expression 0.001 {
 	with 'Attean::API::DirectedAcyclicGraph';
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
+	requires 'evaluate';
 	requires 'as_string';
 	
 	sub BUILD {}
