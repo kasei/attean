@@ -46,6 +46,7 @@ package Attean::API::Term 0.001 {
 	sub as_string {
 		shift->ntriples_string();
 	}
+	sub ebv { return 0; }
 	
 	sub __ntriples_string {
 		my $self	= shift;
@@ -99,6 +100,19 @@ package Attean::API::Literal 0.001 {
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
+	sub ebv {
+		my $self	= shift;
+		my $value	= $self->value;
+		my $dt		= $self->datatype->value;
+		if ($dt eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+			return ($value eq 'true' or $value eq '1');
+		} elsif ($dt eq 'http://www.w3.org/2001/XMLSchema#integer') {
+			return ($value != 0);
+# 			# TODO: handle other numeric types
+		} else {
+			return (length($value) > 0);
+		}
+	}
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		use Types::Standard qw(Maybe Str ConsumerOf);
@@ -132,6 +146,7 @@ package Attean::API::Literal 0.001 {
 package Attean::API::Blank 0.001 {
 	use Moo::Role;
 	
+	sub ebv { return 0; }
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
 }
@@ -140,6 +155,7 @@ package Attean::API::IRI 0.001 {
 	use Moo::Role;
 	use IRI;
 	
+	sub ebv { return 0; }
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
 	
