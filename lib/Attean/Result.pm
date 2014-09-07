@@ -60,6 +60,13 @@ object.
 		my $self	= shift;
 		return keys %{ $self->bindings };
 	}
+	
+	sub as_string {
+		my $self	= shift;
+		my @vars	= $self->variables;
+		my @strs	= map { join('=', $_, $self->value($_)->ntriples_string) } sort $self->variables;
+		return '{' . join(', ', @strs) . '}';
+	}
 }
 
 1;

@@ -74,6 +74,17 @@ use Attean;
 	is($t->tuples_string, '_:x <http://example.org/p> "foo"@en-US', 'tuples string');
 }
 
+{
+	note('Attean::Result');
+	my $iri	= Attean::IRI->new('http://example.org/p');
+	my $literal	= Attean::Literal->integer(123);
+	my $r	= Attean::Result->new( bindings => { 's' => $iri, 'o' => $literal } );
+	does_ok($r, 'Attean::API::Binding');
+	isa_ok($r, 'Attean::Result');
+	is_deeply([sort $r->variables], [qw(o s)]);
+	is($r->as_string, '{o="123"^^<http://www.w3.org/2001/XMLSchema#integer>, s=<http://example.org/p>}');
+}
+
 done_testing();
 
 
