@@ -90,7 +90,7 @@ package Attean::Algebra::BGP 0.001 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
-	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Triple']], default => sub { [] });
+	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']], default => sub { [] });
 }
 
 package Attean::Algebra::Path 0.001 {
@@ -102,6 +102,13 @@ package Attean::Algebra::Path 0.001 {
 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::Term'], required => 1);
 }
 
+package Attean::Algebra::Group 0.001 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
+	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
+}
 
 package Attean::Algebra::NegatedPropertySet 0.001 {
 	use Moo;
@@ -163,14 +170,6 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnaryPropertyPath';
 	sub postfix_name { return "?" }
-}
-
-package Group 0.001 {
-	use Moo;
-	use Types::Standard qw(ArrayRef ConsumerOf);
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
-	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
 }
 
 
