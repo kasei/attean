@@ -59,8 +59,10 @@ package Attean::API::Iterator 0.001 {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
 		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Quad'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad'))) {
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuadPattern'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Result'))) {
+			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
 		}
 	};
 	
@@ -170,6 +172,24 @@ package Attean::API::MixedStatementIterator 0.001 {
 			sub { $_->does('Attean::API::Quad') ? $_ : $_->as_quad($graph) },
 			Type::Tiny::Role->new(role => 'Attean::API::Quad')
 		);
+	}
+}
+
+package Attean::API::ResultIterator 0.001 {
+	use Moo::Role;
+	sub join {
+		my $self	= shift;
+		my $rhs		= shift;
+		my @rhs		= $rhs->elements;
+		my @results;
+		while (my $lhs = $self->next) {
+			foreach my $rhs (@rhs) {
+				if (my $j = $lhs->join($rhs)) {
+					push(@results, $j);
+				}
+			}
+		}
+		return Attean::ListIterator->new( values => \@results, item_type => $self->item_type);
 	}
 }
 

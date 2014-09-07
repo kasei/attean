@@ -22,9 +22,32 @@ It conforms to the L<Attean::API::Quad|Attean::API::Binding> role.
 
 =cut
 
-package Attean::Quad 0.001 {
+package Attean::QuadPattern 0.001 {
 	use Moo;
 	use Attean::API;
+	
+	has 'subject'	=> (is => 'ro', required => 1);
+	has 'predicate'	=> (is => 'ro', required => 1);
+	has 'object'	=> (is => 'ro', required => 1);
+	has 'graph'		=> (is => 'ro', required => 1);
+	
+	with 'Attean::API::QuadPattern';
+
+	around BUILDARGS => sub {
+		my $orig 	= shift;
+		my $class	= shift;
+		if (scalar(@_) == 4) {
+			my %args;
+			@args{ $class->variables }	= @_;
+			return $class->$orig(%args);
+		}
+		return $class->$orig(@_);
+	};
+}
+
+package Attean::Quad 0.001 {
+	use Moo;
+	use Attean::API::Binding;
 	
 	has 'subject'	=> (is => 'ro', does => 'Attean::API::BlankOrIRI', required => 1);
 	has 'predicate'	=> (is => 'ro', does => 'Attean::API::IRI', required => 1);

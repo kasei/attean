@@ -48,6 +48,10 @@ use Type::Tiny::Role;
 
 package Attean::API::TripleOrQuad {
 	use Moo::Role;
+}
+
+package Attean::API::TripleOrQuadPattern {
+	use Moo::Role;
 	sub apply_map {
 		my $self	= shift;
 		my $class	= ref($self);
@@ -79,11 +83,11 @@ package Attean::API::Binding 0.001 {
 	}
 }
 
-
-package Attean::API::Triple 0.001 {
+package Attean::API::TriplePattern 0.001 {
 	use Moo::Role;
-	
+
 	sub variables { return qw(subject predicate object) }
+
 	sub value {
 		my $self	= shift;
 		my $key		= shift;
@@ -94,10 +98,23 @@ package Attean::API::Triple 0.001 {
 		}
 	}
 	
+	sub as_quad_pattern {
+		my $self	= shift;
+		my $graph	= shift;
+		return Attean::QuadPattern->new($self->values, $graph);
+	}
+
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
 
+	with 'Attean::API::TripleOrQuadPattern';
+	with 'Attean::API::Binding';
+}
+
+package Attean::API::Triple 0.001 {
+	use Moo::Role;
+	
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		my %map	= (
 			subject		=> 'Attean::API::BlankOrIRI',
@@ -127,12 +144,13 @@ package Attean::API::Triple 0.001 {
 		return Attean::Quad->new($self->values, $graph);
 	}
 
+	with 'Attean::API::TriplePattern';
 	with 'Attean::API::TripleOrQuad';
+	with 'Attean::API::TripleOrQuadPattern';
 	with 'Attean::API::Binding';
 }
 
-
-package Attean::API::Quad 0.001 {
+package Attean::API::QuadPattern 0.001 {
 	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object graph) }
@@ -151,6 +169,13 @@ package Attean::API::Quad 0.001 {
 	requires 'object';
 	requires 'graph';
 
+	with 'Attean::API::TripleOrQuadPattern';
+	with 'Attean::API::Binding';
+}
+
+package Attean::API::Quad 0.001 {
+	use Moo::Role;
+	
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		my %map	= (
 			# subject, predicate, and graph type checking is done by the Attean::API::Triple method modifiers
@@ -173,7 +198,9 @@ package Attean::API::Quad 0.001 {
 		}
 	}
 
+	with 'Attean::API::QuadPattern';
 	with 'Attean::API::TripleOrQuad';
+	with 'Attean::API::TripleOrQuadPattern';
 	with 'Attean::API::Triple';
 }
 
@@ -201,7 +228,7 @@ package Attean::API::Result 0.001 {
 		}
 	
 		my $row	= { (map { $_ => $self->value($_) } grep { defined($self->value($_)) } $self->variables), (map { $_ => $rowb->value($_) } grep { defined($rowb->value($_)) } $rowb->variables) };
-		my $joined	= Attean::Result->new( $row );
+		my $joined	= Attean::Result->new( bindings => $row );
 		return $joined;
 	}
 

@@ -22,6 +22,28 @@ It conforms to the L<Attean::API::Triple|Attean::API::Binding> role.
 
 =cut
 
+package Attean::TriplePattern 0.001 {
+	use Moo;
+	use Attean::API::Binding;
+	
+	has 'subject'	=> (is => 'ro', required => 1);
+	has 'predicate'	=> (is => 'ro', required => 1);
+	has 'object'	=> (is => 'ro', required => 1);
+	
+	with 'Attean::API::TriplePattern';
+	
+	around BUILDARGS => sub {
+		my $orig 	= shift;
+		my $class	= shift;
+		if (scalar(@_) == 3) {
+			my %args;
+			@args{ $class->variables }	= @_;
+			return $class->$orig(%args);
+		}
+		return $class->$orig(@_);
+	};
+}
+
 package Attean::Triple 0.001 {
 	use Moo;
 	use Attean::API::Binding;
