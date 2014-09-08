@@ -46,10 +46,6 @@ package Attean::API::Term 0.001 {
 	sub as_string {
 		shift->ntriples_string();
 	}
-	sub equals {
-		my ($a, $b)	= @_;
-		return ($a->as_string eq $b->as_string);
-	}
 	sub ebv { return 0; }
 	
 	sub __ntriples_string {
