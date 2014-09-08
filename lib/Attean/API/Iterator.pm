@@ -124,10 +124,9 @@ package Attean::API::Iterator 0.001 {
 	sub grep {
 		my $self	= shift;
 		my $block	= shift;
-		my $type	= $self->item_type;
 		
 		Attean::CodeIterator->new(
-			item_type => $type,
+			item_type => $self->item_type,
 			generator => sub {
 				while (1) {
 					my $item	= $self->next();
@@ -140,7 +139,29 @@ package Attean::API::Iterator 0.001 {
 			}
 		);
 	}
-
+	
+	sub offset {
+		my $self	= shift;
+		my $offset	= shift;
+		$self->next for (1 .. $offset);
+		return $self;
+	}
+	
+	sub limit {
+		my $self	= shift;
+		my $limit	= shift;
+		
+		Attean::CodeIterator->new(
+			item_type => $self->item_type,
+			generator => sub {
+				return unless $limit;
+				my $item	= $self->next();
+				return unless defined($item);
+				$limit--;
+				return $item;
+			}
+		);
+	}
 }
 
 package Attean::API::RepeatableIterator 0.001 {

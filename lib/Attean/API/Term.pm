@@ -46,6 +46,10 @@ package Attean::API::Term 0.001 {
 	sub as_string {
 		shift->ntriples_string();
 	}
+	sub equals {
+		my ($a, $b)	= @_;
+		return ($a->as_string eq $b->as_string);
+	}
 	sub ebv { return 0; }
 	
 	sub __ntriples_string {
@@ -108,7 +112,7 @@ package Attean::API::Literal 0.001 {
 			return ($value eq 'true' or $value eq '1');
 		} elsif ($dt eq 'http://www.w3.org/2001/XMLSchema#integer') {
 			return ($value != 0);
-# 			# TODO: handle other numeric types
+# 			# TODO: handle other numeric XSD types when determining EBV
 		} else {
 			return (length($value) > 0);
 		}

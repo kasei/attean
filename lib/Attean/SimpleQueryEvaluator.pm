@@ -186,11 +186,11 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			my ($child)	= @{ $algebra->children };
 			my $iter	= $self->evaluate( $child );
 			if ($algebra->offset > 0) {
-				foreach (1 .. $algebra->offset) {
-					$iter->next;
-				}
+				$iter	= $iter->offset($algebra->offset);
 			}
-			# TODO: implement limit
+			if ($algebra->limit >= 0) {
+				$iter	= $iter->limit($algebra->limit);
+			}
 			return $iter;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
 			my @iters	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };

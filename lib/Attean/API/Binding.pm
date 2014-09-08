@@ -207,6 +207,7 @@ package Attean::API::Quad 0.001 {
 
 package Attean::API::Result 0.001 {
 	use Moo::Role;
+	use Scalar::Util qw(refaddr);
 	
 	sub join {
 		my $self	= shift;
@@ -221,7 +222,7 @@ package Attean::API::Result 0.001 {
 			my $val_a	= $self->value($key);
 			my $val_b	= $rowb->value($key);
 			next unless (defined($val_a) and defined($val_b));
-			my $equal	= (refaddr($val_a) == refaddr($val_b)) || $val_a->equal( $val_b );
+			my $equal	= (refaddr($val_a) == refaddr($val_b)) || $val_a->equals( $val_b );
 			unless ($equal) {
 				return;
 			}
