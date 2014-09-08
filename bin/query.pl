@@ -49,8 +49,6 @@ try {
 		my $iter	= $parser->parse_iter_from_io($fh);
 		my $quads	= $iter->as_quads($graph);
 		$store->add_iter($quads);
-		$store->add_quad(quad(iri('s'), iri('p'), iri('o'), iri('graph1')));
-		$store->add_quad(quad(iri('s'), iri('p'), iri('o'), iri('graph2')));
 	}
 
 	if ($debug) {
