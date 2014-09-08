@@ -75,7 +75,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			my $expr	= $algebra->expression;
 			my ($child)	= @{ $algebra->children };
-			my $iter	= $self->evaluate( $child );
+			my $iter	= $self->evaluate( $child, $active_graph );
 			return $iter->grep(sub {
 				my $r	= shift;
 				return $expr->evaluate($r)->ebv;
@@ -175,7 +175,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			die "Unimplemented path type: $path";
 		} elsif ($algebra->isa('Attean::Algebra::Project')) {
 			my ($child)	= @{ $algebra->children };
-			my $iter	= $self->evaluate( $child );
+			my $iter	= $self->evaluate( $child, $active_graph );
 			my @vars	= map { $_->value } @{ $algebra->variables };
 			return $iter->map(sub {
 				my $r	= shift;
@@ -184,7 +184,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
 			my ($child)	= @{ $algebra->children };
-			my $iter	= $self->evaluate( $child );
+			my $iter	= $self->evaluate( $child, $active_graph );
 			if ($algebra->offset > 0) {
 				$iter	= $iter->offset($algebra->offset);
 			}
