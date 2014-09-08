@@ -64,10 +64,19 @@ package Attean::API::TripleOrQuadPattern {
 
 package Attean::API::Binding 0.001 {
 	use Moo::Role;
+	use List::MoreUtils qw(zip);
 	
 	requires 'value';
 	requires 'variables';
 	requires 'apply_map';
+	
+	sub mapping {
+		my $self	= shift;
+		my @k		= $self->variables;
+		my @v		= $self->values;
+		return zip @k, @v;
+	}
+	
 	sub values {
 		my $self	= shift;
 		return map { $self->value($_) } $self->variables;
@@ -85,7 +94,8 @@ package Attean::API::Binding 0.001 {
 
 package Attean::API::TriplePattern 0.001 {
 	use Moo::Role;
-
+	use List::MoreUtils qw(zip);
+	
 	sub variables { return qw(subject predicate object) }
 
 	sub value {
@@ -101,7 +111,9 @@ package Attean::API::TriplePattern 0.001 {
 	sub as_quad_pattern {
 		my $self	= shift;
 		my $graph	= shift;
-		return Attean::QuadPattern->new($self->values, $graph);
+		my @keys	= Attean::API::Quad->variables;
+		my @values	= ($self->values, $graph);
+		return Attean::QuadPattern->new(zip @keys, @values);
 	}
 
 	requires 'subject';
