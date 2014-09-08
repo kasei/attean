@@ -151,7 +151,6 @@ sub translate {
 	} elsif ($a->isa('RDF::Query::Algebra::NamedGraph')) {
 		my $graph	= translate($a->graph);
 		my $p		= translate($a->pattern);
-		warn Dumper($a);
 		return Attean::Algebra::Graph->new( children => [$p], graph => $graph );
 	} elsif ($a->isa('')) {
 	}
