@@ -82,7 +82,7 @@ package Attean::API::QuadStore 0.001 {
 			my $g	= $r->graph;
 			$graphs{ $g->as_string }++;
 		}
-		return keys %graphs;
+		return Attean::ListIterator->new( values => [keys %graphs], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
 	}
 	
 	sub size {

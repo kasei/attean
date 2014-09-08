@@ -84,7 +84,7 @@ package Attean::API::Model 0.001 {
 		}
 		my $quads		= $self->get_quads(@nodes);
 		return $quads->map(sub {
-			my $q			= $_;
+			my $q			= shift;
 			return unless blessed($q);
 			my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
 			return Attean::Result->new( bindings => \%bindings );
@@ -109,7 +109,7 @@ package Attean::API::Model 0.001 {
 			my $g	= $r->graph;
 			$graphs{ $g->as_string }++;
 		}
-		return keys %graphs;
+		return Attean::ListIterator->new( values => [keys %graphs], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
 	}
 	
 	sub get_list {
