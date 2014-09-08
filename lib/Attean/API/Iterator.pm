@@ -93,6 +93,31 @@ package Attean::API::Iterator 0.001 {
 		return @elements;
 	}
 	
+	sub imap {
+		my $self	= shift;
+		my $block	= shift;
+		my $type	= shift || $self->item_type;
+		my $current;
+		my $generator	= sub {
+			while (1) {
+				if (defined($current)) {
+					my $item	= $current->next;
+					return $item if defined($item);
+					undef $current;
+				}
+				my $item	= $self->next();
+				return unless defined($item);
+				local($_)	= $item;
+				$current	= $block->($item);
+			}
+		};
+		
+		return Attean::CodeIterator->new(
+			item_type => $type,
+			generator => $generator,
+		);
+	}
+	
 	sub map {
 		my $self	= shift;
 		my $block	= shift;
@@ -107,11 +132,15 @@ package Attean::API::Iterator 0.001 {
 				return $new;
 			}
 		} else {
+			my @buffer;
 			$generator	= sub {
-				my $item	= $self->next();
-				return unless defined($item);
-				local($_)	= $item;
-				return $block->($item);
+				while (1) {
+					return shift(@buffer) if (scalar(@buffer));
+					my $item	= $self->next();
+					return unless defined($item);
+					local($_)	= $item;
+					push(@buffer, $block->($item));
+				}
 			}
 		}
 		
