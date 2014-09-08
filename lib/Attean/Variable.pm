@@ -26,6 +26,7 @@ It conforms to the L<Attean::API::TermOrVariable|Attean::API> role.
 package Attean::Variable 0.001 {
 	use Moo;
 	use Types::Standard qw(Str);
+	use Data::UUID;
 	
 	has 'value' => (is => 'ro', isa => Str, required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
@@ -36,7 +37,10 @@ package Attean::Variable 0.001 {
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;
-		if (scalar(@_) == 1) {
+		if (scalar(@_) == 0) {
+			my $uuid	= Data::UUID->new->create_hex;
+			return $class->$orig(value => $uuid);
+		} elsif (scalar(@_) == 1) {
 			return $class->$orig(value => shift);
 		}
 		return $class->$orig(@_);
