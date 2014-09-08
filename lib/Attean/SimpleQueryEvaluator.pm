@@ -14,7 +14,7 @@ This document describes Attean::SimpleQueryEvaluator version 0.001
   use v5.14;
   use Attean;
   my $e = Attean::SimpleQueryEvaluator->new( model => $model );
-  my $result = $e->evaluate( $algebra );
+  my $iter = $e->evaluate( $algebra, $active_graph );
 
 =head1 DESCRIPTION
 
@@ -29,6 +29,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	has 'model' => (is => 'ro', isa => ConsumerOf['Attean::API::Model'], required => 1);
+	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 	
 	sub evaluate {
 		my $self			= shift;
@@ -38,7 +39,8 @@ package Attean::SimpleQueryEvaluator 0.001 {
 		if ($algebra->isa('Attean::Algebra::BGP')) {
 			my @triples	= @{ $algebra->triples };
 			if (scalar(@triples) == 0) {
-				return Attean::ListIterator->new(values => [], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+				my $b	= Attean::Result->new( bindings => {} );
+				return Attean::ListIterator->new(values => [$b], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 			} else {
 				my @iters;
 				foreach my $t (@triples) {
@@ -86,11 +88,18 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			if ($graph->does('Attean::API::Term')) {
 				return $self->evaluate($child, $graph);
 			} else {
-				my @graphs	= $self->model->get_graphs();
-				foreach my $g (@graphs) {
-					# TODO: handle case of GRAPH ?g {}
-					return $self->evaluate($child, $g);
+				my $graphs	= $self->model->get_graphs();
+				my @iters;
+				while (my $g = $graphs->next) {
+					next if ($g->value eq $self->default_graph->value);
+					my $gr	= Attean::Result->new( bindings => { $graph->value => $g } );
+					my $iter	= $self->evaluate($child, $g);
+					push(@iters, $iter->map(sub {
+						my $b	= shift;
+						return $b->join($gr);
+					}));
 				}
+				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 			# TODO: implement group evaluation
@@ -150,18 +159,62 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			if ($path->isa('Attean::Algebra::PredicatePath')) {
 				return $self->model->get_bindings( $s, $path->predicate, $o, $active_graph );
 			} elsif ($path->isa('Attean::Algebra::InversePath')) {
-				my ($child)	= @{ $algebra->children };
+				my ($child)	= @{ $path->children };
 				my $path	= Attean::Algebra::Path->new( subject => $o, path => $child, object => $s );
 				return $self->evaluate( $path, $active_graph );
 			} elsif ($path->isa('Attean::Algebra::AlternativePath')) {
-				my @paths		= @{ $algebra->children };
+				my @paths		= @{ $path->children };
 				my @algebras	= map { Attean::Algebra::Path->new( subject => $s, path => $_, object => $o ) } @paths;
 				my @iters		= map { $self->evaluate($_, $active_graph) } @algebras;
 				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
 			} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
-				# TODO: implement NegatedPropertySet evaluation
+				my ($child)	= @{ $path->children };
+				my $preds	= $path->predicates;
+				my %preds	= map { $_->value => 1 } @$preds;
+				my $iter	= $self->model->get_quads($s, undef, $o, $active_graph);
+				my $filter	= $iter->grep(sub {
+					my $q	= shift;
+					my $p	= $q->predicate;
+					return not exists $preds{ $p->value };
+				});
+				my %vars;
+				if ($s->does('Attean::API::Variable')) {
+					$vars{subject}	= $s->value;
+				}
+				if ($o->does('Attean::API::Variable')) {
+					$vars{object}	= $o->value;
+				}
+				return $filter->map(sub {
+					my $q	= shift;
+					return unless $q;
+					my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
+					return Attean::Result->new( bindings => \%bindings );
+				}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
 			} elsif ($path->isa('Attean::Algebra::SequencePath')) {
-				# TODO: implement SequencePath evaluation
+				my @seq		= @{ $path->children };
+				if (scalar(@seq) == 1) {
+					my $path	= Attean::Algebra::Path->new( subject => $s, path => $seq[0], object => $o );
+					return $self->evaluate($path, $active_graph);
+				} else {
+					# TODO: introduce new join variables
+					my @paths;
+					my $first	= shift(@seq);
+					my $join	= Attean::Variable->new();
+					push(@paths, Attean::Algebra::Path->new( subject => $s, path => $first, object => $join ));
+					foreach my $i (0 .. $#seq) {
+						my $p	= $seq[$i];
+						my $newjoin	= Attean::Variable->new();
+						my $obj	= ($i == $#seq) ? $o : $newjoin;
+						push(@paths, Attean::Algebra::Path->new( subject => $join, path => $p, object => $obj ));
+						$join	= $newjoin;
+					}
+					
+					while (scalar(@paths) > 1) {
+						my ($l, $r)	= splice(@paths, 0, 2);
+						unshift(@paths, Attean::Algebra::Join->new( children => [$l, $r] ));
+					}
+					return $self->evaluate(shift(@paths), $active_graph);
+				}
 			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
 				# TODO: implement ZeroOrMorePath evaluation
 			} elsif ($path->isa('Attean::Algebra::OneOrMorePath')) {
@@ -169,7 +222,6 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
 				# TODO: implement ZeroOrOnePath evaluation
 			} else {
-				# TODO: implement path evaluation
 				die "Unexpected path type: $path";
 			}
 			die "Unimplemented path type: $path";
