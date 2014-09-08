@@ -54,6 +54,11 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 
 package Attean::API::Algebra 0.001 {
 	use Moo::Role;
+
+	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
+# TODO: require these algebra methods:
+# 	requires 'necessarily_bound_variables';	# variables that will necessarily be bound to a term after this operation is evaluated
+# 	requires 'required_variables';			# variables that must be bound before this operation for its evaluation to be successful
 	
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -78,10 +83,6 @@ package Attean::API::Algebra 0.001 {
 package Attean::API::QueryTree 0.001 {
 	use Moo::Role;
 	with 'Attean::API::DirectedAcyclicGraph';
-# TODO:
-# 	requires 'in_scope_variables';
-# 	requires 'necessarily_bound_variables';
-# 	requires 'required_variables';			# assert required_variables ⊆ union(child->in_scope_variables)
 }
 
 package Attean::API::NullaryQueryTree {
@@ -104,7 +105,6 @@ package Attean::API::BinaryQueryTree {
 
 package Attean::API::PropertyPath 0.001 {
 	use Moo::Role;
-	with 'Attean::API::Algebra';
 	with 'Attean::API::QueryTree';
 	requires 'as_string';
 }
@@ -144,6 +144,33 @@ package Attean::API::NaryPropertyPath {
 		}
 	}
 	with 'Attean::API::PropertyPath';
+}
+
+package Attean::API::UnionScopeVariables 0.001 {
+	use Moo::Role;
+	sub in_scope_variables {
+		my $self	= shift;
+		my $set		= Set::Scalar->new();
+		foreach my $c (@{ $self->children }) {
+			$set->insert( $c->in_scope_variables );
+		}
+		return $set->members;
+	}
+}
+
+package Attean::API::IntersectionScopeVariables 0.001 {
+	use Moo::Role;
+	sub in_scope_variables {
+		my $self	= shift;
+		my @c		= @{ $self->children };
+		return unless scalar(@c);
+		my $set		= Set::Scalar->new(shift(@c)->in_scope_variables);
+		foreach my $c (@c) {
+			my $rhs	= Set::Scalar->new($c->in_scope_variables);
+			$set	= $set->intersection($rhs);
+		}
+		return $set->members;
+	}
 }
 
 1;
