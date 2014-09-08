@@ -27,6 +27,10 @@ package Attean::API::BlankOrIRI 0.001 {
 
 package Attean::API::TermOrVariable 0.001 {
 	use Moo::Role;
+	sub equals {
+		my ($a, $b)	= @_;
+		return ($a->as_string eq $b->as_string);
+	}
 }
 
 package Attean::Mapper 0.001 {
@@ -37,6 +41,10 @@ package Attean::Mapper 0.001 {
 package Attean::API::Variable 0.001 {
 	use Moo::Role;
 	with 'Attean::API::TermOrVariable';
+	sub as_string {
+		my $self	= shift;
+		return '?' . $self->value;
+	}
 }
 
 package Attean::API 0.001 {
