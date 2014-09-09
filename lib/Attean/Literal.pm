@@ -85,7 +85,7 @@ package Attean::Literal 0.001 {
 		} else {
 			my $dt	= $self->datatype->as_string;
 			if ($dt eq 'http://www.w3.org/2001/XMLSchema#string') {
-				return sprintf('"%s"', $self->value);
+				return sprintf('"%s"', $value);
 			} else {
 				return sprintf('"%s"^^<%s>', $value, $dt);
 			}
