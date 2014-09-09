@@ -146,7 +146,7 @@ package Attean::API::Literal 0.001 {
 package Attean::API::Blank 0.001 {
 	use Moo::Role;
 	
-	sub ebv { return 0; }
+	sub ebv { return 1; }
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
 }
@@ -155,7 +155,7 @@ package Attean::API::IRI 0.001 {
 	use Moo::Role;
 	use IRI;
 	
-	sub ebv { return 0; }
+	sub ebv { return 1; }
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
 	
