@@ -67,8 +67,8 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 	sub parse_cb_from_io {
 		my $self	= shift;
 		my $fh		= shift;
-		my $handler	= AtteanX::Parser::SPARQLXML::SAXHandler->new();
-		my $p		= XML::SAX::ParserFactory->parser(Handler => $self->handler);
+		my $handler	= AtteanX::Parser::SPARQLXML::SAXHandler->new($self->handler);
+		my $p		= XML::SAX::ParserFactory->parser(Handler => $handler);
 		$p->parse_file( $fh );
 	}
 
