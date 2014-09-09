@@ -59,7 +59,7 @@ package Attean::API::Iterator 0.001 {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
 		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Quad'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuadPattern'))) {
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Result'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');

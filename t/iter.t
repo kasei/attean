@@ -6,13 +6,9 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+use Attean::RDF;
 use Type::Tiny;
-
-my $Int = Type::Tiny->new(
-	name       => "Int",
-	constraint => sub { /^(\d+)$/ },
-	message    => sub { "$_ isn't an integer" },
-);
+use Types::Standard qw(Int);
 
 {
 	note('ListIterator[Attean::Triple]');
@@ -56,7 +52,7 @@ my $Int = Type::Tiny->new(
 	note('CodeIterator[Int]->map<Int>');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => $Int );
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => Int );
 	is($iter->next, 1, 'expected value');
 	is($iter->next, 2, 'expected value');
 	is($iter->next, 3, 'expected value');
@@ -72,7 +68,7 @@ my $Int = Type::Tiny->new(
 	note('CodeIterator[Int]->map<Literal>');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => $Int );
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => Int );
 	my $ints	= $iter->map(
 		sub { Attean::Literal->new(value => $_, datatype => 'http://www.w3.org/2001/XMLSchema#integer') },
 		Type::Tiny::Role->new(role => 'Attean::API::Literal')
@@ -94,8 +90,7 @@ my $Int = Type::Tiny->new(
 {
 	note('ListIterator[Int]->grep');
 	my $value	= 0;
-	my $code	= sub { return ++$value };
-	my $iter	= Attean::ListIterator->new(values => [1, 2, 3, 4, 5], item_type => $Int);
+	my $iter	= Attean::ListIterator->new(values => [1, 2, 3, 4, 5], item_type => Int);
 	my $evens	= $iter->grep(sub { $_ % 2 == 0 });
 	does_ok($evens, 'Attean::API::Iterator');
 	isa_ok($evens->item_type, 'Type::Tiny');
@@ -106,16 +101,45 @@ my $Int = Type::Tiny->new(
 }
 
 {
+	note('CodeIterator[Int] slice');
+	my $value	= 0;
+	my $code	= sub { return ++$value };
+	my $iter	= Attean::CodeIterator->new(generator => $code, item_type => Int)->offset(5)->limit(5);
+	does_ok($iter, 'Attean::API::Iterator');
+	isa_ok($iter->item_type, 'Type::Tiny');
+	is($iter->item_type->name, 'Int', 'expected item_type');
+	is($iter->next, 6, 'expected value');
+	is($iter->next, 7, 'expected value');
+	is($iter->next, 8, 'expected value');
+	is($iter->next, 9, 'expected value');
+	is($iter->next, 10, 'expected value');
+	is($iter->next, undef, 'expected eof');
+}
+
+{
 	note('ListIterator[Int] reset');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
-	my $iter	= Attean::ListIterator->new(values => [1, 2], item_type => $Int);
+	my $iter	= Attean::ListIterator->new(values => [1, 2], item_type => Int);
 	does_ok($iter, 'Attean::API::RepeatableIterator');
 	is($iter->next, 1, 'expected value');
 	is($iter->next, 2, 'expected value');
 	$iter->reset;
 	is($iter->next, 1, 'expected value after reset');
 	is($iter->next, 2, 'expected value');
+	is($iter->next, undef, 'expected eof');
+}
+
+{
+	note('ListIterator[Mixed] as_quads');
+	my $t	= triple(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'));
+	my $q	= quad(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'), iri('graph'));
+	my $iter	= Attean::ListIterator->new(values => [$t, $q], item_type => Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad'));
+	does_ok($iter, 'Attean::API::MixedStatementIterator');
+	my $quads	= $iter->as_quads(iri('default'));
+	does_ok($quads, 'Attean::API::QuadIterator');
+	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <default>', 'expected triple coerced to quad');
+	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <graph>', 'expected quad');
 	is($iter->next, undef, 'expected eof');
 }
 
