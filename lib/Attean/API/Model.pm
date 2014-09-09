@@ -105,11 +105,7 @@ package Attean::API::Model 0.001 {
 		my $self	= shift;
 		my $iter	= $self->get_quads(@_);
 		my %graphs;
-		while (my $r = $iter->next) {
-			my $g	= $r->graph;
-			$graphs{ $g->as_string }++;
-		}
-		return Attean::ListIterator->new( values => [keys %graphs], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+		return $self->graphs->grep(sub { not($graphs{ shift->as_string }++) });
 	}
 	
 	sub get_list {
