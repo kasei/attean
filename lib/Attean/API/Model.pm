@@ -40,7 +40,7 @@ following methods:
 
 =item C<< get_graphs >>
 
-=item C<< get_list( $head ) >>
+=item C<< get_list( $graph, $head ) >>
 
 =item C<< get_sequence( $head ) >>
 
@@ -91,39 +91,47 @@ package Attean::API::Model 0.001 {
 		}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
 	}
 	
-	sub count_quads {
-		my $self	= shift;
-		my $iter	= $self->get_quads(@_);
-		my $count	= 0;
-		while (my $r = $iter->next) {
-			$count++;
-		}
-		return $count;
-	}
+	requires 'count_quads';
+	requires 'get_graphs';
 	
-	sub get_graphs {
-		my $self	= shift;
-		my $iter	= $self->get_quads(@_);
-		my %graphs;
-		return $self->graphs->grep(sub { not($graphs{ shift->as_string }++) });
-	}
+# 	sub count_quads {
+# 		my $self	= shift;
+# 		my $iter	= $self->get_quads(@_);
+# 		my $count	= 0;
+# 		while (my $r = $iter->next) {
+# 			$count++;
+# 		}
+# 		return $count;
+# 	}
+# 	
+# 	sub get_graphs {
+# 		my $self	= shift;
+# 		my $iter	= $self->get_quads(@_);
+# 		my %graphs;
+# 		return $self->graphs->grep(sub { not($graphs{ shift->as_string }++) });
+# 	}
 	
 	sub get_list {
 		my $self	= shift;
+		die "get_list called without a graph name" unless (scalar(@_));
+		my $graph	= shift;
+		die "get_list called without a list head" unless (scalar(@_));
 		my $head	= shift;
-		my $rdf		= URI::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		my $rdf_first	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+		my $rdf_rest	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+		my $rdf_nil		= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 		my @elements;
 		my %seen;
-		while (blessed($head) and not($head->does('Attean::API::IRI') and $head->value eq $rdf->nil->value)) {
+		while (blessed($head) and not($head->does('Attean::API::IRI') and $head->value eq $rdf_nil->value)) {
 			if ($seen{ $head->as_string }++) {
 				die "Loop found during rdf:List traversal";
 			}
-			my @n		= $self->objects( $head, $rdf->first )->elements;
+			my @n		= $self->objects( $head, $rdf_first )->elements;
 			if (scalar(@n) != 1) {
 				die "Invalid structure found during rdf:List traversal";
 			}
 			push(@elements, @n);
-			($head)	= $self->objects( $head, $rdf->rest )->elements;
+			($head)	= $self->objects( $head, $rdf_rest )->elements;
 		}
 		return Attean::ListIterator->new(values => \@elements, item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
 	}
@@ -131,12 +139,12 @@ package Attean::API::Model 0.001 {
 	sub get_sequence {
 		my $self	= shift;
 		my $head	= shift;
-		my $rdf		= URI::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		my $rdf		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 		my @elements;
 		my $i		= 1;
 		while (1) {
-			my $method	= '_' . $i;
-			my @elem	= $self->objects( $head, $rdf->$method() )->elements;
+			my $term	= Attean::IRI->new("${rdf}_$i");
+			my @elem	= $self->objects( $head, $term )->elements;
 			last unless (scalar(@elem));
 			if (scalar(@elem) > 1) {
 				my $count	= scalar(@elem);
@@ -189,17 +197,20 @@ package Attean::API::MutableModel 0.001 {
 	
 	sub add_list {
 		my $self	= shift;
+		die "add_list called without a graph name" unless (scalar(@_));
 		my $graph	= shift;
 		my @elements	= @_;
-		my $rdf		= URI::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+		my $rdf_first	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+		my $rdf_rest	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+		my $rdf_nil		= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 		if (scalar(@elements) == 0) {
-			return $rdf->nil;
+			return $rdf_nil;
 		} else {
 			my $head		= Attean::Blank->new();
 			my $node		= shift(@elements);
-			my $rest		= $self->add_list( @elements );
-			$self->add_quad( Attean::Quad->new($head, $rdf->first, $node, $graph) );
-			$self->add_quad( Attean::Quad->new($head, $rdf->rest, $rest, $graph) );
+			my $rest		= $self->add_list($graph, @elements);
+			$self->add_quad( Attean::Quad->new($head, $rdf_first, $node, $graph) );
+			$self->add_quad( Attean::Quad->new($head, $rdf_rest, $rest, $graph) );
 			return $head;
 		}
 	}
