@@ -233,7 +233,6 @@ package Attean::API::Result 0.001 {
 		foreach my $key (@shared) {
 			my $val_a	= $self->value($key);
 			my $val_b	= $rowb->value($key);
-			next unless (defined($val_a) and defined($val_b));
 			my $equal	= (refaddr($val_a) == refaddr($val_b)) || $val_a->equals( $val_b );
 			unless ($equal) {
 				return;
