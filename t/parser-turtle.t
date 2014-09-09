@@ -34,6 +34,17 @@ sub literal {
 }
 
 {
+	my $turtle	= "<s> <p> 1, 2 .\n";
+	open(my $fh, '<', \$turtle);
+	my $parser	= Attean->get_parser('Turtle')->new();
+	my $iter	= $parser->parse_iter_from_io($fh);
+	does_ok($iter, 'Attean::API::Iterator');
+	is($iter->next->object->value, '1');
+	is($iter->next->object->value, '2');
+	is($iter->next, undef);
+}
+
+{
 	my $map		= URI::NamespaceMap->new();
 	my $parser	= Attean->get_parser('Turtle')->new( namespaces => $map );
 	my $content	= <<'END';
@@ -79,3 +90,9 @@ foreach my $file (@bad) {
 }
 
 done_testing();
+
+sub does_ok {
+    my ($class_or_obj, $does, $message) = @_;
+    $message ||= "The object does $does";
+    ok(eval { $class_or_obj->does($does) }, $message);
+}

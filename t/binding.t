@@ -55,13 +55,16 @@ is_deeply([Attean::API::Quad->variables], [qw(subject predicate object graph)]);
 
 {
 	note('Attean::Result joining');
-	my $b1	= Attean::Result->new( bindings => { p => blank('eve'), type => iri('http://xmlns.com/foaf/0.1/Person') } );
+	my $shared	= blank('eve');
+	my $b1	= Attean::Result->new( bindings => { p => $shared, type => iri('http://xmlns.com/foaf/0.1/Person') } );
 	my $b2	= Attean::Result->new( bindings => { p => blank('eve'), name => literal('Eve') } );
 	my $b3	= Attean::Result->new( bindings => { p => blank('alice'), name => literal('Alice') } );
 	my $b4	= Attean::Result->new( bindings => { x => literal('xxx') } );
+	my $b5	= Attean::Result->new( bindings => { p => $shared, name => literal('Eve') } );
 	is($b1->join($b3), undef, 'intersecting result non-join');
-	is($b1->join($b2)->as_string, '{name="Eve", p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>}', 'intersecting result join');
 	is($b1->join($b4)->as_string, '{p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>, x="xxx"}', 'disjoint result join');
+	is($b1->join($b2)->as_string, '{name="Eve", p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>}', 'intersecting result join');
+	is($b1->join($b5)->as_string, '{name="Eve", p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>}', 'intersecting result join using shared term object');
 }
 
 

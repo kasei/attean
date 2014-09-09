@@ -37,7 +37,7 @@ sub literal {
     <variable name="friend"/>
   </head>
   <results>
-    <result> 
+    <result>
       <binding name="x">
 	<bnode>r2</bnode>
       </binding>
@@ -78,6 +78,33 @@ END
 		is($hpage->value, 'http://work.example.org/bob/');
 	});
 	$parser->parse_cb_from_bytes($xml);
+}
+
+{
+	my $xml	= <<'END';
+<?xml version="1.0"?>
+<sparql xmlns="http://www.w3.org/2005/sparql-results#">
+	<head>
+		<variable name="x"/>
+		<variable name="name"/>
+	</head>
+	<results>
+		<result>
+			<binding name="x"><bnode>r2</bnode></binding>
+			<binding name="name"><literal xml:lang="en">Bob</literal></binding>
+		</result>
+		<result>
+			<binding name="x"><uri>http://example.org/eve</uri></binding>
+			<binding name="name"><literal>Eve</literal></binding>
+		</result>
+	</results>
+</sparql>
+END
+	open(my $fh, '<', \$xml);
+	my $counter	= 0;
+	my $parser	= Attean->get_parser('SPARQLXML')->new(handler => sub {});
+	my @results	= $parser->parse_list_from_io($fh);
+	is(scalar(@results), 2);
 }
 
 done_testing();

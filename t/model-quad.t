@@ -137,9 +137,24 @@ use Type::Tiny::Role;
 			$count++;
 			like($g->value, qr<^http://example.org/graph[24]$>, "Graph value: $g");
 		}
-		is($count, 2);
+		is($count, 2, 'expected graph count');
 	}
-	
+}
+
+{
+	note('List helper methods');
+	my $graph	= Attean::IRI->new('http://example.org/list-graph');
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	dies_ok { $model->add_list() } 'add_list with bad arguments';
+	dies_ok { $model->get_list($graph) } 'get_list with bad arguments';
+	my $head	= $model->add_list($graph, map { Attean::Literal->integer($_) } (1 .. 3));
+	my $iter	= $model->get_quads;
+# 	while (my $q  = $iter->next) { say $q->as_string }
+	is($model->size, 6, 'expected add_list model size');
+	my $list	= $model->get_list($graph, $head);
+	does_ok($list, 'Attean::API::Iterator', 'get_list returned iterator');
+	is_deeply([map { $_->value } $list->elements], [1,2,3], 'get_list elements');
 }
 
 done_testing();
