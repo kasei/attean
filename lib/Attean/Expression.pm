@@ -14,12 +14,14 @@ package Attean::ValueExpression 0.001 {
 		my $class	= shift;
 		return $class->SUPER::BUILDARGS(@_, operator => '_value');
 	}
-	has 'value' => (is => 'ro', isa => ConsumerOf['Attean::API::Term']);
+	has 'value' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable']);
 	sub as_string {
 		my $self	= shift;
 		my $str		= $self->value->ntriples_string;
 		if ($str =~ m[^"(true|false)"\^\^<http://www[.]w3[.]org/2001/XMLSchema#boolean>$]) {
 			return $1;
+		} elsif ($str =~ m[^"(\d+)"\^\^<http://www[.]w3[.]org/2001/XMLSchema#integer>$]) {
+			return $1
 		}
 		return $str;
 	}
@@ -78,17 +80,26 @@ package Attean::BinaryExpression 0.001 {
 		my $op			= $self->operator;
 		
 		if ($op eq '&&') {
+			# TODO: catch type errors
+			my $lbv	= $lhs->evaluate(@_);
+			my $rbv	= $rhs->evaluate(@_);
+			return ($lbv->ebv && $rbv->ebv) ? Attean::Literal->true : Attean::Literal->false;
 		} elsif ($op eq '||') {
+			# TODO: catch type errors
+			my $lbv	= $lhs->evaluate(@_);
+			return Attean::Literal->true if ($lbv->ebv);
+			my $rbv	= $rhs->evaluate(@_);
+			return ($rbv->ebv) ? Attean::Literal->true : Attean::Literal->false;
 		} else {
 			($lhs, $rhs)	= map { $_->evaluate(@_) } ($lhs, $rhs);
 			if ($op eq '+') {
-				
+				# TODO
 			} elsif ($op eq '-') {
-				
+				# TODO
 			} elsif ($op eq '*') {
-				
+				# TODO
 			} elsif ($op eq '/') {
-				
+				# TODO
 			} else {
 				die "Unimplemented operator evaluation: $op";
 			}
