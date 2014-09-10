@@ -129,6 +129,16 @@ sub translate {
 		return variable($a->name);
 	} elsif ($a->isa('RDF::Query::Node::Resource')) {
 		return iri($a->uri_value);
+	} elsif ($a->isa('RDF::Query::Node::Blank')) {
+		return blank($a->blank_identifier);
+	} elsif ($a->isa('RDF::Query::Node::Literal')) {
+		if ($a->has_language) {
+			return langliteral($a->literal_value, $a->literal_value_language);
+		} elsif ($a->has_datatype) {
+			return dtliteral($a->literal_value, $a->literal_datatype);
+		} else {
+			return literal($a->literal_value);
+		}
 	} elsif ($a->isa('RDF::Query::Algebra::Limit')) {
 		my $child	= $a->pattern;
 		if ($child->isa('RDF::Query::Algebra::Offset')) {
