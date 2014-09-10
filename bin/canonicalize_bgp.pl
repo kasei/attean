@@ -154,7 +154,7 @@ sub translate_path {
 sub canonicalize {
 	my $bgp		= shift;
 	my @t		= @{ $bgp->triples };
-	my @pairs	= map { [ $_->tuples_string => $_ ] } @t;
+	my @pairs	= map { [ $_->tuples_string, $_, {} ] } @t;
 	my $replacements	= 0;
 	foreach my $p (@pairs) {
 		my ($str, $t)	= @$p;
@@ -164,6 +164,7 @@ sub canonicalize {
 			if ($term->does('Attean::API::Blank') or $term->does('Attean::API::Variable')) {
 				$str	=~ s/\Q$tstr\E/~/;
 				$str	.= "#$tstr";
+				$p->[2]{$pos}	= $tstr;
 				$replacements++;
 				$p->[0]	= $str;
 			}
@@ -180,31 +181,48 @@ sub canonicalize {
 		$last	= $pairs[$i-1][0] if ($i > 0);
 		$next	= $pairs[$i+1][0] if ($i < $#pairs);
 		next if ($str eq $last or $str eq $next);
-		while ($str =~ /~/) {
-			$str	=~ /#([?]|_:)([^#]+)$/;
-			my $prefix	= $1;
-			my $name	= $2;
-			my $key		= "$prefix$name";
-			substr($str, $-[0])	= '';
-			my $id		= (exists($mapping{$key})) ? $mapping{$key}{id} : $counter++;
-			$mapping{ $key }	= { id => $id, prefix => $prefix, type => ($prefix eq '?' ? 'variable' : 'blank') };
-			substr($str, rindex($str, '~'), 1, sprintf("%sv_%03d", $prefix, $id));
+		foreach my $pos (qw(object predicate subject)) {
+			if (defined(my $tstr = $p->[2]{$pos})) {
+				$tstr	=~ /^([?]|_:)([^#]+)$/;
+				my $prefix	= $1;
+				my $name	= $2;
+				my $key		= "$prefix$name";
+				delete $p->[2]{$pos};
+				my $id		= (exists($mapping{$key})) ? $mapping{$key}{id} : $counter++;
+				my $type	= ($prefix eq '?' ? 'variable' : 'blank');
+				$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
+				my %t		= $p->[1]->mapping;
+				$t{ $pos }	= ($type eq 'blank') ? blank(sprintf("v_%03d", $id)) : variable(sprintf("v_%03d", $id));
+				my $t	= Attean::Triple->new( %t );
+				$p->[1]	= $t;
+				$p->[0]	= $t->tuples_string;
+			}
 		}
-		$p->[0]	= $str;
 	}
 	
 	foreach my $p (@pairs) {
 		my ($str, $t)	= @$p;
-		while ($str =~ /~/) {
-			$str	=~ /#([?]|_:)([^#]+)$/;
-			my $prefix	= $1;
-			my $name	= $2;
-			my $key		= "$prefix$name";
-			substr($str, $-[0])	= '';
-			my $id		= $mapping{$key}{id};
-			substr($str, rindex($str, '~'), 1, sprintf("%sv_%03d", $prefix, $id));
+		foreach my $pos (qw(object predicate subject)) {
+			if (defined(my $tstr = $p->[2]{$pos})) {
+				$tstr	=~ /^([?]|_:)([^#]+)$/;
+				my $prefix	= $1;
+				my $name	= $2;
+				my $key		= "$prefix$name";
+				delete $p->[2]{$pos};
+				unless (exists($mapping{$key})) {
+					warn "Cannot canonicalize BGP";
+					return;
+				}
+				my $id		= $mapping{$key}{id};
+				my $type	= ($prefix eq '?' ? 'variable' : 'blank');
+				$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
+				my %t		= $p->[1]->mapping;
+				$t{ $pos }	= ($type eq 'blank') ? blank(sprintf("v_%03d", $id)) : variable(sprintf("v_%03d", $id));
+				my $t	= Attean::Triple->new( %t );
+				$p->[1]	= $t;
+				$p->[0]	= $t->tuples_string;
+			}
 		}
-		$p->[0]	= $str;
 	}
 
 	@pairs	= sort { $a->[0] cmp $b->[0] } @pairs;
@@ -215,7 +233,7 @@ sub canonicalize {
 	say "SELECT " . join(' ', @proj) . " WHERE {";
 	foreach my $p (@pairs) {
 		my ($str, $t)	= @$p;
-		say "\t$str";
+		say "\t" . $t->tuples_string;
 	}
 	say "}";
 }
