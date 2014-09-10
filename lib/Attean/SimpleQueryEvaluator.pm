@@ -34,7 +34,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 	sub evaluate {
 		my $self			= shift;
 		my $algebra			= shift;
-		my $active_graph	= shift;
+		my $active_graph	= shift || die "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
 		
 		if ($algebra->isa('Attean::Algebra::BGP')) {
 			my @triples	= @{ $algebra->triples };
@@ -58,7 +58,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
 			my %seen;
 			my ($child)	= @{ $algebra->children };
-			my $iter	= $self->evaluate( $child );
+			my $iter	= $self->evaluate( $child, $active_graph );
 			return $iter->grep(sub {
 				my $r	= shift;
 				return not($seen{ $r->as_string }++);
