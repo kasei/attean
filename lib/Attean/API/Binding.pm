@@ -85,7 +85,7 @@ package Attean::API::Binding 0.001 {
 	sub tuples_string {
 		my $self	= shift;
 		my @strs	= map { $_->ntriples_string } $self->values;
-		return join(' ', @strs);
+		return join(' ', @strs) . ' .';
 	}
 	sub as_string {
 		shift->tuples_string();
