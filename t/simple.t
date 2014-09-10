@@ -71,7 +71,7 @@ use Attean;
 	isa_ok($t->predicate, 'Attean::IRI');
 	does_ok($t->object, 'Attean::API::Term');
 	
-	is($t->tuples_string, '_:x <http://example.org/p> "foo"@en-US', 'tuples string');
+	is($t->tuples_string, '_:x <http://example.org/p> "foo"@en-US .', 'tuples string');
 }
 
 {

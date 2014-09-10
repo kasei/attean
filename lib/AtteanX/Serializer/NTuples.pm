@@ -44,8 +44,8 @@ L<IO::Handle> object C<< $fh >>.
 		my $iter	= shift;
 		my $type	= $iter->item_type;
 		while (my $t = $iter->next()) {
-			my $str = $t->tuples_string;
-			$io->print($str, " .\n");
+			my $str = $t->tuples_string . "\n";
+			$io->print($str);
 		}
 		return;
 	}
@@ -63,8 +63,7 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my $data	= '';
 		while (my $t = $iter->next()) {
 			my $str = $t->tuples_string;
-			$data	.= $str;
-			$data	.= " .\n";
+			$data	.= $str . "\n";
 		}
 		return encode('UTF-8', $data);
 	}

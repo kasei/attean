@@ -138,8 +138,8 @@ use Types::Standard qw(Int);
 	does_ok($iter, 'Attean::API::MixedStatementIterator');
 	my $quads	= $iter->as_quads(iri('default'));
 	does_ok($quads, 'Attean::API::QuadIterator');
-	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <default>', 'expected triple coerced to quad');
-	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <graph>', 'expected quad');
+	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <default> .', 'expected triple coerced to quad');
+	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <graph> .', 'expected quad');
 	is($iter->next, undef, 'expected eof');
 }
 
