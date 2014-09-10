@@ -36,7 +36,7 @@ package Attean::RDF 0.001 {
 	use List::MoreUtils qw(zip);
 	require Exporter;
 	our @ISA	= qw(Exporter);
-	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad);
+	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern);
 
 =item C<< variable( $value ) >>
 
@@ -108,6 +108,16 @@ C<< Attean::Triple->new( @terms ) >>
 
 	sub triple {
 		return Attean::Triple->new(@_);
+	}
+	
+=item C<< triplepattern( @terms ) >>
+
+C<< Attean::TriplePattern->new( @terms ) >>
+
+=cut
+
+	sub triplepattern {
+		return Attean::TriplePattern->new(@_);
 	}
 	
 =item C<< quad( @terms ) >>
