@@ -3,6 +3,7 @@ use autodie;
 use utf8;
 use Test::More;
 use Test::Exception;
+use Digest::SHA qw(sha1_hex);
 
 use Attean;
 use Attean::RDF;
@@ -98,6 +99,39 @@ if ($ENV{ATTEAN_TYPECHECK}) {
 	
 	my $inv_seq_star	= Attean::Algebra::ZeroOrMorePath->new( children => [$inv_seq] );
 	is($inv_seq_star->as_string, '(^(<p1>/<p2>))*', 'complex ZeroOrMorePath as_string');
+}
+
+{
+	note('BGP canonicalization');
+	my $b		= blank('person');
+	my $rdf_type	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+	my $foaf_name	= iri('http://xmlns.com/foaf/0.1/name');
+	my $foaf_knows	= iri('http://xmlns.com/foaf/0.1/knows');
+	my $foaf_Person	= iri('http://xmlns.com/foaf/0.1/Person');
+	my $bgp1	= Attean::Algebra::BGP->new( triples => [
+		triplepattern($b, $rdf_type, $foaf_Person),
+		triplepattern($b, $foaf_name, variable('name')),
+		triplepattern($b, $foaf_knows, variable('knows')),
+	] );
+	my $bgp2	= Attean::Algebra::BGP->new( triples => [
+		triplepattern(blank('s'), $foaf_knows, variable('person')),
+		triplepattern(blank('s'), $rdf_type, $foaf_Person),
+		triplepattern(blank('s'), $foaf_name, variable('myname')),
+	] );
+
+	my $hash1	= sha1_hex( join("\n", map { $_->tuples_string } (@{$bgp1->triples}) ) );
+	my $hash2	= sha1_hex( join("\n", map { $_->tuples_string } (@{$bgp2->triples}) ) );
+	isnt($hash1, $hash2, 'non-matching pre-canonicalized BGP hashes');
+	
+	my ($cbgp1, $m1)	= $bgp1->canonicalize;
+	my ($cbgp2, $m2)	= $bgp2->canonicalize;
+	
+	my $chash1	= sha1_hex( join("\n", map { $_->tuples_string } (@{$cbgp1->triples}) ) );
+	my $chash2	= sha1_hex( join("\n", map { $_->tuples_string } (@{$cbgp2->triples}) ) );
+	is($chash1, $chash2, 'matching canonicalized BGP hashes' );
+	
+	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 3, 'type' => 'variable' }, '?knows' => { 'id' => 2, 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 1, 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
+	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 2, 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 1, 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 3, 'prefix' => '?' } }, 'BGP2 mapping');
 }
 
 done_testing();

@@ -51,8 +51,15 @@ try {
 	
 	my ($bgp)	= @{ $a->children };
 	die "Query must be a simple BGP" unless ($a->isa('Attean::Algebra::Project') and $bgp->isa('Attean::Algebra::BGP'));
-	my $canon	= canonicalize($bgp);
-	
+	my ($canon, $mapping)	= $bgp->canonicalize();
+	my $hash	= sha1_hex( join("\n", map { $_->tuples_string } (@{$canon->triples}) ) );
+	my @proj	= sort map { sprintf("(?v_%03d AS $_)", $mapping->{$_}{id}) } grep { $mapping->{$_}{type} eq 'variable' } (keys %$mapping);
+	say "# Hash key: $hash";
+	say "SELECT " . join(' ', @proj) . " WHERE {";
+	foreach my $t (@{$canon->triples}) {
+		say "\t" . $t->tuples_string;
+	}
+	say "}";
 } catch {
 	my $exception	= $_;
 	warn "Caught error: $exception";
@@ -157,91 +164,4 @@ sub translate_path {
 		return Attean::Algebra::AlternativePath->new( children => \@paths );
 	}
 	die "Unrecognized path: $op";
-}
-
-sub canonicalize {
-	my $bgp		= shift;
-	my @t		= @{ $bgp->triples };
-	my @pairs	= map { [ $_->tuples_string, $_, {} ] } @t;
-	my $replacements	= 0;
-	foreach my $p (@pairs) {
-		my ($str, $t)	= @$p;
-		foreach my $pos (qw(subject predicate object)) {
-			my $term	= $t->$pos();
-			my $tstr	= $term->ntriples_string;
-			if ($term->does('Attean::API::Blank') or $term->does('Attean::API::Variable')) {
-				$str	=~ s/\Q$tstr\E/~/;
-				$str	.= "#$tstr";
-				$p->[2]{$pos}	= $tstr;
-				$replacements++;
-				$p->[0]	= $str;
-			}
-		}
-	}
-	
-	@pairs	= sort { $a->[0] cmp $b->[0] } @pairs;
-	my $counter	= 1;
-	my %mapping;
-	foreach my $i (0 .. $#pairs) {
-		my $p		= $pairs[$i];
-		my ($str, $t)	= @$p;
-		my ($next, $last)	= ('')x2;
-		$last	= $pairs[$i-1][0] if ($i > 0);
-		$next	= $pairs[$i+1][0] if ($i < $#pairs);
-		next if ($str eq $last or $str eq $next);
-		foreach my $pos (qw(object predicate subject)) {
-			if (defined(my $tstr = $p->[2]{$pos})) {
-				$tstr	=~ /^([?]|_:)([^#]+)$/;
-				my $prefix	= $1;
-				my $name	= $2;
-				my $key		= "$prefix$name";
-				delete $p->[2]{$pos};
-				my $id		= (exists($mapping{$key})) ? $mapping{$key}{id} : $counter++;
-				my $type	= ($prefix eq '?' ? 'variable' : 'blank');
-				$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
-				my %t		= $p->[1]->mapping;
-				$t{ $pos }	= ($type eq 'blank') ? blank(sprintf("v_%03d", $id)) : variable(sprintf("v_%03d", $id));
-				my $t	= Attean::Triple->new( %t );
-				$p->[1]	= $t;
-				$p->[0]	= $t->tuples_string;
-			}
-		}
-	}
-	
-	foreach my $p (@pairs) {
-		my ($str, $t)	= @$p;
-		foreach my $pos (qw(object predicate subject)) {
-			if (defined(my $tstr = $p->[2]{$pos})) {
-				$tstr	=~ /^([?]|_:)([^#]+)$/;
-				my $prefix	= $1;
-				my $name	= $2;
-				my $key		= "$prefix$name";
-				delete $p->[2]{$pos};
-				unless (exists($mapping{$key})) {
-					warn "Cannot canonicalize BGP";
-					return;
-				}
-				my $id		= $mapping{$key}{id};
-				my $type	= ($prefix eq '?' ? 'variable' : 'blank');
-				$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
-				my %t		= $p->[1]->mapping;
-				$t{ $pos }	= ($type eq 'blank') ? blank(sprintf("v_%03d", $id)) : variable(sprintf("v_%03d", $id));
-				my $t	= Attean::Triple->new( %t );
-				$p->[1]	= $t;
-				$p->[0]	= $t->tuples_string;
-			}
-		}
-	}
-
-	@pairs	= sort { $a->[0] cmp $b->[0] } @pairs;
-	
-	my $hash	= sha1_hex( join('.', map { $_->[0] } @pairs) );
-	my @proj	= sort map { sprintf("(?v_%03d AS $_)", $mapping{$_}{id}) } grep { $mapping{$_}{type} eq 'variable' } (keys %mapping);
-	say "# Hash key: $hash";
-	say "SELECT " . join(' ', @proj) . " WHERE {";
-	foreach my $p (@pairs) {
-		my ($str, $t)	= @$p;
-		say "\t" . $t->tuples_string;
-	}
-	say "}";
 }
