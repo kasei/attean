@@ -27,6 +27,7 @@ model, and returns a query result.
 
 package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
+	use List::Util qw(reduce);
 	use Types::Standard qw(ConsumerOf);
 	has 'model' => (is => 'ro', isa => ConsumerOf['Attean::API::Model'], required => 1);
 	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
@@ -82,6 +83,29 @@ package Attean::SimpleQueryEvaluator 0.001 {
 				my $r	= shift;
 				return $expr->evaluate($r)->ebv;
 			});
+		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
+			my ($child)	= @{ $algebra->children };
+			my $iter	= $self->evaluate( $child, $active_graph );
+			my @rows	= $iter->elements;
+			my @cmps	= @{ $algebra->comparators };
+			my @exprs	= map { $_->expression } @cmps;
+			my @dirs	= map { $_->ascending } @cmps;
+			my @sorted	= map { $_->[0] } sort {
+				my ($ar, $avalues)	= @$a;
+				my ($br, $bvalues)	= @$b;
+				my $c	= 0;
+				foreach my $i (0 .. $#cmps) {
+					my $av	= $avalues->[$i];
+					my $bv	= $bvalues->[$i];
+					$c	= $av->compare($bv);
+					if ($dirs[$i] == 0) {
+						$c	*= -1;
+					}
+					last unless ($c == 0);
+				}
+				$c
+			} map { my $r = $_; [$r, [map { $_->evaluate($r) } @exprs]] } @rows;
+			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type);
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
 			my $graph	= $algebra->graph;
 			my ($child)	= @{ $algebra->children };
@@ -150,8 +174,6 @@ package Attean::SimpleQueryEvaluator 0.001 {
 				push(@results, $lhs) unless ($joinable);
 			}
 			return Attean::ListIterator->new( values => \@results, item_type => $self->item_type);
-		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
-			# TODO: implement orderby evaluation
 		} elsif ($algebra->isa('Attean::Algebra::Path')) {
 			my $s		= $algebra->subject;
 			my $path	= $algebra->path;

@@ -48,6 +48,8 @@ package Attean::API::Term 0.001 {
 	}
 	sub ebv { return 0; }
 	
+	requires 'compare';
+	
 	sub __ntriples_string {
 		my $self	= shift;
 		my $value	= $self->value;
@@ -95,23 +97,42 @@ package Attean::API::Term 0.001 {
 package Attean::API::Literal 0.001 {
 	use Moo::Role;
 	use IRI;
+	use Scalar::Util qw(blessed);
 	
 	with 'Attean::API::Term';
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
+	
+	sub BUILD {}
+	around 'BUILD' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		$self->$orig(@_);
+		if (my $dt = $self->datatype) {
+			my $type	= $dt->value;
+			if ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::NumericLiteral');
+			}
+		}
+	};
+	
 	sub ebv {
 		my $self	= shift;
 		my $value	= $self->value;
 		my $dt		= $self->datatype->value;
 		if ($dt eq 'http://www.w3.org/2001/XMLSchema#boolean') {
 			return ($value eq 'true' or $value eq '1');
-		} elsif ($dt eq 'http://www.w3.org/2001/XMLSchema#integer') {
-			return ($value != 0);
-# 			# TODO: handle other numeric XSD types when determining EBV
 		} else {
 			return (length($value) > 0);
 		}
+	}
+	
+	sub compare {
+		my ($a, $b)	= @_;
+		return 1 unless blessed($b);
+		return 1 unless ($b->does('Attean::API::Literal'));
+		return ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
 	}
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -139,25 +160,88 @@ package Attean::API::Literal 0.001 {
 	
 	sub _ntriples_string {
 		my $self	= shift;
-		return sprintf('"%s"', $self->__ntriples_string);
+		my $str		= sprintf('"%s"', $self->__ntriples_string);
+		if (my $l = $self->language) {
+			return join('@', $str, $l);
+		} else {
+			my $dt	= $self->datatype;
+			if ($dt->value eq 'http://www.w3.org/2001/XMLSchema#string') {
+				return $str;
+			} else {
+				return join('^^', $str, $dt->ntriples_string);
+			}
+		}
 	}
+}
+
+package Attean::API::NumericLiteral 0.001 {
+	use Moo::Role;
+	use Scalar::Util qw(blessed);
+	
+	sub compare {
+		my ($a, $b)	= @_;
+		return 1 unless blessed($b);
+		return 1 unless ($b->does('Attean::API::Literal'));
+		if ($b->does('Attean::API::NumericLiteral')) {
+			return $a->numeric_value <=> $b->numeric_value;
+		} else {
+			Attean::API::Literal::compare($a, $b);
+		}
+	}
+	
+	sub ebv {
+		my $self	= shift;
+		return ($self->numeric_value != 0);
+	}
+
+	sub numeric_value {
+		my $self	= shift;
+		# TODO: parse numeric values that have lexical forms that perl doesn't recognize
+		return 0+$self->value;
+
+	}
+	
+	sub promotion_type {
+		my $self	= shift;
+		my $rhs		= shift;
+		# TODO: implement XSD type promotion
+		return 'http://www.w3.org/2001/XMLSchema#integer';
+	}
+	with 'Attean::API::Literal';
 }
 
 package Attean::API::Blank 0.001 {
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
+
+	sub compare {
+		my ($a, $b)	= @_;
+		return 1 unless blessed($b);
+		return -1 unless ($b->does('Attean::API::Blank'));
+		return ($a->value cmp $b->value);
+	}
 }
 
 package Attean::API::IRI 0.001 {
 	use Moo::Role;
 	use IRI;
+	use Scalar::Util qw(blessed);
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term';
 	with 'Attean::API::BlankOrIRI';
+	
+	sub compare {
+		my ($a, $b)	= @_;
+		return 1 unless blessed($b);
+		return -1 if ($b->does('Attean::API::Literal'));
+		return 1 unless ($b->does('Attean::API::IRI'));
+		return ($a->value cmp $b->value);
+	}
 	
 	sub _ntriples_string {
 		my $self	= shift;

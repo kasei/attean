@@ -92,14 +92,18 @@ package Attean::BinaryExpression 0.001 {
 			return ($rbv->ebv) ? Attean::Literal->true : Attean::Literal->false;
 		} else {
 			($lhs, $rhs)	= map { $_->evaluate(@_) } ($lhs, $rhs);
+			die unless $lhs->does('Attean::API::NumericLiteral');
+			die unless $rhs->does('Attean::API::NumericLiteral');
+			my $lv	= $lhs->numeric_value;
+			my $rv	= $rhs->numeric_value;
 			if ($op eq '+') {
-				# TODO
+				return Attean::Literal->new( value => ($lv + $rv), datatype => $lhs->promotion_type($rhs) );
 			} elsif ($op eq '-') {
-				# TODO
+				return Attean::Literal->new( value => ($lv - $rv), datatype => $lhs->promotion_type($rhs) );
 			} elsif ($op eq '*') {
-				# TODO
+				return Attean::Literal->new( value => ($lv * $rv), datatype => $lhs->promotion_type($rhs) );
 			} elsif ($op eq '/') {
-				# TODO
+				return Attean::Literal->new( value => ($lv / $rv), datatype => $lhs->promotion_type($rhs) );
 			} else {
 				die "Unimplemented operator evaluation: $op";
 			}

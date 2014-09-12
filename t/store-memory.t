@@ -60,7 +60,6 @@ use Attean;
 
 done_testing();
 
-
 sub does_ok {
     my ($class_or_obj, $does, $message) = @_;
     $message ||= "The object does $does";

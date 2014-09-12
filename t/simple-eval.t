@@ -204,6 +204,46 @@ END
 		is(scalar(@r_l), 1, 'limit count');
 		is(scalar(@r_ol), 1, 'offset/limit count');
 	}
+
+	{
+		note('Order');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		my $sort_by	= sub {
+			my $algebra		= shift;
+			my @cmps;
+			while (scalar(@_)) {
+				my ($variable, $asc)	= splice(@_, 0, 2);
+				my $expr	= Attean::ValueExpression->new( value => variable($variable) );
+				my $cmp		= Attean::Algebra::_Comparator->new( expression => $expr, ascending => $asc );
+				push(@cmps, $cmp);
+			}
+			return Attean::Algebra::OrderBy->new( children => [$algebra], comparators => \@cmps );
+		};
+		
+		my $b		= Attean::Algebra::BGP->new( triples => [triplepattern(variable('s'), variable('p'), variable('o'))] );
+		
+		{
+			my $order_o	= $sort_by->( $b, 'o', 1 );
+			my @rows_o	= $e->evaluate($order_o, $g)->elements;
+			my @values_o	= map { $_->value('o')->value } @rows_o;
+			is_deeply(\@values_o, [qw(b c d e)], 'ORDER ascending');
+		}
+		
+		{
+			my $order_o	= $sort_by->( $b, 'o', 0 );
+			my @rows_o	= $e->evaluate($order_o, $g)->elements;
+			my @values_o	= map { $_->value('o')->value } @rows_o;
+			is_deeply(\@values_o, [qw(e d c b)], 'ORDER descending');
+		}
+		
+		{
+			my $order_so	= $sort_by->( $b, 's' => 1, 'o' => 0 );
+			my @rows_so	= $e->evaluate($order_so, $g)->elements;
+			my @values_so	= map { [$_->value('s')->value, $_->value('o')->value] } @rows_so;
+			is_deeply(\@values_so, [[qw(a b)], [qw(b c)], [qw(c e)], [qw(c d)]], 'ORDER mixed');
+# 			foreach my $r (@rows_so) { say $r->as_string }
+		}
+	}
 	
 }
 
