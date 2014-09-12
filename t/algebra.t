@@ -123,15 +123,15 @@ if ($ENV{ATTEAN_TYPECHECK}) {
 	my $hash2	= sha1_hex( join("\n", map { $_->tuples_string } (@{$bgp2->triples}) ) );
 	isnt($hash1, $hash2, 'non-matching pre-canonicalized BGP hashes');
 	
-	my ($cbgp1, $m1)	= $bgp1->canonicalize;
-	my ($cbgp2, $m2)	= $bgp2->canonicalize;
+	my ($cbgp1, $m1)	= $bgp1->canonical_bgp_with_mapping;
+	my ($cbgp2, $m2)	= $bgp2->canonical_bgp_with_mapping;
 	
 	my $chash1	= sha1_hex( join("\n", map { $_->tuples_string } (@{$cbgp1->triples}) ) );
 	my $chash2	= sha1_hex( join("\n", map { $_->tuples_string } (@{$cbgp2->triples}) ) );
 	is($chash1, $chash2, 'matching canonicalized BGP hashes' );
 	
-	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 3, 'type' => 'variable' }, '?knows' => { 'id' => 2, 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 1, 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
-	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 2, 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 1, 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 3, 'prefix' => '?' } }, 'BGP2 mapping');
+	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 'v003', 'type' => 'variable' }, '?knows' => { 'id' => 'v002', 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 'v001', 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
+	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
 }
 
 done_testing();

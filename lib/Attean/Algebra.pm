@@ -120,7 +120,7 @@ package Attean::Algebra::OrderBy 0.001 {
 	use Types::Standard qw(ArrayRef InstanceOf);
 	with 'Attean::API::UnionScopeVariables';
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	has 'expressions' => (is => 'ro', isa => ArrayRef[InstanceOf['_Comparator']], required => 1);
+	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::_Comparator']], required => 1);
 }
 
 package Attean::Algebra::BGP 0.001 {
@@ -140,6 +140,19 @@ package Attean::Algebra::BGP 0.001 {
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']], default => sub { [] });
 	
 	sub canonicalize {
+		my $self	= shift;
+		my ($algebra, $mapping)	= $self->canonical_bgp_with_mapping();
+		my @proj	= sort map { sprintf("(?v%03d AS $_)", $mapping->{$_}{id}) } grep { $mapping->{$_}{type} eq 'variable' } (keys %$mapping);
+		foreach my $var (keys %$mapping) {
+			$algebra	= Attean::Algebra::Extend->new(
+				children	=> [$algebra],
+				variable	=> variable($var),
+				expression	=> Attean::ValueExpression->new( value => variable($mapping->{$var}{id}) ),
+			);
+		}
+	}
+	
+	sub canonical_bgp_with_mapping {
 		my $bgp		= shift;
 		my @t		= @{ $bgp->triples };
 		my @pairs	= map { [ $_->tuples_string, $_, {} ] } @t;
@@ -176,11 +189,11 @@ package Attean::Algebra::BGP 0.001 {
 					my $name	= $2;
 					my $key		= "$prefix$name";
 					delete $p->[2]{$pos};
-					my $id		= (exists($mapping{$key})) ? $mapping{$key}{id} : $counter++;
+					my $id		= (exists($mapping{$key})) ? $mapping{$key}{id} : sprintf("v%03d", $counter++);
 					my $type	= ($prefix eq '?' ? 'variable' : 'blank');
 					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
 					my %t		= $p->[1]->mapping;
-					$t{ $pos }	= ($type eq 'blank') ? blank(sprintf("v_%03d", $id)) : variable(sprintf("v_%03d", $id));
+					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
 					my $t	= Attean::Triple->new( %t );
 					$p->[1]	= $t;
 					$p->[0]	= $t->tuples_string;
@@ -205,7 +218,7 @@ package Attean::Algebra::BGP 0.001 {
 					my $type	= ($prefix eq '?' ? 'variable' : 'blank');
 					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
 					my %t		= $p->[1]->mapping;
-					$t{ $pos }	= ($type eq 'blank') ? blank(sprintf("v_%03d", $id)) : variable(sprintf("v_%03d", $id));
+					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
 					my $t	= Attean::Triple->new( %t );
 					$p->[1]	= $t;
 					$p->[0]	= $t->tuples_string;
