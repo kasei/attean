@@ -35,7 +35,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 	sub evaluate {
 		my $self			= shift;
 		my $algebra			= shift;
-		my $active_graph	= shift || die "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
+		my $active_graph	= shift || Carp::confess "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
 		
 		if ($algebra->isa('Attean::Algebra::BGP')) {
 			my @triples	= @{ $algebra->triples };
@@ -68,11 +68,14 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			my $expr	= $algebra->expression;
 			my $var		= $algebra->variable->value;
 			my ($child)	= @{ $algebra->children };
-			my $iter	= $self->evaluate( $child );
+			my $iter	= $self->evaluate( $child, $active_graph );
 			return $iter->map(sub {
 				my $r	= shift;
 				my %b	= map { $_ => $r->value($_) } $r->variables;
-				$b{$var}	= $expr->evaluate($r);
+				my $val	= eval { $expr->evaluate($r) };
+				if ($val) {
+					$b{$var}	= $val;
+				}
 				my $b	= Attean::Result->new( bindings => \%b );
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
@@ -253,7 +256,11 @@ package Attean::SimpleQueryEvaluator 0.001 {
 			my @vars	= map { $_->value } @{ $algebra->variables };
 			return $iter->map(sub {
 				my $r	= shift;
-				my $b	= { map { $_ => $r->value($_) } @vars };
+				my $b	= { map {
+					my $t	= $r->value($_);
+					$t	? ($_ => $t)
+						: ()
+				} @vars };
 				return Attean::Result->new( bindings => $b );
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
