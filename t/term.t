@@ -35,6 +35,40 @@ ok(iri('foo')->ebv, '<foo> EBV');
 	is($i1->compare($i2), -1, 'numeric literal sort');
 }
 
+{
+	note('XSD type promotion');
+	{
+		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#long');
+		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#short');
+		is($a->binary_promotion_type($b, '+'), 'http://www.w3.org/2001/XMLSchema#long');
+	}
+	{
+		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
+		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#unsignedByte');
+		is($a->binary_promotion_type($b, '+'), 'http://www.w3.org/2001/XMLSchema#nonNegativeInteger');
+	}
+	{
+		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
+		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#unsignedByte');
+		is($a->binary_promotion_type($b, '/'), 'http://www.w3.org/2001/XMLSchema#decimal');
+	}
+	{
+		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
+		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#unsignedByte');
+		is($a->binary_promotion_type($b, '/'), 'http://www.w3.org/2001/XMLSchema#decimal');
+	}
+	{
+		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#float');
+		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#float');
+		is($a->binary_promotion_type($b, '*'), 'http://www.w3.org/2001/XMLSchema#float');
+	}
+	{
+		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#float');
+		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#double');
+		is($a->binary_promotion_type($b, '*'), 'http://www.w3.org/2001/XMLSchema#double');
+	}
+}
+
 done_testing();
 
 sub does_ok {

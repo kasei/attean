@@ -9,7 +9,14 @@ package Attean::API::Expression 0.001 {
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
 	requires 'evaluate';
 	requires 'as_string';
+	requires 'impl';
 	
+	sub evaluate {
+		my $self	= shift;
+		my $impl	= $self->impl;
+		return $impl->( @_ );
+	}
+
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		around 'BUILD' => sub {

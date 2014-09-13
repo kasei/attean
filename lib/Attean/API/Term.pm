@@ -189,6 +189,12 @@ package Attean::API::NumericLiteral 0.001 {
 		}
 	}
 	
+	sub is_integer_type {
+		my $self	= shift;
+		my $type	= $self->datatype->value;
+		return scalar($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>);
+	}
+	
 	sub ebv {
 		my $self	= shift;
 		return ($self->numeric_value != 0);
@@ -200,12 +206,68 @@ package Attean::API::NumericLiteral 0.001 {
 		return 0+$self->value;
 
 	}
-	
-	sub promotion_type {
-		my $self	= shift;
-		my $rhs		= shift;
-		# TODO: implement XSD type promotion
-		return 'http://www.w3.org/2001/XMLSchema#integer';
+
+	{
+		my %type_hierarchy	= (
+			'integer'				=> 'decimal',
+			'nonPositiveInteger'	=> 'integer',
+			'negativeInteger'		=> 'nonPositiveInteger',
+			'long'					=> 'integer',
+			'int'					=> 'long',
+			'short'					=> 'int',
+			'byte'					=> 'short',
+			'nonNegativeInteger'	=> 'integer',
+			'unsignedLong'			=> 'nonNegativeInteger',
+			'unsignedInt'			=> 'unsignedLong',
+			'unsignedShort'			=> 'unsignedInt',
+			'unsignedByte'			=> 'unsignedShort',
+			'positiveInteger'		=> 'nonNegativeInteger',
+		);
+		sub _lca {
+			my ($lhs, $rhs)	= @_;
+			for ($lhs, $rhs) {
+				s/^.*#//;
+			}
+# 			warn "LCA ($lhs $rhs)";
+			return "http://www.w3.org/2001/XMLSchema#$lhs" if ($lhs eq $rhs);
+			my $cur	= $lhs;
+			my %ancestors	= ($cur => 1);
+			while ($cur = $type_hierarchy{$cur}) {
+				$ancestors{$cur}++;
+				return "http://www.w3.org/2001/XMLSchema#$cur" if ($cur eq $rhs);
+			}
+# 			use Data::Dumper;
+# 			warn Dumper(\%ancestors);
+			$cur	= $rhs;
+			while ($cur = $type_hierarchy{$cur}) {
+				return "http://www.w3.org/2001/XMLSchema#$cur" if exists $ancestors{$cur};
+			}
+			return;
+		}
+		sub binary_promotion_type {
+			my $self	= shift;
+			my $rhs		= shift;
+			my $op		= shift;
+			
+			if ($op =~ m<^[-+*]$>) {
+				# return common numeric type
+				if (my $type = _lca($self->datatype->value, $rhs->datatype->value)) {
+					return $type;
+				}
+				return 'http://www.w3.org/2001/XMLSchema#double';
+			} elsif ($op eq '/') {
+				if ($self->is_integer_type and $rhs->is_integer_type) {
+					# return xsd:decimal if both operands are integers
+					return 'http://www.w3.org/2001/XMLSchema#decimal';
+				}
+				if (my $type = _lca($self->datatype->value, $rhs->datatype->value)) {
+					return $type;
+				}
+				return 'http://www.w3.org/2001/XMLSchema#double';
+			} else {
+				die "Unexpected numeric operation in binary_promotion_type: $op";
+			}
+		}
 	}
 	with 'Attean::API::Literal';
 }
