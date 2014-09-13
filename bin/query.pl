@@ -14,6 +14,168 @@ use Getopt::Long;
 use Try::Tiny;
 use Benchmark qw(timethese);
 
+BEGIN { $Error::TypeTiny::StackTrace	= 1; }
+
+package Translator 0.1 {
+	use v5.20;
+	use warnings;
+	use Moo;
+	use namespace::clean;
+	
+	use Attean::RDF;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Bool);
+	has 'in_expr' => (is => 'rw', isa => Bool, default => 0);
+	
+	sub translate {
+		my $self	= shift;
+		my $a		= shift;
+		die "Not a reference? " . Dumper($a) unless blessed($a);
+		if ($a->isa('RDF::Query::Algebra::Project')) {
+			my $p	= $a->pattern;
+			my $v	= $a->vars;
+			my @vars	= map { variable($_->name) } @$v;
+			return Attean::Algebra::Project->new(
+				children	=> [ $self->translate($p) ],
+				variables	=> [ @vars ],
+			);
+		} elsif ($a->isa('RDF::Query::Algebra::GroupGraphPattern')) {
+			my @p	= map { $self->translate($_) } $a->patterns;
+			if (scalar(@p) == 0) {
+				return Attean::Algebra::BGP->new();
+			} else {
+				while (scalar(@p) > 1) {
+					my ($l, $r)	= splice(@p, 0, 2);
+					unshift(@p, Attean::Algebra::Join->new( children => [$l, $r] ));
+				}
+				return shift(@p);
+			}
+		} elsif ($a->isa('RDF::Query::Algebra::BasicGraphPattern')) {
+			my @p	= map { $self->translate($_) } $a->triples;
+			return Attean::Algebra::BGP->new( triples => \@p );
+		} elsif ($a->isa('RDF::Query::Algebra::Triple')) {
+			my @nodes	= map { $self->translate($_) } $a->nodes;
+			return Attean::TriplePattern->new(@nodes);
+		} elsif ($a->isa('RDF::Query::Node::Variable')) {
+			my $value	= variable($a->name);
+			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			return $value;
+		} elsif ($a->isa('RDF::Query::Node::Resource')) {
+			my $value	= iri($a->uri_value);
+			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			return $value;
+		} elsif ($a->isa('RDF::Query::Node::Blank')) {
+			my $value	= blank($a->blank_identifier);
+			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			return $value;
+		} elsif ($a->isa('RDF::Query::Node::Literal')) {
+			my $value;
+			if ($a->has_language) {
+				$value	= langliteral($a->literal_value, $a->literal_value_language);
+			} elsif ($a->has_datatype) {
+				$value	= dtliteral($a->literal_value, $a->literal_datatype);
+			} else {
+				$value	= literal($a->literal_value);
+			}
+			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			return $value;
+		} elsif ($a->isa('RDF::Query::Algebra::Limit')) {
+			my $child	= $a->pattern;
+			if ($child->isa('RDF::Query::Algebra::Offset')) {
+				my $p	= $self->translate($child->pattern);
+				return Attean::Algebra::Slice->new( children => [$p], limit => $a->limit, offset => $child->offset );
+			} else {
+				my $p	= $self->translate($child);
+				return Attean::Algebra::Slice->new( children => [$p], limit => $a->limit );
+			}
+		} elsif ($a->isa('RDF::Query::Algebra::Offset')) {
+			my $p	= $self->translate($a->pattern);
+			return Attean::Algebra::Slice->new( children => [$p], offset => $a->offset );
+		} elsif ($a->isa('RDF::Query::Algebra::Path')) {
+			my $s		= $self->translate($a->start);
+			my $o		= $self->translate($a->end);
+			my $path	= $self->translate_path($a->path);
+			return Attean::Algebra::Path->new( subject => $s, path => $path, object => $o );
+		} elsif ($a->isa('RDF::Query::Algebra::NamedGraph')) {
+			my $graph	= $self->translate($a->graph);
+			my $p		= $self->translate($a->pattern);
+			return Attean::Algebra::Graph->new( children => [$p], graph => $graph );
+		} elsif ($a->isa('RDF::Query::Algebra::Filter')) {
+			my $p		= $self->translate($a->pattern);
+			my $expr	= $self->translate_expr($a->expr);
+			return Attean::Algebra::Filter->new( children => [$p], expression => $expr );
+		} elsif ($a->isa('RDF::Query::Expression::Binary')) {
+			my $op	= $a->op;
+			my @ops	= $a->operands;
+			my @operands	= map { $self->translate($_) } @ops;
+			my $expr	= Attean::BinaryExpression->new( operator => $op, children => \@operands );
+			return $expr;
+		} elsif ($a->isa('RDF::Query::Algebra::Extend')) {
+			my $p		= $self->translate($a->pattern);
+			my $vars	= $a->vars;
+			foreach my $v (@$vars) {
+				if ($v->isa('RDF::Query::Expression::Alias')) {
+					my $var		= variable($v->name);
+					my $expr	= $self->translate_expr( $v->expression );
+					$p	= Attean::Algebra::Extend->new( children => [$p], variable => $var, expression => $expr );
+				} else {
+					die "Unexpected extend expression: " . Dumper($v);
+				}
+			}
+			return $p;
+		} elsif ($a->isa('')) {
+		} elsif ($a->isa('')) {
+		} elsif ($a->isa('')) {
+		} elsif ($a->isa('')) {
+		}
+		die "Unrecognized algebra " . ref($a);
+	}
+
+	sub translate_expr {
+		my $self	= shift;
+		my $a		= shift;
+		my $prev	= $self->in_expr;
+		$self->in_expr(1);
+		my $expr	= $self->translate($a);
+		$self->in_expr($prev);
+		return $expr;
+	}
+	
+	sub translate_path {
+		my $self	= shift;
+		my $path	= shift;
+		my ($op, @args)	= @$path;
+		if ($op eq '!') {
+			my @nodes	= map { $self->translate($_) } @args;
+			return Attean::Algebra::NegatedPropertySet->new( predicates => \@nodes );
+		} elsif ($op eq '/') {
+			my @paths	= map { $self->translate($_) } @args;
+			foreach (@paths) {
+				if ($_->does('Attean::API::IRI')) {
+					$_	= Attean::Algebra::PredicatePath->new( predicate => $_ );
+				}
+			}
+			return Attean::Algebra::SequencePath->new( children => \@paths );
+		} elsif ($op eq '^') {
+			my $path	= $self->translate(shift(@args));
+			if ($path->does('Attean::API::IRI')) {
+				$path	= Attean::Algebra::PredicatePath->new( predicate => $path );
+			}
+			return Attean::Algebra::InversePath->new( children => [$path] );
+		} elsif ($op eq '|') {
+			my @paths	= map { $self->translate($_) } @args;
+			foreach (@paths) {
+				if ($_->does('Attean::API::IRI')) {
+					$_	= Attean::Algebra::PredicatePath->new( predicate => $_ );
+				}
+			}
+			return Attean::Algebra::AlternativePath->new( children => \@paths );
+		}
+		die "Unrecognized path: $op";
+	}
+}
+
+
 if (scalar(@ARGV) < 2) {
 	print STDERR <<"END";
 Usage: $0 data.ttl query.rq
@@ -36,7 +198,6 @@ my $qfile	= shift;
 
 open(my $fh, '<:encoding(UTF-8)', $data);
 
-$Error::TypeTiny::StackTrace	= 1;
 try {
 	warn "Constructing model...\n" if ($verbose);
 	my $store	= Attean->get_store('Memory')->new();
@@ -67,7 +228,8 @@ try {
 	my $p		= $query->pattern;
 
 	warn "Translating query...\n" if ($verbose);
-	my $a		= translate($p);
+	my $t	= Translator->new();
+	my $a		= $t->translate($p);
 	if ($debug) {
 		warn "Walking algebra:\n";
 		$a->walk( prefix => sub { my $a = shift; warn "- $a\n" });
@@ -96,103 +258,3 @@ try {
 	warn "Caught error: $exception";
 	warn $exception->stack_trace;
 };
-
-sub translate {
-	my $a	= shift;
-	die "Not a reference? " . Dumper($a) unless blessed($a);
-	if ($a->isa('RDF::Query::Algebra::Project')) {
-		my $p	= $a->pattern;
-		my $v	= $a->vars;
-		my @vars	= map { variable($_->name) } @$v;
-		return Attean::Algebra::Project->new(
-			children	=> [ translate($p) ],
-			variables	=> [ @vars ],
-		);
-	} elsif ($a->isa('RDF::Query::Algebra::GroupGraphPattern')) {
-		my @p	= map { translate($_) } $a->patterns;
-		if (scalar(@p) == 0) {
-			return Attean::Algebra::BGP->new();
-		} else {
-			while (scalar(@p) > 1) {
-				my ($l, $r)	= splice(@p, 0, 2);
-				unshift(@p, Attean::Algebra::Join->new( children => [$l, $r] ));
-			}
-			return shift(@p);
-		}
-	} elsif ($a->isa('RDF::Query::Algebra::BasicGraphPattern')) {
-		my @p	= map { translate($_) } $a->triples;
-		return Attean::Algebra::BGP->new( triples => \@p );
-	} elsif ($a->isa('RDF::Query::Algebra::Triple')) {
-		my @nodes	= map { translate($_) } $a->nodes;
-		return Attean::TriplePattern->new(@nodes);
-	} elsif ($a->isa('RDF::Query::Node::Variable')) {
-		return variable($a->name);
-	} elsif ($a->isa('RDF::Query::Node::Resource')) {
-		return iri($a->uri_value);
-	} elsif ($a->isa('RDF::Query::Node::Blank')) {
-		return blank($a->blank_identifier);
-	} elsif ($a->isa('RDF::Query::Node::Literal')) {
-		if ($a->has_language) {
-			return langliteral($a->literal_value, $a->literal_value_language);
-		} elsif ($a->has_datatype) {
-			return dtliteral($a->literal_value, $a->literal_datatype);
-		} else {
-			return literal($a->literal_value);
-		}
-	} elsif ($a->isa('RDF::Query::Algebra::Limit')) {
-		my $child	= $a->pattern;
-		if ($child->isa('RDF::Query::Algebra::Offset')) {
-			my $p	= translate($child->pattern);
-			return Attean::Algebra::Slice->new( children => [$p], limit => $a->limit, offset => $child->offset );
-		} else {
-			my $p	= translate($child);
-			return Attean::Algebra::Slice->new( children => [$p], limit => $a->limit );
-		}
-	} elsif ($a->isa('RDF::Query::Algebra::Offset')) {
-		my $p	= translate($a->pattern);
-		return Attean::Algebra::Slice->new( children => [$p], offset => $a->offset );
-	} elsif ($a->isa('RDF::Query::Algebra::Path')) {
-		my $s		= translate($a->start);
-		my $o		= translate($a->end);
-		my $path	= translate_path($a->path);
-		return Attean::Algebra::Path->new( subject => $s, path => $path, object => $o );
-	} elsif ($a->isa('RDF::Query::Algebra::NamedGraph')) {
-		my $graph	= translate($a->graph);
-		my $p		= translate($a->pattern);
-		return Attean::Algebra::Graph->new( children => [$p], graph => $graph );
-	} elsif ($a->isa('')) {
-	}
-	die "Unrecognized algebra " . ref($a);
-}
-
-sub translate_path {
-	my $path	= shift;
-	my ($op, @args)	= @$path;
-	if ($op eq '!') {
-		my @nodes	= map { translate($_) } @args;
-		return Attean::Algebra::NegatedPropertySet->new( predicates => \@nodes );
-	} elsif ($op eq '/') {
-		my @paths	= map { translate($_) } @args;
-		foreach (@paths) {
-			if ($_->does('Attean::API::IRI')) {
-				$_	= Attean::Algebra::PredicatePath->new( predicate => $_ );
-			}
-		}
-		return Attean::Algebra::SequencePath->new( children => \@paths );
-	} elsif ($op eq '^') {
-		my $path	= translate(shift(@args));
-		if ($path->does('Attean::API::IRI')) {
-			$path	= Attean::Algebra::PredicatePath->new( predicate => $path );
-		}
-		return Attean::Algebra::InversePath->new( children => [$path] );
-	} elsif ($op eq '|') {
-		my @paths	= map { translate($_) } @args;
-		foreach (@paths) {
-			if ($_->does('Attean::API::IRI')) {
-				$_	= Attean::Algebra::PredicatePath->new( predicate => $_ );
-			}
-		}
-		return Attean::Algebra::AlternativePath->new( children => \@paths );
-	}
-	die "Unrecognized path: $op";
-}
