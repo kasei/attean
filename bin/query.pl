@@ -20,6 +20,7 @@ package Translator 0.1 {
 	use v5.20;
 	use warnings;
 	use Moo;
+	use Data::Dumper;
 	use namespace::clean;
 	
 	use Attean::RDF;
@@ -144,12 +145,16 @@ package Translator 0.1 {
 	sub translate_path {
 		my $self	= shift;
 		my $path	= shift;
+		if (blessed($path) and $path->isa('RDF::Query::Node::Resource')) {
+			return Attean::Algebra::PredicatePath->new( predicate => $self->translate($path) );
+		}
+		
 		my ($op, @args)	= @$path;
 		if ($op eq '!') {
 			my @nodes	= map { $self->translate($_) } @args;
 			return Attean::Algebra::NegatedPropertySet->new( predicates => \@nodes );
 		} elsif ($op eq '/') {
-			my @paths	= map { $self->translate($_) } @args;
+			my @paths	= map { $self->translate_path($_) } @args;
 			foreach (@paths) {
 				if ($_->does('Attean::API::IRI')) {
 					$_	= Attean::Algebra::PredicatePath->new( predicate => $_ );
