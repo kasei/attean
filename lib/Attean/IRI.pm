@@ -43,12 +43,21 @@ package Attean::IRI 0.001 {
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;
+		my $args;
 		if (scalar(@_) == 1) {
-			return $class->$orig(value => shift);
+			$args	= $class->$orig(value => shift);
+		} else {
+			$args	= $class->$orig(@_);
 		}
-		return $class->$orig(@_);
+		
+		if (exists $args->{base}) {
+			# fully qualify IRIs
+			my $iri	= IRI->new( %$args );
+			$args	= { value => $iri->as_string };
+		}
+		return $args;
 	};
-	
+
 =item C<< as_string >>
 
 Returns the IRI value.
