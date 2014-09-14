@@ -35,6 +35,13 @@ package Attean::Result 0.001 {
 	use Attean::API::Binding;
 	
 	with 'Attean::API::Result';
+
+=item C<< bindings >>
+
+Returns the HASH reference containing the variable bindings for this result.
+
+=cut
+
 	has 'bindings' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Term']]);
 	
 =item C<< value( $name ) >>
@@ -61,6 +68,12 @@ object.
 		return keys %{ $self->bindings };
 	}
 	
+=item C<< as_string >>
+
+Returns a string serialization of the variable bindings contained in the result.
+
+=cut
+
 	sub as_string {
 		my $self	= shift;
 		my @vars	= $self->variables;

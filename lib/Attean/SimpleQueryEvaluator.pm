@@ -29,9 +29,33 @@ package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
 	use List::Util qw(reduce);
 	use Types::Standard qw(ConsumerOf);
+
+=item C<< model >>
+
+The L<Attean::API::Model> object used for query evaluation.
+
+=cut
+
 	has 'model' => (is => 'ro', isa => ConsumerOf['Attean::API::Model'], required => 1);
+	
+=item C<< default_graph >>
+
+The L<Attean::API::IRI> object representing the default graph in the C<< model >>.
+The default graph will be excluded from enumeration of graph names for query
+features such as C<< GRAPH ?g {} >>.
+
+=cut
+
 	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 	
+=item C<< evaluate( $algebra, $active_graph ) >>
+
+Returns an L<Attean::API::Iterator> object with results produced by evaluating
+the query C<< $algebra >> against the evaluator's C<< model >>, using the
+supplied C<< $active_graph >>.
+
+=cut
+
 	sub evaluate {
 		my $self			= shift;
 		my $algebra			= shift;

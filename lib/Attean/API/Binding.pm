@@ -36,6 +36,8 @@ following methods:
 
 =over 4
 
+=item C<< mapping >>
+
 =item C<< values >>
 
 =item C<< tuples_string >>

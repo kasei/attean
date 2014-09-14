@@ -1,6 +1,25 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::Algebra - Representation of SPARQL algebra operators
+
+=head1 VERSION
+
+This document describes Attean::Algebra version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a collection of classes representing SPARQL algebra operators.
+
+=cut
+
 use Attean::API::Query;
 
 package Attean::Algebra::Join 0.001 {
@@ -321,5 +340,27 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 	sub postfix_name { return "?" }
 }
 
-
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

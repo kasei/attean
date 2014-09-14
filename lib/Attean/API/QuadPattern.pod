@@ -1,0 +1,68 @@
+=head1 NAME
+
+Attean::API::QuadPattern - Role representing quad patterns
+
+=head1 VERSION
+
+This document describes Attean::API::QuadPattern version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role representing quad patterns.
+
+=head1 ROLES
+
+This role consumes L<Attean::API::TripleOrQuadPattern> and L<Attean::API::Binding>, which provide the following methods:
+
+=over 4
+
+=item C<< mapping >>
+
+=item C<< values >>
+
+=item C<< tuples_string >>
+
+=item C<< as_string >>
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item C<< variables >>
+
+Returns the list of variable names: C<< qw(subject predicate object graph) >>.
+
+=item C<< value( $key ) >>
+
+Returns the L<Attean::API::Term> value bound to the variable named C<< $key >>
+(which must be present in the C<< variables >> list), undef otherwise.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

@@ -1,13 +1,57 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Expression - SPARQL expressions
+
+=head1 VERSION
+
+This document describes Attean::API::Expression version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::Expression role defines a common API for SPARQL expressions
+consisting of logical, numeric, and function operators, constant terms, and
+variables. Expressions may be evaluated in the context of a
+L<Attean::API::Result> object, and either return a L<Attean::API::Term> object
+or throw a type error exception.
+
+=head1 REQUIRED METHODS
+
+The following methods are required by the L<Attean::API::Expression> role:
+
+=over 4
+
+=item C<< as_string >>
+
+=item C<< impl >>
+
+=back
+
+=head1 METHODS
+
+The L<Attean::API::Expression> role role provides default implementations of the
+following methods:
+
+=over 4
+
+=item C<< values >>
+
+=item C<< tuples_string >>
+
+=item C<< as_string >>
+
+=back
+
+=cut
+
 package Attean::API::Expression 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(Str);
 	with 'Attean::API::DirectedAcyclicGraph';
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
-	requires 'evaluate';
 	requires 'as_string';
 	requires 'impl';
 	
@@ -75,3 +119,26 @@ package Attean::API::AggregateExpression 0.001 {
 }
 
 1;
+
+__END__
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

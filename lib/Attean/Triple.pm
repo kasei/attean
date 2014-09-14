@@ -20,6 +20,22 @@ This document describes Attean::Triple version 0.001
 The Attean::Triple class represents an RDF triple.
 It conforms to the L<Attean::API::Triple|Attean::API::Binding> role.
 
+=head1 ROLES
+
+This role consumes L<Attean::API::Triple>.
+
+=head1 METHODS
+
+=over 4
+
+=item C<< subject >>
+
+=item C<< predicate >>
+
+=item C<< object >>
+
+=back
+
 =cut
 
 package Attean::TriplePattern 0.001 {

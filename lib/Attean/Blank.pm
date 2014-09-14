@@ -21,6 +21,16 @@ This document describes Attean::Blank version 0.001
 The Attean::Blank class represents RDF blank nodes.
 It conforms to the L<Attean::API::Blank|Attean::API::Term> role.
 
+=head1 ROLES
+
+This role consumes L<Attean::API::Blank>, which provides the following methods:
+
+=over 4
+
+=item C<< value >>
+
+=back
+
 =cut
 
 package Attean::Blank 0.001 {

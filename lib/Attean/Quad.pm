@@ -20,6 +20,24 @@ This document describes Attean::Quad version 0.001
 The Attean::Quad class represents an RDF quad.
 It conforms to the L<Attean::API::Quad|Attean::API::Binding> role.
 
+=head1 ROLES
+
+This role consumes L<Attean::API::Quad>.
+
+=head1 METHODS
+
+=over 4
+
+=item C<< subject >>
+
+=item C<< predicate >>
+
+=item C<< object >>
+
+=item C<< graph >>
+
+=back
+
 =cut
 
 package Attean::QuadPattern 0.001 {

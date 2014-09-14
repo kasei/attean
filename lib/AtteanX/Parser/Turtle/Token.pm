@@ -1,7 +1,30 @@
-package AtteanX::Parser::Turtle::Token;
-
 use v5.14;
 use warnings;
+
+=head1 NAME
+
+AtteanX::Parser::Turtle::Token - Token objects used for parsing of Turtle
+
+=head1 VERSION
+
+This document describes AtteanX::Parser::Turtle::Token version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+  my $term = Attean::Blank->new('b1');
+  $term->ntriples_string; # _:b1
+
+=head1 DESCRIPTION
+
+The AtteanX::Parser::Turtle::Token class represents tokens produced and used
+during parsing of Turtle.
+
+=cut
+
+package AtteanX::Parser::Turtle::Token;
+
 use List::MoreUtils qw(zip);
 
 use Moo;
@@ -12,8 +35,6 @@ has start_column => ( is => 'ro', );
 has line => ( is => 'ro', );
 has column => ( is => 'ro', );
 has args => ( is => 'ro', );
-
-=begin private
 
 =item C<< value >>
 
@@ -45,4 +66,23 @@ __PACKAGE__->meta->make_immutable;
 
 1;
 
-=end private
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

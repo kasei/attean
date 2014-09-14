@@ -1,0 +1,48 @@
+=head1 NAME
+
+Attean::API::TermOrVariable - Role representing terms and variables
+
+=head1 VERSION
+
+This document describes Attean::API::TermOrVariable version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role that both terms and variables consume, and is used as a
+constraint for nodes in triple and quad patterns.
+
+=head1 METHODS
+
+=over 4
+
+=item C<< equals( $other ) >>
+
+Returns true if the referant and C<< $other >> are value-equal, false otherwise.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

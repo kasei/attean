@@ -30,7 +30,6 @@ RDF objects such as IRIs, Literals, Blanks, Triples, etc.
 
 =cut
 
-
 package Attean::RDF 0.001 {
 	use Attean;
 	use List::MoreUtils qw(zip);
