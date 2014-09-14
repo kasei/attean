@@ -17,52 +17,54 @@ SPARQL results (variable bindings).
 
 =head1 REQUIRED METHODS
 
-The following methods are required by the L<Attean::API::Binding> role:
+Classes consuming this role must provide the following methods:
 
 =over 4
 
 =item C<< value( $name ) >>
 
+Returns the L<Attean::API::Term> object mapped to the variable named C<< $name >>,
+or C<< undef >> if no such term is mapped.
+
 =item C<< variables >>
 
-=item C<< map( $mapper ) >>
+Returns a list of the variable names mapped to L<Attean::API::Term> objects in
+this mapping.
+
+=item C<< apply_map( $mapper ) >>
+
+Returns a new mapping object (of the same class as the referent) with term
+objects rewritten using the supplied L<Attean::Mapper> object C<< $mapper >>.
 
 =back
 
 =head1 METHODS
 
-The L<Attean::API::Binding> role role provides default implementations of the
-following methods:
+This role provides default implementations of the following methods:
 
 =over 4
 
 =item C<< mapping >>
 
+Returns a HASH mapping variable names to L<Attean::API::Term> objects.
+
 =item C<< values >>
+
+Returns a list of L<Attean::API::Term> objects corresponding to the variable
+names returned by the referent's C<< variables >> method.
 
 =item C<< tuples_string >>
 
+Returns a string serialization of the L<Attean::API::Term> objects in the order
+they are returned by the referent's C<< values >> method.
+
 =item C<< as_string >>
+
+Returns a string serialization of the variable bindings.
 
 =cut
 
 use Type::Tiny::Role;
-
-package Attean::API::TripleOrQuad {
-	use Moo::Role;
-}
-
-package Attean::API::TripleOrQuadPattern {
-	use Moo::Role;
-	sub apply_map {
-		my $self	= shift;
-		my $class	= ref($self);
-		my $mapper	= shift;
-		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
-		return $class->new( %values );
-	}
-}
-
 
 package Attean::API::Binding 0.001 {
 	use Moo::Role;
@@ -91,6 +93,21 @@ package Attean::API::Binding 0.001 {
 	}
 	sub as_string {
 		shift->tuples_string();
+	}
+}
+
+package Attean::API::TripleOrQuad 0.001 {
+	use Moo::Role;
+}
+
+package Attean::API::TripleOrQuadPattern 0.001 {
+	use Moo::Role;
+	sub apply_map {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $mapper	= shift;
+		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
+		return $class->new( %values );
 	}
 }
 

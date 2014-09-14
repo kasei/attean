@@ -45,7 +45,7 @@ This role consumes L<Attean::API::TriplePattern>, L<Attean::API::TripleOrQuad>, 
 
 =item C<< as_quad( $graph ) >>
 
-Returns an L<Attean::Quad> object with the referant's subject, predicate, and
+Returns an L<Attean::Quad> object with the referent's subject, predicate, and
 object, and the supplied C<< $graph >>.
 
 =item C<< subject >>

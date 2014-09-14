@@ -22,7 +22,7 @@ constraint for nodes in triple and quad patterns.
 
 =item C<< equals( $other ) >>
 
-Returns true if the referant and C<< $other >> are value-equal, false otherwise.
+Returns true if the referent and C<< $other >> are value-equal, false otherwise.
 
 =back
 

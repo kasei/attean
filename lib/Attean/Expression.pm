@@ -22,12 +22,13 @@ This document describes Attean::Expression version 0.001
 
 =head1 DESCRIPTION
 
-The Attean::Expression class represents a SPARQL expression consisting of
-logical, numeric, and function operators, constant terms, and variables.
-Expressions may be evaluated in the context of a L<Attean::API::Result> object,
-and either return a L<Attean::API::Term> object or throw a type error exception.
+This is a utility package that defines all the Attean SPARQL expression classes
+consisting of logical, numeric, and function operators, constant terms, and
+variables. Expressions may be evaluated in the context of a
+L<Attean::API::Result> object, and either return a L<Attean::API::Term> object
+or throw a type error exception.
 
-=head1 METHODS
+The expression classes are:
 
 =over 4
 
@@ -35,7 +36,9 @@ and either return a L<Attean::API::Term> object or throw a type error exception.
 
 use Attean::API::Expression;
 
-package Attean::Expression 0.001 {}
+=item * L<Attean::ValueExpression>
+
+=cut
 
 package Attean::ValueExpression 0.001 {
 	use Moo;
@@ -58,13 +61,13 @@ package Attean::ValueExpression 0.001 {
 		return $str;
 	}
 
-=item C<< impl >>
-
-Returns a CODE reference that when called with a L<Attean::API::Result>
-argument, will evaluate the expression and return the resulting
-L<Attean::API::Term> object (or throw a type error exception).
-
-=cut
+# =item C<< impl >>
+# 
+# Returns a CODE reference that when called with a L<Attean::API::Result>
+# argument, will evaluate the expression and return the resulting
+# L<Attean::API::Term> object (or throw a type error exception).
+# 
+# =cut
 
 	sub impl {
 		my $self	= shift;
@@ -81,6 +84,10 @@ L<Attean::API::Term> object (or throw a type error exception).
 		}
 	}
 }
+
+=item * L<Attean::UnaryExpression>
+
+=cut
 
 package Attean::UnaryExpression 0.001 {
 	use Moo;
@@ -112,6 +119,10 @@ package Attean::UnaryExpression 0.001 {
 	with 'Attean::API::UnaryExpression';
 	with 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
+
+=item * L<Attean::BinaryExpression>
+
+=cut
 
 package Attean::BinaryExpression 0.001 {
 	use Moo;
@@ -179,6 +190,10 @@ package Attean::BinaryExpression 0.001 {
 	
 	with 'Attean::API::BinaryExpression';
 }
+
+=item * L<Attean::FunctionExpression>
+
+=cut
 
 package Attean::FunctionExpression 0.001 {
 	use Moo;

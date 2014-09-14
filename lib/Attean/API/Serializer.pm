@@ -34,7 +34,7 @@ The following methods are required by the L<Attean::API::Serializer> role:
 
 =head1 METHODS
 
-The L<Attean::API::Serializer> role role provides default implementations of the
+The L<Attean::API::Serializer> role provides default implementations of the
 following methods:
 
 =over 4

@@ -12,29 +12,72 @@ This document describes Attean::API::Iterator version 0.001
 =head1 DESCRIPTION
 
 The Attean::API::Iterator role defines a common API for typed iterators.
+This package also defines several type-specific iterator roles:
+
+=over 4
+
+=item * L<Attean::API::TripleIterator>
+
+=item * L<Attean::API::QuadIterator>
+
+=item * L<Attean::API::MixedStatementIterator>
+
+=item * L<Attean::API::ResultIterator>
+
+=back
+
+These roles will automatically be applied to iterators during construction when appropriate.
+
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< item_type >>
+
+A L<Type::Tiny> object indicating the type of elements returned by the iterator.
+
+=back
 
 =head1 REQUIRED METHODS
 
-The following methods are required by the L<Attean::API::Iterator> role:
+The following methods are required by the L<Attean::API::Expression> role:
 
 =over 4
 
 =item C<< next >>
 
+Returns the next element from the iterator, or C<< undef >> upon exhaustion.
+
 =back
 
 =head1 METHODS
 
-The L<Attean::API::Iterator> role role provides default implementations of the
+The L<Attean::API::Iterator> role provides default implementations of the
 following methods:
 
 =over 4
 
 =item C<< elements >>
 
-=item C<< map( \&mapper, $result_type ) >>
+Returns a list of all remaining elements in the iterator.
+
+=item C<< map( \&mapper [, $result_type] ) >>
+
+Returns a new L<Attean::API::Iterator> object with each element mapped using
+the supplied C<< &mapper >> function. If the iterator elements are of the same
+type as those in the referent iterator, only a mapping function is required.
+Otherwise, the supplied L<Type::Tiny> C<< $result_type >> object must indicate
+the new iterator's type information.
 
 =item C<< grep( \&filter ) >>
+
+Returns a new L<Attean::API::Iterator> object that filters elements from the
+referent iterator based on whether calling C<< &filter( $element ) >> for each
+C<< $element >> results in a true value.
+
+=back
 
 =cut
 
@@ -92,31 +135,6 @@ package Attean::API::Iterator 0.001 {
 		while (my $item = $self->next) { push(@elements, $item); }
 		return @elements;
 	}
-	
-# 	sub imap {
-# 		my $self	= shift;
-# 		my $block	= shift;
-# 		my $type	= shift || $self->item_type;
-# 		my $current;
-# 		my $generator	= sub {
-# 			while (1) {
-# 				if (defined($current)) {
-# 					my $item	= $current->next;
-# 					return $item if defined($item);
-# 					undef $current;
-# 				}
-# 				my $item	= $self->next();
-# 				return unless defined($item);
-# 				local($_)	= $item;
-# 				$current	= $block->($item);
-# 			}
-# 		};
-# 		
-# 		return Attean::CodeIterator->new(
-# 			item_type => $type,
-# 			generator => $generator,
-# 		);
-# 	}
 	
 	sub map {
 		my $self	= shift;
@@ -255,6 +273,8 @@ Please report any bugs or feature requests to through the GitHub web interface
 at L<https://github.com/kasei/attean/issues>.
 
 =head1 SEE ALSO
+
+L<Attean::API::RepeatableIterator>
 
 L<http://www.perlrdf.org/>
 

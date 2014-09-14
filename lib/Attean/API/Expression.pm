@@ -17,6 +17,40 @@ variables. Expressions may be evaluated in the context of a
 L<Attean::API::Result> object, and either return a L<Attean::API::Term> object
 or throw a type error exception.
 
+=head1 ROLES
+
+This role consumes the L<Attean::API::DirectedAcyclicGraph> role which provide the following methods:
+
+=over 4
+
+=item C<< is_leaf >>
+
+=item C<< walk( prefix => \&pre_cb, postfix => \&pre_cb ) >>
+
+=item C<< cover( prefix => \&pre_cb, postfix => \&pre_cb ) >>
+
+=back
+
+and the following attributes:
+
+=over 4
+
+=item C<< children >>
+
+=back
+
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< operator >>
+
+A string indicating the expression operator (e.g. C<'+'> or C<'||'>).
+
+=back
+
 =head1 REQUIRED METHODS
 
 The following methods are required by the L<Attean::API::Expression> role:
@@ -25,22 +59,28 @@ The following methods are required by the L<Attean::API::Expression> role:
 
 =item C<< as_string >>
 
+Returns a string serialization of the expression object.
+
 =item C<< impl >>
+
+Returns a CODE reference that when called with a L<Attean::API::Result>
+argument, will evaluate the expression and return the resulting
+L<Attean::API::Term> object (or throw a type error exception).
 
 =back
 
 =head1 METHODS
 
-The L<Attean::API::Expression> role role provides default implementations of the
+The L<Attean::API::Expression> role provides default implementations of the
 following methods:
 
 =over 4
 
-=item C<< values >>
+=item C<< evaluate( $result ) >>
 
-=item C<< tuples_string >>
-
-=item C<< as_string >>
+Evaluates the referent expression in the context of the supplied
+L<Attean::API::Result> C<< $result >>, and either returns the resulting
+L<Attean::API::Term> object or throws a type error exception.
 
 =back
 

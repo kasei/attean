@@ -46,7 +46,7 @@ Returns the L<Attean::API::Term> value bound to the variable named C<< $key >>
 
 =item C<< as_quad_pattern( $graph ) >>
 
-Returns a new L<Attean::QuadPattern> object with the referant's subject,
+Returns a new L<Attean::QuadPattern> object with the referent's subject,
 predicate, and object, and the supplied C<< $graph >>.
 
 =back

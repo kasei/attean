@@ -5,17 +5,41 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(ArrayRef ConsumerOf);
+
+=item C<< children >>
+
+An ARRAY reference of L<Attean::API::DirectedAcyclicGraph> objects.
+
+=back
+
+=cut
+
 	has 'children' => (
 		is => 'ro',
 		isa => ArrayRef[ConsumerOf['Attean::API::DirectedAcyclicGraph']],
 		default => sub { [] },
 	);
 	
+=item C<< is_leaf >>
+
+Returns true if the referent has zero C<< children >>, false otherwise.
+
+=cut
+
 	sub is_leaf {
 		my $self	= shift;
 		return not(scalar(@{ $self->children }));
 	}
 	
+=item C<< walk( prefix => \&pre_cb, postfix => \&pre_cb ) >>
+
+Walks the graph rooted at the referent, calling C<< &pre_cb >> (if supplied)
+before descending, and C<< &post_cb >> (if supplied) after descending. The
+callback functions are passed the current graph walk node as the single
+argument.
+
+=cut
+
 	sub walk {
 		my $self	= shift;
 		my %cb		= @_;
@@ -30,6 +54,15 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 		}
 	}
 	
+=item C<< cover( prefix => \&pre_cb, postfix => \&pre_cb ) >>
+
+Similar to C<< walk >>, walks the graph rooted at the referent, calling
+C<< &pre_cb >> (if supplied) before descending, and C<< &post_cb >> (if
+supplied) after descending. However, unlike C<< walk >>, each node in the graph
+is visited only once.
+
+=cut
+
 	sub cover {
 		my $self	= shift;
 		return $self->_cover({}, @_);
@@ -85,19 +118,19 @@ package Attean::API::QueryTree 0.001 {
 	with 'Attean::API::DirectedAcyclicGraph';
 }
 
-package Attean::API::NullaryQueryTree {
+package Attean::API::NullaryQueryTree 0.001 {
 	use Moo::Role;
 	sub arity { return 0 }
 	with 'Attean::API::QueryTree';
 }
 
-package Attean::API::UnaryQueryTree {
+package Attean::API::UnaryQueryTree 0.001 {
 	use Moo::Role;
 	sub arity { return 1 }
 	with 'Attean::API::QueryTree';
 }
 
-package Attean::API::BinaryQueryTree {
+package Attean::API::BinaryQueryTree 0.001 {
 	use Moo::Role;
 	sub arity { return 2 }
 	with 'Attean::API::QueryTree';
@@ -109,7 +142,7 @@ package Attean::API::PropertyPath 0.001 {
 	requires 'as_string';
 }
 
-package Attean::API::UnaryPropertyPath {
+package Attean::API::UnaryPropertyPath 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(ConsumerOf);
 	sub arity { return 1 }
@@ -129,7 +162,7 @@ package Attean::API::UnaryPropertyPath {
 	with 'Attean::API::PropertyPath', 'Attean::API::UnaryQueryTree';
 }
 
-package Attean::API::NaryPropertyPath {
+package Attean::API::NaryPropertyPath 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 # 	has 'children' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::PropertyPath']], required => 1);

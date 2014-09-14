@@ -25,7 +25,7 @@ This role consumes L<Attean::API::Binding>.
 
 =item C<< join( $result ) >>
 
-Returns the combined variable binding set if the referant and C<< $result >>
+Returns the combined variable binding set if the referent and C<< $result >>
 are compatible (as defined by the SPARQL semantics), or C<< undef >> otherwise.
 
 =item C<< apply_map( $mapper ) >>

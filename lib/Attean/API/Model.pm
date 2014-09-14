@@ -29,7 +29,7 @@ The following methods are required by the L<Attean::API::Model> role:
 
 =head1 METHODS
 
-The L<Attean::API::Model> role role provides default implementations of the
+The L<Attean::API::Model> role provides default implementations of the
 following methods:
 
 =over 4

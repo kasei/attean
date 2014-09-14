@@ -12,7 +12,8 @@ This document describes Attean::RDF version 0.001
 =head1 SYNOPSIS
 
   use v5.14;
-  use Attean::RDF qw(iri blank literal dtliteral langliteral triple quad);
+  use Attean::RDF;
+  
   my $s = blank('b');
   my $p = iri('http://xmlns.com/foaf/0.1/name');
   my $o = langliteral("Eve", "en");
@@ -25,6 +26,9 @@ This is a utility package for exporting shorthand functions for constructing
 RDF objects such as IRIs, Literals, Blanks, Triples, etc.
 
 =head1 FUNCTIONS
+
+All of the functions defined in this package may be exported (and are exported
+by default).
 
 =over 4
 

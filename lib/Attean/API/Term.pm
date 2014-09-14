@@ -27,8 +27,8 @@ The following methods are required by the L<Attean::API::Term> role:
 
 =head1 METHODS
 
-The L<Attean::API::Term> role role provides default implementations of the
-following methods:
+The L<Attean::API::Term> role provides default implementations of the following
+methods:
 
 =over 4
 
