@@ -16,39 +16,58 @@ This document describes Attean::Algebra version 0.001
 
 =head1 DESCRIPTION
 
-This is a collection of classes representing SPARQL algebra operators.
+This is a utility package that defines all the Attean query algebra classes
+in the Attean::Algebra namespace:
+
+=over 4
 
 =cut
 
 use Attean::API::Query;
 
+=item * L<Attean::Algebra::Join>
+
+=cut
+
 package Attean::Algebra::Join 0.001 {
 	use Moo;
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 }
+
+=item * L<Attean::Algebra::LeftJoin>
+
+=cut
 
 package Attean::Algebra::LeftJoin 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 }
+
+=item * L<Attean::Algebra::Filter>
+
+=cut
 
 package Attean::Algebra::Filter 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 }
 
+=item * L<Attean::Algebra::Union>
+
+=cut
+
 package Attean::Algebra::Union 0.001 {
 	use Moo;
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 }
+
+=item * L<Attean::Algebra::Graph>
+
+=cut
 
 package Attean::Algebra::Graph 0.001 {
 	use Moo;
@@ -68,6 +87,10 @@ package Attean::Algebra::Graph 0.001 {
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 }
 
+=item * L<Attean::Algebra::Extend>
+
+=cut
+
 package Attean::Algebra::Extend 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
@@ -82,6 +105,10 @@ package Attean::Algebra::Extend 0.001 {
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 }
 
+=item * L<Attean::Algebra::Minus>
+
+=cut
+
 package Attean::Algebra::Minus 0.001 {
 	use Moo;
 	sub in_scope_variables {
@@ -92,26 +119,39 @@ package Attean::Algebra::Minus 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 }
 
+=item * L<Attean::Algebra::Distinct>
+
+=cut
+
 package Attean::Algebra::Distinct 0.001 {
 	use Moo;
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 }
+
+=item * L<Attean::Algebra::Reduced>
+
+=cut
 
 package Attean::Algebra::Reduced 0.001 {
 	use Moo;
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 }
+
+=item * L<Attean::Algebra::Slice>
+
+=cut
 
 package Attean::Algebra::Slice 0.001 {
 	use Moo;
 	use Types::Standard qw(Int);
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
 }
+
+=item * L<Attean::Algebra::Project>
+
+=cut
 
 package Attean::Algebra::Project 0.001 {
 	use Moo;
@@ -127,20 +167,31 @@ package Attean::Algebra::Project 0.001 {
 	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
 }
 
-package Attean::Algebra::_Comparator 0.001 {
+=item * L<Attean::Algebra::Comparator>
+
+=cut
+
+package Attean::Algebra::Comparator 0.001 {
 	use Moo;
 	use Types::Standard qw(Bool ConsumerOf);
 	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 }
 
+=item * L<Attean::Algebra::OrderBy>
+
+=cut
+
 package Attean::Algebra::OrderBy 0.001 {
 	use Moo;
 	use Types::Standard qw(ArrayRef InstanceOf);
-	with 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::_Comparator']], required => 1);
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
 }
+
+=item * L<Attean::Algebra::BGP>
+
+=cut
 
 package Attean::Algebra::BGP 0.001 {
 	use Moo;
@@ -251,6 +302,10 @@ package Attean::Algebra::BGP 0.001 {
 	}	
 }
 
+=item * L<Attean::Algebra::Path>
+
+=cut
+
 package Attean::Algebra::Path 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
@@ -265,6 +320,10 @@ package Attean::Algebra::Path 0.001 {
 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 }
 
+=item * L<Attean::Algebra::Group>
+
+=cut
+
 package Attean::Algebra::Group 0.001 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -278,6 +337,10 @@ package Attean::Algebra::Group 0.001 {
 	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
 }
 
+=item * L<Attean::Algebra::NegatedPropertySet>
+
+=cut
+
 package Attean::Algebra::NegatedPropertySet 0.001 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -288,6 +351,10 @@ package Attean::Algebra::NegatedPropertySet 0.001 {
 		return sprintf("!(%s)", join('|', map { $_->ntriples_string } @{ $self->predicates }));
 	}
 }
+
+=item * L<Attean::Algebra::PredicatePath>
+
+=cut
 
 package Attean::Algebra::PredicatePath 0.001 {
 	use Moo;
@@ -300,6 +367,10 @@ package Attean::Algebra::PredicatePath 0.001 {
 	}
 }
 
+=item * L<Attean::Algebra::InversePath>
+
+=cut
+
 package Attean::Algebra::InversePath 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
@@ -307,17 +378,29 @@ package Attean::Algebra::InversePath 0.001 {
 	sub prefix_name { return "^" }
 }
 
+=item * L<Attean::Algebra::SequencePath>
+
+=cut
+
 package Attean::Algebra::SequencePath 0.001 {
 	use Moo;
 	with 'Attean::API::NaryPropertyPath';
 	sub separator { return "/" }
 }
 
+=item * L<Attean::Algebra::AlternativePath>
+
+=cut
+
 package Attean::Algebra::AlternativePath 0.001 {
 	use Moo;
 	with 'Attean::API::NaryPropertyPath';
 	sub separator { return "|" }
 }
+
+=item * L<Attean::Algebra::ZeroOrMorePath>
+
+=cut
 
 package Attean::Algebra::ZeroOrMorePath 0.001 {
 	use Moo;
@@ -326,12 +409,20 @@ package Attean::Algebra::ZeroOrMorePath 0.001 {
 	sub postfix_name { return "*" }
 }
 
+=item * L<Attean::Algebra::OneOrMorePath>
+
+=cut
+
 package Attean::Algebra::OneOrMorePath 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnaryPropertyPath';
 	sub postfix_name { return "+" }
 }
+
+=item * L<Attean::Algebra::ZeroOrOnePath>
+
+=cut
 
 package Attean::Algebra::ZeroOrOnePath 0.001 {
 	use Moo;
@@ -343,6 +434,8 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

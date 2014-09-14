@@ -214,7 +214,7 @@ END
 			while (scalar(@_)) {
 				my ($variable, $asc)	= splice(@_, 0, 2);
 				my $expr	= Attean::ValueExpression->new( value => variable($variable) );
-				my $cmp		= Attean::Algebra::_Comparator->new( expression => $expr, ascending => $asc );
+				my $cmp		= Attean::Algebra::Comparator->new( expression => $expr, ascending => $asc );
 				push(@cmps, $cmp);
 			}
 			return Attean::Algebra::OrderBy->new( children => [$algebra], comparators => \@cmps );
