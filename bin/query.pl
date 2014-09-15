@@ -8,6 +8,7 @@ use File::Slurp;
 use Scalar::Util qw(blessed);
 use Attean;
 use Attean::RDF;
+use Attean::SimpleQueryEvaluator;
 use RDF::Query;
 use Data::Dumper;
 use Getopt::Long;
