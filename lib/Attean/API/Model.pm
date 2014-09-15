@@ -99,6 +99,11 @@ Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
 graphs of quads matching the supplied pattern (using the same matching
 semantics as C<< get_quads >> with an C<< undef >> graph).
 
+=item C<< graph_nodes( $graph ) >>
+
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of unique
+subjects and objects present in the specified C<< $graph >>.
+
 =cut
 
 use Attean::API::Binding;
@@ -244,6 +249,16 @@ package Attean::API::MutableModel 0.001 {
 			$self->add_quad( Attean::Quad->new($head, $rdf_rest, $rest, $graph) );
 			return $head;
 		}
+	}
+	
+	sub graph_nodes {
+		my $self	= shift;
+		my $graph	= shift;
+		my $s		= $self->subjects(undef, undef, $graph);
+		my $o		= $self->objects(undef, undef, $graph);
+		my $union	= Attean::IteratorSequence->new( iterators => [$s, $o], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+		my %seen;
+		return $union->grep(sub {not($seen{shift->as_string}++)});
 	}
 }
 
