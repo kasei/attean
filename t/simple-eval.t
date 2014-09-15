@@ -7,6 +7,7 @@ no warnings 'redefine';
 
 use Attean;
 use Attean::RDF;
+use Attean::SimpleQueryEvaluator;
 
 {
 	my $parser	= Attean->get_parser('Turtle')->new();
@@ -245,10 +246,66 @@ END
 		}
 	}
 	
+	{
+		note('ZeroOrOnePath');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		
+		{
+			# <a> <q>? ?o
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
+			my $path	= Attean::Algebra::Path->new( subject => iri('a'), path => $pp, object => variable('o') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 1);
+			is($rows[0]->value('o')->value, 'a');
+		}
+		
+		{
+			# ?s <q>? <c>
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
+			my $path	= Attean::Algebra::Path->new( subject => variable('s'), path => $pp, object => iri('c') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 1);
+			is($rows[0]->value('s')->value, 'c');
+		}
+		
+		{
+			# <c> <q>? <c>
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
+			my $path	= Attean::Algebra::Path->new( subject => iri('c'), path => $pp, object => iri('c') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 1);
+			is_deeply([$rows[0]->variables], []);
+		}
+		
+		{
+			# <c> <q>? <d>
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
+			my $path	= Attean::Algebra::Path->new( subject => iri('c'), path => $pp, object => iri('d') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 0);
+		}
+		
+		{
+			# ?s <q>? ?o
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
+			my $path	= Attean::Algebra::Path->new( subject => variable('s'), path => $pp, object => variable('o') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 6);
+		}
+	}
 }
 
 done_testing();
-
 
 sub does_ok {
     my ($class_or_obj, $does, $message) = @_;

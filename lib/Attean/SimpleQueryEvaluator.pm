@@ -25,6 +25,9 @@ model, and returns a query result.
 
 =cut
 
+use Attean::Algebra;
+use Attean::Expression;
+
 package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
 	use List::Util qw(reduce);
@@ -245,7 +248,6 @@ supplied C<< $active_graph >>.
 					my $path	= Attean::Algebra::Path->new( subject => $s, path => $seq[0], object => $o );
 					return $self->evaluate($path, $active_graph);
 				} else {
-					# TODO: introduce new join variables
 					my @paths;
 					my $first	= shift(@seq);
 					my $join	= Attean::Variable->new();
@@ -269,7 +271,12 @@ supplied C<< $active_graph >>.
 			} elsif ($path->isa('Attean::Algebra::OneOrMorePath')) {
 				# TODO: implement OneOrMorePath evaluation
 			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
-				# TODO: implement ZeroOrOnePath evaluation
+				my ($child)	= @{ $path->children };
+				my $path	= Attean::Algebra::Path->new( subject => $s, path => $child, object => $o );
+				my @iters;
+				push(@iters, $self->evaluate( $path, $active_graph ));
+				push(@iters, $self->_zeroLengthPath($s, $o, $active_graph));
+				return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result') );
 			} else {
 				die "Unexpected path type: $path";
 			}
@@ -306,7 +313,39 @@ supplied C<< $active_graph >>.
 
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
+
+	sub _zeroLengthPath {
+		my $self	= shift;
+		my $s		= shift;
+		my $o		= shift;
+		my $graph	= shift;
+		my $s_term	= ($s->does('Attean::API::Term'));
+		my $o_term	= ($o->does('Attean::API::Term'));
+		if ($s_term and $o_term) {
+			my @r;
+			if ($s->equals($o)) {
+				push(@r, Attean::Result->new());
+			}
+			return Attean::ListIterator->new(values => \@r, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+		} elsif ($s_term) {
+			my $name	= $o->value;
+			my $r		= Attean::Result->new( bindings => { $name => $s } );
+			return Attean::ListIterator->new(values => [$r], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+		} elsif ($o_term) {
+			my $name	= $s->value;
+			my $r		= Attean::Result->new( bindings => { $name => $o } );
+			return Attean::ListIterator->new(values => [$r], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+		} else {
+			my @vars	= map { $_->value } ($s, $o);
+			my $nodes	= $self->model->graph_nodes( $graph );
+			return $nodes->map(sub {
+				my $term	= shift;
+				Attean::Result->new( bindings => { map { $_ => $term } @vars } );
+			}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
+		}
+	}
 }
+
 
 1;
 
