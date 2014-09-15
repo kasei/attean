@@ -42,7 +42,7 @@ Returns the HASH reference containing the variable bindings for this result.
 
 =cut
 
-	has 'bindings' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Term']]);
+	has 'bindings' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Term']], default => sub { +{} });
 	
 =item C<< value( $name ) >>
 
