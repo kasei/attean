@@ -69,7 +69,7 @@ text/turtle.
 	);
 	
 	with 'Attean::API::TripleParser';
-	with 'Attean::API::Parser::AbbreviatingParser';
+	with 'Attean::API::AbbreviatingParser';
 	with 'Attean::API::PushParser';
 	
 	my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';

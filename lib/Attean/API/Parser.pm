@@ -63,7 +63,7 @@ package Attean::API::Parser 0.001 {
 	requires 'handled_type'; # => (is => 'ro', isa => 'Type::Tiny', init_arg => undef);
 }
 
-package Attean::API::Parser::AbbreviatingParser 0.001 {
+package Attean::API::AbbreviatingParser 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(InstanceOf Maybe);
 	use URI::NamespaceMap;

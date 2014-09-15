@@ -1,0 +1,56 @@
+=head1 NAME
+
+Attean::API::AbbreviatingParser - Role for parsers that use construct absolute IRIs based on prefixed names or base IRIs
+
+=head1 VERSION
+
+This document describes Attean::API::AbbreviatingParser version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::AbbreviatingParser role defines an API for parsers
+of RDF and SPARQL result data that construct absolute IRIs during parsing by
+using IRI prefixes and base IRIs.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Parser> role.
+
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< base >>
+
+An L<IRI> object representing the base against which relative IRIs
+in the parsed data are resolved (may be set explicitly or set by a directive in
+the input data).
+
+=item C<< namespaces >>
+
+A HASH reference mapping prefix strings to L<URI::NamespaceMap> objects.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

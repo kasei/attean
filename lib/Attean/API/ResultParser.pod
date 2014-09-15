@@ -1,0 +1,49 @@
+=head1 NAME
+
+Attean::API::ResultParser - Role for parsers of L<Attean::API::Result> objects
+
+=head1 VERSION
+
+This document describes Attean::API::ResultParser version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::ResultParser role defines parsers of L<Attean::API::Result> objects.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Parser> role.
+
+=head1 METHODS
+
+This role provides default implementations of the following methods:
+
+=over 4
+
+=item C<< handled_type >>
+
+Returns a L<Type::Tiny> object for objects which consume the
+L<Attean::API::Result> role.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
