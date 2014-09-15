@@ -42,7 +42,7 @@ A L<Type::Tiny> object indicating the type of elements returned by the iterator.
 
 =head1 REQUIRED METHODS
 
-The following methods are required by the L<Attean::API::Expression> role:
+The following methods are required by the L<Attean::API::Iterator> role:
 
 =over 4
 
@@ -264,8 +264,6 @@ package Attean::API::ResultIterator 0.001 {
 1;
 
 __END__
-
-=back
 
 =head1 BUGS
 
