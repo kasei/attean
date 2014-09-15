@@ -6,6 +6,7 @@ use Test::Exception;
 
 use Attean;
 use Attean::RDF;
+use Attean::Expression;
 
 {
 	my $t	= Attean::Literal->true;

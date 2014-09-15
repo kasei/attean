@@ -7,6 +7,7 @@ use Digest::SHA qw(sha1_hex);
 
 use Attean;
 use Attean::RDF;
+use Attean::SimpleQueryEvaluator;
 
 if ($ENV{ATTEAN_TYPECHECK}) {
 	my $bgp	= Attean::Algebra::BGP->new();
