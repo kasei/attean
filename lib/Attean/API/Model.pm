@@ -25,6 +25,25 @@ The following methods are required by the L<Attean::API::Model> role:
 
 =item C<< get_quads( $subject, $predicate, $object, $graph ) >>
 
+Returns an L<Attean::API::Iterator> for quads in the model that match the
+supplied C<< $subject >>, C<< $predicate >>, C<< $object >>, and C<< $graph >>.
+Any of these terms may be C<< undef >> or a L<Attean::API::Variable> object, in
+which case that term will be considered as a wildcard for the purposes of
+matching.
+
+The returned iterator conforms to both L<Attean::API::Iterator> and
+L<Attean::API::QuadIterator>.
+
+=item C<< count_quads( $subject, $predicate, $object, $graph ) >>
+
+Returns the number of quads in the model matching the supplied pattern
+(using the same matching semantics as C<< get_quads >>).
+
+=item C<< get_graphs >>
+
+Returns an L<Attean::API::Iterator> of distinct L<Attean::API::Term> objects
+that are used in the graph position of quads in the model.
+
 =back
 
 =head1 METHODS
@@ -36,21 +55,49 @@ following methods:
 
 =item C<< get_bindings( $subject, $predicate, $object, $graph ) >>
 
-=item C<< count_quads( $subject, $predicate, $object, $graph ) >>
-
-=item C<< get_graphs >>
+Returns an L<Attean::API::Iterator> of L<Attean::API::Result> objects
+corresponding to quads in the model matching the supplied pattern. For each
+L<Attean::API::Variable> in the pattern list, a mapping will be present in the
+corresponding result object. For example,
+C<< $model->get_bindings( variable('s') ) >> will return an iterator of results
+containing just a mapping from C<< 's' >> to subjects of all quads in the
+model.
 
 =item C<< get_list( $graph, $head ) >>
 
-=item C<< get_sequence( $head ) >>
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects that are
+members of the rdf:List with the specified C<< $head >> (and matching
+restricted to only the specified C<< $graph >>).
+
+=item C<< get_sequence( $graph, $head ) >>
+
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects that are
+members of the rdf:Sequence with the specified C<< $head >> (and matching
+restricted to only the specified C<< $graph >>).
 
 =item C<< subjects( $predicate, $object, $graph ) >>
 
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
+subjects of quads matching the supplied pattern (using the same matching
+semantics as C<< get_quads >>).
+
 =item C<< predicates( $subject, $object, $graph ) >>
+
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
+predicates of quads matching the supplied pattern (using the same matching
+semantics as C<< get_quads >> with an C<< undef >> predicate).
 
 =item C<< objects( $subject, $predicate, $graph ) >>
 
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
+objects of quads matching the supplied pattern (using the same matching
+semantics as C<< get_quads >> with an C<< undef >> object).
+
 =item C<< graphs( $subject, $predicate, $object ) >>
+
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
+graphs of quads matching the supplied pattern (using the same matching
+semantics as C<< get_quads >> with an C<< undef >> graph).
 
 =cut
 
@@ -94,23 +141,6 @@ package Attean::API::Model 0.001 {
 	requires 'count_quads';
 	requires 'get_graphs';
 	
-# 	sub count_quads {
-# 		my $self	= shift;
-# 		my $iter	= $self->get_quads(@_);
-# 		my $count	= 0;
-# 		while (my $r = $iter->next) {
-# 			$count++;
-# 		}
-# 		return $count;
-# 	}
-# 	
-# 	sub get_graphs {
-# 		my $self	= shift;
-# 		my $iter	= $self->get_quads(@_);
-# 		my %graphs;
-# 		return $self->graphs->grep(sub { not($graphs{ shift->as_string }++) });
-# 	}
-	
 	sub get_list {
 		my $self	= shift;
 		die "get_list called without a graph name" unless (scalar(@_));
@@ -138,13 +168,14 @@ package Attean::API::Model 0.001 {
 
 	sub get_sequence {
 		my $self	= shift;
+		my $graph	= shift;
 		my $head	= shift;
 		my $rdf		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 		my @elements;
 		my $i		= 1;
 		while (1) {
 			my $term	= Attean::IRI->new("${rdf}_$i");
-			my @elem	= $self->objects( $head, $term )->elements;
+			my @elem	= $self->objects( $head, $term, $graph )->elements;
 			last unless (scalar(@elem));
 			if (scalar(@elem) > 1) {
 				my $count	= scalar(@elem);

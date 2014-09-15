@@ -50,13 +50,14 @@ package Attean::QuadModel 0.001 {
 	
 =item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
 
-Returns an iterator for quads in the model that match the supplied
-C<< $subject >>, C<< $predicate >>, C<< $object >>, and C<< $graph >>.
-Any of these terms may be undefined or a
-L<Attean::API::Blank|Attean::API::Term> object, in which case that term will be
-considered as a wildcard for the purposes of matching.
+Returns an L<Attean::API::Iterator> for quads in the model that match the
+supplied C<< $subject >>, C<< $predicate >>, C<< $object >>, and C<< $graph >>.
+Any of these terms may be undefined or a L<Attean::API::Variable> object, in
+which case that term will be considered as a wildcard for the purposes of
+matching.
 
-The returned iterator conforms to both L<Attean::API::Iterator> and L<Attean::API::QuadIterator>.
+The returned iterator conforms to both L<Attean::API::Iterator> and
+L<Attean::API::QuadIterator>.
 
 =cut
 

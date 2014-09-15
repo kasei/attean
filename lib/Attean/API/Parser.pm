@@ -14,17 +14,39 @@ This document describes Attean::API::Parser version 0.001
 The Attean::API::Parser role defines a common API for all parsers of typed
 objects from data (either a byte string or a filehandle).
 
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< handler >>
+
+A code reference that will be called during callback-variant parsing  methods.
+This attribute has a default (no-op function), so specifying it is not
+necessary if using iterator- or list-variant parsing methods.
+
+=back
+
 =head1 REQUIRED METHODS
 
-The following methods are required by the L<Attean::API::Serializer> role:
+The following methods are required by the L<Attean::API::Parser> role:
 
 =over 4
 
 =item C<< canonical_media_type >>
 
+Returns the canonical media type string for the format of this parser.
+
 =item C<< media_types >>
 
+Returns an ARRAY reference of media type strings that are acceptable as input
+to this parser.
+
 =item C<< handled_type >>
+
+Returns a L<Type::Tiny> object representing the type of items that result from
+parsing.
 
 =cut
 

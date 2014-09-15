@@ -1,0 +1,46 @@
+=head1 NAME
+
+Attean::API::AppendableSerializer - Role for serializers that can be repeatedly invoked while keeping output valid
+
+=head1 VERSION
+
+This document describes Attean::API::AppendableSerializer version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::AppendableSerializer role defines serializers that allow
+multiple serialization calls to be appended to the same output (either
+filehandle or a byte string) and remain syntactically valid.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Serializer> roles which provide the following methods:
+
+=over 4
+
+=item C<< serialize_list_to_io( $fh, @elements ) >>
+
+=item C<< serialize_list_to_bytes( @elements ) >>
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

@@ -21,18 +21,25 @@ The following methods are required by the L<Attean::API::Term> role:
 
 =item C<< value >>
 
+Returns the term's value string.
+
 =item C<< ntriples_string >>
+
+Returns an N-Triples-compatible string serialization.
 
 =back
 
 =head1 METHODS
 
-The L<Attean::API::Term> role provides default implementations of the following
-methods:
+This role provides default implementations of the following methods:
 
 =over 4
 
 =item C<< as_string >>
+
+Returns a string serialization of the term.
+
+=back
 
 =cut
 
@@ -314,8 +321,6 @@ package Attean::API::IRI 0.001 {
 1;
 
 __END__
-
-=back
 
 =head1 BUGS
 

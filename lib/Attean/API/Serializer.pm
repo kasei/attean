@@ -22,26 +22,47 @@ The following methods are required by the L<Attean::API::Serializer> role:
 
 =item C<< canonical_media_type >>
 
+Returns the canonical media type string for the format of this serializer.
+
 =item C<< media_types >>
+
+Returns an ARRAY reference of media type strings that also identify the format
+produced by this serializer.
 
 =item C<< handled_type >>
 
-=item C<< serialize_iter_to_io >>
+Returns a L<Type::Tiny> object representing the type of items that are consumed
+during serialization.
 
-=item C<< serialize_iter_to_bytes >>
+=item C<< serialize_iter_to_io( $fh, $iterator ) >>
+
+Serializes the elements from the L<Attean::API::Iterator> C<< $iterator >> to
+the L<IO::Handle> object C<< $fh >>.
+
+=item C<< serialize_iter_to_bytes( $fh, $iterator ) >>
+
+Serializes the elements from the L<Attean::API::Iterator> C<< $iterator >>
+and returns the serialization as a UTF-8 encoded byte string.
 
 =back
 
 =head1 METHODS
 
-The L<Attean::API::Serializer> role provides default implementations of the
-following methods:
+This role provides default implementations of the following methods:
 
 =over 4
 
-=item C<< serialize_list_to_io >>
+=item C<< serialize_list_to_io( $fh, @elements ) >>
 
-=item C<< serialize_list_to_bytes >>
+Serializes the objects in C<< @elements >> to the L<IO::Handle> object
+C<< $fh >>.
+
+=item C<< serialize_list_to_bytes( @elements ) >>
+
+Serializes the objects in C<< @elements >> and returns the serialization as a
+UTF-8 encoded byte string.
+
+=back
 
 =cut
 
@@ -137,8 +158,6 @@ package Attean::API::ResultSerializer 0.001 {
 1;
 
 __END__
-
-=back
 
 =head1 BUGS
 

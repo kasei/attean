@@ -1,18 +1,41 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::API::Query - Utility package defining query-related roles
+
+=head1 VERSION
+
+This document describes Attean::API::Query version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a utility package for defining query-related roles:
+
+=over 4
+
+=item * L<Attean::API::DirectedAcyclicGraph>
+
+=cut
+
 package Attean::API::DirectedAcyclicGraph 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(ArrayRef ConsumerOf);
 
-=item C<< children >>
-
-An ARRAY reference of L<Attean::API::DirectedAcyclicGraph> objects.
-
-=back
-
-=cut
+# =item C<< children >>
+# 
+# An ARRAY reference of L<Attean::API::DirectedAcyclicGraph> objects.
+# 
+# =back
+# 
+# =cut
 
 	has 'children' => (
 		is => 'ro',
@@ -20,25 +43,25 @@ An ARRAY reference of L<Attean::API::DirectedAcyclicGraph> objects.
 		default => sub { [] },
 	);
 	
-=item C<< is_leaf >>
-
-Returns true if the referent has zero C<< children >>, false otherwise.
-
-=cut
+# =item C<< is_leaf >>
+# 
+# Returns true if the referent has zero C<< children >>, false otherwise.
+# 
+# =cut
 
 	sub is_leaf {
 		my $self	= shift;
 		return not(scalar(@{ $self->children }));
 	}
 	
-=item C<< walk( prefix => \&pre_cb, postfix => \&pre_cb ) >>
-
-Walks the graph rooted at the referent, calling C<< &pre_cb >> (if supplied)
-before descending, and C<< &post_cb >> (if supplied) after descending. The
-callback functions are passed the current graph walk node as the single
-argument.
-
-=cut
+# =item C<< walk( prefix => \&pre_cb, postfix => \&pre_cb ) >>
+# 
+# Walks the graph rooted at the referent, calling C<< &pre_cb >> (if supplied)
+# before descending, and C<< &post_cb >> (if supplied) after descending. The
+# callback functions are passed the current graph walk node as the single
+# argument.
+# 
+# =cut
 
 	sub walk {
 		my $self	= shift;
@@ -54,14 +77,14 @@ argument.
 		}
 	}
 	
-=item C<< cover( prefix => \&pre_cb, postfix => \&pre_cb ) >>
-
-Similar to C<< walk >>, walks the graph rooted at the referent, calling
-C<< &pre_cb >> (if supplied) before descending, and C<< &post_cb >> (if
-supplied) after descending. However, unlike C<< walk >>, each node in the graph
-is visited only once.
-
-=cut
+# =item C<< cover( prefix => \&pre_cb, postfix => \&pre_cb ) >>
+# 
+# Similar to C<< walk >>, walks the graph rooted at the referent, calling
+# C<< &pre_cb >> (if supplied) before descending, and C<< &post_cb >> (if
+# supplied) after descending. However, unlike C<< walk >>, each node in the graph
+# is visited only once.
+# 
+# =cut
 
 	sub cover {
 		my $self	= shift;
@@ -84,6 +107,10 @@ is visited only once.
 		}
 	}
 }
+
+=item * L<Attean::API::Algebra>
+
+=cut
 
 package Attean::API::Algebra 0.001 {
 	use Moo::Role;
@@ -113,10 +140,18 @@ package Attean::API::Algebra 0.001 {
 	}
 }
 
+=item * L<Attean::API::QueryTree>
+
+=cut
+
 package Attean::API::QueryTree 0.001 {
 	use Moo::Role;
 	with 'Attean::API::DirectedAcyclicGraph';
 }
+
+=item * L<Attean::API::NullaryQueryTree>
+
+=cut
 
 package Attean::API::NullaryQueryTree 0.001 {
 	use Moo::Role;
@@ -124,11 +159,19 @@ package Attean::API::NullaryQueryTree 0.001 {
 	with 'Attean::API::QueryTree';
 }
 
+=item * L<Attean::API::UnaryQueryTree>
+
+=cut
+
 package Attean::API::UnaryQueryTree 0.001 {
 	use Moo::Role;
 	sub arity { return 1 }
 	with 'Attean::API::QueryTree';
 }
+
+=item * L<Attean::API::BinaryQueryTree>
+
+=cut
 
 package Attean::API::BinaryQueryTree 0.001 {
 	use Moo::Role;
@@ -136,11 +179,19 @@ package Attean::API::BinaryQueryTree 0.001 {
 	with 'Attean::API::QueryTree';
 }
 
+=item * L<Attean::API::PropertyPath>
+
+=cut
+
 package Attean::API::PropertyPath 0.001 {
 	use Moo::Role;
 	with 'Attean::API::QueryTree';
 	requires 'as_string';
 }
+
+=item * L<Attean::API::UnaryPropertyPath>
+
+=cut
 
 package Attean::API::UnaryPropertyPath 0.001 {
 	use Moo::Role;
@@ -162,6 +213,10 @@ package Attean::API::UnaryPropertyPath 0.001 {
 	with 'Attean::API::PropertyPath', 'Attean::API::UnaryQueryTree';
 }
 
+=item * L<Attean::API::NaryPropertyPath>
+
+=cut
+
 package Attean::API::NaryPropertyPath 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -179,6 +234,10 @@ package Attean::API::NaryPropertyPath 0.001 {
 	with 'Attean::API::PropertyPath';
 }
 
+=item * L<Attean::API::UnionScopeVariables>
+
+=cut
+
 package Attean::API::UnionScopeVariables 0.001 {
 	use Moo::Role;
 	sub in_scope_variables {
@@ -190,6 +249,10 @@ package Attean::API::UnionScopeVariables 0.001 {
 		return $set->members;
 	}
 }
+
+=item * L<Attean::API::IntersectionScopeVariables>
+
+=cut
 
 package Attean::API::IntersectionScopeVariables 0.001 {
 	use Moo::Role;
@@ -207,3 +270,26 @@ package Attean::API::IntersectionScopeVariables 0.001 {
 }
 
 1;
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

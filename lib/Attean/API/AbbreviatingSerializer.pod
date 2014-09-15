@@ -1,0 +1,63 @@
+=head1 NAME
+
+Attean::API::AbbreviatingSerializer - Role for serializers that can abbreviate IRIs as prefixed names or relative IRIs
+
+=head1 VERSION
+
+This document describes Attean::API::AbbreviatingSerializer version 0.001
+
+=head1 DESCRIPTION
+
+The Attean::API::AbbreviatingSerializer role defines an API for serializers
+of RDF and SPARQL result data that can abbreviate IRI values as prefixed names
+or relative IRIs.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Serializer> roles which provide the following methods:
+
+=over 4
+
+=item C<< serialize_list_to_io( $fh, @elements ) >>
+
+=item C<< serialize_list_to_bytes( @elements ) >>
+
+=back
+
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< base >>
+
+An L<Attean::API::IRI> object representing the base against which relative IRIs
+in the serialized data should be resolved.
+
+=item C<< namespaces >>
+
+A HASH reference mapping prefix strings to L<URI::NamespaceMap> objects.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

@@ -11,9 +11,23 @@ This document describes Attean::Store version 0.001
 
 =head1 DESCRIPTION
 
-The Attean::Store role is an empty role that more specialized roles conform to.
+The Attean::Store role is an empty role that more specialized roles conform to:
 
 =over 4
+
+=item * L<Attean::API::TripleStore>
+
+=item * L<Attean::API::MutableTripleStore>
+
+=item * L<Attean::API::CacheableTripleStore>
+
+=item * L<Attean::API::QuadStore>
+
+=item * L<Attean::API::MutableQuadStore>
+
+=item * L<Attean::API::CacheableQuadStore>
+
+=back
 
 =cut
 
@@ -125,8 +139,6 @@ package Attean::API::CacheableQuadStore 0.001 {
 1;
 
 __END__
-
-=back
 
 =head1 BUGS
 
