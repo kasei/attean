@@ -5,7 +5,8 @@ use v5.14;
 use warnings;
 no warnings 'redefine';
 
-use Attean;
+use Attean parsers => ['Turtle'];
+
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 
@@ -302,6 +303,75 @@ END
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 6);
 		}
+	}
+}
+
+{
+	my $parser	= Attean->get_parser('Turtle')->new();
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	{
+		my $data	= <<'END';
+@prefix ex:	<http://www.example.org/schema#>.
+@prefix in:	<http://www.example.org/instance#>.
+
+in:a ex:p1 in:b .
+in:b ex:p2 in:c .
+in:a ex:p1 in:d .
+in:d ex:p2 in:c .
+END
+		my $iter	= $parser->parse_iter_from_bytes($data);
+		$store->add_iter($iter->as_quads(iri('pp11')));
+	}
+	{
+		my $data	= <<'END';
+@prefix : <http://example.org/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+:a foaf:knows :b .
+:b foaf:knows :c .
+END
+		my $iter	= $parser->parse_iter_from_bytes($data);
+		$store->add_iter($iter->as_quads(iri('pp14')));
+	}
+	
+	{
+		# pp14
+		my $p1	= Attean::Algebra::PredicatePath->new( predicate => iri('http://xmlns.com/foaf/0.1/knows') );
+		my $pp	= Attean::Algebra::ZeroOrMorePath->new( children => [$p1] );
+		my $path	= Attean::Algebra::Path->new( subject => variable('X'), path => $pp, object => variable('Y') );
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => iri('pp14') );
+		my $iter	= $e->evaluate($path, iri('pp14'));
+		my @rows	= $iter->elements;
+		is(scalar(@rows), 6);
+		my @expected	= (
+			q(a a),
+			q(a b),
+			q(a c),
+			q(b b),
+			q(b c),
+			q(c c),
+		);
+		my @got;
+		foreach my $r (@rows) {
+			my $str	= join(' ', map { $r->value($_)->value } qw(X Y));
+			$str	=~ s#http://example.org/##g;
+			push(@got, $str);
+		}
+		is_deeply([sort @got], \@expected);
+		while (my $q = $iter->next) { say $q->as_string }
+	}
+	
+	if (0) {
+		# pp12
+		my $p1	= Attean::Algebra::PredicatePath->new( predicate => iri('http://www.example.org/schema#p1') );
+		my $p2	= Attean::Algebra::PredicatePath->new( predicate => iri('http://www.example.org/schema#p2') );
+		my $seq	= Attean::Algebra::SequencePath->new( children => [$p1, $p2] );
+		my $pp	= Attean::Algebra::OneOrMorePath->new( children => [$seq] );
+		my $path	= Attean::Algebra::Path->new( subject => iri('http://www.example.org/instance#a'), path => $pp, object => variable('x') );
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => iri('pp11') );
+		my $iter	= $e->evaluate($path, iri('pp11'));
+		while (my $q = $iter->next) { say $q->as_string }
 	}
 }
 

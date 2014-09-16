@@ -30,6 +30,7 @@ use Attean::Expression;
 
 package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
+	use Attean::RDF;
 	use List::Util qw(reduce);
 	use Types::Standard qw(ConsumerOf);
 
@@ -267,7 +268,44 @@ supplied C<< $active_graph >>.
 					return $self->evaluate(shift(@paths), $active_graph);
 				}
 			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
-				# TODO: implement ZeroOrMorePath evaluation
+				my ($child)	= @{ $path->children };
+				if ($s->does('Attean::API::Term') and $o->does('Attean::API::Variable')) {
+					my $v	= {};
+					$self->_ALP($active_graph, $s, $child, $v);
+					my @results;
+					foreach my $v (values %$v) {
+						my $r	= Attean::Result->new( bindings => { $o->value => $v } );
+						push(@results, $r);
+					}
+					return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::Variable')) {
+					my $nodes	= $self->model->graph_nodes( $active_graph );
+					my @results;
+					while (my $t = $nodes->next) {
+						my $tr	= Attean::Result->new( bindings => { $s->value => $t } );
+						my $p		= Attean::Algebra::Path->new( subject => $t, path => $path, object => $o );
+						my $iter	= $self->evaluate($p, $active_graph);
+						while (my $r = $iter->next) {
+							push(@results, $r->join($tr));
+						}
+					}
+					return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::Term')) {
+					my $pp	= Attean::Algebra::InversePath->new( children => [$child] );
+					my $p	= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
+					warn '# Variable ZeroOrMorePath(path) Term';
+					return $self->evaluate($p, $active_graph);
+				} else { # Term ZeroOrMorePath(path) Term
+					my $v	= {};
+					$self->_ALP($active_graph, $s, $child, $v);
+					my @results;
+					foreach my $v (values %$v) {
+						if ($v->equals($o)) {
+							return Attean::ListIterator->new(values => [Attean::Result->new()], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+						}
+					}
+					return Attean::ListIterator->new(values => [], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+				}
 			} elsif ($path->isa('Attean::Algebra::OneOrMorePath')) {
 				# TODO: implement OneOrMorePath evaluation
 			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
@@ -314,6 +352,33 @@ supplied C<< $active_graph >>.
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
 
+	sub _ALP {
+		my $self	= shift;
+		my $graph	= shift;
+		my $term	= shift;
+		my $path	= shift;
+		my $v		= shift;
+		return if (exists $v->{ $term->as_string });
+		$v->{ $term->as_string }	= $term;
+		
+		my $iter	= $self->_eval($graph, $term, $path);
+		while (my $n = $iter->next) {
+			$self->_ALP($graph, $n, $path, $v);
+		}
+	}
+	
+	sub _eval {
+		my $self	= shift;
+		my $graph	= shift;
+		my $term	= shift;
+		my $path	= shift;
+		my $pp		= Attean::Algebra::Path->new( subject => $term, path => $path, object => variable('o') );
+		my $iter	= $self->evaluate($pp, $graph);
+		my $terms	= $iter->map(sub { shift->value('o') }, Type::Tiny::Role->new(role => 'Attean::API::Term'));
+		my %seen;
+		return $terms->grep(sub { not $seen{ shift->as_string }++ });
+	}
+	
 	sub _zeroLengthPath {
 		my $self	= shift;
 		my $s		= shift;
