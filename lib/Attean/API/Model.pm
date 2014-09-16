@@ -27,9 +27,16 @@ The following methods are required by the L<Attean::API::Model> role:
 
 Returns an L<Attean::API::Iterator> for quads in the model that match the
 supplied C<< $subject >>, C<< $predicate >>, C<< $object >>, and C<< $graph >>.
-Any of these terms may be C<< undef >> or a L<Attean::API::Variable> object, in
-which case that term will be considered as a wildcard for the purposes of
-matching.
+
+Any of these terms may be:
+
+* An L<Attean::API::Term> object, in which case matching is equality-based
+
+* A L<Attean::API::Variable> object or C<< undef >>, in which case that term
+will be considered as a wildcard for the purposes of matching
+
+* An ARRAY reference of L<Attean::API::Term> objects, in which case the
+matching will be equality-based on the disjunction of the supplied terms
 
 The returned iterator conforms to both L<Attean::API::Iterator> and
 L<Attean::API::QuadIterator>.
@@ -216,6 +223,16 @@ package Attean::API::Model 0.001 {
 			});
 		}
 	}
+
+	sub graph_nodes {
+		my $self	= shift;
+		my $graph	= shift;
+		my $s		= $self->subjects(undef, undef, $graph);
+		my $o		= $self->objects(undef, undef, $graph);
+		my $union	= Attean::IteratorSequence->new( iterators => [$s, $o], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+		my %seen;
+		return $union->grep(sub {not($seen{shift->as_string}++)});
+	}
 }
 
 
@@ -231,6 +248,19 @@ package Attean::API::MutableModel 0.001 {
 	
 	with 'Attean::API::Model';
 	
+	sub add_iter {
+		my $self	= shift;
+		my $iter	= shift;
+		my $type	= $iter->item_type;
+		use Data::Dumper;
+		die "Iterator type isn't quads: " . Dumper($type) unless $type->is_a_type_of(
+			Type::Tiny::Role->new(role => 'Attean::API::Quad')
+		);
+		while (my $q = $iter->next) {
+			$self->add_quad($q);
+		}
+	}
+
 	sub add_list {
 		my $self	= shift;
 		die "add_list called without a graph name" unless (scalar(@_));
@@ -249,16 +279,6 @@ package Attean::API::MutableModel 0.001 {
 			$self->add_quad( Attean::Quad->new($head, $rdf_rest, $rest, $graph) );
 			return $head;
 		}
-	}
-	
-	sub graph_nodes {
-		my $self	= shift;
-		my $graph	= shift;
-		my $s		= $self->subjects(undef, undef, $graph);
-		my $o		= $self->objects(undef, undef, $graph);
-		my $union	= Attean::IteratorSequence->new( iterators => [$s, $o], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
-		my %seen;
-		return $union->grep(sub {not($seen{shift->as_string}++)});
 	}
 }
 

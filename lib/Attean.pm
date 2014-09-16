@@ -47,6 +47,7 @@ package Attean 0.001 {
 	use Attean::Result;
 	
 	use Attean::QuadModel;
+	use Attean::BindingEqualityTest;
 	
 	use Attean::CodeIterator;
 	use Attean::ListIterator;
@@ -59,6 +60,25 @@ package Attean 0.001 {
 	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;
 	use Module::Pluggable search_path => 'AtteanX::Serializer', sub_name => 'serializers', max_depth => 3;
 	use Module::Pluggable search_path => 'AtteanX::Store', sub_name => 'stores', max_depth => 3;
+	
+	sub import {
+		my $class	= shift;
+		if (scalar(@_)) {
+			my %args	= @_;
+			foreach my $p (@{ $args{parsers} || [] }) {
+# 				warn "Loading $p parser...";
+				$class->get_parser($p) || die "Failed to load parser: $p";
+			}
+			foreach my $s (@{ $args{serializers} || [] }) {
+# 				warn "Loading $s serializer...";
+				$class->get_serializer($s) || die "Failed to load serializer: $s";
+			}
+			foreach my $s (@{ $args{stores} || [] }) {
+# 				warn "Loading $s store...";
+				$class->get_store($s) || die "Failed to load store: $s";
+			}
+		}
+	}
 	
 =item C<< get_store( $NAME ) >>
 
