@@ -123,6 +123,7 @@ package Attean::API::Model 0.001 {
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
+	use namespace::clean;
 	
 	# get_quads($s, $p, $o, $g)
 	# or:
@@ -238,6 +239,8 @@ package Attean::API::Model 0.001 {
 
 package Attean::API::MutableModel 0.001 {
 	use Moo::Role;
+	use Encode qw(encode);
+	use namespace::clean;
 	
 	requires 'add_quad';
 	requires 'remove_quad';
@@ -247,6 +250,19 @@ package Attean::API::MutableModel 0.001 {
 	requires 'add_iter';
 	
 	with 'Attean::API::Model';
+	
+	sub load_triples {
+		my $self	= shift;
+		my $format	= shift;
+		my $class	= Attean->get_parser($format) || die "Failed to load parser for '$format'";
+		my $parser	= $class->new() || die "Failed to construct parser for '$format'";
+		while (scalar(@_)) {
+			my ($graph, $string)	= splice(@_, 0, 2);
+			my $iter	= $parser->parse_iter_from_bytes(encode('UTF-8', $string, Encode::FB_CROAK));
+			my $quads	= $iter->as_quads($graph);
+			$self->add_iter($quads);
+		}
+	}
 	
 	sub add_iter {
 		my $self	= shift;

@@ -11,7 +11,6 @@ use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 
 {
-	my $parser	= Attean->get_parser('Turtle')->new();
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	
@@ -22,9 +21,7 @@ use Attean::SimpleQueryEvaluator;
 		<a> <b> <a> .
 		<a> <c> 2, 3 .
 END
-		my $iter	= $parser->parse_iter_from_bytes($data);
-		my $quads	= $iter->as_quads($graph);
-		$store->add_iter($quads);
+		$model->load_triples('turtle', $graph, $data);
 	}
 	
 	my $e	= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
@@ -69,7 +66,6 @@ END
 
 {
 	my $g		= iri('g');
-	my $parser	= Attean->get_parser('NQuads')->new();
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	{
@@ -84,8 +80,7 @@ END
 		<b> <values> "2"^^<http://www.w3.org/2001/XMLSchema#integer> <ints> .
 		<b> <values> "07"^^<http://www.w3.org/2001/XMLSchema#integer> <ints> .
 END
-		my $iter	= $parser->parse_iter_from_bytes($data);
-		$store->add_iter($iter->as_quads($g));
+		$model->load_triples('nquads', $g, $data);
 	}
 	
 	{
@@ -307,7 +302,6 @@ END
 }
 
 {
-	my $parser	= Attean->get_parser('Turtle')->new();
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	{
@@ -320,8 +314,7 @@ in:b ex:p2 in:c .
 in:a ex:p1 in:d .
 in:d ex:p2 in:c .
 END
-		my $iter	= $parser->parse_iter_from_bytes($data);
-		$store->add_iter($iter->as_quads(iri('pp11')));
+		$model->load_triples('turtle', iri('pp11'), $data);
 	}
 	{
 		my $data	= <<'END';
@@ -331,8 +324,7 @@ END
 :a foaf:knows :b .
 :b foaf:knows :c .
 END
-		my $iter	= $parser->parse_iter_from_bytes($data);
-		$store->add_iter($iter->as_quads(iri('pp14')));
+		$model->load_triples('turtle', iri('pp14'), $data);
 	}
 	
 	{
