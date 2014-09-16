@@ -62,6 +62,11 @@ they are returned by the referent's C<< values >> method.
 
 Returns a string serialization of the variable bindings.
 
+=item C<< has_blanks >>
+
+Returns true if any variable is bound to an L<Attean::API::Blank> term, false
+otherwise.
+
 =cut
 
 use Type::Tiny::Role;
@@ -93,6 +98,12 @@ package Attean::API::Binding 0.001 {
 	}
 	sub as_string {
 		shift->tuples_string();
+	}
+	
+	sub has_blanks {
+		my $self	= shift;
+		my @blanks	= grep { $_->does('Attean::API::Blank') } $self->values;
+		return scalar(@blanks);
 	}
 }
 
@@ -268,7 +279,7 @@ package Attean::API::Result 0.001 {
 		my $class	= ref($self);
 		my $mapper	= shift;
 		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
-		return $class->new( \%values );
+		return $class->new( bindings => \%values );
 	}
 
 	with 'Attean::API::Binding';

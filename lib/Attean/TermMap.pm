@@ -102,6 +102,24 @@ alphabetic names (e.g. _:a, _:b).
 		});
 	}
 
+	sub rewrite_map {
+		my $class	= shift;
+		my $map		= shift;
+		use Data::Dumper;
+# 		warn "Rewrite map: " . Dumper($map);
+		return $class->new(mapper => sub {
+			my $term	= shift;
+			if (exists $map->{ $term->as_string }) {
+				my $new	= $map->{ $term->as_string };
+# 				warn "Rewriting " . $term->as_string . ": " . $new->as_string;
+				return $new;
+			} else {
+# 				warn "Passing through: " . $term->as_string;
+				return $term;
+			}
+		});
+	}
+
 =back
 
 =head1 METHODS
