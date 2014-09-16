@@ -88,6 +88,7 @@ package Attean::API::Iterator 0.001 {
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Object InstanceOf);
 	use Role::Tiny;
+	use namespace::clean;
 	
 	has 'item_type' => (is => 'ro', isa => InstanceOf['Type::Tiny'], required => 1);
 	requires 'next';

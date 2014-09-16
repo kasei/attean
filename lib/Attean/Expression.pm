@@ -43,6 +43,8 @@ use Attean::API::Expression;
 package Attean::ValueExpression 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::Expression';
 	sub arity { return 0 }
 	sub BUILDARGS {
@@ -92,6 +94,8 @@ package Attean::ValueExpression 0.001 {
 package Attean::UnaryExpression 0.001 {
 	use Moo;
 	use Types::Standard qw(Enum);
+	use namespace::clean;
+
 	my %map	= ('NOT' => '!');
 	around 'BUILDARGS' => sub {
 		my $orig	= shift;
@@ -128,6 +132,8 @@ package Attean::BinaryExpression 0.001 {
 	use Moo;
 	use Try::Tiny;
 	use Types::Standard qw(Enum);
+	use namespace::clean;
+
 	sub BUILD {
 		my $self	= shift;
 		state $type	= Enum[qw(+ - * / < <= > >= != = && ||)];
@@ -199,6 +205,8 @@ package Attean::FunctionExpression 0.001 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use Types::Common::String qw(UpperCaseStr);
+	use namespace::clean;
+
 	around 'BUILDARGS' => sub {
 		my $orig	= shift;
 		my $class	= shift;

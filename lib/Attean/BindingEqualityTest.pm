@@ -10,6 +10,7 @@ package Attean::BindingEqualityTest 0.001 {
 	use Scalar::Util qw(blessed);
 	use Moo;
 	use Types::Standard qw(CodeRef ConsumerOf Str);
+	use namespace::clean;
 	
 	our $debug	= 0;
 	

@@ -34,8 +34,8 @@ package AtteanX::Parser::SPARQLXML::SAXHandler 0.001;
 use Attean;
 use Scalar::Util qw(refaddr);
 use base qw(XML::SAX::Base);
-
 use Attean;
+use namespace::clean;
 
 my %strings;
 my %tagstack;

@@ -56,6 +56,7 @@ package Attean::CodeIterator 0.001 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(CodeRef);
+	use namespace::clean;
 	
 	with 'Attean::API::Iterator';
 	

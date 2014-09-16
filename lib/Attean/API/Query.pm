@@ -28,6 +28,7 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
 
 # =item C<< children >>
 # 
@@ -196,6 +197,8 @@ package Attean::API::PropertyPath 0.001 {
 package Attean::API::UnaryPropertyPath 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	sub arity { return 1 }
 # 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
 	sub prefix_name { "" }
@@ -220,6 +223,8 @@ package Attean::API::UnaryPropertyPath 0.001 {
 package Attean::API::NaryPropertyPath 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+
 # 	has 'children' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::PropertyPath']], required => 1);
 	requires 'separator';
 	sub as_string {

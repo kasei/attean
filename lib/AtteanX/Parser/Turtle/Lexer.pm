@@ -31,6 +31,7 @@ use strict;
 use warnings;
 use Moo;
 use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
+use namespace::clean;
 
 our $VERSION;
 BEGIN {

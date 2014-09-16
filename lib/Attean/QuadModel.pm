@@ -41,6 +41,8 @@ quad-store.
 package Attean::QuadModel 0.001 {
 	use Moo;
 	use Scalar::Util qw(reftype);
+	use namespace::clean;
+
 	has 'store'	=> (
 		is => 'ro',
 		does => 'Attean::API::QuadStore',

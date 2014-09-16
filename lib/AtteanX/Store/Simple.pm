@@ -23,13 +23,14 @@ package AtteanX::Store::Simple 0.001 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
-	with 'Attean::API::QuadStore';
-
 	use Encode;
 	use Set::Scalar;
 	use Digest::SHA;
 	use List::Util qw(first);
 	use Scalar::Util qw(refaddr reftype blessed);
+	use namespace::clean;
+
+	with 'Attean::API::QuadStore';
 
 	my @pos_names	= Attean::API::Quad->variables;
 

@@ -55,6 +55,7 @@ use Type::Tiny::Role;
 package Attean::API::Parser 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
+	use namespace::clean;
 	
 	has 'handler' => (is => 'rw', isa => CodeRef, default => sub { sub {} });
 	
@@ -68,6 +69,7 @@ package Attean::API::AbbreviatingParser 0.001 {
 	use Types::Standard qw(InstanceOf Maybe);
 	use URI::NamespaceMap;
 	use Scalar::Util qw(blessed);
+	use namespace::clean;
 	
 	with 'Attean::API::Parser';
 	has 'base' 		=> (is => 'rw', isa => InstanceOf['IRI'], coerce => sub { blessed($_[0]) ? IRI->new($_[0]->as_string) : IRI->new($_[0]) }, predicate => 'has_base');

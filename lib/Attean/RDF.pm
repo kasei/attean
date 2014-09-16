@@ -38,6 +38,8 @@ package Attean::RDF 0.001 {
 	use Attean;
 	use List::MoreUtils qw(zip);
 	require Exporter;
+	use namespace::clean;
+
 	our @ISA	= qw(Exporter);
 	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern);
 

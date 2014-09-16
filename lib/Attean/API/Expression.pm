@@ -89,6 +89,8 @@ L<Attean::API::Term> object or throws a type error exception.
 package Attean::API::Expression 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(Str);
+	use namespace::clean;
+
 	with 'Attean::API::DirectedAcyclicGraph';
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);

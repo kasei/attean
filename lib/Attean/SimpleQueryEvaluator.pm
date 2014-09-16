@@ -33,6 +33,7 @@ package Attean::SimpleQueryEvaluator 0.001 {
 	use Attean::RDF;
 	use List::Util qw(reduce);
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
 
 =item C<< model >>
 

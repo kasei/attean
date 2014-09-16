@@ -46,6 +46,7 @@ that will be returned from the iterator.
 package Attean::IteratorSequence 0.001 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
 	
 	with 'Attean::API::Iterator';
 	

@@ -27,6 +27,7 @@ package Attean::Variable 0.001 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use Data::UUID;
+	use namespace::clean;
 	
 	has 'value' => (is => 'ro', isa => Str, required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');

@@ -57,6 +57,8 @@ package Attean 0.001 {
 	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
+	use namespace::clean;
+	
 	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;
 	use Module::Pluggable search_path => 'AtteanX::Serializer', sub_name => 'serializers', max_depth => 3;
 	use Module::Pluggable search_path => 'AtteanX::Store', sub_name => 'stores', max_depth => 3;

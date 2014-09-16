@@ -74,6 +74,7 @@ use Type::Tiny::Role;
 package Attean::API::Binding 0.001 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
+	use namespace::clean;
 	
 	requires 'value';
 	requires 'variables';
@@ -125,6 +126,7 @@ package Attean::API::TripleOrQuadPattern 0.001 {
 package Attean::API::TriplePattern 0.001 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
+	use namespace::clean;
 	
 	sub variables { return qw(subject predicate object) }
 
@@ -250,6 +252,7 @@ package Attean::API::Quad 0.001 {
 package Attean::API::Result 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
+	use namespace::clean;
 	
 	sub join {
 		my $self	= shift;

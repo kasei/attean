@@ -36,6 +36,7 @@ package Attean::TermMap 0.001 {
 	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;
 	use Data::UUID;
+	use namespace::clean;
 	
 	with 'Attean::Mapper';
 	has 'mapper'	=> (is => 'ro', isa => CodeRef, default => sub { shift }, required => 1);

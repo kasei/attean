@@ -53,6 +53,7 @@ package Attean::ListIterator 0.001 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(ArrayRef Int);
+	use namespace::clean;
 	
 	with 'Attean::API::RepeatableIterator';
 	

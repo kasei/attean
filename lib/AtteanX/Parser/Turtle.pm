@@ -29,6 +29,8 @@ This module implements a parser for the Turtle RDF format.
 =cut
 
 package AtteanX::Parser::Turtle 0.001 {
+	use Moo;
+	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 	use utf8;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
@@ -36,8 +38,7 @@ package AtteanX::Parser::Turtle 0.001 {
 	use AtteanX::Parser::Turtle::Lexer;
 	use AtteanX::Parser::Turtle::Token;
 	use Attean::API::Parser;
-	use Moo;
-	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
+	use namespace::clean;
 
 =item C<< canonical_media_type >>
 

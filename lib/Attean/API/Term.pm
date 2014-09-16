@@ -105,6 +105,8 @@ package Attean::API::Literal 0.001 {
 	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Maybe Str ConsumerOf);
+	use namespace::clean;
 	
 	with 'Attean::API::Term';
 	
@@ -143,7 +145,6 @@ package Attean::API::Literal 0.001 {
 	}
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
-		use Types::Standard qw(Maybe Str ConsumerOf);
 		my %map	= (
 			language	=> Maybe[Str],
 			datatype	=> ConsumerOf['Attean::API::IRI'],
@@ -184,6 +185,7 @@ package Attean::API::Literal 0.001 {
 package Attean::API::NumericLiteral 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
+	use namespace::clean;
 	
 	sub compare {
 		my ($a, $b)	= @_;
@@ -282,6 +284,7 @@ package Attean::API::NumericLiteral 0.001 {
 package Attean::API::Blank 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
+	use namespace::clean;
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term';
@@ -299,6 +302,7 @@ package Attean::API::IRI 0.001 {
 	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
+	use namespace::clean;
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term';

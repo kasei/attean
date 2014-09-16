@@ -32,6 +32,7 @@ package Attean::IRI 0.001 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use IRI 0.003;
+	use namespace::clean;
 
 	extends 'IRI';
 	

@@ -197,6 +197,8 @@ package Attean::Algebra::BGP 0.001 {
 	use Moo;
 	use Attean::RDF;
 	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+
 	sub in_scope_variables {
 		my $self	= shift;
 		my $set		= Set::Scalar->new();

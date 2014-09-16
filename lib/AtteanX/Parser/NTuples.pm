@@ -25,9 +25,10 @@ This document describes AtteanX::Parser::NTuples version 0.001
 
 package AtteanX::Parser::NTuples 0.001 {
 	use utf8;
+	use Moo;
 	use Attean;
 	use Encode qw(decode);
-	use Moo;
+	use namespace::clean;
 	
 =item C<< parse_iter_from_bytes( $data ) >>
 

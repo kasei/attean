@@ -25,9 +25,9 @@ during parsing of Turtle.
 
 package AtteanX::Parser::Turtle::Token;
 
-use List::MoreUtils qw(zip);
-
 use Moo;
+use List::MoreUtils qw(zip);
+use namespace::clean;
 
 has type => ( is => 'ro', );
 has start_line => ( is => 'ro', );

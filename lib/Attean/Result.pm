@@ -33,6 +33,7 @@ package Attean::Result 0.001 {
 	use Moo;
 	use Types::Standard qw(HashRef ConsumerOf);
 	use Attean::API::Binding;
+	use namespace::clean;
 	
 	with 'Attean::API::Result';
 

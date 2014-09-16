@@ -30,6 +30,7 @@ package AtteanX::Serializer::NTuples 0.001 {
 	use Encode qw(encode);
 	use Attean::ListIterator;
 	use List::MoreUtils qw(any);
+	use namespace::clean;
 	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 

@@ -32,6 +32,7 @@ package Attean::Literal 0.001 {
 	use Attean::API::Term;
 	use IRI;
 	use Scalar::Util qw(blessed);
+	use namespace::clean;
 	
 	my $XSD_STRING	= IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
 	has 'value'				=> (is => 'ro', isa => Str, required => 1);

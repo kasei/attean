@@ -23,6 +23,8 @@ requires		'Moo'						=> 1.006000;
 requires		'Sub::Name'					=> 0;
 requires		'Sub::Install'				=> 0;
 requires		'Set::Scalar'				=> 0;
+requires		'namespace::clean'			=> 0;
+
 
 
 resources(
