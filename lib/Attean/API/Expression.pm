@@ -157,6 +157,8 @@ package Attean::API::NaryExpression 0.001 {
 
 package Attean::API::AggregateExpression 0.001 {
 	use Moo::Role;
+	requires 'operator';
+	requires 'scalar_vars';
 	with 'Attean::API::DirectedAcyclicGraph';
 }
 

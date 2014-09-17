@@ -122,6 +122,8 @@ package Attean::API::Literal 0.001 {
 			my $type	= $dt->value;
 			if ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::NumericLiteral');
+			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#dateTime') {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::DateTimeLiteral');
 			}
 		}
 	};
@@ -141,7 +143,8 @@ package Attean::API::Literal 0.001 {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
 		return 1 unless ($b->does('Attean::API::Literal'));
-		return ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
+		my $c	= ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
+		return $c;
 	}
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -166,6 +169,14 @@ package Attean::API::Literal 0.001 {
 		}
 	}
 	
+	sub construct_args {
+		my $self	= shift;
+		my %args;
+		$args{language}	= $self->language if ($self->language);
+		$args{datatype}	= $self->datatype if ($self->datatype);
+		return %args;
+	}
+	
 	sub _ntriples_string {
 		my $self	= shift;
 		my $str		= sprintf('"%s"', $self->__ntriples_string);
@@ -182,9 +193,20 @@ package Attean::API::Literal 0.001 {
 	}
 }
 
+package Attean::API::DateTimeLiteral 0.001 {
+	use Moo::Role;
+	use DateTime::Format::W3CDTF;
+	use namespace::clean;
+	sub datetime {
+		my $self	= shift;
+		my $w3c	= DateTime::Format::W3CDTF->new;
+		return $w3c->parse_datetime( $self->value );
+	}
+}
+
 package Attean::API::NumericLiteral 0.001 {
 	use Moo::Role;
-	use Scalar::Util qw(blessed);
+	use Scalar::Util qw(blessed looks_like_number);
 	use namespace::clean;
 	
 	sub compare {
@@ -194,7 +216,8 @@ package Attean::API::NumericLiteral 0.001 {
 		if ($b->does('Attean::API::NumericLiteral')) {
 			return $a->numeric_value <=> $b->numeric_value;
 		} else {
-			Attean::API::Literal::compare($a, $b);
+			return 1;
+# 			Attean::API::Literal::compare($a, $b);
 		}
 	}
 	
@@ -211,9 +234,8 @@ package Attean::API::NumericLiteral 0.001 {
 
 	sub numeric_value {
 		my $self	= shift;
-		# TODO: parse numeric values that have lexical forms that perl doesn't recognize
-		return 0+$self->value;
-
+		my $v		= $self->value;
+		return (looks_like_number($v)) ? eval $v : undef;
 	}
 
 	{
@@ -237,7 +259,6 @@ package Attean::API::NumericLiteral 0.001 {
 			for ($lhs, $rhs) {
 				s/^.*#//;
 			}
-# 			warn "LCA ($lhs $rhs)";
 			return "http://www.w3.org/2001/XMLSchema#$lhs" if ($lhs eq $rhs);
 			my $cur	= $lhs;
 			my %ancestors	= ($cur => 1);
@@ -245,8 +266,6 @@ package Attean::API::NumericLiteral 0.001 {
 				$ancestors{$cur}++;
 				return "http://www.w3.org/2001/XMLSchema#$cur" if ($cur eq $rhs);
 			}
-# 			use Data::Dumper;
-# 			warn Dumper(\%ancestors);
 			$cur	= $rhs;
 			while ($cur = $type_hierarchy{$cur}) {
 				return "http://www.w3.org/2001/XMLSchema#$cur" if exists $ancestors{$cur};
@@ -273,9 +292,8 @@ package Attean::API::NumericLiteral 0.001 {
 					return $type;
 				}
 				return 'http://www.w3.org/2001/XMLSchema#double';
-			} else {
-				die "Unexpected numeric operation in binary_promotion_type: $op";
 			}
+			die "Unexpected numeric operation in binary_promotion_type: $op";
 		}
 	}
 	with 'Attean::API::Literal';
@@ -287,8 +305,7 @@ package Attean::API::Blank 0.001 {
 	use namespace::clean;
 	
 	sub ebv { return 1; }
-	with 'Attean::API::Term';
-	with 'Attean::API::BlankOrIRI';
+	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
 
 	sub compare {
 		my ($a, $b)	= @_;
@@ -305,8 +322,7 @@ package Attean::API::IRI 0.001 {
 	use namespace::clean;
 	
 	sub ebv { return 1; }
-	with 'Attean::API::Term';
-	with 'Attean::API::BlankOrIRI';
+	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
 	
 	sub compare {
 		my ($a, $b)	= @_;

@@ -31,6 +31,7 @@ use Attean::Expression;
 package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
 	use Attean::RDF;
+	use Scalar::Util qw(blessed);
 	use List::Util qw(reduce);
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -98,14 +99,12 @@ supplied C<< $active_graph >>.
 			my $var		= $algebra->variable->value;
 			my ($child)	= @{ $algebra->children };
 			my $iter	= $self->evaluate( $child, $active_graph );
+			my $impl	= $expr->impl;
 			return $iter->map(sub {
 				my $r	= shift;
-				my %b	= map { $_ => $r->value($_) } $r->variables;
-				my $val	= eval { $expr->evaluate($r) };
-				if ($val) {
-					$b{$var}	= $val;
-				}
-				my $b	= Attean::Result->new( bindings => \%b );
+				my $val	= eval { $impl->($r) };
+				return Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
+				return $r;
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			my $expr	= $algebra->expression;
@@ -158,7 +157,48 @@ supplied C<< $active_graph >>.
 				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
-			# TODO: implement group evaluation
+			my @groupby	= @{ $algebra->groupby };
+			my @impls	= map { $_->impl } @groupby;
+			my ($child)	= @{ $algebra->children };
+			my $iter	= $self->evaluate($child, $active_graph);
+			my %groups;
+			while (my $r = $iter->next) {
+				my %vars;
+				my @group_terms	= map { eval { $_->($r) } } @impls;
+				my $key			= join(' ', map { blessed($_) ? $_->as_string : '' } @group_terms);
+				my %group_bindings;
+				foreach my $i (0 .. $#group_terms) {
+					my $v	= $groupby[$i];
+					if (blessed($v) and $v->isa('Attean::ValueExpression') and $v->value->does('Attean::API::Variable')) {
+						if (my $term = $group_terms[$i]) {
+							$group_bindings{$v->value->value}	= $term;
+						}
+					}
+				}
+				my $gr			= Attean::Result->new( bindings => \%group_bindings );
+				$groups{$key}	= [$gr, []] unless (exists($groups{$key}));
+				push(@{ $groups{$key}[1] }, $r);
+			}
+			
+			my $aggs	= $algebra->aggregates;
+			my @agg_impls	= map { $_->impl } @$aggs;
+			my @results;
+			foreach my $key (keys %groups) {
+				my ($binding, $rows)	= @{ $groups{$key} };
+				my $count	= scalar(@$rows);
+# 				warn sprintf("Group with %3d rows: $key", $count);
+				my %bindings;
+				foreach my $i (0 .. $#agg_impls) {
+					my $agg	= $aggs->[$i];
+					my $name	= $agg->variable->value;
+					my $term	= $agg_impls[$i]->( @$rows );
+					if ($term) {
+						$bindings{ $name } = $term;
+					}
+				}
+				push(@results, Attean::Result->new( bindings => \%bindings )->join($binding));
+			}
+			return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
 			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
 			return $lhs->join($rhs);
@@ -268,11 +308,18 @@ supplied C<< $active_graph >>.
 					}
 					return $self->evaluate(shift(@paths), $active_graph);
 				}
-			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
+			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath') or $path->isa('Attean::Algebra::OneOrMorePath')) {
 				my ($child)	= @{ $path->children };
 				if ($s->does('Attean::API::Term') and $o->does('Attean::API::Variable')) {
 					my $v	= {};
-					$self->_ALP($active_graph, $s, $child, $v);
+					if ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
+						$self->_ALP($active_graph, $s, $child, $v);
+					} else {
+						my $iter	= $self->_eval($active_graph, $s, $child);
+						while (my $n = $iter->next) {
+							$self->_ALP($active_graph, $n, $child, $v);
+						}
+					}
 					my @results;
 					foreach my $v (values %$v) {
 						my $r	= Attean::Result->new( bindings => { $o->value => $v } );
@@ -294,7 +341,6 @@ supplied C<< $active_graph >>.
 				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::Term')) {
 					my $pp	= Attean::Algebra::InversePath->new( children => [$child] );
 					my $p	= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
-					warn '# Variable ZeroOrMorePath(path) Term';
 					return $self->evaluate($p, $active_graph);
 				} else { # Term ZeroOrMorePath(path) Term
 					my $v	= {};
@@ -307,8 +353,6 @@ supplied C<< $active_graph >>.
 					}
 					return Attean::ListIterator->new(values => [], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 				}
-			} elsif ($path->isa('Attean::Algebra::OneOrMorePath')) {
-				# TODO: implement OneOrMorePath evaluation
 			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
 				my ($child)	= @{ $path->children };
 				my $path	= Attean::Algebra::Path->new( subject => $s, path => $child, object => $o );

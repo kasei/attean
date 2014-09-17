@@ -5,6 +5,8 @@ use Test::More;
 use Type::Tiny::Role;
 use Attean::RDF;
 
+my $XSD	= "http://www.w3.org/2001/XMLSchema#";
+
 is(iri('http://example.org/')->ntriples_string, '<http://example.org/>', 'IRI ntriples_string');
 is(iri('http://example.org/✪')->ntriples_string, '<http://example.org/\u272A>', 'unicode IRI ntriples_string');
 is(literal("🐶\\\n✪")->ntriples_string, qq["🐶\\\\\\n✪"], 'unicode literal ntriples_string');
@@ -18,6 +20,11 @@ ok(not(literal('')->ebv), '"" EBV');
 ok(literal('foo')->ebv, '"foo" EBV');
 ok(blank('foo')->ebv, '_:foo EBV');
 ok(iri('foo')->ebv, '<foo> EBV');
+
+is(dtliteral('1', "${XSD}integer")->numeric_value, 1, 'integer numeric value');
+is(dtliteral('1.5', "${XSD}float")->numeric_value, 1.5, 'float numeric value');
+is(dtliteral('2.2e3', "${XSD}double")->numeric_value, 2200, 'double numeric value');
+is(dtliteral('2.5', "${XSD}decimal")->numeric_value, 2.5, 'decimal numeric value');
 
 {
 	my $l1	= literal(7);

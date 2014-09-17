@@ -59,7 +59,7 @@ package Translator 0.1 {
 			my @nodes	= map { $self->translate($_) } $a->nodes;
 			return Attean::TriplePattern->new(@nodes);
 		} elsif ($a->isa('RDF::Query::Node::Variable')) {
-			my $value	= variable($a->name);
+			my $value	= variable($a->isa("RDF::Query::Node::Variable::ExpressionProxy") ? ("." . $a->name) : $a->name);
 			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Resource')) {
@@ -108,6 +108,7 @@ package Translator 0.1 {
 			return Attean::Algebra::Filter->new( children => [$p], expression => $expr );
 		} elsif ($a->isa('RDF::Query::Expression::Binary')) {
 			my $op	= $a->op;
+			$op		= '=' if ($op eq '==');
 			my @ops	= $a->operands;
 			my @operands	= map { $self->translate($_) } @ops;
 			my $expr	= Attean::BinaryExpression->new( operator => $op, children => \@operands );
@@ -118,17 +119,42 @@ package Translator 0.1 {
 			foreach my $v (@$vars) {
 				if ($v->isa('RDF::Query::Expression::Alias')) {
 					my $var		= variable($v->name);
-					my $expr	= $self->translate_expr( $v->expression );
-					$p	= Attean::Algebra::Extend->new( children => [$p], variable => $var, expression => $expr );
+					my $expr	= $v->expression;
+					$p	= Attean::Algebra::Extend->new( children => [$p], variable => $var, expression => $self->translate_expr( $expr ) );
 				} else {
 					die "Unexpected extend expression: " . Dumper($v);
 				}
 			}
 			return $p;
-		} elsif ($a->isa('')) {
-		} elsif ($a->isa('')) {
-		} elsif ($a->isa('')) {
-		} elsif ($a->isa('')) {
+		} elsif ($a->isa('RDF::Query::Algebra::Aggregate')) {
+			my $p		= $self->translate($a->pattern);
+			my @group	= map { $self->translate_expr($_) } $a->groupby;
+			my @ops		= $a->ops;
+			
+			my @aggs;
+			foreach my $o (@ops) {
+				my ($str, $op, $scalar_vars, @vars)	= @$o;
+				my $operands	= [map { $self->translate_expr($_) } grep { blessed($_) } @vars];
+				my $expr	= Attean::AggregateExpression->new(
+					operator => $op,
+					children => $operands,
+					scalar_vars => $scalar_vars,
+					variable => variable(".$str"),
+				);
+				push(@aggs, $expr);
+			}
+			return Attean::Algebra::Group->new(
+				children	=> [$p],
+				groupby		=> \@group,
+				aggregates	=> \@aggs,
+			);
+		} elsif ($a->isa('RDF::Query::Expression::Function')) {
+			my $uri		= $a->uri->uri_value;
+			my @args	= map { $self->translate_expr($_) } $a->arguments;
+			if ($uri =~ /^sparql:(.+)$/) {
+				return Attean::FunctionExpression->new( children => \@args, operator => $1 );
+			}
+			warn Dumper($uri, \@args);
 		}
 		die "Unrecognized algebra " . ref($a);
 	}
