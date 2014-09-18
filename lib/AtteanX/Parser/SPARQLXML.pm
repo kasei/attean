@@ -53,7 +53,7 @@ application/sparql-results+xml.
 		return [qw(application/sparql-results+xml)];
 	}
 	
-	with 'Attean::API::ResultParser';
+	with 'Attean::API::ResultOrTermParser';
 	with 'Attean::API::PushParser';
 
 =item C<< parse_cb_from_io( $fh ) >>

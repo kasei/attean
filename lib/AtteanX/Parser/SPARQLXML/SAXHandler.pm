@@ -117,6 +117,9 @@ sub end_element {
 		push( @{ $variables{ $addr } }, $el->{Attributes}{'{}name'}{Value});
 	} elsif ($tag eq 'boolean') {
 		$booleans{ $addr }	= ($string eq 'true') ? 1 : 0;
+		if ($string =~ /^(?:true|false)$/ and my $code = $result_handlers{ $addr }) {
+			$code->( Attean::Literal->$string() );
+		}
 	} elsif ($tag eq 'binding') {
 		my $name	= $el->{Attributes}{'{}name'}{Value};
 		my $value	= delete( $values{ $addr } );
