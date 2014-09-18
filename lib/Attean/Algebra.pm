@@ -42,7 +42,7 @@ package Attean::Algebra::LeftJoin 0.001 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
 }
 
 =item * L<Attean::Algebra::Filter>
@@ -432,6 +432,17 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 	with 'Attean::API::UnaryPropertyPath';
 	sub postfix_name { return "?" }
 }
+
+=item * L<Attean::Algebra::Ask>
+
+=cut
+
+package Attean::Algebra::Ask 0.001 {
+	use Moo;
+	sub in_scope_variables { return; }
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+}
+
 
 1;
 
