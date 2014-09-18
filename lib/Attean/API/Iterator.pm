@@ -77,6 +77,21 @@ Returns a new L<Attean::API::Iterator> object that filters elements from the
 referent iterator based on whether calling C<< &filter( $element ) >> for each
 C<< $element >> results in a true value.
 
+=item C<< offset( $offset ) >>
+
+Returns the L<Attean::API::Iterator> referent after skipping the first
+C<< $offset >> elements.
+
+=item C<< limit( $limit ) >>
+
+Returns a new L<Attean::API::Iterator> object which returns the first
+C<< $limit >> elements of the referent.
+
+=item C<< materialize >>
+
+Returns a new L<Attean::API::RepeatableIterator> object containing all the
+elements from the referent.
+
 =back
 
 =cut
@@ -209,6 +224,12 @@ package Attean::API::Iterator 0.001 {
 				return $item;
 			}
 		);
+	}
+	
+	sub materialize {
+		my $self	= shift;
+		my @data	= $self->elements;
+		return Attean::ListIterator->new( values => \@data, item_type => $self->item_type );
 	}
 }
 
