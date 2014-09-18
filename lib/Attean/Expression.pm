@@ -42,6 +42,7 @@ use Attean::API::Expression;
 
 package Attean::ValueExpression 0.001 {
 	use Moo;
+	use utf8::all;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
 
@@ -118,6 +119,15 @@ package Attean::UnaryExpression 0.001 {
 	
 	sub impl {
 		my $self	= shift;
+		my $op		= $self->operator;
+		my ($child)	= @{ $self->children };
+		my $impl	= $child->impl;
+		if ($op eq '!') {
+			return sub {
+				my $term	= $impl->( shift );
+				return ($term->ebv) ? Attean::Literal->false : Attean::Literal->true;
+			}
+		}
 		# TODO: implement UnaryExpression evaluation
 		die "Unimplemented UnaryExpression evaluation: " . $self->operator;
 	}
@@ -212,7 +222,9 @@ package Attean::FunctionExpression 0.001 {
 	use Encode qw(encode);
 	use POSIX qw(ceil floor);
 	use Digest;
+	use List::MoreUtils qw(zip);
 	use DateTime::Format::W3CDTF;
+	use I18N::LangTags;
 	use namespace::clean;
 
 	around 'BUILDARGS' => sub {
@@ -256,8 +268,22 @@ package Attean::FunctionExpression 0.001 {
 				# TODO: BNODE(literal)
 				return Attean::Blank->new($operands[0]->value);
 			} elsif ($func eq 'LANG') {
-				return Attean::Literal->new($operands[0]->language);
-			# LANGMATCHES
+				die "TypeError: LANG" unless ($operands[0]->does('Attean::API::Literal'));
+# 				warn "LANG literal: " . $operands[0]->as_string . "\n";	# XXX
+				return Attean::Literal->new($operands[0]->language // '');
+			} elsif ($func eq 'LANGMATCHES') {
+				my ($lang, $match)	= map { $_->value } @operands;
+				my $true	= Attean::Literal->true;
+				my $false	= Attean::Literal->false;
+				if ($match eq '*') {
+					# """A language-range of "*" matches any non-empty language-tag string."""
+					return ($lang ? $true : $false);
+				} else {
+					my $ok	= (I18N::LangTags::is_dialect_of( $lang, $match ));
+# 					warn "\@$lang ~~ $match  ===>  $ok\n";	# XXX
+					return $ok ? $true : $false;
+				}
+				
 			} elsif ($func eq 'DATATYPE') {
 				return $operands[0]->datatype;
 			} elsif ($func eq 'BOUND') {
@@ -288,8 +314,34 @@ package Attean::FunctionExpression 0.001 {
 			# CONTAINS
 			# STRSTARTS
 			# STRENDS
-			# STRBEFORE
-			# STRAFTER
+			} elsif ($func eq 'STRBEFORE' or $func eq 'STRAFTER') {
+				my ($node, $substr)	= @operands;
+				my $lhs_simple	= not($node->language or $node->datatype);
+				my $lhs_xsd		= ($node->datatype and $node->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				my $rhs_simple	= not($substr->language or $substr->datatype);
+				my $rhs_xsd		= ($substr->datatype and $substr->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				if (($lhs_simple or $lhs_xsd) and ($rhs_simple or $rhs_xsd)) {
+					# ok
+				} elsif ($node->language and $substr->language and $node->langauge eq $substr->language) {
+					# ok
+				} elsif ($node->language and ($rhs_simple or $rhs_xsd)) {
+					# ok
+				} else {
+					die "$func called with literals that are not argument compatible";
+				}
+	
+				my $value	= $node->value;
+				my $match	= $substr->value;
+				my $i		= index($value, $match, 0);
+				if ($i < 0) {
+					return Attean::Literal->new('');
+				} else {
+					if ($func eq 'STRBEFORE') {
+						return Attean::Literal->new(value => substr($value, 0, $i), $node->construct_args);
+					} else {
+						return Attean::Literal->new(value => substr($value, $i+length($match)), $node->construct_args);
+					}
+				}
 			# YEAR
 			# MONTH
 			# DAY
@@ -309,8 +361,18 @@ package Attean::FunctionExpression 0.001 {
 				my $hash	= $func =~ s/SHA/SHA-/r;
 				my $digest	= eval { Digest->new($hash)->add(encode('UTF-8', $operands[0]->value, Encode::FB_CROAK))->hexdigest };
 				return Attean::Literal->new($digest);
-			# STRLANG
-			# STRDT
+			} elsif ($func eq 'STRLANG') {
+				my @values	= map { $_->value } @operands;
+				return Attean::Literal->new( value => $values[0], language => $values[1] );
+			} elsif ($func eq 'STRDT') {
+				die "TypeError: STRDT" unless ($operands[0]->does('Attean::API::Literal') and not($operands[0]->language));
+				if (my $dt = $operands[0]->datatype) {
+					die "TypeError: STRDT" unless ($dt->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				}
+				die "TypeError: STRDT" unless ($operands[1]->does('Attean::API::IRI'));
+				my @values	= map { $_->value } @operands;
+				my $str	= Attean::Literal->new( value => $values[0], datatype => $values[1] );
+				return $str;
 			# SAMETERM
 			} elsif ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC)$/) {
 				return $operands[0]->does("Attean::API::$type_roles{$1}") ? Attean::Literal->true : Attean::Literal->false;
