@@ -30,6 +30,13 @@ package AtteanX::Parser::NTuples 0.001 {
 	use Encode qw(decode);
 	use namespace::clean;
 	
+	sub parse_term_from_string {
+		my $self	= shift;
+		my $string	= shift;
+		my $n = $self->_eat_node( 0, $string );
+		return $n;
+	}
+	
 =item C<< parse_iter_from_bytes( $data ) >>
 
 Returns an iterator of L<Attean::API::Binding> objects that result from parsing

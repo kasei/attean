@@ -124,6 +124,11 @@ serialization is found at the beginning of C<< $string >>.
 
 =cut
 
+	sub parse_term_from_string {
+		my $self	= shift;
+		return $self->parse_node(@_);
+	}
+	
 	sub parse_node {
 		my $self	= shift;
 		my $string	= shift;
