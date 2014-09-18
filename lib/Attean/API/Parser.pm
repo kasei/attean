@@ -199,6 +199,10 @@ package Attean::API::TermParser 0.001 {
 	# Parser returns objects that conform to Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
+	sub handled_type {
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Term');
+		return $ITEM_TYPE;
+	}
 }
 
 package Attean::API::TripleParser 0.001 {
@@ -227,6 +231,16 @@ package Attean::API::MixedStatementParser 0.001 {
 	with 'Attean::API::Parser';
 	sub handled_type {
 		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad');
+		return $ITEM_TYPE;
+	}
+}
+
+package Attean::API::ResultOrTermParser 0.001 {
+	# Parser returns objects that conform to either Attean::API::Result or Attean::API::Term
+	use Moo::Role;
+	with 'Attean::API::Parser';
+	sub handled_type {
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::ResultOrTerm');
 		return $ITEM_TYPE;
 	}
 }
