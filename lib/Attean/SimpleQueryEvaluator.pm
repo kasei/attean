@@ -67,6 +67,8 @@ supplied C<< $active_graph >>.
 		my $algebra			= shift;
 		my $active_graph	= shift || Carp::confess "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
 		
+		Carp::confess "No algebra passed for evaluation" unless ($algebra);
+		
 		if ($algebra->isa('Attean::Algebra::BGP')) {
 			my @triples	= @{ $algebra->triples };
 			if (scalar(@triples) == 0) {
@@ -103,6 +105,7 @@ supplied C<< $active_graph >>.
 			return $iter->map(sub {
 				my $r	= shift;
 				my $val	= eval { $impl->($r) };
+# 				warn "Extend: $@" if ($@);
 				return Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
 				return $r;
 			});
@@ -112,7 +115,9 @@ supplied C<< $active_graph >>.
 			my $iter	= $self->evaluate( $child, $active_graph );
 			return $iter->grep(sub {
 				my $r	= shift;
-				return $expr->evaluate($r)->ebv;
+				my $t	= eval { $expr->evaluate($r) };
+				if ($@) { warn "Filter evaluation: $@\n" };
+				return $t ? $t->ebv : 0;
 			});
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 			my ($child)	= @{ $algebra->children };
@@ -154,7 +159,7 @@ supplied C<< $active_graph >>.
 						return $b->join($gr);
 					}));
 				}
-				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
+				return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result') );
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 			my @groupby	= @{ $algebra->groupby };
