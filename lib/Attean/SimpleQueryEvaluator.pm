@@ -209,10 +209,10 @@ supplied C<< $active_graph >>.
 			return $lhs->join($rhs);
 		} elsif ($algebra->isa('Attean::Algebra::LeftJoin')) {
 			my $expr	= $algebra->expression;
-			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
-			my @rhs		= $rhs->elements;
+			my ($lhs_iter, $rhs_iter)	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
+			my @rhs		= $rhs_iter->elements;
 			my @results;
-			while (my $lhs = $self->next) {
+			while (my $lhs = $lhs_iter->next) {
 				my $joined	= 0;
 				foreach my $rhs (@rhs) {
 					if (my $j = $lhs->join($rhs)) {
@@ -224,7 +224,7 @@ supplied C<< $active_graph >>.
 				}
 				push(@results, $lhs) unless ($joined);
 			}
-			return Attean::ListIterator->new( values => \@results, item_type => $self->item_type);
+			return Attean::ListIterator->new( values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 		} elsif ($algebra->isa('Attean::Algebra::Minus')) {
 			my $expr	= $algebra->expression;
 			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
@@ -395,6 +395,13 @@ supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
 			my @iters	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
 			return Attean::IteratorSequence->new( iterators => \@iters );
+		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
+			my ($child)	= @{ $algebra->children };
+			my $iter	= $self->evaluate($child, $active_graph);
+			my $result	= $iter->next;
+			my $true	= Attean::Literal->true;
+			my $false	= Attean::Literal->false;
+			return Attean::ListIterator->new(values => [$result ? $true : $false], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'));
 		} else {
 			die "Unexpected algebra type: $algebra";
 		}
