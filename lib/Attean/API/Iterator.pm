@@ -122,6 +122,8 @@ package Attean::API::Iterator 0.001 {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Result'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Term'))) {
+			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
 		}
 	};
 	
@@ -281,6 +283,10 @@ package Attean::API::ResultIterator 0.001 {
 		}
 		return Attean::ListIterator->new( values => \@results, item_type => $self->item_type);
 	}
+}
+
+package Attean::API::TermIterator 0.001 {
+	use Moo::Role;
 }
 
 1;
