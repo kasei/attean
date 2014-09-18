@@ -4,12 +4,12 @@ use warnings;
 package Attean::BindingEqualityTest 0.001 {
 	use v5.14;
 	use warnings;
-	use Data::Dumper;
-	use Attean::RDF;
-	use Algorithm::Combinatorics qw(permutations);
-	use Scalar::Util qw(blessed);
 	use Moo;
 	use Types::Standard qw(CodeRef ConsumerOf Str);
+	use Data::Dumper;
+	use Algorithm::Combinatorics qw(permutations);
+	use Scalar::Util qw(blessed);
+	use Attean::RDF;
 	use namespace::clean;
 	
 	our $debug	= 0;
@@ -65,7 +65,7 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 	
 		foreach my $i (0 .. $#{ $nba }) {
 			unless ($nba->[$i] eq $nbb->[$i]) {
-				$self->error("non-blank triples don't match: " . Dumper($nba->[$i], $nbb->[$i]));
+				$self->error("non-blank triples don't match:\n" . Dumper($nba->[$i], $nbb->[$i]));
 				return 0;
 			}
 		}
@@ -160,8 +160,10 @@ solutions, the solution returned is arbitrary.
 		MAPPING: while (my $mapping = $kbp->next) {
 			my %mapping_str;
 			@mapping_str{ @ka }	= @$mapping;
-			my $mapping			= { map { blank($_)->as_string => blank($mapping_str{$_}) } keys %mapping_str };
-			my $mapper	= Attean::TermMap->rewrite_map($mapping);
+			my %mapping			= map {
+				Attean::Blank->new($_)->as_string => Attean::Blank->new($mapping_str{$_})
+			} (keys %mapping_str);
+			my $mapper	= Attean::TermMap->rewrite_map(\%mapping);
 			warn "trying mapping: " . Dumper($mapping) if ($debug);
 		
 			my %bb	= %bb_master;
