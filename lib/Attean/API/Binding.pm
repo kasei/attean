@@ -285,7 +285,7 @@ package Attean::API::Result 0.001 {
 		return $class->new( bindings => \%values );
 	}
 
-	with 'Attean::API::Binding';
+	with 'Attean::API::Binding', 'Attean::API::ResultOrTerm';
 }
 
 1;

@@ -46,7 +46,7 @@ Returns a string serialization of the term.
 package Attean::API::Term 0.001 {
 	use Moo::Role;
 	
-	with 'Attean::API::TermOrVariable';
+	with 'Attean::API::TermOrVariable', 'Attean::API::ResultOrTerm';
 	
 	requires 'value'; # => (is => 'ro', isa => 'Str', required => 1);
 	requires 'ntriples_string';
