@@ -21,6 +21,10 @@ in the Attean::API namespace.
 
 =cut
 
+package Attean::API::ResultOrTerm 0.001 {
+	use Moo::Role;
+}
+
 package Attean::API::BlankOrIRI 0.001 {
 	use Moo::Role;
 }
