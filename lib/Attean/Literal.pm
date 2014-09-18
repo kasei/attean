@@ -31,6 +31,8 @@ package Attean::Literal 0.001 {
 	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;
 	use IRI;
+	use Sub::Install;
+	use Sub::Name;
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
@@ -103,10 +105,19 @@ package Attean::Literal 0.001 {
 		return $v;
 	}
 	
-	sub integer {
-		my $class	= shift;
-		return $class->new( value => shift, datatype => 'http://www.w3.org/2001/XMLSchema#integer' );
+	{
+		for my $method (qw(integer decimal float double)) {
+			my $code	= sub {
+				my $class	= shift;
+				return $class->new( value => shift, datatype => "http://www.w3.org/2001/XMLSchema#$method" );
+			};
+			Sub::Install::install_sub({
+				code	=> subname("${method}", $code),
+				as		=> "${method}"
+			});
+		}
 	}
+
 }
 
 1;
