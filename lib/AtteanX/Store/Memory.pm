@@ -124,6 +124,7 @@ sub get_quads {
 		foreach my $i (0 .. $#pos) {
 			my $pos	= $pos[ $i ];
 			my $node	= $bound{ $pos };
+			Carp::confess unless ($node->can('as_string'));
 			my $string	= $node->as_string;
 			my $name	= $names[$i];
 			my $hash	= $self->$name();
@@ -317,6 +318,9 @@ sub count_quads {
 	
 	foreach my $pos (0 .. 3) {
 		my $n	= $nodes[ $pos ];
+		if (ref($n)) {
+			Carp::confess "Non-Attean node?" unless (ref($n) =~ /Attean/);
+		}
 		if (blessed($n) and not($n->does('Attean::API::Variable'))) {
 			$bound++;
 			$bound{ $pos }	= $n;

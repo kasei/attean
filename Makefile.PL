@@ -26,6 +26,8 @@ requires		'Set::Scalar'				=> 0;
 requires		'namespace::clean'			=> 0;
 requires		'Data::UUID'				=> 0;
 requires		'DateTime::Format::W3CDTF'	=> 0;
+requires		'I18N::LangTags'			=> 0;
+requires		'URI::Escape'				=> 1.36;
 
 
 

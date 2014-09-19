@@ -198,8 +198,14 @@ serialization is found at the beginning of C<< $string >>.
 	# 		when (WS) {}
 		if ($type == PREFIX or $type == SPARQLPREFIX) {
 			$t	= $self->_get_token_type($l, PREFIXNAME);
+			use Data::Dumper;
+			unless (defined($t->value)) {
+				my $tname	= AtteanX::Parser::Turtle::Constants::decrypt_constant($t->type);
+				Carp::confess "undefined $tname token value: " . Dumper($t);
+			}
 			my $name	= $t->value;
-			$name		=~ s/:$//;
+			chop($name) if (substr($name, -1) eq ':');
+# 			$name		=~ s/:$//;
 			$t	= $self->_get_token_type($l, IRI);
 			my %args	= (value => $t->value);
 			if ($self->has_base) {

@@ -66,15 +66,17 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 
 	sub walk {
 		my $self	= shift;
-		my %cb		= @_;
-		if (my $cb = $cb{ prefix }) {
-			$cb->( $self );
+		my %args	= @_;
+		my $level	= $args{ level } // 0;
+		my $parent	= $args{ parent };
+		if (my $cb = $args{ prefix }) {
+			$cb->( $self, $level, $parent );
 		}
 		foreach my $c (@{ $self->children }) {
-			$c->walk( %cb );
+			$c->walk( %args, level => (1+$level), parent => $self );
 		}
-		if (my $cb = $cb{ postfix }) {
-			$cb->( $self );
+		if (my $cb = $args{ postfix }) {
+			$cb->( $self, $level, $parent );
 		}
 	}
 	
@@ -120,6 +122,11 @@ package Attean::API::Algebra 0.001 {
 # TODO: require these algebra methods:
 # 	requires 'necessarily_bound_variables';	# variables that will necessarily be bound to a term after this operation is evaluated
 # 	requires 'required_variables';			# variables that must be bound before this operation for its evaluation to be successful
+	
+	sub algebra_as_string {
+		my $self	= shift;
+		return "$self";
+	}
 	
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {

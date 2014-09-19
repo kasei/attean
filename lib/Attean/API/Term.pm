@@ -114,6 +114,28 @@ package Attean::API::Literal 0.001 {
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
 	
 	sub BUILD {}
+	around 'BUILDARGS' => sub {
+		my $orig	= shift;
+		my $class	= shift;
+		my $args	= $class->$orig(@_);
+		if (my $lang = $args->{language}) {
+			my $oldlang	= $lang;
+			# http://tools.ietf.org/html/bcp47#section-2.1.1
+			# All subtags use lowercase letters
+			$lang	= lc($lang);
+
+			# with 2 exceptions: subtags that neither appear at the start of the tag nor occur after singletons
+			# i.e. there's a subtag of length at least 2 preceding the exception; and a following subtag or end-of-tag
+
+			# 1. two-letter subtags are all uppercase
+			$lang	=~ s{(?<=\w\w-)(\w\w)(?=($|-))}{\U$1}g;
+
+			# 2. four-letter subtags are titlecase
+			$lang	=~ s{(?<=\w\w-)(\w\w\w\w)(?=($|-))}{\u\L$1}g;
+			$args->{language}	= $lang;
+		}
+		return $args;
+	};
 	around 'BUILD' => sub {
 		my $orig	= shift;
 		my $self	= shift;
@@ -219,6 +241,102 @@ package Attean::API::NumericLiteral 0.001 {
 			return 1;
 # 			Attean::API::Literal::compare($a, $b);
 		}
+	}
+	
+	sub canonicalized_term {
+		my $self	= shift;
+		my $value	= $self->value;
+		my $type	= $self->datatype->value;
+		$type		=~ s/^.*#//;
+		if ($type eq 'integer') {
+			if ($value =~ m/^([-+])?(\d+)$/) {
+				my $sign	= $1 || '';
+				my $num		= $2;
+				$sign		= '' if ($sign eq '+');
+				$num		=~ s/^0+(\d)/$1/;
+				return Attean::Literal->integer("${sign}${num}");
+			} else {
+				die "Bad lexical form for xsd:integer: '$value'";
+			}
+		} elsif ($type eq 'decimal') {
+			if ($value =~ m/^([-+])?((\d+)([.]\d*)?)$/) {
+				my $sign	= $1 || '';
+				my $num		= $2;
+				my $int		= $3;
+				my $frac	= $4;
+				$sign		= '' if ($sign eq '+');
+				$num		=~ s/^0+(.)/$1/;
+				$num		=~ s/[.](\d)0+$/.$1/;
+				if ($num =~ /^[.]/) {
+					$num	= "0$num";
+				}
+				if ($num !~ /[.]/) {
+					$num	= "${num}.0";
+				}
+				return Attean::Literal->decimal("${sign}${num}");
+			} elsif ($value =~ m/^([-+])?([.]\d+)$/) {
+				my $sign	= $1 || '';
+				my $num		= $2;
+				$sign		= '' if ($sign eq '+');
+				$num		=~ s/^0+(.)/$1/;
+				return Attean::Literal->decimal("${sign}${num}");
+			} else {
+				die "Bad lexical form for xsd:deciaml: '$value'";
+			}
+		} elsif ($type eq 'float') {
+			if ($value =~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/) {
+				my $sign	= $1;
+				my $inf		= $4;
+				my $nan		= $5;
+				no warnings 'uninitialized';
+				$sign		= '' if ($sign eq '+');
+				return Attean::Literal->float("${sign}$inf") if ($inf);
+				return Attean::Literal->float($nan) if ($nan);
+
+				$value		= sprintf('%E', $value);
+				$value 		=~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/;
+				$sign		= $1;
+				$inf		= $4;
+				$nan		= $5;
+				my $num		= $2;
+				my $exp		= $3;
+				$num		=~ s/[.](\d+?)0+/.$1/;
+				$exp	=~ tr/e/E/;
+				$exp	=~ s/E[+]/E/;
+				$exp	=~ s/E(-?)0+([1-9])$/E$1$2/;
+				$exp	=~ s/E(-?)0+$/E${1}0/;
+				return Attean::Literal->float("${sign}${num}${exp}");
+			} else {
+				die "Bad lexical form for xsd:float: '$value'";
+			}
+		} elsif ($type eq 'double') {
+			if ($value =~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/) {
+				my $sign	= $1;
+				my $inf		= $4;
+				my $nan		= $5;
+				no warnings 'uninitialized';
+				$sign		= '' if ($sign eq '+');
+				return Attean::Literal->double("${sign}$inf") if ($inf);
+				return Attean::Literal->double($nan) if ($nan);
+
+				$value		= sprintf('%E', $value);
+				$value 		=~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/;
+				$sign		= $1;
+				$inf		= $4;
+				$nan		= $5;
+				my $num		= $2;
+				my $exp		= $3;
+				$num		=~ s/[.](\d+?)0+/.$1/;
+				$exp	=~ tr/e/E/;
+				$exp	=~ s/E[+]/E/;
+				$exp	=~ s/E(-?)0+([1-9])$/E$1$2/;
+				$exp	=~ s/E(-?)0+$/E${1}0/;
+				return Attean::Literal->double("${sign}${num}${exp}");
+			} else {
+				die "Bad lexical form for xsd:double: '$value'";
+			}
+		}
+		return $self;
 	}
 	
 	sub is_integer_type {

@@ -56,7 +56,7 @@ application/sparql-results+json.
 	sub parse_list_from_io {
 		my $self	= shift;
 		my $io		= shift;
-		my $data	= do { undef($/); <$io> };
+		my $data	= do { local($/) = undef; <$io> };
 		return $self->parse_list_from_bytes($data);
 	}
 	
@@ -96,7 +96,7 @@ application/sparql-results+json.
 							$data{ $v }	= Attean::Literal->new( value => $data, datatype => $dt );
 						} else {
 							warn Dumper($data, $b);
-							throw RDF::Trine::Error -text => "Unknown node type $type during parsing of SPARQL JSON Results";
+							die "Unknown node type $type during parsing of SPARQL JSON Results";
 						}
 					}
 				}

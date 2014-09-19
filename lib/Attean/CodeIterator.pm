@@ -55,13 +55,14 @@ that will be returned from the iterator.
 package Attean::CodeIterator 0.001 {
 	use Moo;
 	use Type::Tiny::Role;
-	use Types::Standard qw(CodeRef);
+	use Types::Standard qw(CodeRef ArrayRef);
 	use namespace::clean;
 	
 	with 'Attean::API::Iterator';
 	
 	has generator => (is => 'ro', isa => CodeRef, required => 1);
-	
+	has buffer => (is => 'ro', isa => ArrayRef, init_arg => undef, default => sub { [] });
+
 =item C<< next >>
 
 Returns the iterator's next item, or undef upon reaching the end of iteration.
@@ -70,9 +71,16 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 
 	sub next {
 		my $self	= shift;
-		my $item	= $self->generator->();
+		my $buffer	= $self->buffer;
+		if (scalar(@$buffer)) {
+			return shift(@$buffer);
+		}
+		my @items	= $self->generator->();
+		my $item	= shift(@items);
 		return unless defined($item);
-		
+		if (scalar(@items)) {
+			push(@$buffer, @items);
+		}
 		my $constraint	= $self->item_type;
 		$constraint->assert_valid($item);
 		return $item;

@@ -76,9 +76,23 @@ supplied C<< $active_graph >>.
 				return Attean::ListIterator->new(values => [$b], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 			} else {
 				my @iters;
+				my %vars;
 				foreach my $t (@triples) {
-					my $q	= $t->as_quad_pattern($active_graph);
-					my $iter	= $self->model->get_bindings( $q->values );
+					my $q		= $t->as_quad_pattern($active_graph);
+					my @values;
+					my %blanks;
+					foreach my $v ($q->values) {
+						if ($v->does('Attean::API::Blank')) {
+							my $var	= ($blanks{$v->value} ||= Attean::Variable->new());
+							push(@values, $var);
+						} else {
+							if ($v->does('Attean::API::Variable')) {
+								$vars{ $v->value }++;
+							}
+							push(@values, $v);
+						}
+					}
+					my $iter	= $self->model->get_bindings( @values )->map(sub { shift->project(keys %vars) });
 					push(@iters, $iter);
 				}
 				while (scalar(@iters) > 1) {
@@ -97,16 +111,31 @@ supplied C<< $active_graph >>.
 				return not($seen{ $r->as_string }++);
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
-			my $expr	= $algebra->expression;
-			my $var		= $algebra->variable->value;
-			my ($child)	= @{ $algebra->children };
+			my $child	= $algebra;
+			my @extends;
+			my %extends;
+			while ($child->isa('Attean::Algebra::Extend')) {
+				my $expr			= $child->expression;
+				my $var				= $child->variable->value;
+				my $impl			= $expr->impl;
+				$extends{ $var }	= $impl;
+				unshift(@extends, $var);
+				($child)			= @{ $child->children };
+			}
 			my $iter	= $self->evaluate( $child, $active_graph );
-			my $impl	= $expr->impl;
 			return $iter->map(sub {
 				my $r	= shift;
-				my $val	= eval { $impl->($r) };
-# 				warn "Extend: $@" if ($@);
-				return Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
+				my %extension;
+				my %row_cache;
+				foreach my $var (@extends) {
+					my $impl	= $extends{ $var };
+# 					warn "================> $var\n";
+					my $val	= eval { $impl->($r, \%row_cache) };
+					warn "Extend error: $@" if ($@);
+					if ($val) {
+						$r	= Attean::Result->new( bindings => { $var => $val } )->join($r);
+					}
+				}
 				return $r;
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
@@ -133,7 +162,7 @@ supplied C<< $active_graph >>.
 				foreach my $i (0 .. $#cmps) {
 					my $av	= $avalues->[$i];
 					my $bv	= $bvalues->[$i];
-					$c	= $av->compare($bv);
+					$c		= $av ? $av->compare($bv) : 1;
 					if ($dirs[$i] == 0) {
 						$c	*= -1;
 					}
@@ -156,7 +185,8 @@ supplied C<< $active_graph >>.
 					my $iter	= $self->evaluate($child, $g);
 					push(@iters, $iter->map(sub {
 						my $b	= shift;
-						return $b->join($gr);
+						my $result	= $b->join($gr);
+						return $result;
 					}));
 				}
 				return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result') );
@@ -184,24 +214,30 @@ supplied C<< $active_graph >>.
 				$groups{$key}	= [$gr, []] unless (exists($groups{$key}));
 				push(@{ $groups{$key}[1] }, $r);
 			}
-			
+			my @keys	= keys %groups;
+			if (scalar(@keys) == 0) {
+				push(@keys, '');
+				my $gr			= Attean::Result->new( bindings => {} );
+				$groups{''}	= [$gr, []];
+			}
 			my $aggs	= $algebra->aggregates;
 			my @agg_impls	= map { $_->impl } @$aggs;
 			my @results;
-			foreach my $key (keys %groups) {
+			foreach my $key (@keys) {
 				my ($binding, $rows)	= @{ $groups{$key} };
 				my $count	= scalar(@$rows);
-# 				warn sprintf("Group with %3d rows: $key", $count);
 				my %bindings;
 				foreach my $i (0 .. $#agg_impls) {
 					my $agg	= $aggs->[$i];
 					my $name	= $agg->variable->value;
-					my $term	= $agg_impls[$i]->( @$rows );
+					my $term	= eval { $agg_impls[$i]->( @$rows ) };
 					if ($term) {
 						$bindings{ $name } = $term;
 					}
 				}
-				push(@results, Attean::Result->new( bindings => \%bindings )->join($binding));
+				my $r	= Attean::Result->new( bindings => \%bindings )->join($binding);
+				say "GROUP Result: " . $r->as_string;
+				push(@results, $r);
 			}
 			return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
@@ -226,7 +262,6 @@ supplied C<< $active_graph >>.
 			}
 			return Attean::ListIterator->new( values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 		} elsif ($algebra->isa('Attean::Algebra::Minus')) {
-			my $expr	= $algebra->expression;
 			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
 			my @rhs		= $rhs->elements;
 			my @results;
@@ -394,7 +429,7 @@ supplied C<< $active_graph >>.
 			return $iter;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
 			my @iters	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
-			return Attean::IteratorSequence->new( iterators => \@iters );
+			return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my ($child)	= @{ $algebra->children };
 			my $iter	= $self->evaluate($child, $active_graph);
@@ -402,6 +437,34 @@ supplied C<< $active_graph >>.
 			my $true	= Attean::Literal->true;
 			my $false	= Attean::Literal->false;
 			return Attean::ListIterator->new(values => [$result ? $true : $false], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'));
+		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
+			my ($child)	= @{ $algebra->children };
+			my $iter	= $self->evaluate($child, $active_graph);
+			my $triples	= $algebra->triples;
+			my %seen;
+			return Attean::CodeIterator->new(
+				generator => sub {
+					my $r	= $iter->next;
+					return unless ($r);
+					my %mapping			= map {
+						my $t	= $r->value($_);
+						$t ? ("?$_" => $t) : ();
+					} ($r->variables);
+					my $mapper	= Attean::TermMap->rewrite_map(\%mapping);
+				
+					my @triples;
+					foreach my $pattern (@$triples) {
+						my $triple	= Attean::Triple->new($pattern->apply_map($mapper)->values);
+						push(@triples, $triple) unless ($triple->has_blanks);
+					}
+					return @triples;
+				},
+				item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple')
+			)->grep(sub {
+				return not($seen{shift->as_string}++);
+			});
+		} elsif ($algebra->isa('Attean::Algebra::Table')) {
+			return Attean::ListIterator->new(values => $algebra->rows, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 		} else {
 			die "Unexpected algebra type: $algebra";
 		}

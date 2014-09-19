@@ -26,6 +26,7 @@ during parsing of Turtle.
 package AtteanX::Parser::Turtle::Token;
 
 use Moo;
+use Types::Standard qw(ArrayRef Str);
 use List::MoreUtils qw(zip);
 use namespace::clean;
 
@@ -34,7 +35,7 @@ has start_line => ( is => 'ro', );
 has start_column => ( is => 'ro', );
 has line => ( is => 'ro', );
 has column => ( is => 'ro', );
-has args => ( is => 'ro', );
+has args => ( is => 'ro', isa => ArrayRef[Str]);
 
 =item C<< value >>
 

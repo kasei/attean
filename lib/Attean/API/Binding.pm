@@ -242,6 +242,12 @@ package Attean::API::Quad 0.001 {
 		}
 	}
 
+	sub as_triple {
+		my $self	= shift;
+		my @values	= $self->values;
+		return Attean::Triple->new(@values[0..2]);
+	}
+
 	with 'Attean::API::QuadPattern';
 	with 'Attean::API::TripleOrQuad';
 	with 'Attean::API::TripleOrQuadPattern';
@@ -276,7 +282,20 @@ package Attean::API::Result 0.001 {
 		my $joined	= Attean::Result->new( bindings => $row );
 		return $joined;
 	}
-
+	
+	sub project {
+		my $self	= shift;
+		my @vars	= @_;
+		my %bindings;
+		foreach my $v (@vars) {
+			my $term	= $self->value($v);
+			if ($term) {
+				$bindings{ $v }	= $term;
+			}
+		}
+		return Attean::Result->new( bindings => \%bindings );
+	}
+	
 	sub apply_map {
 		my $self	= shift;
 		my $class	= ref($self);

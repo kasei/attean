@@ -49,8 +49,6 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 	sub parse_iter_from_bytes {
 		my $self	= shift;
 		my $data	= shift;
-	
-		$data	= Encode::encode("utf-8", $data);
 		open(my $fh, '<:encoding(UTF-8)', \$data);
 		return $self->parse_iter_from_io($fh);
 	}
@@ -66,12 +64,17 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $fh		= shift;
 		
+		my $parser	= Attean->get_parser('Turtle')->new();
+
 		my $line	= <$fh>;
 		chomp($line);
 		my @vars;
-		my $parser	= Attean->get_parser('Turtle')->new();
 		foreach my $v (split("\t", $line)) {
-			die "Bad variable syntaxin SPARQL TSV data: '$v'" unless (substr($v, 0, 1) eq '?');
+			unless (substr($v, 0, 1) eq '?') {
+				use Data::Dumper;
+				warn 'TSV header: ' . Dumper($line);
+				Carp::confess "Bad variable syntax in SPARQL TSV data: '$v'";
+			}
 			push(@vars, substr($v, 1));
 		}
 		

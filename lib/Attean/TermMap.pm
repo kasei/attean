@@ -50,6 +50,28 @@ package Attean::TermMap 0.001 {
 		return $class->$orig(@_);
 	};
 	
+=item C<< canonicalization_map >>
+
+Returns a new L<Attean::TermMap> that canonicalizes recognized typed
+L<Attean::API::Literal> values.
+
+=cut
+
+	sub canonicalization_map {
+		my $class	= shift;
+		my %map;
+		return $class->new(mapper => sub {
+			my $term	= shift;
+			return $term unless ($term->does('Attean::API::Literal') and $term->datatype);
+			
+			if ($term->does('Attean::API::NumericLiteral')) {
+				return $term->canonicalized_term;
+			}
+			
+			return $term;
+		});
+	}
+	
 =item C<< uuid_blank_map >>
 
 Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.

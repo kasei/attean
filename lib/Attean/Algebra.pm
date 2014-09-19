@@ -103,6 +103,11 @@ package Attean::Algebra::Extend 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Extend { %s=%s }', $self->variable->as_string, $self->expression->as_string);
+	}
+	
 }
 
 =item * L<Attean::Algebra::Minus>
@@ -208,6 +213,12 @@ package Attean::Algebra::BGP 0.001 {
 		}
 		return $set->members;
 	}
+	
+	sub algebra_as_string {
+		my $self	= shift;
+		return 'BGP {' . join(', ', map { $_->as_string } @{ $self->triples }) . '}';
+	}
+	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']], default => sub { [] });
 	
@@ -433,6 +444,23 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 	sub postfix_name { return "?" }
 }
 
+=item * L<Attean::Algebra::Table>
+
+=cut
+
+package Attean::Algebra::Table 0.001 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+	sub in_scope_variables {
+		my $self	= shift;
+		return map { $_->value } @{ $self->variables };
+	}
+	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
+	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+}
+
 =item * L<Attean::Algebra::Ask>
 
 =cut
@@ -440,6 +468,18 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 package Attean::Algebra::Ask 0.001 {
 	use Moo;
 	sub in_scope_variables { return; }
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+}
+
+=item * L<Attean::Algebra::Construct>
+
+=cut
+
+package Attean::Algebra::Construct 0.001 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
+	sub in_scope_variables { return qw(subject predicate object); }
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 }
 

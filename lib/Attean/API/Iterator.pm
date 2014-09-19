@@ -124,6 +124,8 @@ package Attean::API::Iterator 0.001 {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
 		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Term'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
+		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::ResultOrTerm'))) {
+			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
 		}
 	};
 	
@@ -240,10 +242,44 @@ package Attean::API::RepeatableIterator 0.001 {
 	
 	requires 'reset';
 	with 'Attean::API::Iterator';
+	
+	sub peek {
+		my $self	= shift;
+		my $item	= $self->next;
+		$self->reset;
+		return $item;
+	}
+}
+
+package Attean::API::CanonicalizingBindingIterator {
+	use Moo::Role;
+	sub canonicalize {
+		my $self	= shift;
+		my $mapper	= Attean::TermMap->canonicalization_map;
+		return $self->map(sub { shift->apply_map( $mapper ) });
+	}
+}
+
+package Attean::API::ResultOrTermIterator 0.001 {
+	use Moo::Role;
+	sub canonicalize {
+		my $self	= shift;
+		my $mapper	= Attean::TermMap->canonicalization_map;
+		return $self->map(sub{
+			my $item	= shift;
+			if ($item->does('Attean::API::Term')) {
+				return $mapper->map($item);
+			} else {
+				my %values	= map { $_ => $mapper->map($item->value($_)) } $item->variables;
+				return Attean::Result->new( bindings => \%values );
+			}
+		});
+	}
 }
 
 package Attean::API::TripleIterator 0.001 {
 	use Moo::Role;
+	with 'Attean::API::CanonicalizingBindingIterator';
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;
@@ -253,10 +289,12 @@ package Attean::API::TripleIterator 0.001 {
 
 package Attean::API::QuadIterator 0.001 {
 	use Moo::Role;
+	with 'Attean::API::CanonicalizingBindingIterator';
 }
 
 package Attean::API::MixedStatementIterator 0.001 {
 	use Moo::Role;
+	with 'Attean::API::CanonicalizingBindingIterator';
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;
@@ -269,6 +307,7 @@ package Attean::API::MixedStatementIterator 0.001 {
 
 package Attean::API::ResultIterator 0.001 {
 	use Moo::Role;
+	with 'Attean::API::CanonicalizingBindingIterator';
 	sub join {
 		my $self	= shift;
 		my $rhs		= shift;
@@ -287,6 +326,12 @@ package Attean::API::ResultIterator 0.001 {
 
 package Attean::API::TermIterator 0.001 {
 	use Moo::Role;
+	sub canonicalize {
+		my $self	= shift;
+		my $mapper	= Attean::TermMap->canonicalization_map;
+		return $self->map( $mapper );
+	}
+	with 'Attean::API::CanonicalizingBindingIterator';
 }
 
 1;

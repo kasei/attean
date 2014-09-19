@@ -29,6 +29,7 @@ use AtteanX::Parser::Turtle::Constants;
 use v5.14;
 use strict;
 use warnings;
+use Data::Dumper;
 use Moo;
 use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 use namespace::clean;
@@ -195,7 +196,7 @@ sub get_token {
 		$self->start_column( $start_column );
 		$self->start_line( $start_line );
 		
-		if ($c eq '.' and $self->{buffer} =~ $r_decimal) {
+		if ($c eq '.' and $self->{buffer} =~ /^$r_decimal/) {
 			return $self->_get_number();
 		}
 		
@@ -364,9 +365,9 @@ sub _get_pname {
 	my $self	= shift;
 	my $prefix	= '';
 	
-	if ($self->{buffer} =~ $r_PNAME_LN) {
+	if ($self->{buffer} =~ /^$r_PNAME_LN/o) {
 		my $ln	= $self->_read_length($+[0]);
-		my ($ns,$local)	= ($ln =~ /^([^:]*:)(.*)$/o);
+		my ($ns, $local)	= ($ln =~ /^([^:]*:)(.*)$/);
 		no warnings 'uninitialized';
 		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 		return $self->new_token(PREFIXNAME, $self->{start_line}, $self->{start_column}, $ns, $local);
@@ -716,7 +717,7 @@ sub _throw_error {
 	my $error	= shift;
 	my $line	= $self->line;
 	my $col		= $self->column;
-	die "$error at $line:$col";
+	Carp::confess "$error at $line:$col with buffer: " . Dumper($self->{buffer});
 }
 
 __PACKAGE__->meta->make_immutable;
