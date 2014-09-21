@@ -226,6 +226,11 @@ package Attean::API::DateTimeLiteral 0.001 {
 	}
 }
 
+package Attean::API::CanonicalizingLiteral 0.001 {
+	use Moo::Role;
+	requires 'canonicalized_term';
+}
+
 package Attean::API::NumericLiteral 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed looks_like_number);
@@ -414,7 +419,7 @@ package Attean::API::NumericLiteral 0.001 {
 			die "Unexpected numeric operation in binary_promotion_type: $op";
 		}
 	}
-	with 'Attean::API::Literal';
+	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
 }
 
 package Attean::API::Blank 0.001 {
