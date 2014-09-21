@@ -32,6 +32,7 @@ use Attean::API::Query;
 package Attean::Algebra::Join 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	sub algebra_as_string { return 'Join' }
 }
 
 =item * L<Attean::Algebra::LeftJoin>
@@ -43,6 +44,10 @@ package Attean::Algebra::LeftJoin 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('LeftJoin { %s }', $self->expression->as_string);
+	}
 }
 
 =item * L<Attean::Algebra::Filter>
@@ -54,6 +59,10 @@ package Attean::Algebra::Filter 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Filter { %s }', $self->expression->as_string);
+	}
 }
 
 =item * L<Attean::Algebra::Union>
@@ -63,6 +72,7 @@ package Attean::Algebra::Filter 0.001 {
 package Attean::Algebra::Union 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	sub algebra_as_string { return 'Union' }
 }
 
 =item * L<Attean::Algebra::Graph>
@@ -82,6 +92,10 @@ package Attean::Algebra::Graph 0.001 {
 		} else {
 			return @vars;
 		}
+	}
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Graph %s', $self->graph->as_string);
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
@@ -122,6 +136,7 @@ package Attean::Algebra::Minus 0.001 {
 		return $child->in_scope_variables;
 	}
 	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	sub algebra_as_string { return 'Minus' }
 }
 
 =item * L<Attean::Algebra::Distinct>
@@ -131,6 +146,7 @@ package Attean::Algebra::Minus 0.001 {
 package Attean::Algebra::Distinct 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	sub algebra_as_string { return 'Distinct' }
 }
 
 =item * L<Attean::Algebra::Reduced>
@@ -140,6 +156,7 @@ package Attean::Algebra::Distinct 0.001 {
 package Attean::Algebra::Reduced 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	sub algebra_as_string { return 'Reduced' }
 }
 
 =item * L<Attean::Algebra::Slice>
@@ -152,6 +169,13 @@ package Attean::Algebra::Slice 0.001 {
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
+	sub algebra_as_string {
+		my $self	= shift;
+		my @str	= ('Filter');
+		push(@str, "Limit=" . $self->limit) if ($self->limit >= 0);
+		push(@str, "Offset=" . $self->offset) if ($self->limit > 0);
+		return join(' ', @str);
+	}
 }
 
 =item * L<Attean::Algebra::Project>
@@ -170,6 +194,10 @@ package Attean::Algebra::Project 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
+	}
 }
 
 =item * L<Attean::Algebra::Comparator>
@@ -216,7 +244,7 @@ package Attean::Algebra::BGP 0.001 {
 	
 	sub algebra_as_string {
 		my $self	= shift;
-		return 'BGP {' . join(', ', map { $_->as_string } @{ $self->triples }) . '}';
+		return 'BGP { ' . join(', ', map { $_->as_string } @{ $self->triples }) . ' }';
 	}
 	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
