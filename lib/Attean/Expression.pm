@@ -77,7 +77,7 @@ package Attean::ValueExpression 0.001 {
 		my $node	= $self->value;
 		if ($node->does('Attean::API::Variable')) {
 			return sub {
-				my ($r, @args)	= @_;
+				my ($r, %args)	= @_;
 # 				warn "Evaluating ValueExpression for variable '" . $node->value . "' on binding " . $binding->as_string;
 				my $term	= $r->value($node->value);
 # 				warn "===> " . $term->as_string;
@@ -124,12 +124,19 @@ package Attean::UnaryExpression 0.001 {
 		my $impl	= $child->impl;
 		if ($op eq '!') {
 			return sub {
-				my ($r, @args)	= @_;
-				my $term	= $impl->($r, @args);
+				my ($r, %args)	= @_;
+				my $term	= $impl->($r, %args);
 				return ($term->ebv) ? Attean::Literal->false : Attean::Literal->true;
 			}
+		} elsif ($op eq '-' or $op eq '+') {
+			return sub {
+				my ($r, %args)	= @_;
+				my $term	= $impl->($r, %args);
+				die "TypeError $op" unless (blessed($term) and $term->does('Attean::API::NumericLiteral'));
+				my $v	= $term->numeric_value;
+				return Attean::Literal->new( value => eval "$op$rv", datatype => $term->datatype );
+			};
 		}
-		# TODO: implement UnaryExpression evaluation
 		die "Unimplemented UnaryExpression evaluation: " . $self->operator;
 	}
 	
@@ -162,9 +169,9 @@ package Attean::BinaryExpression 0.001 {
 		my $false	= Attean::Literal->false;
 		if ($op eq '&&') {
 			return sub {
-				my ($r, @args)	= @_;
-				my $lbv	= eval { $lhsi->($r, @args) };
-				my $rbv	= eval { $rhsi->($r, @args) };
+				my ($r, %args)	= @_;
+				my $lbv	= eval { $lhsi->($r, %args) };
+				my $rbv	= eval { $rhsi->($r, %args) };
 				die "TypeError $op" unless ($lbv or $rbv);
 				return $false if (not($lbv) and not($rbv->ebv));
 				return $false if (not($rbv) and not($lbv->ebv));
@@ -173,20 +180,22 @@ package Attean::BinaryExpression 0.001 {
 			}
 		} elsif ($op eq '||') {
 			return sub {
-				my ($r, @args)	= @_;
-				my $lbv	= eval { $lhsi->($r, @args) };
+				my ($r, %args)	= @_;
+				my $lbv	= eval { $lhsi->($r, %args) };
+# 				warn 'LOGICAL-OR LHS: ' . ($lbv ? $lbv->as_string : '(undef)');
 				return $true if ($lbv and $lbv->ebv);
-				my $rbv	= eval { $rhsi->($r, @args) };
+				my $rbv	= eval { $rhsi->($r, %args) };
+# 				warn 'LOGICAL-OR RHS: ' . ($rbv ? $rbv->as_string : '(undef)');
 				die "TypeError $op" unless ($rbv);
 				return $true if ($rbv->ebv);
-		
+# 				warn "LOGICAL-OR FALLTHROUGH\n";
 				return $false if ($lbv);
 				die "TypeError $op";
 			}
 		} elsif ($op =~ m#^(?:[-+*/])$#) { # numeric operators: - + * /
 			return sub {
-				my ($r, @args)	= @_;
-				($lhs, $rhs)	= map { $_->($r, @args) } ($lhsi, $rhsi);
+				my ($r, %args)	= @_;
+				($lhs, $rhs)	= map { $_->($r, %args) } ($lhsi, $rhsi);
 				for ($lhs, $rhs) { die "TypeError $op" unless (blessed($_) and $_->does('Attean::API::NumericLiteral')); }
 				my $lv	= $lhs->numeric_value;
 				my $rv	= $rhs->numeric_value;
@@ -194,8 +203,8 @@ package Attean::BinaryExpression 0.001 {
 			};
 		} elsif ($op =~ /^!?=$/) {
 			return sub {
-				my ($r, @args)	= @_;
-				($lhs, $rhs)	= map { $_->($r, @args) } ($lhsi, $rhsi);
+				my ($r, %args)	= @_;
+				($lhs, $rhs)	= map { $_->($r, %args) } ($lhsi, $rhsi);
 				for ($lhs, $rhs) { die "TypeError $op" unless (blessed($_) and $_->does('Attean::API::Term')); }
 				my $ok	= ($lhs->equals($rhs));
 				$ok		= not($ok) if ($op eq '!=');
@@ -203,8 +212,8 @@ package Attean::BinaryExpression 0.001 {
 			}
 		} elsif ($op =~ /^[<>]=?$/) {
 			return sub {
-				my ($r, @args)	= @_;
-				($lhs, $rhs)	= map { $_->($r, @args) } ($lhsi, $rhsi);
+				my ($r, %args)	= @_;
+				($lhs, $rhs)	= map { $_->($r, %args) } ($lhsi, $rhsi);
 				for ($lhs, $rhs) { die "TypeError $op" unless $_->does('Attean::API::Term'); }
 				my $c	= ($lhs->compare($rhs));
 				return Attean::Literal->true if (($c < 0 and ($op =~ /<=?/)) or ($c > 0 and ($op =~ />=?/)) or ($c == 0 and ($op =~ /=/)));
@@ -259,37 +268,38 @@ package Attean::FunctionExpression 0.001 {
 		my %type_roles		= qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral);
 		my %type_classes	= qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal);
 		return sub {
-			my ($r, @args)	= @_;
-			my $row_cache	= shift(@args) || {};
+			my ($r, %args)	= @_;
+			my $row_cache	= $args{row_cache} || {};
 			my $true		= Attean::Literal->true;
 			my $false		= Attean::Literal->false;
 			
 			if ($func eq 'IF') {
-				my $term	= $children[0]->( $r, @args );
+				my $term	= $children[0]->( $r, %args );
 				if ($term->ebv) {
-					return $children[1]->( $r, @args );
+					return $children[1]->( $r, %args );
 				} else {
-					return $children[2]->( $r, @args );
+					return $children[2]->( $r, %args );
 				}
 			} elsif ($func eq 'IN' or $func eq 'NOTIN') {
 				($true, $false)	= ($false, $true) if ($func eq 'NOTIN');
 				my $child	= shift(@children);
-				my $term	= $child->( $r, @args );
+				my $term	= $child->( $r, %args );
 				foreach my $c (@children) {
-					if (my $value = eval { $c->( $r, @args ) }) {
+					if (my $value = eval { $c->( $r, %args ) }) {
 						return $true if ($term->equals($value));
 					}
 				}
 				return $false;
 			} elsif ($func eq 'COALESCE') {
 				foreach my $c (@children) {
-					my $t	= eval { $c->( $r, @args ) };
+					my $t	= eval { $c->( $r, %args ) };
+					next if ($@);
 					return $t if $t;
 				}
 				return;
 			}
 			
-			my @operands	= map { $_->( $r, @args ) } @children;
+			my @operands	= map { $_->( $r, %args ) } @children;
 			if ($func =~ /^(STR)$/) {
 				return $type_classes{$1}->new($operands[0]->value);
 			} elsif ($func =~ /^([UI]RI)$/) {
@@ -365,7 +375,7 @@ package Attean::FunctionExpression 0.001 {
 			} elsif ($func eq 'SUBSTR') {
 				my $str	= shift(@operands);
 				my @args	= map { $_->numeric_value } @operands;
-				my $v	= scalar(@args == 1) ? substr($str->value, $args[0]) : substr($str->value, $args[0], $args[1]);
+				my $v	= scalar(@args == 1) ? substr($str->value, $args[0]-1) : substr($str->value, $args[0]-1, $args[1]);
 				return Attean::Literal->new( value => $v, $str->construct_args );
 			} elsif ($func eq 'STRLEN') {
 				return Attean::Literal->integer(length($operands[0]->value));
@@ -393,7 +403,6 @@ package Attean::FunctionExpression 0.001 {
 			} elsif ($func eq 'CONTAINS') {
 				my ($node, $pat)	= @operands;
 				my ($lit, $plit)	= map { $_->value } @operands;
-				# TODO: what should be returned if one or both arguments are typed as xsd:string?
 				die "TypeError: CONTAINS" if ($node->language and $pat->language and $node->language ne $pat->language);
 				my $pos		= index($lit, $plit);
 				return ($pos >= 0) ? Attean::Literal->true : Attean::Literal->false;
@@ -562,22 +571,30 @@ package Attean::AggregateExpression 0.001 {
 			if ($child) {
 				my $impl	= $child->impl;
 				return sub {
-					my @terms	= grep { blessed($_) } map { $impl->($_) } @_;
+					my ($rows, %args)	= @_;
+					my @terms	= grep { blessed($_) } map { $impl->($_, %args) } @{ $rows };
 					return Attean::Literal->integer(scalar(@terms));
 				};
 			} else {
-				return sub { return Attean::Literal->integer(scalar(@_)); };
+				return sub {
+					my ($rows, %args)	= @_;
+					return Attean::Literal->integer(scalar(@$rows));
+				};
 			}
 		} elsif ($agg =~ /^(?:SAMPLE|MIN|MAX|SUM|AVG|GROUP_CONCAT)$/) {
 			my $impl	= $child->impl;
 			if ($agg eq 'SAMPLE') {
-				return sub { return $impl->( shift ) };
+				return sub {
+					my ($rows, %args)	= @_;
+					return $impl->( shift(@$rows), %args )
+				};
 			} elsif ($agg eq 'MIN' or $agg eq 'MAX') {
 				my $expect	= ($agg eq 'MIN') ? 1 : -1;
 				return sub {
+					my ($rows, %args)	= @_;
 					my $extrema;
-					foreach my $r (@_) {
-						my $t	= $impl->( $r );
+					foreach my $r (@$rows) {
+						my $t	= $impl->( $r, %args );
 						return if (not($t) and $agg eq 'MIN');	# unbound is always minimal
 						next if (not($t));						# unbound need not be considered for MAX
 						$extrema	= $t if (not($extrema) or $extrema->compare($t) == $expect);
@@ -586,10 +603,11 @@ package Attean::AggregateExpression 0.001 {
 				};
 			} elsif ($agg eq 'SUM' or $agg eq 'AVG') {
 				return sub {
+					my ($rows, %args)	= @_;
 					my $count	= 0;
 					my $sum		= Attean::Literal->integer(0);
-					foreach my $r (@_) {
-						my $term	= $impl->( $r );
+					foreach my $r (@$rows) {
+						my $term	= $impl->( $r, %args );
 						if ($term->does('Attean::API::NumericLiteral')) {
 							$count++;
 							$sum	= Attean::Literal->new( value => ($sum->numeric_value + $term->numeric_value), datatype => $sum->binary_promotion_type($term, '+') );
@@ -605,13 +623,48 @@ package Attean::AggregateExpression 0.001 {
 			} elsif ($agg eq 'GROUP_CONCAT') {
 				my $sep	= $self->scalar_vars->{ 'seperator' } // ' ';
 				return sub {
-					my @strings	= map { eval { $impl->( shift )->value } // '' } @_;
+					my ($rows, %args)	= @_;
+					my @strings	= map { eval { $impl->( $_, %args )->value } // '' } @$rows;
 					return Attean::Literal->new(join($sep, @strings));
 				};
 			}
 		}
 		die "Unimplemented AggregateExpression evaluation: " . $self->operator;
 	}
+}
+
+package Attean::CastExpression 0.001 {
+	use Moo;
+	use Types::Standard qw(Enum ConsumerOf);
+	use namespace::clean;
+
+	has 'datatype'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI']);
+	sub BUILDARGS {
+		my $class	= shift;
+		return $class->SUPER::BUILDARGS(@_, operator => '_cast');
+	}
+	sub BUILD {
+		my $self	= shift;
+		state $type	= Enum[map { "http://www.w3.org/2001/XMLSchema#$_" } qw(integer decimal float double string boolean dateTime)];
+		$type->assert_valid($self->datatype->value);
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my ($child)	= @{ $self->children };
+		my $impl	= $child->impl;
+		my $type	= $self->datatype;
+		return sub {
+			my ($r, %args)	= @_;
+			my $term	= $impl->($r, %args);
+			# TODO: reformat syntax for xsd:double
+			my $cast	= Attean::Literal->new( value => $term->value, datatype => $type );
+			return $cast->canonicalized_term if ($cast->does('Attean::API::CanonicalizingLiteral'));
+			return $cast;
+		}
+	}
+	
+	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
 
 package Attean::ExistsExpression 0.001 {
@@ -636,7 +689,11 @@ package Attean::ExistsExpression 0.001 {
 	sub impl {
 		my $self	= shift;
 		my $algebra	= $self->pattern;
-		die "Unimplemented ExistsExpression evaluation";
+		return sub {
+			my ($r, %args)	= @_;
+			my $handler		= $args{handle_exists} || die "No handler found for EXISTS expressions";
+			return $handler->($algebra, $r, %args);
+		};
 	}
 }
 

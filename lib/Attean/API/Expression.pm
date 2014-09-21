@@ -63,9 +63,12 @@ Returns a string serialization of the expression object.
 
 =item C<< impl >>
 
-Returns a CODE reference that when called with a L<Attean::API::Result>
-argument, will evaluate the expression and return the resulting
-L<Attean::API::Term> object (or throw a type error exception).
+Returns a CODE reference that when called, will evaluate the expression and
+return the resulting L<Attean::API::Term> object (or throw a type error exception).
+The CODE reference will be called with with these arguments:
+
+* a L<Attean::API::Result> object (for normal expressions), or an ARRAY reference of L<Attean::API::Result> objects (for aggregate expressions)
+* a HASH reference that may be used to store per-result data (used in the evaluation of the BNODE function)
 
 =back
 

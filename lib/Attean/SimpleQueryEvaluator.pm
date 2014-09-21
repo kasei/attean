@@ -62,6 +62,20 @@ supplied C<< $active_graph >>.
 
 =cut
 
+	sub exists_pattern_handler_generator {
+		my $self			= shift;
+		my $active_graph	= shift;
+		return sub {
+			my $pattern		= shift;
+			my ($r, %args)	= @_;
+			my $table		= Attean::Algebra::Table->new( variables => [map { variable($_) } $r->variables], rows => [$r] );
+			my $join		= Attean::Algebra::Join->new( children => [$table, $pattern] );
+			# TODO: substitute variables at top-level of EXISTS pattern
+			my $iter	= $self->evaluate($join, $active_graph);
+			return ($iter->next) ? Attean::Literal->true : Attean::Literal->false;
+		}
+	}
+	
 	sub evaluate {
 		my $self			= shift;
 		my $algebra			= shift;
@@ -77,13 +91,16 @@ supplied C<< $active_graph >>.
 			} else {
 				my @iters;
 				my %vars;
+				my %blanks;
 				foreach my $t (@triples) {
 					my $q		= $t->as_quad_pattern($active_graph);
 					my @values;
-					my %blanks;
 					foreach my $v ($q->values) {
 						if ($v->does('Attean::API::Blank')) {
-							my $var	= ($blanks{$v->value} ||= Attean::Variable->new());
+							unless (exists $blanks{$v->value}) {
+								$blanks{$v->value}	= Attean::Variable->new();
+							}
+							my $var	= $blanks{$v->value};
 							push(@values, $var);
 						} else {
 							if ($v->does('Attean::API::Variable')) {
@@ -92,7 +109,7 @@ supplied C<< $active_graph >>.
 							push(@values, $v);
 						}
 					}
-					my $iter	= $self->model->get_bindings( @values )->map(sub { shift->project(keys %vars) });
+					my $iter	= $self->model->get_bindings( @values );
 					push(@iters, $iter);
 				}
 				while (scalar(@iters) > 1) {
@@ -100,7 +117,7 @@ supplied C<< $active_graph >>.
 					my $iter		= $lhs->join($rhs);
 					unshift(@iters, $iter);
 				}
-				return shift(@iters);
+				return shift(@iters)->map(sub { shift->project(keys %vars) });
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
 			my %seen;
@@ -130,8 +147,9 @@ supplied C<< $active_graph >>.
 				foreach my $var (@extends) {
 					my $impl	= $extends{ $var };
 # 					warn "================> $var\n";
-					my $val	= eval { $impl->($r, \%row_cache) };
-					warn "Extend error: $@" if ($@);
+					my $eh	= $self->exists_pattern_handler_generator( $active_graph );
+					my $val	= eval { $impl->($r, handle_exists => $eh, row_cache => \%row_cache) };
+# 					warn "Extend error: $@" if ($@);
 					if ($val) {
 						$r	= Attean::Result->new( bindings => { $var => $val } )->join($r);
 					}
@@ -140,13 +158,18 @@ supplied C<< $active_graph >>.
 			});
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			my $expr	= $algebra->expression;
+			my $impl	= $expr->impl;
 			my ($child)	= @{ $algebra->children };
 			my $iter	= $self->evaluate( $child, $active_graph );
+			my $eh	= $self->exists_pattern_handler_generator( $active_graph );
 			return $iter->grep(sub {
 				my $r	= shift;
-				my $t	= eval { $expr->evaluate($r) };
+				say "FILTER Result: " . $r->as_string;
+				my $t	= eval { $impl->($r, handle_exists => $eh, row_cache => {}) };
 				if ($@) { warn "Filter evaluation: $@\n" };
-				return $t ? $t->ebv : 0;
+# 				warn "Filter: " . ($t ? $t->as_string : '(undef)') . "\n";
+# 				warn sprintf("--> %d\n", $t->ebv) if ($t);
+				return ($t ? $t->ebv : 0);
 			});
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 			my ($child)	= @{ $algebra->children };
@@ -197,9 +220,11 @@ supplied C<< $active_graph >>.
 			my ($child)	= @{ $algebra->children };
 			my $iter	= $self->evaluate($child, $active_graph);
 			my %groups;
+			my $eh	= $self->exists_pattern_handler_generator( $active_graph );
 			while (my $r = $iter->next) {
 				my %vars;
-				my @group_terms	= map { eval { $_->($r) } } @impls;
+				my %row_cache;
+				my @group_terms	= map { eval { $_->($r, handle_exists => $eh, row_cache => \%row_cache) } } @impls;
 				my $key			= join(' ', map { blessed($_) ? $_->as_string : '' } @group_terms);
 				my %group_bindings;
 				foreach my $i (0 .. $#group_terms) {
@@ -224,19 +249,21 @@ supplied C<< $active_graph >>.
 			my @agg_impls	= map { $_->impl } @$aggs;
 			my @results;
 			foreach my $key (@keys) {
+				my %row_cache;
 				my ($binding, $rows)	= @{ $groups{$key} };
 				my $count	= scalar(@$rows);
 				my %bindings;
 				foreach my $i (0 .. $#agg_impls) {
 					my $agg	= $aggs->[$i];
 					my $name	= $agg->variable->value;
-					my $term	= eval { $agg_impls[$i]->( @$rows ) };
+					my $term	= eval { $agg_impls[$i]->( $rows, handle_exists => $eh, row_cache => \%row_cache ) };
+# 					warn "AGGREGATE error: $@" if ($@);
 					if ($term) {
 						$bindings{ $name } = $term;
 					}
 				}
 				my $r	= Attean::Result->new( bindings => \%bindings )->join($binding);
-				say "GROUP Result: " . $r->as_string;
+# 				say "GROUP Result: " . $r->as_string;
 				push(@results, $r);
 			}
 			return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
@@ -426,7 +453,11 @@ supplied C<< $active_graph >>.
 			if ($algebra->limit >= 0) {
 				$iter	= $iter->limit($algebra->limit);
 			}
-			return $iter;
+			return $iter->grep(sub {
+				my $r	= shift;
+				say "SLICE Result: " . $r->as_string;
+				return 1;
+			});
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
 			my @iters	= map { $self->evaluate($_, $active_graph) } @{ $algebra->children };
 			return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
