@@ -61,30 +61,6 @@ The following methods are required by the L<Attean::API::Expression> role:
 
 Returns a string serialization of the expression object.
 
-=item C<< impl >>
-
-Returns a CODE reference that when called, will evaluate the expression and
-return the resulting L<Attean::API::Term> object (or throw a type error exception).
-The CODE reference will be called with with these arguments:
-
-* a L<Attean::API::Result> object (for normal expressions), or an ARRAY reference of L<Attean::API::Result> objects (for aggregate expressions)
-* a HASH reference that may be used to store per-result data (used in the evaluation of the BNODE function)
-
-=back
-
-=head1 METHODS
-
-The L<Attean::API::Expression> role provides default implementations of the
-following methods:
-
-=over 4
-
-=item C<< evaluate( $result ) >>
-
-Evaluates the referent expression in the context of the supplied
-L<Attean::API::Result> C<< $result >>, and either returns the resulting
-L<Attean::API::Term> object or throws a type error exception.
-
 =back
 
 =cut
@@ -98,14 +74,7 @@ package Attean::API::Expression 0.001 {
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
 	requires 'as_string';
-	requires 'impl';
 	
-	sub evaluate {
-		my $self	= shift;
-		my $impl	= $self->impl;
-		return $impl->( @_ );
-	}
-
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		around 'BUILD' => sub {

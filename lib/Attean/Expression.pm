@@ -134,7 +134,7 @@ package Attean::UnaryExpression 0.001 {
 				my $term	= $impl->($r, %args);
 				die "TypeError $op" unless (blessed($term) and $term->does('Attean::API::NumericLiteral'));
 				my $v	= $term->numeric_value;
-				return Attean::Literal->new( value => eval "$op$rv", datatype => $term->datatype );
+				return Attean::Literal->new( value => eval "$op$v", datatype => $term->datatype );
 			};
 		}
 		die "Unimplemented UnaryExpression evaluation: " . $self->operator;
@@ -234,15 +234,15 @@ package Attean::FunctionExpression 0.001 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf HashRef);
 	use Types::Common::String qw(UpperCaseStr);
-	use URI::Escape qw(uri_escape_utf8);
-	use Encode qw(encode);
-	use POSIX qw(ceil floor);
-	use Digest;
-	use Data::UUID;
-	use Scalar::Util qw(blessed);
-	use List::MoreUtils qw(zip);
-	use DateTime::Format::W3CDTF;
-	use I18N::LangTags;
+# 	use URI::Escape qw(uri_escape_utf8);
+# 	use Encode qw(encode);
+# 	use POSIX qw(ceil floor);
+# 	use Digest;
+# 	use Data::UUID;
+# 	use Scalar::Util qw(blessed);
+# 	use List::MoreUtils qw(zip);
+# 	use DateTime::Format::W3CDTF;
+# 	use I18N::LangTags;
 	use namespace::clean;
 
 	around 'BUILDARGS' => sub {
@@ -684,16 +684,6 @@ package Attean::ExistsExpression 0.001 {
 		my $self	= shift;
 		# TODO: implement as_string for EXISTS patterns
 		return "EXISTS { ... }";
-	}
-	
-	sub impl {
-		my $self	= shift;
-		my $algebra	= $self->pattern;
-		return sub {
-			my ($r, %args)	= @_;
-			my $handler		= $args{handle_exists} || die "No handler found for EXISTS expressions";
-			return $handler->($algebra, $r, %args);
-		};
 	}
 }
 
