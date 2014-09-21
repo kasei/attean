@@ -71,8 +71,6 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		my @vars;
 		foreach my $v (split("\t", $line)) {
 			unless (substr($v, 0, 1) eq '?') {
-				use Data::Dumper;
-				warn 'TSV header: ' . Dumper($line);
 				Carp::confess "Bad variable syntax in SPARQL TSV data: '$v'";
 			}
 			push(@vars, substr($v, 1));

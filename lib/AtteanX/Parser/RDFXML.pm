@@ -76,13 +76,11 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		}
 		my $nodes	= $saxhandler->{nodes};
 		if ($nodes and scalar(@$nodes)) {
-			warn Dumper($nodes);
-			die "RDFXML parser node stack isn't empty after parse";
+			die "RDFXML parser node stack isn't empty after parse: " . Dumper($nodes);
 		}
 		my $expect	= $saxhandler->{expect};
 		if ($expect and scalar(@$expect) > 2) {
-			warn Dumper($expect);
-			die "RDFXML parser expect stack isn't empty after parse";
+			die "RDFXML parser expect stack isn't empty after parse:" . Dumper($expect);
 		}
 	}
 }

@@ -134,7 +134,7 @@ supplied C<< $active_graph >>.
 				foreach my $var (@extends) {
 					my $expr	= $extends{ $var };
 					my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
-					warn "Extend error: $@" if ($@);
+# 					warn "Extend error: $@" if ($@);
 					if ($val) {
 						$r	= Attean::Result->new( bindings => { $var => $val } )->join($r);
 					}
@@ -150,8 +150,6 @@ supplied C<< $active_graph >>.
 # 				say "FILTER Result: " . $r->as_string;
 				my $t	= $expr_eval->evaluate_expression( $expr, $r, $active_graph, {} );
 				if ($@) { warn "Filter evaluation: $@\n" };
-# 				warn "Filter: " . ($t ? $t->as_string : '(undef)') . "\n";
-# 				warn sprintf("--> %d\n", $t->ebv) if ($t);
 				return ($t ? $t->ebv : 0);
 			});
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
@@ -575,6 +573,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 		my $self			= shift;
 		my $expr			= shift;
 		my $active_graph	= shift;
+		my $op		= $expr->operator;
 		if ($expr->isa('Attean::ExistsExpression')) {
 			my $pattern		= $expr->pattern;
 			return sub {
@@ -590,18 +589,13 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 			if ($node->does('Attean::API::Variable')) {
 				return sub {
 					my ($r, %args)	= @_;
-	# 				warn "Evaluating ValueExpression for variable '" . $node->value . "' on binding " . $binding->as_string;
 					my $term	= $r->value($node->value);
-	# 				warn "===> " . $term->as_string;
 					return $term;
 				};
 			} else {
-				return sub {
-					return $node;
-				};
+				return sub { return $node };
 			}
 		} elsif ($expr->isa('Attean::UnaryExpression')) {
-			my $op		= $expr->operator;
 			my ($child)	= @{ $expr->children };
 			my $impl	= $self->impl($child, $active_graph);
 			if ($op eq '!') {
@@ -622,7 +616,6 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 			die "Unimplemented UnaryExpression evaluation: " . $expr->operator;
 		} elsif ($expr->isa('Attean::BinaryExpression')) {
 			my ($lhs, $rhs)	= @{ $expr->children };
-			my $op			= $expr->operator;
 			my ($lhsi, $rhsi)	= map { $self->impl($_, $active_graph) } ($lhs, $rhs);
 			my $true	= Attean::Literal->true;
 			my $false	= Attean::Literal->false;
@@ -681,7 +674,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 			}
 			die "Unexpected operator evaluation: $op";
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
-			my $func	= $expr->operator;
+			my $func		= $expr->operator;
 			my @children	= map { $self->impl($_, $active_graph) } @{ $expr->children };
 			my %type_roles		= qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral);
 			my %type_classes	= qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal);
