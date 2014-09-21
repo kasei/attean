@@ -128,6 +128,19 @@ package Attean::API::Algebra 0.001 {
 		return "$self";
 	}
 	
+	sub as_string {
+		my $self	= shift;
+		my $string	= '';
+		$self->walk( prefix => sub {
+			my $a		= shift;
+			my $level	= shift;
+			my $parent	= shift;
+			my $indent	= '  ' x $level;
+			$string	.= "-$indent " .  $a->algebra_as_string . "\n";
+		});
+		return $string;
+	}
+	
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		around 'BUILD' => sub {
