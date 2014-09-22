@@ -199,9 +199,7 @@ package Attean::API::Iterator 0.001 {
 					my $item	= $self->next();
 					return unless defined($item);
 					local($_)	= $item;
-					if ($block->($item)) {
-						return $item;
-					}
+					return $item if ($block->($item));
 				}
 			}
 		);
@@ -234,6 +232,12 @@ package Attean::API::Iterator 0.001 {
 		my $self	= shift;
 		my @data	= $self->elements;
 		return Attean::ListIterator->new( values => \@data, item_type => $self->item_type );
+	}
+	
+	sub debug {
+		my $self	= shift;
+		my $name	= shift // 'Iterator item';
+		return $self->grep(sub { my $r = shift; say "$name: " . $r->as_string; return 1; });
 	}
 }
 
