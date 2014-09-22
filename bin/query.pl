@@ -18,7 +18,7 @@ use Benchmark qw(timethese);
 BEGIN { $Error::TypeTiny::StackTrace	= 1; }
 
 package Translator 0.1 {
-	use v5.20;
+	use v5.14;
 	use warnings;
 	use Moo;
 	use Data::Dumper;
@@ -26,14 +26,54 @@ package Translator 0.1 {
 	
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);
-	use Types::Standard qw(Bool);
+	use Types::Standard qw(Bool ConsumerOf HashRef);
 	has 'in_expr' => (is => 'rw', isa => Bool, default => 0);
+	has 'base' => (is => 'rw', isa => ConsumerOf['Attean::IRI'], predicate => 'has_base');
+	
+	sub translate_query {
+		my $class	= shift;
+		my $query	= shift;
+		my $parsed	= $query->{parsed};
+		my $t		= $class->new();
+		if (exists $parsed->{base} and my $base = $t->translate($parsed->{base})) {
+			$t->base($base);
+		}
+		my $method	= $parsed->{method};
+		my $algebra	= $t->translate($query->pattern);
+		if (my $b = $parsed->{bindings}) {
+			my @vars	= map { $t->translate($_) } @{ $b->{vars} };
+			my $terms	= $b->{terms};
+			my @bindings;
+			foreach my $row (@$terms) {
+				my %binding;
+				foreach my $i (0 .. $#vars) {
+					if (my $term = $row->[$i]) {
+						$binding{ $vars[$i]->value }	= $t->translate($term);
+					}
+				}
+				push(@bindings, Attean::Result->new( bindings => \%binding ));
+			}
+			my $table	= Attean::Algebra::Table->new( rows => \@bindings, variables => \@vars );
+			$algebra	= Attean::Algebra::Join->new( children => [$table, $algebra] );
+		}
+		if ($method eq 'ASK') {
+			$algebra	= Attean::Algebra::Ask->new( children => [$algebra] );
+		}
+		return $algebra;
+	}
 	
 	sub translate {
 		my $self	= shift;
 		my $a		= shift;
-		die "Not a reference? " . Dumper($a) unless blessed($a);
-		if ($a->isa('RDF::Query::Algebra::Project')) {
+		Carp::confess "Not a reference? " . Dumper($a) unless blessed($a);
+		if ($a->isa('RDF::Query::Algebra::Construct')) {
+			my $p		= $self->translate($a->pattern);
+			my @triples	= @{ $a->triples || [] };
+			if (scalar(@triples) == 1 and $triples[0]->isa('RDF::Query::Algebra::BasicGraphPattern')) {
+				@triples	= $triples[0]->triples;
+			}
+			return Attean::Algebra::Construct->new( children => [$p], triples => [map { $self->translate($_) } @triples] );
+		} elsif ($a->isa('RDF::Query::Algebra::Project')) {
 			my $p	= $a->pattern;
 			my $v	= $a->vars;
 			my @vars	= map { variable($_->name) } @$v;
@@ -60,15 +100,15 @@ package Translator 0.1 {
 			return Attean::TriplePattern->new(@nodes);
 		} elsif ($a->isa('RDF::Query::Node::Variable')) {
 			my $value	= variable($a->isa("RDF::Query::Node::Variable::ExpressionProxy") ? ("." . $a->name) : $a->name);
-			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value		= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Resource')) {
 			my $value	= iri($a->uri_value);
-			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value		= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Blank')) {
 			my $value	= blank($a->blank_identifier);
-			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value		= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Literal')) {
 			my $value;
@@ -113,6 +153,12 @@ package Translator 0.1 {
 			my @operands	= map { $self->translate($_) } @ops;
 			my $expr	= Attean::BinaryExpression->new( operator => $op, children => \@operands );
 			return $expr;
+		} elsif ($a->isa('RDF::Query::Expression::Unary')) {
+			my $op	= $a->op;
+			$op		= '=' if ($op eq '==');
+			my ($child)	= $a->operands;
+			my $expr	= Attean::UnaryExpression->new( operator => $op, children => [$self->translate($child)] );
+			return $expr;
 		} elsif ($a->isa('RDF::Query::Algebra::Extend')) {
 			my $p		= $self->translate($a->pattern);
 			my $vars	= $a->vars;
@@ -126,9 +172,32 @@ package Translator 0.1 {
 				}
 			}
 			return $p;
+		} elsif ($a->isa('RDF::Query::VariableBindings')) {
+			my %bindings;
+			foreach my $v ($a->variables) {
+				if (my $term = $a->{ $v }) {
+					$bindings{ $v }	= $self->translate( $term );
+				}
+			}
+			return Attean::Result->new( bindings => \%bindings );
+		} elsif ($a->isa('RDF::Query::Algebra::Table')) {
+			my @vars	= map { variable($_) } $a->variables;
+			my @rows	= map { $self->translate($_) } $a->rows;
+			return Attean::Algebra::Table->new( variables => \@vars, rows => \@rows );
 		} elsif ($a->isa('RDF::Query::Algebra::Aggregate')) {
 			my $p		= $self->translate($a->pattern);
-			my @group	= map { $self->translate_expr($_) } $a->groupby;
+			my @group;
+			foreach my $g ($a->groupby) {
+				if ($g->isa('RDF::Query::Expression::Alias')) {
+					my $var		= $self->translate($g->alias);
+					my $varexpr	= $self->translate_expr($g->alias);
+					push(@group, $varexpr);
+					my $expr	= $self->translate_expr( $g->expression );
+					$p	= Attean::Algebra::Extend->new( children => [$p], variable => $var, expression => $expr );
+				} else {
+					push(@group, $self->translate_expr($g));
+				}
+			}
 			my @ops		= $a->ops;
 			
 			my @aggs;
@@ -148,15 +217,73 @@ package Translator 0.1 {
 				groupby		=> \@group,
 				aggregates	=> \@aggs,
 			);
+		} elsif ($a->isa('RDF::Query::Algebra::Sort')) {
+			my $p		= $self->translate($a->pattern);
+			my @order	= $a->orderby;
+			my @cmps;
+			foreach my $o (@order) {
+				my ($dir, $e)	= @$o;
+				my $asc				= ($dir eq 'ASC');
+				my $expr			= $self->translate_expr($e);
+				push(@cmps, Attean::Algebra::Comparator->new(ascending => $asc, expression => $expr));
+			}
+			return Attean::Algebra::OrderBy->new( children => [$p], comparators => \@cmps );
+		} elsif ($a->isa('RDF::Query::Algebra::Distinct')) {
+			my $p		= $self->translate($a->pattern);
+			return Attean::Algebra::Distinct->new( children => [$p] );
+		} elsif ($a->isa('RDF::Query::Algebra::Minus')) {
+			my $p		= $self->translate($a->pattern);
+			my $m		= $self->translate($a->minus);
+			return Attean::Algebra::Minus->new( children => [$p, $m] );
+		} elsif ($a->isa('RDF::Query::Algebra::Union')) {
+			my @p		= map { $self->translate($_) } $a->patterns;
+			return Attean::Algebra::Union->new( children => \@p );
+		} elsif ($a->isa('RDF::Query::Algebra::Optional')) {
+			my $p		= $self->translate($a->pattern);
+			my $o		= $self->translate($a->optional);
+			return Attean::Algebra::LeftJoin->new( children => [$p, $o] );
+		} elsif ($a->isa('RDF::Query::Algebra::SubSelect')) {
+			my $q	= $a->query;
+			my $p	= $self->translate_query($q);
+			return $p;
 		} elsif ($a->isa('RDF::Query::Expression::Function')) {
 			my $uri		= $a->uri->uri_value;
 			my @args	= map { $self->translate_expr($_) } $a->arguments;
-			if ($uri =~ /^sparql:(.+)$/) {
-				return Attean::FunctionExpression->new( children => \@args, operator => $1 );
+			if ($uri eq 'sparql:logical-and') {
+				my $algebra	= Attean::BinaryExpression->new( operator => '&&', children => [splice(@args, 0, 2)] );
+				while (scalar(@args)) {
+					$algebra	= Attean::BinaryExpression->new( operator => '&&', children => [$algebra, shift(@args)] );
+				}
+				return $algebra;
+			} elsif ($uri eq 'sparql:logical-or') {
+				my $algebra	= Attean::BinaryExpression->new( operator => '||', children => [splice(@args, 0, 2)] );
+				while (scalar(@args)) {
+					$algebra	= Attean::BinaryExpression->new( operator => '||', children => [$algebra, shift(@args)] );
+				}
+				return $algebra;
+			} elsif ($uri =~ /^sparql:(.+)$/) {
+				if ($1 eq 'exists') {
+					# re-translate the pattern as a pattern, not an expression:
+					my ($p)	= map { $self->translate_pattern($_) } $a->arguments;
+					return Attean::ExistsExpression->new( pattern => $p );
+				} else {
+					return Attean::FunctionExpression->new( children => \@args, operator => $1, ($self->has_base ? (base => $self->base) : ()) );
+				}
+			} elsif ($uri =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?<cast>integer|decimal|float|double|string|boolean|dateTime)$>) {
+				my $cast	= $+{cast};
+				if ($cast =~ /^(?:integer|decimal|float|double)$/) {
+					return Attean::CastExpression->new( children => \@args, datatype => iri($uri) );
+				} elsif ($cast eq 'string') {
+					return Attean::FunctionExpression->new( children => \@args, operator => 'STR', ($self->has_base ? (base => $self->base) : ()) );
+				} elsif ($cast eq 'boolean') {
+				
+				} elsif ($cast eq 'dateTime') {
+				
+				}
 			}
-			warn Dumper($uri, \@args);
+			warn "Unrecognized function: " . Dumper($uri, \@args);
 		}
-		die "Unrecognized algebra " . ref($a);
+		Carp::confess "Unrecognized algebra " . ref($a);
 	}
 
 	sub translate_expr {
@@ -164,6 +291,16 @@ package Translator 0.1 {
 		my $a		= shift;
 		my $prev	= $self->in_expr;
 		$self->in_expr(1);
+		my $expr	= $self->translate($a);
+		$self->in_expr($prev);
+		return $expr;
+	}
+	
+	sub translate_pattern {
+		my $self	= shift;
+		my $a		= shift;
+		my $prev	= $self->in_expr;
+		$self->in_expr(0);
 		my $expr	= $self->translate($a);
 		$self->in_expr($prev);
 		return $expr;
@@ -188,14 +325,23 @@ package Translator 0.1 {
 				}
 			}
 			return Attean::Algebra::SequencePath->new( children => \@paths );
+		} elsif ($op eq '?') {
+			my $path	= $self->translate_path(shift(@args));
+			return Attean::Algebra::ZeroOrOnePath->new( children => [$path] );
+		} elsif ($op eq '*') {
+			my $path	= $self->translate_path(shift(@args));
+			return Attean::Algebra::ZeroOrMorePath->new( children => [$path] );
+		} elsif ($op eq '+') {
+			my $path	= $self->translate_path(shift(@args));
+			return Attean::Algebra::OneOrMorePath->new( children => [$path] );
 		} elsif ($op eq '^') {
-			my $path	= $self->translate(shift(@args));
+			my $path	= $self->translate_path(shift(@args));
 			if ($path->does('Attean::API::IRI')) {
 				$path	= Attean::Algebra::PredicatePath->new( predicate => $path );
 			}
 			return Attean::Algebra::InversePath->new( children => [$path] );
 		} elsif ($op eq '|') {
-			my @paths	= map { $self->translate($_) } @args;
+			my @paths	= map { $self->translate_path($_) } @args;
 			foreach (@paths) {
 				if ($_->does('Attean::API::IRI')) {
 					$_	= Attean::Algebra::PredicatePath->new( predicate => $_ );
@@ -257,20 +403,15 @@ try {
 	unless ($query) {
 		die RDF::Query->error;
 	}
-	my $p		= $query->pattern;
 
 	warn "Translating query...\n" if ($verbose);
 	my $t	= Translator->new();
-	my $a		= $t->translate($p);
+	my $a	= $t->translate_query($query);
 	if ($debug) {
 		warn "Walking algebra:\n";
-		$a->walk( prefix => sub { my $a = shift; warn "- $a\n" });
+		warn $a->as_string;
 	}
 	
-	if ($debug) {
-		warn Dumper($a);
-	}
-
 	warn "Evaluating query...\n" if ($verbose);
 	my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
 	if ($benchmark) {
