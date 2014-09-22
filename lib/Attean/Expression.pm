@@ -80,9 +80,7 @@ package Attean::UnaryExpression 0.001 {
 		my $class	= shift;
 		my $args	= $class->$orig(@_);
 		my $op		= $args->{operator};
-		if (exists $map{uc($op)}) {
-			$args->{operator}	= $map{uc($op)};
-		}
+		$args->{operator}	= $map{uc($op)} if (exists $map{uc($op)});
 		return $args;
 	};
 	sub BUILD {
@@ -100,9 +98,7 @@ package Attean::UnaryExpression 0.001 {
 
 package Attean::BinaryExpression 0.001 {
 	use Moo;
-	use Try::Tiny;
 	use Types::Standard qw(Enum);
-	use Scalar::Util qw(blessed);
 	use namespace::clean;
 
 	sub BUILD {
@@ -143,7 +139,6 @@ package Attean::FunctionExpression 0.001 {
 
 package Attean::AggregateExpression 0.001 {
 	use Moo;
-	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Enum Str HashRef ConsumerOf);
 	use Types::Common::String qw(UpperCaseStr);
 	use namespace::clean;

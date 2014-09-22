@@ -98,7 +98,8 @@ sub get_quads {
 			return unless ($i <= $#{ $self->statements });
 			my $st	= $self->statements->[ $i ];
 			while (not(blessed($st)) and ($i <= $#{ $self->statements })) {
-				$st	= $self->statements->[ ++$i ];
+				$i++;
+				$st	= $self->statements->[ $i ];
 			}
 			$i++;
 			return $st;
@@ -108,8 +109,8 @@ sub get_quads {
 	
 	my $match_set;
 	if ($bound == 1) {
-		my ($pos)		= keys %bound;
-		my $name		= $pos_names[ $pos ];
+		my ($pos)	= keys %bound;
+		my $name	= $pos_names[ $pos ];
 		my $node	= $bound{ $pos };
 		my $string	= $node->as_string;
 		$match_set	= $self->$name()->{ $string };
@@ -145,15 +146,10 @@ sub get_quads {
 		$match_set	= $i;
 	}
 	
-	my $open	= 1;
 	my @e		= $match_set->elements;
 	my $sub	= sub {
-		unless (scalar(@e)) {
-			$open	= 0;
-			return;
-		}
-		my $e = shift(@e);
-		
+		return unless (scalar(@e));
+		my $e	= shift(@e);
 		my $st	= $self->statements->[ $e ];
 		return $st;
 	};

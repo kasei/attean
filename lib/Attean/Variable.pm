@@ -32,8 +32,7 @@ package Attean::Variable 0.001 {
 	has 'value' => (is => 'ro', isa => Str, required => 1);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
-	with 'Attean::API::TermOrVariable';
-	with 'Attean::API::Variable';
+	with 'Attean::API::Variable', 'Attean::API::TermOrVariable';
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;
