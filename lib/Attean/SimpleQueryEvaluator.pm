@@ -77,7 +77,7 @@ supplied C<< $active_graph >>.
 				return Attean::ListIterator->new(values => [$b], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
 			} else {
 				my @iters;
-				my %vars;
+				my @new_vars;
 				my %blanks;
 				foreach my $t (@triples) {
 					my $q		= $t->as_quad_pattern($active_graph);
@@ -86,13 +86,11 @@ supplied C<< $active_graph >>.
 						if ($v->does('Attean::API::Blank')) {
 							unless (exists $blanks{$v->value}) {
 								$blanks{$v->value}	= Attean::Variable->new();
+								push(@new_vars, $blanks{$v->value}->value);
 							}
 							my $var	= $blanks{$v->value};
 							push(@values, $var);
 						} else {
-							if ($v->does('Attean::API::Variable')) {
-								$vars{ $v->value }++;
-							}
 							push(@values, $v);
 						}
 					}
@@ -104,7 +102,7 @@ supplied C<< $active_graph >>.
 					my $iter		= $lhs->join($rhs);
 					unshift(@iters, $iter);
 				}
-				return shift(@iters)->map(sub { shift->project(keys %vars) }); #->debug('BGP result');
+				return shift(@iters)->map(sub { shift->project_complement(@new_vars) });
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
 			my %seen;
@@ -342,10 +340,12 @@ supplied C<< $active_graph >>.
 					my @paths;
 					my $first	= shift(@seq);
 					my $join	= Attean::Variable->new();
+					my @new_vars	= ($join->value);
 					push(@paths, Attean::Algebra::Path->new( subject => $s, path => $first, object => $join ));
 					foreach my $i (0 .. $#seq) {
 						my $p	= $seq[$i];
 						my $newjoin	= Attean::Variable->new();
+						push(@new_vars, $newjoin->value);
 						my $obj	= ($i == $#seq) ? $o : $newjoin;
 						push(@paths, Attean::Algebra::Path->new( subject => $join, path => $p, object => $obj ));
 						$join	= $newjoin;
@@ -355,7 +355,8 @@ supplied C<< $active_graph >>.
 						my ($l, $r)	= splice(@paths, 0, 2);
 						unshift(@paths, Attean::Algebra::Join->new( children => [$l, $r] ));
 					}
-					return $self->evaluate(shift(@paths), $active_graph);
+					my $iter	= $self->evaluate(shift(@paths), $active_graph);
+					return $iter->map(sub { shift->project_complement(@new_vars) });
 				}
 			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath') or $path->isa('Attean::Algebra::OneOrMorePath')) {
 				my ($child)	= @{ $path->children };
@@ -406,7 +407,8 @@ supplied C<< $active_graph >>.
 				my ($child)	= @{ $path->children };
 				my $path	= Attean::Algebra::Path->new( subject => $s, path => $child, object => $o );
 				my @iters;
-				push(@iters, $self->evaluate( $path, $active_graph ));
+				my %seen;
+				push(@iters, $self->evaluate( $path, $active_graph )->grep(sub { my $r = shift; warn ">>> " . $r->as_string; return not($seen{$r->as_string}++); }));	 # XXX
 				push(@iters, $self->_zeroLengthPath($s, $o, $active_graph));
 				return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result') );
 			}
@@ -1005,7 +1007,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 		} elsif ($expr->isa('Attean::CastExpression')) {
 			my ($child)	= @{ $expr->children };
 			my $impl	= $self->impl( $child, $active_graph );
-			my $type	= $self->datatype;
+			my $type	= $expr->datatype;
 			return sub {
 				my ($r, %args)	= @_;
 				my $term	= $impl->($r, %args);
