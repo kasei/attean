@@ -296,6 +296,19 @@ package Attean::API::Result 0.001 {
 		return Attean::Result->new( bindings => \%bindings );
 	}
 	
+	sub project_complement {
+		my $self	= shift;
+		my %vars	= map { $_ => 1 } @_;
+		my %bindings;
+		foreach my $v ($self->variables) {
+			unless ($vars{$v}) {
+				my $term	= $self->value($v);
+				$bindings{ $v }	= $term;
+			}
+		}
+		return Attean::Result->new( bindings => \%bindings );
+	}
+	
 	sub apply_map {
 		my $self	= shift;
 		my $class	= ref($self);
