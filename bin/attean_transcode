@@ -10,7 +10,8 @@ use Attean;
 
 unless (@ARGV) {
 	print <<"END";
-Usage: $0 -i in_format -o out_format rdf_data.filename
+Usage: $0 -list
+       $0 -i IN_FORMAT [-o OUT_FORMAT] FILENAME
 
 END
 	exit;
@@ -19,11 +20,20 @@ END
 my $verbose		= 0;
 my $pull		= 0;
 my $push		= 0;
+my $list		= 0;
 my $block_size	= 25;
 my %namespaces;
 my $in	= 'ntriples';
 my $out	= 'string';
-my $result	= GetOptions ("verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in, "out=s" => \$out, "define=s" => \%namespaces, "D=s" => \%namespaces);
+my $result	= GetOptions ("list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in, "out=s" => \$out, "define=s" => \%namespaces, "D=s" => \%namespaces);
+
+if ($list) {
+	my @formats	= Attean->list_plugins('parsers');
+	foreach my $f (sort @formats) {
+		say $f;
+	}
+	exit;
+}
 
 unless (@_) { push(@ARGV, '-') }
 my $file	= shift or die "An input filename must be given";

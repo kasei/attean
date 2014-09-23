@@ -130,6 +130,17 @@ returns undef.
 		return $self->_get_plugin('parsers', shift, 'Attean::API::Parser');
 	}
 	
+	sub list_plugins {
+		my $self	= shift;
+		my $type	= shift;
+		my @plugins;
+		foreach my $p ($self->$type()) {
+			my ($name)	= ($p =~ /^.*::(.*)$/);
+			push(@plugins, $name);
+		}
+		return @plugins;
+	}
+	
 	sub _get_plugin {
 		my $self	= shift;
 		my $type	= shift;
