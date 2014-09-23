@@ -4,6 +4,7 @@ use warnings;
 use inc::Module::Install;
 
 name			'Attean';
+version			'0.000_01';
 all_from		'lib/Attean.pm';
 author			'Gregory Todd Williams <gwilliams@cpan.org>';
 license			'perl';
@@ -28,14 +29,12 @@ requires		'Data::UUID'				=> 0;
 requires		'DateTime::Format::W3CDTF'	=> 0;
 requires		'I18N::LangTags'			=> 0;
 requires		'URI::Escape'				=> 1.36;
-requires		'RDF::Query'				=> 2.911;
-
-
+requires		'RDF::Query'				=> 2.910;
 
 resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",
 	'repository' => "http://github.com/kasei/attean/",
-	'bugtracker' => "https://github.com/kasei/attean/issues"
+	'bugtracker' => "https://github.com/kasei/attean/issues",
 	'IRC'			=> "irc://irc.perl.org/#perlrdf",
 );
 
