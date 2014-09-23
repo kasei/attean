@@ -415,7 +415,7 @@ Checks the input buffer for a Unicode BOM, and consumes it if it is present.
 						$quote_count	= 0;
 					}
 					if (substr($self->{buffer}, 0, 1) eq '\\') {
-						$string	.= $self->get_escaped_char();
+						$string	.= $self->_get_escaped_char();
 					} else {
 						$self->{buffer}	=~ /^[^"\\]+/;
 						$string	.= $self->_read_length($+[0]);
