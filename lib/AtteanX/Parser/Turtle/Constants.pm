@@ -19,73 +19,72 @@ This document describes AtteanX::Parser::Turtle::Constants version 0.001
 
 =cut
 
-package AtteanX::Parser::Turtle::Constants;
+package AtteanX::Parser::Turtle::Constants 0.001 {
+	use v5.14;
+	use warnings;
 
-use strict;
-use warnings;
-use v5.14;
-
-our $VERSION;
-our @EXPORT;
-BEGIN {
-	$VERSION				= '0.001';
-	@EXPORT = qw(
-		LBRACKET
-		RBRACKET
-		LPAREN
-		RPAREN
-		DOT
-		SEMICOLON
-		COMMA
-		HATHAT
-		A
-		BOOLEAN
-		PREFIXNAME
-		IRI
-		BNODE
-		DOUBLE
-		DECIMAL
-		INTEGER
-		WS
-		COMMENT
-		STRING3D
-		STRING3S
-		STRING1D
-		STRING1S
-		BASE
-		PREFIX
-		SPARQLBASE
-		SPARQLPREFIX
-		LANG
-		LBRACE
-		RBRACE
-		EQUALS
-		decrypt_constant
-	)
-};
-use base 'Exporter';
-
-{
-	my %mapping;
-	my %reverse;
+	our $VERSION;
+	our @EXPORT;
 	BEGIN {
-		my $cx	= 0;
-		foreach my $name (grep { $_ ne 'decrypt_constant' } @EXPORT) {
-			my $value	= ++$cx;
-			$reverse{ $value }	= $name;
-			$mapping{ $name }	= $value;
+		$VERSION				= '0.001';
+		@EXPORT = qw(
+			LBRACKET
+			RBRACKET
+			LPAREN
+			RPAREN
+			DOT
+			SEMICOLON
+			COMMA
+			HATHAT
+			A
+			BOOLEAN
+			PREFIXNAME
+			IRI
+			BNODE
+			DOUBLE
+			DECIMAL
+			INTEGER
+			WS
+			COMMENT
+			STRING3D
+			STRING3S
+			STRING1D
+			STRING1S
+			BASE
+			PREFIX
+			SPARQLBASE
+			SPARQLPREFIX
+			LANG
+			LBRACE
+			RBRACE
+			EQUALS
+			decrypt_constant
+		)
+	};
+	use base 'Exporter';
+
+	{
+		my %mapping;
+		my %reverse;
+		BEGIN {
+			my $cx	= 0;
+			foreach my $name (grep { $_ ne 'decrypt_constant' } @EXPORT) {
+				my $value	= ++$cx;
+				$reverse{ $value }	= $name;
+				$mapping{ $name }	= $value;
+			}
 		}
-	}
-	use constant +{ %mapping };
+		use constant +{ %mapping };
 
 =item C<< decrypt_constant ( $type ) >>
 
-Returns the token name for the given toke type.
+Returns the token name for the given token type.
 
 =cut
 
-	sub decrypt_constant { my $num	= +shift; $reverse{$num} }
-};
+		sub decrypt_constant { my $num	= +shift; $reverse{$num} }
+	}
+}
 
 1;
 
