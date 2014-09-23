@@ -28,6 +28,7 @@ requires		'Data::UUID'				=> 0;
 requires		'DateTime::Format::W3CDTF'	=> 0;
 requires		'I18N::LangTags'			=> 0;
 requires		'URI::Escape'				=> 1.36;
+requires		'RDF::Query'				=> 2.911;
 
 
 
@@ -35,9 +36,12 @@ resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",
 	'repository' => "http://github.com/kasei/attean/",
 	'bugtracker' => "https://github.com/kasei/attean/issues"
+	'IRC'			=> "irc://irc.perl.org/#perlrdf",
 );
 
 author_tests('xt');
+
+install_script glob('bin/attean_transcode');
 
 sign;
 
