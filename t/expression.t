@@ -7,6 +7,7 @@ use Test::Exception;
 use Attean;
 use Attean::RDF;
 use Attean::Expression;
+use Attean::SimpleQueryEvaluator;
 
 {
 	my $t	= Attean::Literal->true;
@@ -26,8 +27,10 @@ is($foo->as_string, '"foo"');
 is($two->as_string, '2');
 is($two->arity, 0);
 
+my $eval	= Attean::SimpleQueryEvaluator::ExpressionEvaluator->new();
+
 {
-	my $tt	= $t->evaluate();
+	my $tt	= $eval->evaluate_expression($t);
 	is_deeply($tt, $true, 'ValueExpression evaluate');
 }
 
@@ -60,7 +63,7 @@ is($two->arity, 0);
 {
 	my $expr	= Attean::ValueExpression->new( value => variable('foo') );
 	my $b		= Attean::Result->new( bindings => { foo => literal('bar'), baz => iri('quux') } );
-	my $foo		= $expr->evaluate( $b );
+	my $foo		= $eval->evaluate_expression($expr, $b);
 	does_ok($foo, 'Attean::API::Literal');
 	is($foo->value, 'bar');
 }
@@ -75,38 +78,38 @@ my $ident	= Attean::Result->new();
 	
 	{
 		my $plus	= Attean::BinaryExpression->new( children => [$a, $b], operator => '+' );
-		my $v		= $plus->evaluate($ident);
+		my $v		= $eval->evaluate_expression($plus, $ident);
 		does_ok($v, 'Attean::API::NumericLiteral');
 		is($v->numeric_value, 6, 'numeric +');
 		is($v->datatype->value, 'http://www.w3.org/2001/XMLSchema#integer', 'expected result datatype');
 	}
 	{
 		my $plus	= Attean::BinaryExpression->new( children => [$a, $b], operator => '-' );
-		my $v		= $plus->evaluate($ident);
+		my $v		= $eval->evaluate_expression($plus, $ident);
 		does_ok($v, 'Attean::API::NumericLiteral');
 		is($v->numeric_value, -2, 'numeric -');
 		is($v->datatype->value, 'http://www.w3.org/2001/XMLSchema#integer', 'expected result datatype');
 	}
 	{
 		my $plus	= Attean::BinaryExpression->new( children => [$a, $b], operator => '*' );
-		my $v		= $plus->evaluate($ident);
+		my $v		= $eval->evaluate_expression($plus, $ident);
 		does_ok($v, 'Attean::API::NumericLiteral');
 		is($v->numeric_value, 8, 'numeric *');
 		is($v->datatype->value, 'http://www.w3.org/2001/XMLSchema#integer', 'expected result datatype');
 	}
 	{
 		my $plus	= Attean::BinaryExpression->new( children => [$a, $b], operator => '/' );
-		my $v		= $plus->evaluate($ident);
+		my $v		= $eval->evaluate_expression($plus, $ident);
 		does_ok($v, 'Attean::API::NumericLiteral');
 		is($v->numeric_value, 0.5, 'numeric /');
 		is($v->datatype->value, 'http://www.w3.org/2001/XMLSchema#decimal', 'expected result datatype');
 	}
 	
-	dies_ok {
+	{
 		my $iri		= Attean::ValueExpression->new( value => iri('http://example.org/') );
 		my $plus	= Attean::BinaryExpression->new( children => [$a, $iri], operator => '+' );
-		$plus->evaluate($ident);
-	} 'TypeError on bad operand numeric op';
+		is($eval->evaluate_expression($plus, $ident), undef, 'TypeError on bad operand numeric op');
+	}
 	
 	{
 		# The SPARQL 1.1 logical truth table from <http://www.w3.org/TR/sparql11-query/#evaluation>
@@ -130,10 +133,11 @@ my $ident	= Attean::Result->new();
 					my $expr	= Attean::BinaryExpression->new( children => [$lhs, $rhs], operator => $op );
 					my $expect	= $expected{$l, $r}{$op};
 					if ($expect eq 'E') {
-						dies_ok { $expr->evaluate($ident) } "$l $op $r => Error";
+						my $term	= $eval->evaluate_expression($expr, $ident);
+						is($term, undef, "$l $op $r => $expect");
 					} else {
 						my $value	= ($expect eq 'T') ? 'true' : 'false';
-						my $term	= $expr->evaluate($ident);
+						my $term	= $eval->evaluate_expression($expr, $ident);
 						is($term->value, $value, "$l $op $r => $expect");
 					}
 				}
