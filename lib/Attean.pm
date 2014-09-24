@@ -57,6 +57,8 @@ package Attean 0.001 {
 	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
+	use Sub::Install;
+	use Sub::Name;
 	use namespace::clean;
 	
 	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;
@@ -152,15 +154,28 @@ returns undef.
 		}
 	}
 	
-	sub list_plugins {
-		my $self	= shift;
-		my $type	= shift;
-		my @plugins;
-		foreach my $p ($self->$type()) {
-			my ($name)	= ($p =~ /^.*::(.*)$/);
-			push(@plugins, $name);
+	{
+		my %roles	= (
+			serializers	=> 'Attean::API::Serializer',
+			parsers		=> 'Attean::API::Parser',
+			stores		=> 'Attean::API::Store',
+		);
+		for my $method (keys %roles) {
+			my $role	= $roles{$method};
+			my $code	= sub {
+				my $self	= shift;
+				my @classes;
+				foreach my $class ($self->$method()) {
+					next unless (can_load( modules => { $class => 0 }));
+					push(@classes, $class) if ($class->does($role));
+				}
+				return @classes;
+			};
+			Sub::Install::install_sub({
+				code	=> subname("list_${method}", $code),
+				as		=> "list_${method}"
+			});
 		}
-		return @plugins;
 	}
 	
 	sub _get_plugin {

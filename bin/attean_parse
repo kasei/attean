@@ -30,10 +30,11 @@ my $out	= 'STRING';
 my $result	= GetOptions ("list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in, "out=s" => \$out, "define=s" => \%namespaces, "D=s" => \%namespaces);
 
 if ($list) {
-	my @formats	= Attean->list_plugins('parsers');
-	foreach my $f (sort @formats) {
-		say $f;
-	}
+	say "Parsers:";
+	say sprintf("- %s", s/^.*://r) for (sort Attean->list_parsers);
+	say "\nSerializers:";
+	say sprintf("- %s", s/^.*://r) for (sort Attean->list_serializers);
+	say '';
 	exit;
 }
 
