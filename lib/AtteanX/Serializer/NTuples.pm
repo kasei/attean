@@ -43,7 +43,6 @@ L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $io		= shift;
 		my $iter	= shift;
-		my $type	= $iter->item_type;
 		while (my $t = $iter->next()) {
 			my $str = $t->tuples_string . "\n";
 			$io->print($str);

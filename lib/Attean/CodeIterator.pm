@@ -18,7 +18,7 @@ This document describes Attean::CodeIterator version 0.001
       state $value = 0;
       Attean::Literal->new(++$value)
     },
-    item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'),
+    item_type => 'Attean::API::Term',
   );
   
   say $iter->next->value; # 1
@@ -81,8 +81,10 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		if (scalar(@items)) {
 			push(@$buffer, @items);
 		}
-		my $constraint	= $self->item_type;
-		$constraint->assert_valid($item);
+		my $role	= $self->item_type;
+		if (Role::Tiny->is_role($role)) {
+			die "CodeIterator item is not a $role" unless ($item->does($role));
+		}
 		return $item;
 	}
 }

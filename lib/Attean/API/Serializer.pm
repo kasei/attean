@@ -81,13 +81,13 @@ package Attean::API::Serializer 0.001 {
 	sub serialize_list_to_io {
 		my $self	= shift;
 		my $io		= shift;
-		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type );
+		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type->role );
 		return $self->serialize_iter_to_io($io, $iter);
 	}
 
 	sub serialize_list_to_bytes {
 		my $self	= shift;
-		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type );
+		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type->role );
 		return $self->serialize_iter_to_bytes($iter);
 	}
 }

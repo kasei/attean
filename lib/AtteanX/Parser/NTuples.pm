@@ -99,7 +99,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		};
 		return Attean::CodeIterator->new(
 			generator => $gen,
-			item_type => $self->handled_type,
+			item_type => $self->handled_type->role,
 		);
 	}
 

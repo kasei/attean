@@ -8,7 +8,7 @@ no warnings 'redefine';
 use Attean;
 use Type::Tiny::Role;
 
-my $constraint	= Type::Tiny::Role->new(role => 'Attean::API::Triple');
+my $constraint	= 'Attean::API::Triple';
 
 my $s	= Attean::Blank->new('x');
 my $p	= Attean::IRI->new('http://example.org/p');

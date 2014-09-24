@@ -11,7 +11,7 @@ my $bindings_mapper	= $mapper->binding_mapper;
 
 {
 	note('Mapping Iterator<Term>');
-	my $iter	= Attean::ListIterator->new(values => [blank('a'), blank('zzz')], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'));
+	my $iter	= Attean::ListIterator->new(values => [blank('a'), blank('zzz')], item_type => 'Attean::API::Term');
 	my $mapped	= $iter->map( $mapper );
 	my $a		= $mapped->next;
 	my $b		= $mapped->next;
@@ -21,7 +21,7 @@ my $bindings_mapper	= $mapper->binding_mapper;
 
 {
 	note('Mapping Triples');
-	my $iter	= Attean::ListIterator->new(values => [$t, $u], item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple'));
+	my $iter	= Attean::ListIterator->new(values => [$t, $u], item_type => 'Attean::API::Triple');
 	my $c		= $iter->next->apply_map($mapper);
 	my $d		= $iter->next->apply_map($mapper);
 	is($c->subject->ntriples_string, '_:c');
@@ -30,7 +30,7 @@ my $bindings_mapper	= $mapper->binding_mapper;
 
 {
 	note('Mapping Iterator<Triple>');
-	my $iter	= Attean::ListIterator->new(values => [$u, $t], item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple'));
+	my $iter	= Attean::ListIterator->new(values => [$u, $t], item_type => 'Attean::API::Triple');
 	my $mapped	= $iter->map( $bindings_mapper );
 	my $d		= $mapped->next;
 	my $c		= $mapped->next;

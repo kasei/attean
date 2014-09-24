@@ -10,7 +10,7 @@ use Attean::RDF;
 use Encode;
 use Type::Tiny::Role;
 
-my $constraint	= Type::Tiny::Role->new(role => 'Attean::API::Triple');
+my $constraint	= 'Attean::API::Triple';
 
 my $p	= iri('http://example.org/p');
 

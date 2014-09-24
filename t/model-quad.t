@@ -114,8 +114,7 @@ use Type::Tiny::Role;
 		note('objects() matching');
 		my $objects	= $model->objects();
 		does_ok($objects, 'Attean::API::Iterator');
-		isa_ok($objects->item_type, 'Type::Tiny::Role');
-		is($objects->item_type->role, 'Attean::API::Term', 'expected item_type');
+		is($objects->item_type, 'Attean::API::Term', 'expected item_type');
 		my $count	= 0;
 		while (my $obj = $objects->next) {
 			$count++;
@@ -131,7 +130,7 @@ use Type::Tiny::Role;
 		my $p3		= Attean::IRI->new("http://example.org/p3");
 		my $graphs	= $model->graphs(undef, [$p1, $p3]);
 		does_ok($graphs, 'Attean::API::Iterator');
-		is($graphs->item_type->role, 'Attean::API::Term', 'expected item_type');
+		is($graphs->item_type, 'Attean::API::Term', 'expected item_type');
 		my $count	= 0;
 		while (my $g = $graphs->next) {
 			$count++;

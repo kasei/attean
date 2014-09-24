@@ -119,7 +119,6 @@ package Attean::API::Model 0.001 {
 	use Moo::Role;
 	use Sub::Install;
 	use Sub::Name;
-	use Type::Tiny::Role;
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
@@ -148,7 +147,7 @@ package Attean::API::Model 0.001 {
 			return unless blessed($q);
 			my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
 			return Attean::Result->new( bindings => \%bindings );
-		}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
+		}, 'Attean::API::Result');
 	}
 	
 	requires 'count_quads';
@@ -176,7 +175,7 @@ package Attean::API::Model 0.001 {
 			push(@elements, @n);
 			($head)	= $self->objects( $head, $rdf_rest )->elements;
 		}
-		return Attean::ListIterator->new(values => \@elements, item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+		return Attean::ListIterator->new(values => \@elements, item_type => 'Attean::API::Term' );
 	}
 
 	sub get_sequence {
@@ -199,7 +198,7 @@ package Attean::API::Model 0.001 {
 			push(@elements, $elem);
 			$i++;
 		}
-		return Attean::ListIterator->new(values => \@elements, item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+		return Attean::ListIterator->new(values => \@elements, item_type => 'Attean::API::Term' );
 	}
 
 	{
@@ -214,7 +213,7 @@ package Attean::API::Model 0.001 {
 				my $iter	= $self->get_quads(@nodes);
 				my $nodes	= $iter->map(
 					sub { $_->$method() },
-					Type::Tiny::Role->new(role => 'Attean::API::Term'),
+					'Attean::API::Term',
 				);
 				return $nodes;
 			};
@@ -230,7 +229,7 @@ package Attean::API::Model 0.001 {
 		my $graph	= shift;
 		my $s		= $self->subjects(undef, undef, $graph);
 		my $o		= $self->objects(undef, undef, $graph);
-		my $union	= Attean::IteratorSequence->new( iterators => [$s, $o], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+		my $union	= Attean::IteratorSequence->new( iterators => [$s, $o], item_type => 'Attean::API::Term' );
 		my %seen;
 		return $union->grep(sub {not($seen{shift->as_string}++)});
 	}
@@ -268,10 +267,7 @@ package Attean::API::MutableModel 0.001 {
 		my $self	= shift;
 		my $iter	= shift;
 		my $type	= $iter->item_type;
-		use Data::Dumper;
-		die "Iterator type isn't quads: " . Dumper($type) unless $type->is_a_type_of(
-			Type::Tiny::Role->new(role => 'Attean::API::Quad')
-		);
+		die "Iterator type $type isn't quads" unless (Role::Tiny::does_role($type, 'Attean::API::Quad'));
 		while (my $q = $iter->next) {
 			$self->add_quad($q);
 		}

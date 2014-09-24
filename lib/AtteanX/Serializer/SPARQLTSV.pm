@@ -48,7 +48,6 @@ L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $io		= shift;
 		my $iter	= shift;
-		my $type	= $iter->item_type;
 		my $first	= 1;
 		while (my $t = $iter->next()) {
 			if ($first) {
