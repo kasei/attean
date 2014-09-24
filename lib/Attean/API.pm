@@ -69,8 +69,8 @@ package Attean::API::CanonicalizingBindingSet 0.001 {
 		my $replacements	= 0;
 		foreach my $p (@tuples) {
 			my ($str, $t)	= @$p;
-			foreach my $pos (qw(subject predicate object)) {
-				my $term	= $t->$pos();
+			foreach my $pos ($t->variables) {
+				my $term	= $t->value($pos);
 				my $tstr	= $term->ntriples_string;
 				if ($term->does('Attean::API::Blank') or $term->does('Attean::API::Variable')) {
 					$str	=~ s/\Q$tstr\E/~/;
@@ -92,7 +92,7 @@ package Attean::API::CanonicalizingBindingSet 0.001 {
 			$last	= $tuples[$i-1][0] if ($i > 0);
 			$next	= $tuples[$i+1][0] if ($i < $#tuples);
 			next if ($str eq $last or $str eq $next);
-			foreach my $pos (qw(object predicate subject)) {
+			foreach my $pos (reverse $t->variables) {
 				if (defined(my $tstr = $p->[2]{$pos})) {
 					$tstr	=~ /^([?]|_:)([^#]+)$/;
 					my $prefix	= $1;
@@ -113,7 +113,7 @@ package Attean::API::CanonicalizingBindingSet 0.001 {
 	
 		foreach my $p (@tuples) {
 			my ($str, $t)	= @$p;
-			foreach my $pos (qw(object predicate subject)) {
+			foreach my $pos (reverse $t->variables) {
 				if (defined(my $tstr = $p->[2]{$pos})) {
 					$tstr	=~ /^([?]|_:)([^#]+)$/;
 					my $prefix	= $1;
@@ -121,7 +121,7 @@ package Attean::API::CanonicalizingBindingSet 0.001 {
 					my $key		= "$prefix$name";
 					delete $p->[2]{$pos};
 					unless (exists($mapping{$key})) {
-						warn "Cannot canonicalize BGP";
+						warn "Cannot canonicalize binding set";
 						return;
 					}
 					my $id		= $mapping{$key}{id};
