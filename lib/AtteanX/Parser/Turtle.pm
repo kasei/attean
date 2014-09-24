@@ -59,6 +59,14 @@ text/turtle.
 		return [qw(application/x-turtle application/turtle text/turtle)];
 	}
 
+=item C<< file_extensions >>
+
+Returns a list of file extensions that may be parsed with the parser.
+
+=cut
+
+	sub file_extensions { return [qw(ttl)] }
+
 	has 'canonicalize'	=> (is => 'rw', isa => Bool, default => 0);
 	has 'map' => (is => 'ro', isa => HashRef[Str], default => sub { +{} });
 	has 'namespaces' => (is => 'rw', isa => Maybe[InstanceOf['URI::NamespaceMap']], predicate => 'has_namespaces');

@@ -50,6 +50,14 @@ application/sparql-results+json.
 		return [qw(application/sparql-results+json)];
 	}
 	
+=item C<< file_extensions >>
+
+Returns a list of file extensions that may be parsed with the parser.
+
+=cut
+
+	sub file_extensions { return [qw(srj)] }
+
 	with 'Attean::API::ResultOrTermParser';
 	with 'Attean::API::AtOnceParser';
 

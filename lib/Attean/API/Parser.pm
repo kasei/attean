@@ -62,6 +62,7 @@ package Attean::API::Parser 0.001 {
 	requires 'canonical_media_type'; # => (is => 'ro', isa => 'Str', init_arg => undef);
 	requires 'media_types'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
 	requires 'handled_type'; # => (is => 'ro', isa => 'Type::Tiny', init_arg => undef);
+	requires 'file_extensions'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
 }
 
 package Attean::API::AbbreviatingParser 0.001 {

@@ -51,6 +51,14 @@ application/n-quads.
 		return [qw(application/n-quads)];
 	}
 	
+=item C<< file_extensions >>
+
+Returns a list of file extensions that may be parsed with the parser.
+
+=cut
+
+	sub file_extensions { return [qw(nq)] }
+	
 	with 'Attean::API::MixedStatementParser';
 	with 'Attean::API::PullParser';
 

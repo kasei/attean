@@ -31,6 +31,14 @@ application/sparql-results+json.
 
 	sub media_types { return [qw(application/rdf+xml application/octet-stream)]; }
 	
+=item C<< file_extensions >>
+
+Returns a list of file extensions that may be parsed with the parser.
+
+=cut
+
+	sub file_extensions { return [qw(rdf xrdf)] }
+
 	with 'Attean::API::TripleParser', 'Attean::API::AbbreviatingParser';
 	with 'Attean::API::PushParser';
 

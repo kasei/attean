@@ -37,6 +37,14 @@ package AtteanX::Parser::SPARQLTSV 0.001 {
 		return [qw(text/tab-separated-values)];
 	}
 	
+=item C<< file_extensions >>
+
+Returns a list of file extensions that may be parsed with the parser.
+
+=cut
+
+	sub file_extensions { return [qw(tsv)] }
+
 	with 'Attean::API::ResultParser', 'Attean::API::PullParser', 'Attean::API::Parser';
 
 =item C<< parse_iter_from_bytes( $data ) >>

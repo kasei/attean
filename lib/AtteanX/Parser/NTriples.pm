@@ -51,6 +51,14 @@ application/n-triples.
 		return [qw(application/n-triples)];
 	}
 	
+=item C<< file_extensions >>
+
+Returns a list of file extensions that may be parsed with the parser.
+
+=cut
+
+	sub file_extensions { return [qw(nt)] }
+
 	with 'Attean::API::TripleParser';
 	with 'Attean::API::PullParser';
 	with 'Attean::API::Parser';
