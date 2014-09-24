@@ -51,6 +51,97 @@ package Attean::API::Variable 0.001 {
 	}
 }
 
+package Attean::API::CanonicalizingBindingSet 0.001 {
+	use Moo::Role;
+	use Attean::RDF;
+	use namespace::clean;
+	requires 'elements';
+	sub canonical_set {
+		my $self	= shift;
+		my ($set)	= $self->canonical_set_with_mapping;
+		return $set;
+	}
+	
+	sub canonical_set_with_mapping {
+		my $self	= shift;
+		my @t		= $self->elements;
+		my @tuples	= map { [ $_->tuples_string, $_, {} ] } @t;
+		my $replacements	= 0;
+		foreach my $p (@tuples) {
+			my ($str, $t)	= @$p;
+			foreach my $pos (qw(subject predicate object)) {
+				my $term	= $t->$pos();
+				my $tstr	= $term->ntriples_string;
+				if ($term->does('Attean::API::Blank') or $term->does('Attean::API::Variable')) {
+					$str	=~ s/\Q$tstr\E/~/;
+					$str	.= "#$tstr";
+					$p->[2]{$pos}	= $tstr;
+					$replacements++;
+					$p->[0]	= $str;
+				}
+			}
+		}
+	
+		@tuples	= sort { $a->[0] cmp $b->[0] } @tuples;
+		my $counter	= 1;
+		my %mapping;
+		foreach my $i (0 .. $#tuples) {
+			my $p		= $tuples[$i];
+			my ($str, $t)	= @$p;
+			my ($next, $last)	= ('')x2;
+			$last	= $tuples[$i-1][0] if ($i > 0);
+			$next	= $tuples[$i+1][0] if ($i < $#tuples);
+			next if ($str eq $last or $str eq $next);
+			foreach my $pos (qw(object predicate subject)) {
+				if (defined(my $tstr = $p->[2]{$pos})) {
+					$tstr	=~ /^([?]|_:)([^#]+)$/;
+					my $prefix	= $1;
+					my $name	= $2;
+					my $key		= "$prefix$name";
+					delete $p->[2]{$pos};
+					my $id		= (exists($mapping{$key})) ? $mapping{$key}{id} : sprintf("v%03d", $counter++);
+					my $type	= ($prefix eq '?' ? 'variable' : 'blank');
+					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
+					my %t		= $p->[1]->mapping;
+					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
+					my $t	= Attean::Triple->new( %t );
+					$p->[1]	= $t;
+					$p->[0]	= $t->tuples_string;
+				}
+			}
+		}
+	
+		foreach my $p (@tuples) {
+			my ($str, $t)	= @$p;
+			foreach my $pos (qw(object predicate subject)) {
+				if (defined(my $tstr = $p->[2]{$pos})) {
+					$tstr	=~ /^([?]|_:)([^#]+)$/;
+					my $prefix	= $1;
+					my $name	= $2;
+					my $key		= "$prefix$name";
+					delete $p->[2]{$pos};
+					unless (exists($mapping{$key})) {
+						warn "Cannot canonicalize BGP";
+						return;
+					}
+					my $id		= $mapping{$key}{id};
+					my $type	= ($prefix eq '?' ? 'variable' : 'blank');
+					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
+					my %t		= $p->[1]->mapping;
+					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
+					my $t	= Attean::Triple->new( %t );
+					$p->[1]	= $t;
+					$p->[0]	= $t->tuples_string;
+				}
+			}
+		}
+
+		@tuples	= sort { $a->[0] cmp $b->[0] } @tuples;
+		my $elements	= [ map { $_->[1] } @tuples ];
+		return ($elements, \%mapping);
+	}
+}
+
 package Attean::API 0.001 {
 	use Attean::API::Term;
 	use Attean::API::Store;

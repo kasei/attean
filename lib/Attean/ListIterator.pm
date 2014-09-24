@@ -55,8 +55,6 @@ package Attean::ListIterator 0.001 {
 	use Types::Standard qw(ArrayRef Int);
 	use namespace::clean;
 	
-	with 'Attean::API::RepeatableIterator';
-	
 	has values => (is => 'ro', isa => ArrayRef, required => 1);
 	has current => (is => 'rw', isa => Int, init_arg => undef, default => 0);
 	
@@ -70,7 +68,7 @@ package Attean::ListIterator 0.001 {
 			}
 		}
 	}
-	
+
 =item C<< reset >>
 
 Resets the iterator's internal state so that iteration begins again at the
@@ -98,6 +96,8 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		$self->current(1+$index);
 		return $item;
 	}
+
+	with 'Attean::API::RepeatableIterator';
 }
 
 1;

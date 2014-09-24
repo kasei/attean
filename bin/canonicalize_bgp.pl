@@ -52,6 +52,7 @@ try {
 	
 	my ($bgp)	= @{ $a->children };
 	die "Query must be a simple BGP" unless ($a->isa('Attean::Algebra::Project') and $bgp->isa('Attean::Algebra::BGP'));
+
 	my ($canon, $mapping)	= $bgp->canonical_bgp_with_mapping();
 	my $hash	= sha1_hex( join("\n", map { $_->tuples_string } (@{$canon->triples}) ) );
 	my @proj	= sort map { sprintf("(?v_%03d AS $_)", $mapping->{$_}{id}) } grep { $mapping->{$_}{type} eq 'variable' } (keys %$mapping);

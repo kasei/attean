@@ -127,6 +127,13 @@ package Attean::API::Iterator 0.001 {
 		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::ResultOrTerm'))) {
 			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
 		}
+
+		if ($type->isa('Type::Tiny::Role')) {
+			my $role	= $type->role;
+			if ($self->does('Attean::API::RepeatableIterator') and Role::Tiny::does_role($role, 'Attean::API::Binding')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::CanonicalizingBindingSet');
+			}
+		}
 	};
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -149,6 +156,7 @@ package Attean::API::Iterator 0.001 {
 			return $term;
 		};
 	}
+	
 	sub elements {
 		my $self	= shift;
 		my @elements;
@@ -243,9 +251,15 @@ package Attean::API::Iterator 0.001 {
 
 package Attean::API::RepeatableIterator 0.001 {
 	use Moo::Role;
-	
 	requires 'reset';
-	with 'Attean::API::Iterator';
+	
+	sub elements {
+		my $self	= shift;
+		my @elements;
+		while (my $item = $self->next) { push(@elements, $item); }
+		$self->reset;
+		return @elements;
+	}
 	
 	sub peek {
 		my $self	= shift;
@@ -253,6 +267,13 @@ package Attean::API::RepeatableIterator 0.001 {
 		$self->reset;
 		return $item;
 	}
+
+	sub materialize {
+		my $self	= shift;
+		return $self;
+	}
+
+	with 'Attean::API::Iterator';
 }
 
 package Attean::API::CanonicalizingBindingIterator {

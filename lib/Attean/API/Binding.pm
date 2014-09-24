@@ -108,10 +108,6 @@ package Attean::API::Binding 0.001 {
 	}
 }
 
-package Attean::API::TripleOrQuad 0.001 {
-	use Moo::Role;
-}
-
 package Attean::API::TripleOrQuadPattern 0.001 {
 	use Moo::Role;
 	sub apply_map {
@@ -121,6 +117,11 @@ package Attean::API::TripleOrQuadPattern 0.001 {
 		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
 		return $class->new( %values );
 	}
+}
+
+package Attean::API::TripleOrQuad 0.001 {
+	use Moo::Role;
+	with 'Attean::API::TripleOrQuadPattern';
 }
 
 package Attean::API::TriplePattern 0.001 {
@@ -152,8 +153,7 @@ package Attean::API::TriplePattern 0.001 {
 	requires 'predicate';
 	requires 'object';
 
-	with 'Attean::API::TripleOrQuadPattern';
-	with 'Attean::API::Binding';
+	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
 package Attean::API::Triple 0.001 {
@@ -188,10 +188,7 @@ package Attean::API::Triple 0.001 {
 		return Attean::Quad->new($self->values, $graph);
 	}
 
-	with 'Attean::API::TriplePattern';
-	with 'Attean::API::TripleOrQuad';
-	with 'Attean::API::TripleOrQuadPattern';
-	with 'Attean::API::Binding';
+	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
 }
 
 package Attean::API::QuadPattern 0.001 {
@@ -213,8 +210,7 @@ package Attean::API::QuadPattern 0.001 {
 	requires 'object';
 	requires 'graph';
 
-	with 'Attean::API::TripleOrQuadPattern';
-	with 'Attean::API::Binding';
+	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
 package Attean::API::Quad 0.001 {
@@ -249,9 +245,7 @@ package Attean::API::Quad 0.001 {
 	}
 
 	with 'Attean::API::QuadPattern';
-	with 'Attean::API::TripleOrQuad';
-	with 'Attean::API::TripleOrQuadPattern';
-	with 'Attean::API::Triple';
+	with 'Attean::API::TripleOrQuad', 'Attean::API::TripleOrQuadPattern', 'Attean::API::Triple';
 }
 
 
