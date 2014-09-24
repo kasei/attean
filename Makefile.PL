@@ -14,6 +14,8 @@ build_requires	'Test::Exception'			=> 0;
 
 perl_version	'5.014';
 
+requires		'IRI'						=> 0.004;
+requires		'URI::Namespace'			=> 0;
 requires		'Digest::SHA'				=> 0;
 requires		'Encode'					=> 0;
 requires		'List::Util'				=> 0;
