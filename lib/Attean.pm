@@ -116,9 +116,14 @@ returns undef.
 	
 =item C<< get_parser( $NAME ) >>
 
-Attempts to find a store (L<Attean::API::Parser>) implementation with the
-given C<< $NAME >>. This is done using L<Module::Pluggable> and will generally
-be searching for class names C<< AtteanX::Parser::$NAME >>.
+=item C<< get_parser( filename => $FILENAME ) >>
+
+=item C<< get_parser( media_type => $MEDIA_TYPE ) >>
+
+Attempts to find a L<Attean::API::Parser> parser class with the given
+C<< $NAME >>, or that can parse files with the same extension as
+C<< $FILENAME >>, or that can parse files with the C<< $MEDIA_TYPE >> media
+type.
 
 Returns the full class name if a matching implementation is found, otherwise
 returns undef.
@@ -127,7 +132,24 @@ returns undef.
 
 	sub get_parser {
 		my $self	= shift;
-		return $self->_get_plugin('parsers', shift, 'Attean::API::Parser');
+		my $role	= 'Attean::API::Parser';
+		return $self->_get_plugin('parsers', shift, $role) if (scalar(@_) == 1);
+		my $type	= shift;
+		my %method	= (filename => 'file_extensions', media_type => 'media_types');
+		if (my $method = $method{ $type }) {
+			my $value	= shift;
+			$value	=~ s/^.*[.]// if ($type eq 'filename');
+			foreach my $p ($self->parsers()) {
+				if (can_load( modules => { $p => 0 })) {
+					next unless ($p->does($role));
+					my @exts	= @{ $p->$method() };
+					return $p if (any { $value eq $_ } @exts);
+				}
+			}
+			return;
+		} else {
+			die "Not a valid constraint in get_parser call: $type";
+		}
 	}
 	
 	sub list_plugins {
