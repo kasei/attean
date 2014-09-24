@@ -42,7 +42,7 @@ resources(
 
 author_tests('xt');
 
-install_script glob('bin/attean_transcode');
+install_script glob('bin/attean_parse');
 
 sign;
 
