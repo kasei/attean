@@ -41,7 +41,8 @@ if ($list) {
 	exit;
 }
 
-my $mapper	= $short ? Attean::TermMap->short_blank_map->binding_mapper : undef;
+my $mapper	= $short ? Attean::TermMap->short_blank_map : undef;
+my $bmapper	= $short ? $mapper->binding_mapper : undef;
 
 unless (@ARGV) { push(@ARGV, '-') }
 
@@ -107,8 +108,8 @@ while (defined(my $file = shift)) {
 
 sub fix_iter {
 	my $iter	= shift;
-	if ($mapper) {
-		$iter	= $iter->map($mapper);
+	if ($bmapper) {
+		$iter	= $iter->map($bmapper);
 	}
 	return $iter;
 }
@@ -145,7 +146,7 @@ sub push_transcode {
 		my $handler	= sub {
 			my $triple	= shift;
 			if ($mapper) {
-				$triple	= $triple->map($mapper);
+				$triple	= $triple->apply_map($mapper);
 			}
 			$count++;
 			print STDERR "\r" if ($verbose);
