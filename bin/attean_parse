@@ -19,15 +19,18 @@ END
 	exit;
 }
 
+binmode(\*STDOUT, ':utf8');
+
 my $verbose		= 0;
 my $pull		= 0;
 my $push		= 0;
 my $list		= 0;
 my $block_size	= 25;
+my $short		= 0;
 my %namespaces;
-my $in	= 'GUESS';
-my $out	= 'STRING';
-my $result	= GetOptions ("list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in, "out=s" => \$out, "define=s" => \%namespaces, "D=s" => \%namespaces);
+my $in_format	= 'GUESS';
+my $out_format	= 'STRING';
+my $result	= GetOptions ("short" => \$short, "list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in_format, "out=s" => \$out_format, "define=s" => \%namespaces, "D=s" => \%namespaces);
 
 if ($list) {
 	say "Parsers:";
@@ -38,69 +41,85 @@ if ($list) {
 	exit;
 }
 
-unless (@_) { push(@ARGV, '-') }
-my $file	= shift or die "An input filename must be given";
-my $fh;
-if ($file eq '-') {
-	$fh	= \*STDIN;
-} else {
-	open( $fh, '<:encoding(UTF-8)', $file ) or die $!;
-}
+my $mapper	= $short ? Attean::TermMap->short_blank_map->binding_mapper : undef;
 
-my $out_io		= \*STDOUT;
-$|				= 1;
-my $parser;
-if ($in eq 'GUESS') {
-	my $class	= Attean->get_parser( filename => $file ) // 'ntriples';
-	$parser		= $class->new();
-} else {
-	$parser		= Attean->get_parser($in)->new();
-}
-if ($out eq 'STRING') {
-	parse_to_string($parser, $fh);
-} else {
-	my $sclass		= Attean->get_serializer($out) || die "*** No serializer found for format $out\n";
-	my $serializer	= $sclass->new(namespaces => \%namespaces);
+unless (@ARGV) { push(@ARGV, '-') }
 
-	try {
-		if ($pull) {
-			print "# Pull parsing\n" if ($verbose);
-			pull_transcode($parser, $serializer, $fh, $out_io);
-		} elsif ($push) {
-			print "# Push parsing\n" if ($verbose);
-			push_transcode($parser, $serializer, $fh, $out_io);
-		} elsif ($parser->does('Attean::API::PullParser')) {
-			print "# Pull parsing\n" if ($verbose);
-			pull_transcode($parser, $serializer, $fh, $out_io);
-		} elsif ($parser->does('Attean::API::PushParser')) {
-			print "# Push parsing\n" if ($verbose);
-			push_transcode($parser, $serializer, $fh, $out_io);
-		}
-	} catch {
-		my $e	= $_;
-		if (blessed($e) and $e->isa('Error::TypeTiny::Assertion')) {
-			my $type	= $e->type;
-			my $value	= $e->value;
-			my $class	= ref($value);
-			$class		=~ s/^.*:://;
-			if ($type->isa('Type::Tiny::Role')) {
-				my $role	= ($type->role =~ s/^.*:://r);
-				die "*** Cannot serialize a $class as a $role\n";
+while (defined(my $file = shift)) {
+	my $in	= $in_format;
+	my $out	= $out_format;
+	my $fh;
+	my $base;
+	if ($file eq '-') {
+		$fh		= \*STDIN;
+		$base	= Attean::IRI->new('file:///dev/stdin');
+	} else {
+		open( $fh, '<:encoding(UTF-8)', $file ) or die $!;
+		$base	= Attean::IRI->new('file://' . File::Spec->rel2abs($file));
+	}
+
+	my $out_io		= \*STDOUT;
+	$|				= 1;
+	my $parser;
+	if ($in eq 'GUESS') {
+		my $class	= Attean->get_parser( filename => $file ) // 'AtteanX::Parser::NTriples';
+		$parser		= $class->new( base => $base );
+	} else {
+		$parser		= Attean->get_parser($in)->new();
+	}
+	if ($out eq 'STRING') {
+		parse_to_string($parser, $fh);
+	} else {
+		my $sclass		= Attean->get_serializer($out) || die "*** No serializer found for format $out\n";
+		my $serializer	= $sclass->new(namespaces => \%namespaces);
+
+		try {
+			if ($pull) {
+				warn "# Pull parsing\n" if ($verbose);
+				pull_transcode($parser, $serializer, $fh, $out_io);
+			} elsif ($push) {
+				warn "# Push parsing\n" if ($verbose);
+				push_transcode($parser, $serializer, $fh, $out_io);
+			} elsif ($parser->does('Attean::API::PullParser')) {
+				warn "# Pull parsing\n" if ($verbose);
+				pull_transcode($parser, $serializer, $fh, $out_io);
+			} elsif ($parser->does('Attean::API::PushParser')) {
+				warn "# Push parsing\n" if ($verbose);
+				push_transcode($parser, $serializer, $fh, $out_io);
 			}
-			die "*** Failed to serialize a $class with parser $sclass\n";
-		}
-		die "$e\n";
-	};
+		} catch {
+			my $e	= $_;
+			if (blessed($e) and $e->isa('Error::TypeTiny::Assertion')) {
+				my $type	= $e->type;
+				my $value	= $e->value;
+				my $class	= ref($value);
+				$class		=~ s/^.*:://;
+				if ($type->isa('Type::Tiny::Role')) {
+					my $role	= ($type->role =~ s/^.*:://r);
+					die "*** Cannot serialize a $class as a $role\n";
+				}
+				die "*** Failed to serialize a $class with parser $sclass\n";
+			}
+			die "$e\n";
+		};
+	}
+}
+
+sub fix_iter {
+	my $iter	= shift;
+	if ($mapper) {
+		$iter	= $iter->map($mapper);
+	}
+	return $iter;
 }
 
 sub parse_to_string {
 	my $parser		= shift;
 	my $fh			= shift;
-	$parser->handler(sub {
-		my $item	= shift;
+	my $iter		= fix_iter($parser->parse_iter_from_io($fh));
+	while (my $item = $iter->next) {
 		say $item->as_string;
-	});
-	$parser->parse_cb_from_io($fh);
+	}
 }
 
 sub pull_transcode {
@@ -108,8 +127,8 @@ sub pull_transcode {
 	my $serializer	= shift;
 	my $fh			= shift;
 	my $out_io		= shift;
-	warn "Pull parser" if ($verbose);
-	my $iter		= $parser->parse_iter_from_io($fh);
+	warn "Pull parser\n" if ($verbose);
+	my $iter		= fix_iter($parser->parse_iter_from_io($fh));
 	$serializer->serialize_iter_to_io($out_io, $iter);
 }
 
@@ -118,13 +137,16 @@ sub push_transcode {
 	my $serializer	= shift;
 	my $fh			= shift;
 	my $out_io		= shift;
-	warn "Push parser" if ($verbose);
+	warn "Push parser\n" if ($verbose);
 	if ($serializer->does('Attean::API::AppendableSerializer')) {
 		my $count	= 0;
 		my $start	= [gettimeofday];
 		my @queue;
 		my $handler	= sub {
 			my $triple	= shift;
+			if ($mapper) {
+				$triple	= $triple->map($mapper);
+			}
 			$count++;
 			print STDERR "\r" if ($verbose);
 			
