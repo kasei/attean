@@ -1,6 +1,12 @@
 use v5.14;
 use warnings;
 
+=head1 METHODS
+
+=over 4
+
+=cut
+
 package Attean::BindingEqualityTest 0.001 {
 	use v5.14;
 	use warnings;
@@ -211,3 +217,8 @@ containing blank nodes and bindings without any blank nodes, respectively.
 
 1;
 
+__END__
+
+=back
+
+=cut

@@ -23,6 +23,10 @@ given an L<Attean::API::Algebra|Attean::API::Query> and a L<Attean::API::Model>
 object, evaluates the query represented by the algebra using data from the
 model, and returns a query result.
 
+=head1 ATTRIBUTES
+
+=over 4
+
 =cut
 
 use Attean::Algebra;
@@ -53,7 +57,13 @@ features such as C<< GRAPH ?g {} >>.
 =cut
 
 	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
-	
+
+=back
+
+=head1 METHODS
+
+=over 4
+
 =item C<< evaluate( $algebra, $active_graph ) >>
 
 Returns an L<Attean::API::Iterator> object with results produced by evaluating
@@ -936,6 +946,8 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

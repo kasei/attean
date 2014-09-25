@@ -21,6 +21,10 @@ This document describes AtteanX::Parser::Turtle::Token version 0.000
 The AtteanX::Parser::Turtle::Token class represents tokens produced and used
 during parsing of Turtle.
 
+=head1 METHODS
+
+=over 4
+
 =cut
 
 package AtteanX::Parser::Turtle::Token;
@@ -66,6 +70,8 @@ sub fast_constructor {
 __PACKAGE__->meta->make_immutable;
 
 1;
+
+=back
 
 =head1 BUGS
 
