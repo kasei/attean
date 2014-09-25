@@ -4,7 +4,6 @@ use warnings;
 use inc::Module::Install;
 
 name			'Attean';
-version			'0.000_01';
 all_from		'lib/Attean.pm';
 author			'Gregory Todd Williams <gwilliams@cpan.org>';
 license			'perl';

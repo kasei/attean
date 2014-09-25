@@ -1,13 +1,10 @@
-use v5.14;
-use warnings;
-
 =head1 NAME
 
 Attean - A Semantic Web Framework
 
 =head1 VERSION
 
-This document describes Attean version 0.001
+This document describes Attean version 0.000_01
 
 =head1 SYNOPSIS
 
@@ -34,7 +31,10 @@ Semantic Web (RDF and SPARQL) data.
 
 =cut
 
-package Attean 0.001 {
+package Attean {
+	use 5.014;
+	use warnings;
+	our $VERSION	= '0.000_01';
 	use Attean::API;
 	
 	use Attean::Blank;

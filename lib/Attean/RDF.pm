@@ -1,13 +1,10 @@
-use v5.14;
-use warnings;
-
 =head1 NAME
 
 Attean::RDF - Utility package for exporting shorthand functions for constructing RDF objects
 
 =head1 VERSION
 
-This document describes Attean::RDF version 0.001
+This document describes Attean::RDF version 0.000
 
 =head1 SYNOPSIS
 
@@ -35,6 +32,9 @@ by default).
 =cut
 
 package Attean::RDF 0.001 {
+	use 5.014;
+	use warnings;
+
 	use Attean;
 	use List::MoreUtils qw(zip);
 	require Exporter;
