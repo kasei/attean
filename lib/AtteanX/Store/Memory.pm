@@ -104,7 +104,7 @@ sub get_quads {
 			$i++;
 			return $st;
 		};
-		return Attean::CodeIterator->new( generator => $sub, item_type => Type::Tiny::Role->new(role => 'Attean::API::Quad') );
+		return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' );
 	}
 	
 	my $match_set;
@@ -115,7 +115,7 @@ sub get_quads {
 		my $string	= $node->as_string;
 		$match_set	= $self->$name()->{ $string };
 		unless (blessed($match_set)) {
-			return Attean::ListIterator->new( values => [], item_type => Type::Tiny::Role->new(role => 'Attean::API::Quad') );
+			return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
 		}
 	} else {
 		my @pos		= keys %bound;
@@ -135,7 +135,7 @@ sub get_quads {
 		
 		foreach my $s (@sets) {
 			unless (blessed($s)) {
-				return Attean::ListIterator->new( values => [], item_type => Type::Tiny::Role->new(role => 'Attean::API::Quad') );
+				return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
 			}
 		}
 		my $i	= shift(@sets);
@@ -153,7 +153,7 @@ sub get_quads {
 		my $st	= $self->statements->[ $e ];
 		return $st;
 	};
-	return Attean::CodeIterator->new( generator => $sub, item_type => Type::Tiny::Role->new(role => 'Attean::API::Quad') );
+	return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' );
 }
 
 =item C<< get_graphs >>
@@ -166,7 +166,7 @@ the set of graphs of the stored quads.
 sub get_graphs {
 	my $self	= shift;
 	my @ctx		= values %{ $self->graph_nodes() };
-	return Attean::ListIterator->new( values => \@ctx, item_type => Type::Tiny::Role->new(role => 'Attean::API::Term') );
+	return Attean::ListIterator->new( values => \@ctx, item_type => 'Attean::API::Term' );
 }
 
 =item C<< add_quad ( $quad ) >>

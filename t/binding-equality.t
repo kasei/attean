@@ -170,7 +170,7 @@ sub test_iter_equality {
 
 sub results_iter {
 	my @results	= @_;
-	return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+	return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
 }
 
 sub test_turtle_equality {

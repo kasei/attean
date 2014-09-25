@@ -36,7 +36,7 @@ The following attributes exist:
 
 =item C<< item_type >>
 
-A L<Type::Tiny> object indicating the type of elements returned by the iterator.
+A string indicating the type of elements returned by the iterator.
 
 =back
 
@@ -96,41 +96,55 @@ elements from the referent.
 
 =cut
 
-use Type::Tiny::Role;
-
 package Attean::API::Iterator 0.001 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
-	use Types::Standard qw(Object InstanceOf);
+	use Types::Standard qw(Str Object InstanceOf);
 	use Role::Tiny;
 	use namespace::clean;
 	
-	has 'item_type' => (is => 'ro', isa => InstanceOf['Type::Tiny'], required => 1);
+	has 'item_type' => (is => 'ro', isa => Str, required => 1);
 	requires 'next';
+
+# TODO: remove	
+	around BUILDARGS => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $args	= $self->$orig(@_);
+		use Data::Dumper;
+		my $type	= $args->{item_type};
+		if (ref($type)) {
+			Carp::cluck Dumper($type);
+		}
+		return $args;
+	};
 	
 	sub BUILD {}
 	around 'BUILD' => sub {
 		my $orig	= shift;
 		my $self	= shift;
 		$self->$orig(@_);
-		my $type	= $self->item_type;
-		if ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Triple'))) {
-			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Quad'))) {
-			Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::TripleOrQuad'))) {
-			Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Result'))) {
-			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::Term'))) {
-			Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
-		} elsif ($type->is_a_type_of(Type::Tiny::Role->new(role => 'Attean::API::ResultOrTerm'))) {
-			Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
-		}
+		my $role	= $self->item_type;
+		if (Role::Tiny->is_role($role)) {
+			my $check	= sub {
+				my $check = shift;
+				return ($role eq $check or Role::Tiny::does_role($role, $check));
+			};
+			if ($check->('Attean::API::Quad')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
+			} elsif ($check->('Attean::API::Triple')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
+			} elsif ($check->('Attean::API::TripleOrQuad')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
+			} elsif ($check->('Attean::API::Result')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
+			} elsif ($check->('Attean::API::Term')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
+			} elsif ($check->('Attean::API::ResultOrTerm')) {
+				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
+			}
 
-		if ($type->isa('Type::Tiny::Role')) {
-			my $role	= $type->role;
-			if ($self->does('Attean::API::RepeatableIterator') and Role::Tiny::does_role($role, 'Attean::API::Binding')) {
+			if ($self->does('Attean::API::RepeatableIterator') and $check->('Attean::API::Binding')) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::CanonicalizingBindingSet');
 			}
 		}
@@ -144,14 +158,8 @@ package Attean::API::Iterator 0.001 {
 			my $class	= ref($self);
 			my $term	= $self->$orig(@_);
 			return unless defined($term);
-			my $err		= $type->validate($term);
-			if ($err) {
-				my $name	= $type->name;
-				if ($type->can('role')) {
-					my $role	= $type->role;
-					$name		= "role $role";
-				}
-				die "${class} returned an element that failed conformance check for $name";
+			unless ($term->does($type)) {
+				die "${class} returned an element that failed conformance check for $type";
 			}
 			return $term;
 		};
@@ -190,10 +198,7 @@ package Attean::API::Iterator 0.001 {
 			}
 		}
 		
-		return Attean::CodeIterator->new(
-			item_type => $type,
-			generator => $generator,
-		);
+		return Attean::CodeIterator->new( item_type => $type, generator => $generator );
 	}
 
 	sub grep {
@@ -308,7 +313,7 @@ package Attean::API::TripleIterator 0.001 {
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;
-		return $self->map(sub { $_->as_quad($graph) }, Type::Tiny::Role->new(role => 'Attean::API::Quad'));
+		return $self->map(sub { $_->as_quad($graph) }, 'Attean::API::Quad');
 	}
 }
 
@@ -325,7 +330,7 @@ package Attean::API::MixedStatementIterator 0.001 {
 		my $graph	= shift;
 		return $self->map(
 			sub { $_->does('Attean::API::Quad') ? $_ : $_->as_quad($graph) },
-			Type::Tiny::Role->new(role => 'Attean::API::Quad')
+			'Attean::API::Quad'
 		);
 	}
 }

@@ -5,7 +5,6 @@ use Test::More;
 use utf8;
 
 use Attean;
-use Type::Tiny::Role;
 
 sub iri { Attean::IRI->new(shift) }
 sub blank { Attean::Blank->new(shift) }
@@ -55,7 +54,7 @@ END
 	my $graph	= Attean::IRI->new('http://example.org/default');
 	my $quads	= $iter->map(
 		sub { $_->does('Attean::API::Quad') ? $_ : $_->as_quad($graph) },
-		Type::Tiny::Role->new(role => 'Attean::API::Quad')
+		'Attean::API::Quad'
 	);
 	$store->add_iter($quads);
 	

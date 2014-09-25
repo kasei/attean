@@ -87,13 +87,13 @@ package Attean::API::PushParser 0.001 {
 	sub parse_iter_from_io {
 		my $self	= shift;
 		my @values	= $self->parse_list_from_io(@_);
-		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type->role, );
 	}
 	
 	sub parse_iter_from_bytes {
 		my $self	= shift;
 		my @values	= $self->parse_list_from_bytes(@_);
-		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type->role, );
 	}
 	
 	sub parse_list_from_io {
@@ -185,13 +185,13 @@ package Attean::API::AtOnceParser 0.001 {
 	sub parse_iter_from_io {
 		my $self	= shift;
 		my @values	= $self->parse_list_from_io(@_);
-		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type->role, );
 	}
 	
 	sub parse_iter_from_bytes {
 		my $self	= shift;
 		my @values	= $self->parse_list_from_bytes(@_);
-		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type, );
+		return Attean::ListIterator->new( values => \@values, item_type => $self->handled_type->role, );
 	}
 	
 }

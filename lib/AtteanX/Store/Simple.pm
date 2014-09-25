@@ -72,7 +72,7 @@ predicate and objects. Any of the arguments may be undef to match any value.
 		}
 		
 		my $quads	= $self->quads;
-		my $iter	= Attean::ListIterator->new( values => $quads, item_type => Type::Tiny::Role->new(role => 'Attean::API::Quad') );
+		my $iter	= Attean::ListIterator->new( values => $quads, item_type => 'Attean::API::Quad' );
 		return $iter->grep(sub {
 			my $q	= shift;
 			foreach my $key (keys %bound) {

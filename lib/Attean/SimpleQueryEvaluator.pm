@@ -77,7 +77,7 @@ supplied C<< $active_graph >>.
 			my @triples	= @{ $algebra->triples };
 			if (scalar(@triples) == 0) {
 				my $b	= Attean::Result->new( bindings => {} );
-				return Attean::ListIterator->new(values => [$b], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+				return Attean::ListIterator->new(values => [$b], item_type => 'Attean::API::Result');
 			} else {
 				my @iters;
 				my @new_vars;
@@ -170,7 +170,7 @@ supplied C<< $active_graph >>.
 				my $gr	= Attean::Result->new( bindings => { $graph->value => $g } );
 				push(@iters, $self->evaluate($child, $g)->map(sub { if (my $result = shift->join($gr)) { return $result } else { return } }));
 			}
-			return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result') );
+			return Attean::IteratorSequence->new( iterators => \@iters, item_type => 'Attean::API::Result' );
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 			my @groupby	= @{ $algebra->groupby };
 			my $iter	= $self->evaluate($child, $active_graph);
@@ -207,7 +207,7 @@ supplied C<< $active_graph >>.
 				}
 				push(@results, Attean::Result->new( bindings => \%bindings )->join($binding));
 			}
-			return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
 			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @children;
 			return $lhs->join($rhs);
@@ -228,7 +228,7 @@ supplied C<< $active_graph >>.
 				}
 				push(@results, $lhs) unless ($joined);
 			}
-			return Attean::ListIterator->new( values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new( values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Minus')) {
 			my ($lhsi, $rhs)	= map { $self->evaluate($_, $active_graph) } @children;
 			my @rhs				= $rhs->elements;
@@ -261,7 +261,7 @@ supplied C<< $active_graph >>.
 				
 				push(@results, $lhs) if ($keep);
 			}
-			return Attean::ListIterator->new( values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new( values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Path')) {
 			my $s			= $algebra->subject;
 			my $path		= $algebra->path;
@@ -294,7 +294,7 @@ supplied C<< $active_graph >>.
 					return unless $q;
 					my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
 					return Attean::Result->new( bindings => \%bindings );
-				}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
+				}, 'Attean::API::Result');
 			} elsif ($path->isa('Attean::Algebra::SequencePath')) {
 				if (scalar(@children) == 1) {
 					my $path	= Attean::Algebra::Path->new( subject => $s, path => $children[0], object => $o );
@@ -331,7 +331,7 @@ supplied C<< $active_graph >>.
 						}
 					}
 					my @results	= map { Attean::Result->new( bindings => { $o->value => $_ } ) } (values %$v);
-					return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+					return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
 				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::Variable')) {
 					my $nodes	= $self->model->graph_nodes( $active_graph );
 					my @results;
@@ -343,7 +343,7 @@ supplied C<< $active_graph >>.
 							push(@results, $r->join($tr));
 						}
 					}
-					return Attean::ListIterator->new(values => \@results, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+					return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
 				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::Term')) {
 					my $pp	= Attean::Algebra::InversePath->new( children => [$child] );
 					my $p	= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
@@ -353,10 +353,10 @@ supplied C<< $active_graph >>.
 					$self->_ALP($active_graph, $s, $child, $v);
 					my @results;
 					foreach my $v (values %$v) {
-						return Attean::ListIterator->new(values => [Attean::Result->new()], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'))
+						return Attean::ListIterator->new(values => [Attean::Result->new()], item_type => 'Attean::API::Result')
 							if ($v->equals($o));
 					}
-					return Attean::ListIterator->new(values => [], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+					return Attean::ListIterator->new(values => [], item_type => 'Attean::API::Result');
 				}
 			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
 				my $path	= Attean::Algebra::Path->new( subject => $s, path => $child, object => $o );
@@ -364,7 +364,7 @@ supplied C<< $active_graph >>.
 				my %seen;
 				push(@iters, $self->evaluate( $path, $active_graph )->grep(sub { return not($seen{shift->as_string}++); }));
 				push(@iters, $self->_zeroLengthPath($s, $o, $active_graph));
-				return Attean::IteratorSequence->new( iterators => \@iters, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result') );
+				return Attean::IteratorSequence->new( iterators => \@iters, item_type => 'Attean::API::Result' );
 			}
 			die "Unimplemented path type: $path";
 		} elsif ($algebra->isa('Attean::Algebra::Project')) {
@@ -381,11 +381,11 @@ supplied C<< $active_graph >>.
 			$iter		= $iter->limit($algebra->limit) if ($algebra->limit >= 0);
 			return $iter;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
-			return Attean::IteratorSequence->new( iterators => [map { $self->evaluate($_, $active_graph) } @children], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::IteratorSequence->new( iterators => [map { $self->evaluate($_, $active_graph) } @children], item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my $iter	= $self->evaluate($child, $active_graph);
 			my $result	= $iter->next;
-			return Attean::ListIterator->new(values => [$result ? Attean::Literal->true : Attean::Literal->false], item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'));
+			return Attean::ListIterator->new(values => [$result ? Attean::Literal->true : Attean::Literal->false], item_type => 'Attean::API::Term');
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 			my $iter		= $self->evaluate($child, $active_graph);
 			my $patterns	= $algebra->triples;
@@ -404,10 +404,10 @@ supplied C<< $active_graph >>.
 					}
 					return @triples;
 				},
-				item_type => Type::Tiny::Role->new(role => 'Attean::API::Triple')
+				item_type => 'Attean::API::Triple'
 			)->grep(sub { return not($seen{shift->as_string}++); });
 		} elsif ($algebra->isa('Attean::Algebra::Table')) {
-			return Attean::ListIterator->new(values => $algebra->rows, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new(values => $algebra->rows, item_type => 'Attean::API::Result');
 		}
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
@@ -434,7 +434,7 @@ supplied C<< $active_graph >>.
 		my $path	= shift;
 		my $pp		= Attean::Algebra::Path->new( subject => $term, path => $path, object => variable('o') );
 		my $iter	= $self->evaluate($pp, $graph);
-		my $terms	= $iter->map(sub { shift->value('o') }, Type::Tiny::Role->new(role => 'Attean::API::Term'));
+		my $terms	= $iter->map(sub { shift->value('o') }, 'Attean::API::Term');
 		my %seen;
 		return $terms->grep(sub { not $seen{ shift->as_string }++ });
 	}
@@ -449,22 +449,22 @@ supplied C<< $active_graph >>.
 		if ($s_term and $o_term) {
 			my @r;
 			push(@r, Attean::Result->new()) if ($s->equals($o));
-			return Attean::ListIterator->new(values => \@r, item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new(values => \@r, item_type => 'Attean::API::Result');
 		} elsif ($s_term) {
 			my $name	= $o->value;
 			my $r		= Attean::Result->new( bindings => { $name => $s } );
-			return Attean::ListIterator->new(values => [$r], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new(values => [$r], item_type => 'Attean::API::Result');
 		} elsif ($o_term) {
 			my $name	= $s->value;
 			my $r		= Attean::Result->new( bindings => { $name => $o } );
-			return Attean::ListIterator->new(values => [$r], item_type => Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			return Attean::ListIterator->new(values => [$r], item_type => 'Attean::API::Result');
 		} else {
 			my @vars	= map { $_->value } ($s, $o);
 			my $nodes	= $self->model->graph_nodes( $graph );
 			return $nodes->map(sub {
 				my $term	= shift;
 				Attean::Result->new( bindings => { map { $_ => $term } @vars } );
-			}, Type::Tiny::Role->new(role => 'Attean::API::Result'));
+			}, 'Attean::API::Result');
 		}
 	}
 }

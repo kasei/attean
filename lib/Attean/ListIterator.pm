@@ -16,7 +16,7 @@ This document describes Attean::ListIterator version 0.000
   my @values = map { Attean::Literal->new($_) } (1,2,3);
   my $iter = Attean::ListIterator->new(
     values => \@values,
-    item_type => Type::Tiny::Role->new(role => 'Attean::API::Term'),
+    item_type => 'Attean::API::Term',
   );
   
   say $iter->next->value; # 1
@@ -38,8 +38,8 @@ An array reference containing the items to iterate over.
 
 =item item_type
 
-A L<Type::Tiny> object representing the type of the items
-that will be returned from the iterator.
+A string representing the type of the items that will be returned from the
+iterator.
 
 =back
 
@@ -60,11 +60,10 @@ package Attean::ListIterator 0.001 {
 	
 	sub BUILD {
 		my $self	 = shift;
-		if (1) {
-			# type check the list values
-			my $constraint	= $self->item_type;
-			foreach my $item (@{ $self->values }) {
-				$constraint->assert_valid($item);
+		my $role	= $self->item_type;
+		foreach my $item (@{ $self->values }) {
+			if (Role::Tiny->is_role($role)) {
+				die "ListIterator item is not a $role" unless ($item->does($role));
 			}
 		}
 	}
