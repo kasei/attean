@@ -83,18 +83,14 @@ Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.
 		my %map;
 		return $class->new(mapper => sub {
 			my $term	= shift;
-			unless ($term->does('Attean::API::Blank')) {
-				return $term;
-			}
+			return $term unless ($term->does('Attean::API::Blank'));
 			my $id		= $term->value;
-			if (defined(my $t = $map{$id})) {
-				return $t;
-			} else {
-				my $uuid	= Data::UUID->new->create_hex;
-				my $new		= Attean::Blank->new( $uuid );
-				$map{$id}	= $new;
-				return $new;
-			}
+			return $map{$id} if (defined($map{$id}));
+			
+			my $uuid	= Data::UUID->new->create_hex;
+			my $new		= Attean::Blank->new( $uuid );
+			$map{$id}	= $new;
+			return $new;
 		});
 	}
 	
@@ -111,9 +107,7 @@ alphabetic names (e.g. _:a, _:b).
 		my $next	= 'a';
 		return $class->new(mapper => sub {
 			my $term	= shift;
-			unless ($term->does('Attean::API::Blank')) {
-				return $term;
-			}
+			return $term unless ($term->does('Attean::API::Blank'));
 			my $id		= $term->value;
 			if (defined(my $t = $map{$id})) {
 				return $t;
@@ -128,18 +122,10 @@ alphabetic names (e.g. _:a, _:b).
 	sub rewrite_map {
 		my $class	= shift;
 		my $map		= shift;
-		use Data::Dumper;
-# 		warn "Rewrite map: " . Dumper($map);
 		return $class->new(mapper => sub {
 			my $term	= shift;
-			if (exists $map->{ $term->as_string }) {
-				my $new	= $map->{ $term->as_string };
-# 				warn "Rewriting " . $term->as_string . ": " . $new->as_string;
-				return $new;
-			} else {
-# 				warn "Passing through: " . $term->as_string;
-				return $term;
-			}
+			return $map->{ $term->as_string } if (exists $map->{ $term->as_string });
+			return $term;
 		});
 	}
 
