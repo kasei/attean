@@ -868,6 +868,10 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 					return sub {
 						my ($rows, %args)	= @_;
 						my @terms	= grep { blessed($_) } map { $impl->($_, %args) } @{ $rows };
+						if ($expr->distinct) {
+							my %seen;
+							@terms	= grep { not($seen{$_->as_string}++) } @terms;
+						}
 						return Attean::Literal->integer(scalar(@terms));
 					};
 				} else {
@@ -901,8 +905,12 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 						my ($rows, %args)	= @_;
 						my $count	= 0;
 						my $sum		= Attean::Literal->integer(0);
+						my %seen;
 						foreach my $r (@$rows) {
 							my $term	= $impl->( $r, %args );
+							if ($expr->distinct) {
+								next if ($seen{ $term->as_string }++);
+							}
 							if ($term->does('Attean::API::NumericLiteral')) {
 								$count++;
 								$sum	= Attean::Literal->new( value => ($sum->numeric_value + $term->numeric_value), datatype => $sum->binary_promotion_type($term, '+') );
@@ -919,8 +927,16 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
 					my $sep	= $expr->scalar_vars->{ 'seperator' } // ' ';
 					return sub {
 						my ($rows, %args)	= @_;
-						my @strings	= map { eval { $impl->( $_, %args )->value } // '' } @$rows;
-						return Attean::Literal->new(join($sep, @strings));
+						my %seen;
+						my @strings;
+						foreach my $r (@$rows) {
+							my $term	= eval { $impl->( $r, %args ) };
+							if ($expr->distinct) {
+								next if ($seen{ blessed($term) ? $term->as_string : '' }++);
+							}
+							push(@strings, $term->value // '');
+						}
+						return Attean::Literal->new(join($sep, sort @strings));
 					};
 				}
 			}

@@ -34,7 +34,7 @@ Semantic Web (RDF and SPARQL) data.
 package Attean {
 	use 5.014;
 	use warnings;
-	our $VERSION	= '0.000_01';
+	our $VERSION	= '0.000_02';
 	use Attean::API;
 	
 	use Attean::Blank;
