@@ -31,6 +31,7 @@ requires		'DateTime::Format::W3CDTF'	=> 0;
 requires		'I18N::LangTags'			=> 0;
 requires		'URI::Escape'				=> 1.36;
 requires		'RDF::Query'				=> 2.910;
+requires		'Try::Tiny'					=> 0;
 
 resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",
