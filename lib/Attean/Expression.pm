@@ -42,7 +42,6 @@ use Attean::API::Expression;
 
 package Attean::ValueExpression 0.001 {
 	use Moo;
-	use utf8::all;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
 
@@ -181,7 +180,6 @@ package Attean::CastExpression 0.001 {
 
 package Attean::ExistsExpression 0.001 {
 	use Moo;
-	use utf8::all;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
 
