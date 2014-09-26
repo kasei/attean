@@ -392,7 +392,7 @@ try {
 		my $parser	= $pclass->new(base => $base);
 		my $iter	= $parser->parse_iter_from_io($fh);
 		my $quads	= $iter->as_quads($graph);
-		$store->add_iter($quads);
+		$model->add_iter($quads);
 	}
 
 	if ($debug) {
@@ -421,8 +421,7 @@ try {
 	my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
 	if ($benchmark) {
 		timethese(5, {
-			'baseline'	=> sub { local($ENV{ATTEAN_NO_MERGE_JOIN}) = 1; my @e = $e->evaluate($a, $graph)->elements },
-			'mergejoin'	=> sub { my @e = $e->evaluate($a, $graph)->elements },
+			'baseline'	=> sub { my @e = $e->evaluate($a, $graph)->elements },
 		});
 	} else {
 		my $iter	= $e->evaluate($a, $graph);
