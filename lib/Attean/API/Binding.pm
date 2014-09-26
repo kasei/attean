@@ -134,11 +134,8 @@ package Attean::API::TriplePattern 0.001 {
 	sub value {
 		my $self	= shift;
 		my $key		= shift;
-		if ($key =~ /^(subject|predicate|object)$/) {
-			return $self->$key();
-		} else {
-			die "Unrecognized binding name '$key'";
-		}
+		return $self->$key() if ($key =~ /^(subject|predicate|object)$/);
+		die "Unrecognized binding name '$key'";
 	}
 	
 	sub as_quad_pattern {
@@ -198,11 +195,8 @@ package Attean::API::QuadPattern 0.001 {
 	sub value {
 		my $self	= shift;
 		my $key		= shift;
-		if ($key =~ /^(subject|predicate|object|graph)$/) {
-			return $self->$key();
-		} else {
-			die "Unrecognized binding name '$key'";
-		}
+		return $self->$key() if ($key =~ /^(subject|predicate|object|graph)$/);
+		die "Unrecognized binding name '$key'";
 	}
 	
 	requires 'subject';
@@ -217,25 +211,16 @@ package Attean::API::Quad 0.001 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
-		my %map	= (
-			# subject, predicate, and graph type checking is done by the Attean::API::Triple method modifiers
-			graph		=> 'Attean::API::BlankOrIRI',
-		);
-		foreach my $method (keys %map) {
-			my $role	= $map{$method};
-			around $method => sub {
-				my $orig	= shift;
-				my $self	= shift;
-				my $class	= ref($self);
-				my $term	= $self->$orig(@_);
-				my $type	= Type::Tiny::Role->new( role => $role );
-				my $err		= $type->validate($term);
-				if ($err) {
-					die "${class}'s $method failed conformance check for role $role";
-				}
-				return $term;
-			};
-		}
+		my $type	= Type::Tiny::Role->new( role => 'Attean::API::BlankOrIRI' );
+		around 'graph' => sub {
+			my $orig	= shift;
+			my $self	= shift;
+			my $class	= ref($self);
+			my $term	= $self->$orig(@_);
+			my $err		= $type->validate($term);
+			die "${class}'s graph failed conformance check for role Attean::API::BlankOrIRI" if ($err);
+			return $term;
+		};
 	}
 
 	sub as_triple {
@@ -283,9 +268,7 @@ package Attean::API::Result 0.001 {
 		my %bindings;
 		foreach my $v (@vars) {
 			my $term	= $self->value($v);
-			if ($term) {
-				$bindings{ $v }	= $term;
-			}
+			$bindings{ $v }	= $term if ($term);
 		}
 		return Attean::Result->new( bindings => \%bindings );
 	}
