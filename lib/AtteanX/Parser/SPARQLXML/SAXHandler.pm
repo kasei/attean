@@ -28,7 +28,7 @@ please L<get in touch|http://www.perlrdf.org/>.
 
 package AtteanX::Parser::SPARQLXML::SAXHandler 0.001;
 
-use 5.014;
+use v5.14;
 use warnings;
 
 use Attean;

@@ -32,7 +32,7 @@ by default).
 =cut
 
 package Attean::RDF 0.001 {
-	use 5.014;
+	use v5.14;
 	use warnings;
 
 	use Attean;
