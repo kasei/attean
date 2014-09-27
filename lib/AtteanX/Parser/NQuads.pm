@@ -7,7 +7,7 @@ AtteanX::Parser::NQuads - N-Quads Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NQuads version 0.000
+This document describes AtteanX::Parser::NQuads version 0.001
 
 =head1 SYNOPSIS
 

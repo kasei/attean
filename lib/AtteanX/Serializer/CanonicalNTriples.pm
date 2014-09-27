@@ -4,7 +4,7 @@ AtteanX::Serializer::CanonicalNTriples - Canonical N-Triples Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::CanonicalNTriples version 0.000
+This document describes AtteanX::Serializer::CanonicalNTriples version 0.001
 
 =head1 SYNOPSIS
 

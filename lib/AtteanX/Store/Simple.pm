@@ -4,7 +4,7 @@ AtteanX::Store::Simple - Simple, unindexed, in-memory RDF store
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Simple version 0.000
+This document describes AtteanX::Store::Simple version 0.001
 
 =head1 SYNOPSIS
 

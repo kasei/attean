@@ -7,7 +7,7 @@ Attean::API::Term - RDF Terms
 
 =head1 VERSION
 
-This document describes Attean::API::Term version 0.000
+This document describes Attean::API::Term version 0.001
 
 =head1 DESCRIPTION
 

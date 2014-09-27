@@ -7,7 +7,7 @@ Attean::API::Iterator - Typed iterator
 
 =head1 VERSION
 
-This document describes Attean::API::Iterator version 0.000
+This document describes Attean::API::Iterator version 0.001
 
 =head1 DESCRIPTION
 

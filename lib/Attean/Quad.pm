@@ -7,7 +7,7 @@ Attean::Quad - RDF Quads
 
 =head1 VERSION
 
-This document describes Attean::Quad version 0.000
+This document describes Attean::Quad version 0.001
 
 =head1 SYNOPSIS
 
