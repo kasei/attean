@@ -57,8 +57,7 @@ package Attean {
 	
 	use List::MoreUtils qw(any all);
 	use Module::Load::Conditional qw(can_load);
-	use Sub::Install;
-	use Sub::Name;
+	use Sub::Util qw(set_subname);
 	use namespace::clean;
 	
 	use Module::Pluggable search_path => 'AtteanX::Parser', sub_name => 'parsers', max_depth => 3;
@@ -172,7 +171,7 @@ returns undef.
 				return @classes;
 			};
 			Sub::Install::install_sub({
-				code	=> subname("list_${method}", $code),
+				code	=> set_subname("list_${method}", $code),
 				as		=> "list_${method}"
 			});
 		}

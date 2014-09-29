@@ -118,7 +118,7 @@ use Attean::API::Binding;
 package Attean::API::Model 0.001 {
 	use Moo::Role;
 	use Sub::Install;
-	use Sub::Name;
+	use Sub::Util qw(set_subname);
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
@@ -218,7 +218,7 @@ package Attean::API::Model 0.001 {
 				return $nodes;
 			};
 			Sub::Install::install_sub({
-				code	=> subname("${method}s", $code),
+				code	=> set_subname("${method}s", $code),
 				as		=> "${method}s"
 			});
 		}
