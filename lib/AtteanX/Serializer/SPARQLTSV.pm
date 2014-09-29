@@ -34,8 +34,17 @@ package AtteanX::Serializer::SPARQLTSV 0.001 {
 	use List::MoreUtils qw(any);
 	use namespace::clean;
 
-	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/csv');
-	has 'media_types' => (is => 'ro', isa => ArrayRef[Str], init_arg => undef, default => sub { ['text/csv'] });
+	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/tab-separated-values');
+
+=item C<< media_types >>
+
+Returns a list of media types that identify the format produced by this serializer.
+
+=cut
+
+	sub media_types {
+		return [qw(text/tab-separated-values)];
+	}
 	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 
