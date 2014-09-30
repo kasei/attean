@@ -153,9 +153,9 @@ package Attean::AggregateExpression 0.001 {
 		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE)];
 		$type->assert_valid(shift->operator);
 	}
-	has 'distinct'		=> (is => 'ro', isa => Bool, default => 0);
 	has 'operator'		=> (is => 'ro', isa => UpperCaseStr, coerce => UpperCaseStr->coercion, required => 1);
 	has 'scalar_vars'	=> (is => 'ro', isa => HashRef[Str], default => sub { +{} });
+	has 'distinct'		=> (is => 'ro', isa => Bool, default => 0);
 	has 'variable'		=> (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	with 'Attean::API::AggregateExpression';
 }
