@@ -1,6 +1,6 @@
 =head1 NAME
 
-Attean::API::AggregateExpression - Role representing a aggregate expressions
+Attean::API::AggregateExpression - Role representing an aggregate expression tree
 
 =head1 VERSION
 

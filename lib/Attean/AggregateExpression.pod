@@ -1,6 +1,6 @@
 =head1 NAME
 
-Attean::AggregateExpression - XXX
+Attean::AggregateExpression - Representation of aggregate expression trees 
 
 =head1 VERSION
 
@@ -8,7 +8,8 @@ This document describes Attean::AggregateExpression version 0.001
 
 =head1 DESCRIPTION
 
-The Attean::AggregateExpression class XXX
+The Attean::AggregateExpression class represents an expression tree where the
+root node is an aggregate operation (e.g. SUM(?a) or COALESCE(?a/?b, ?c, 0)).
 
 =head1 ROLES
 

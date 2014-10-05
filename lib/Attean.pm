@@ -10,10 +10,17 @@ This document describes Attean version 0.001
 
   use v5.14;
   use Attean;
-  my $parser = Attean->get_parser('NQuads')->new();
-  my $iter = $parser->parse_iter_from_io(\*STDIN);
+  use Attean::RDF qw(iri);
   my $store = Attean->get_store('Memory')->new();
-  $store->add_iter($iter->as_quads);
+  my $parser = Attean->get_parser('NTriples')->new();
+  
+  # iterator of triples and quads
+  my $iter = $parser->parse_iter_from_io(\*STDIN);
+  
+  # add a graph name to all triples
+  my $quads = $iter->as_quads(iri('http://graph-name/'));
+  
+  $store->add_iter($quads);
   my $model = Attean::QuadModel->new( store => $store );
   my $iter = $model->get_quads();
   while (my $quad = $iter->next) {
