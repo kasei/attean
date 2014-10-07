@@ -1,0 +1,65 @@
+=head1 NAME
+
+Attean::API::BulkUpdatableModel - Role representing models that can perform bulk update operations
+
+=head1 VERSION
+
+This document describes Attean::API::BulkUpdatableModel version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role for L<Attean::API::MutableModel>s that can perform bulk
+update operations.
+
+Model-provided mutating methods (e.g. C<load_triples>, C<add_iter>, and
+C<add_list>) are automatically wrapped in matching C<begin_bulk_updates> and
+C<end_bulk_updates> calls.
+
+Read-only model methods (e.g. C<get_quads>, C<get_bindings>, C<count_quads>,
+C<get_graphs>, C<subject>, C<predicate>, C<object>, and C<graph>) are
+automatically preceded by a C<end_bulk_updates> call.
+
+=head1 REQUIRED METHODS
+
+Classes consuming this role must provide the following methods:
+
+=over 4
+
+=item C<< begin_bulk_updates >>
+
+Indicates that all subsequent updates (until a call to C<end_bulk_updates>)
+should be performed in bulk.
+
+=item C<< end_bulk_updates >>
+
+Indicates that pending bulk updates should be performed. The model must allow
+calls to this method, even when no matching call to C<begin_bulk_updates> was
+made.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
