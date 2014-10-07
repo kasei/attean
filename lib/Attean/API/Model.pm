@@ -310,6 +310,14 @@ package Attean::API::BulkUpdatableModel 0.001 {
 	requires 'begin_bulk_updates';
 	requires 'end_bulk_updates';
 	
+	around [qw(load_triples add_iter add_list)] => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		$self->begin_bulk_updates();
+		$self->$orig(@_);
+		$self->end_bulk_updates();
+	};
+
 	# End bulk updates the moment a read operation is performed...
 	before [qw(get_quads get_bindings count_quads get_graphs subject predicate object graph)] => sub {
 		my $self	= shift;
