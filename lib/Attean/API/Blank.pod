@@ -1,5 +1,3 @@
-=item C<< compare( $blank ) >>
-
 =head1 NAME
 
 Attean::API::Blank - Role representing RDF blank terms
