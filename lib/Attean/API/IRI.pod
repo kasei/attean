@@ -1,0 +1,58 @@
+=head1 NAME
+
+Attean::API::IRI - Role representing RDF IRI terms
+
+=head1 VERSION
+
+This document describes Attean::API::IRI version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role that IRI RDF terms consume.
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Term> and L<Attean::API::BlankOrIRI> roles.
+
+=head1 METHODS
+
+This role provides default implementations of the following methods:
+
+=over 4
+
+=item C<< ebv >>
+
+Returns the boolean value of this term.
+
+=item C<< compare( $iri ) >>
+
+Returns -1, 0, or 1 if C<< $iri >> is less than, equal to, or greater than
+the referent based on SPARQL sorting order.
+
+=back
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
