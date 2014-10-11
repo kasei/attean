@@ -1,0 +1,98 @@
+=head1 NAME
+
+Attean::API::MutableModel - Role representing mutable models
+
+=head1 VERSION
+
+This document describes Attean::API::MutableModel version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role that mutable models consume. It defines the required methods
+for updating data, and provides default functionality.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Model> role.
+
+=head1 REQUIRED METHODS
+
+Classes consuming this role must provide the following methods:
+
+=over 4
+
+=item C<< add_quad( $quad ) >>
+
+Adds the L<Attean::API::Quad> C<$quad> to the model.
+
+=item C<< remove_quad( $quad ) >>
+
+Removes the L<Attean::API::Quad> C<$quad> from the model.
+
+=item C<< create_graph( $graph ) >>
+
+Creates a new, empty graph in the model with the L<Attean::API::BlankOrIRI>
+identifier C<$graph>. If the model does not support empty graphs, this
+operation may be a no-op.
+
+=item C<< drop_graph( $graph ) >>
+
+Removes the graph in the model with the L<Attean::API::BlankOrIRI>
+identifier C<$graph>.
+
+=item C<< clear_graph( $graph ) >>
+
+Removes all quads that belong to the graph in the model with the
+L<Attean::API::BlankOrIRI> identifier C<$graph>. If the model does not support
+empty graphs, this operation may be an alias for C<< drop_graph( $graph ) >>.
+
+=back
+
+=head1 METHODS
+
+This role provides default implementations of the following methods:
+
+=over 4
+
+=item C<< load_triples( $format, $graph => $data ) >>
+
+Parses the serialized triples contained in the string C<$data> using the
+C<$format> parser (see L<Attean/get_parser>). Triples resulting from parsing
+are turned into quads using the C<$graph> identifier, and added to the model.
+
+=item C<< add_iter( $iter ) >>
+
+Adds all the quads from the L<Attean::API::QuadIterator> C<$iter> to the model.
+
+=item C<< add_list( $graph, @elements ) >>
+
+Adds an rdf:List encoded list of C<@elements> to the model in the C<$graph>.
+Returns the L<Attean::API::Blank> head of the list.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
