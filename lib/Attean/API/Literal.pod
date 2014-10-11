@@ -1,10 +1,10 @@
 =head1 NAME
 
-Attean::API::IRI - Role representing RDF IRI terms
+Attean::API::Literal - Role representing RDF Literal terms
 
 =head1 VERSION
 
-This document describes Attean::API::IRI version 0.001
+This document describes Attean::API::Literal version 0.001
 
 =head1 SYNOPSIS
 
@@ -13,11 +13,27 @@ This document describes Attean::API::IRI version 0.001
 
 =head1 DESCRIPTION
 
-This is a Moo role that IRI RDF terms consume.
+This is a Moo role that Literal RDF terms consume.
 
 =head1 ROLES
 
 This role consumes the L<Attean::API::Term> and L<Attean::API::BlankOrIRI> roles.
+
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< language >>
+
+A language tag string.
+
+=item C<< datatype >>
+
+An L<Attean::API::IRI> datatype.
+
+=back
 
 =head1 METHODS
 
@@ -29,9 +45,9 @@ This role provides default implementations of the following methods:
 
 Returns the boolean value of this term.
 
-=item C<< compare( $iri ) >>
+=item C<< compare( $literal ) >>
 
-Returns -1, 0, or 1 if C<< $iri >> is less than, equal to, or greater than
+Returns -1, 0, or 1 if C<< $literal >> is less than, equal to, or greater than
 the referent based on SPARQL sorting order.
 
 =back

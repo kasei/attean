@@ -15,11 +15,6 @@ This document describes Attean::API::Blank version 0.001
 
 This is a Moo role that Blank RDF terms consume.
 
-=head1 BUGS
-
-Please report any bugs or feature requests to through the GitHub web interface
-at L<https://github.com/kasei/attean/issues>.
-
 =head1 ROLES
 
 This role consumes the L<Attean::API::Term> and L<Attean::API::BlankOrIRI> roles.
@@ -40,6 +35,11 @@ Returns -1, 0, or 1 if C<< $blank >> is less than, equal to, or greater than
 the referent based on SPARQL sorting order.
 
 =back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
 
 =head1 SEE ALSO
 
