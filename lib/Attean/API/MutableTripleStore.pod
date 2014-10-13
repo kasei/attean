@@ -1,0 +1,58 @@
+=head1 NAME
+
+Attean::API::MutableTripleStore - Role representing mutable triple stores
+
+=head1 VERSION
+
+This document describes Attean::API::MutableTripleStore version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role that mutable triple storess consume. It defines the required
+methods for updating data.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::TripleStore> role.
+
+=head1 REQUIRED METHODS
+
+Classes consuming this role must provide the following methods:
+
+=over 4
+
+=item C<< add_triple( $triple ) >>
+
+Adds the L<Attean::API::Triple> C<$triple> to the store.
+
+=item C<< remove_triple( $triple ) >>
+
+Removes the L<Attean::API::Triple> C<$triple> from the store.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
