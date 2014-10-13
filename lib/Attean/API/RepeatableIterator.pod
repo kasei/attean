@@ -1,0 +1,73 @@
+=head1 NAME
+
+Attean::API::RepeatableIterator - Role representing iterators that may be reset and iterated again
+
+=head1 VERSION
+
+This document describes Attean::API::RepeatableIterator version 0.001
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+
+=head1 DESCRIPTION
+
+This is a Moo role that are consumed by iterators that can be reset and
+iterated again.
+
+=head1 ROLES
+
+This role consumes the L<Attean::API::Iterator> role.
+
+=head1 REQUIRED METHODS
+
+Classes consuming this role must provide the following methods:
+
+=over 4
+
+=item C<< reset >>
+
+Resets the state of the iterator, allowing iteration from the start of the
+underlying data.
+
+=back
+
+=head1 METHODS
+
+This role provides default implementations of the following methods:
+
+=over 4
+
+=item C<< elements >>
+
+Returns a list of all elements in the iterator, leaving the iterator state
+untouched.
+
+=item C<< peek >>
+
+Returns the first element of the iterator, leaving the iterator state
+untouched.
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
