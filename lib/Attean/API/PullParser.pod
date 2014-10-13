@@ -4,7 +4,7 @@ Attean::API::PullParser - Role for parsers that natively return an iterator
 
 =head1 VERSION
 
-This document describes Attean::API::PullParser version 0.001
+This document describes Attean::API::PullParser version 0.001_01
 
 =head1 DESCRIPTION
 

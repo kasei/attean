@@ -7,7 +7,7 @@ Attean::Blank - RDF blank nodes
 
 =head1 VERSION
 
-This document describes Attean::Blank version 0.001
+This document describes Attean::Blank version 0.001_01
 
 =head1 SYNOPSIS
 

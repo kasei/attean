@@ -4,7 +4,7 @@ Attean::API::AbbreviatingSerializer - Role for serializers that can abbreviate I
 
 =head1 VERSION
 
-This document describes Attean::API::AbbreviatingSerializer version 0.001
+This document describes Attean::API::AbbreviatingSerializer version 0.001_01
 
 =head1 DESCRIPTION
 

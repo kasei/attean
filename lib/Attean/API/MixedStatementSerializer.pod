@@ -4,7 +4,7 @@ Attean::API::MixedStatementSerializer - Role for serializers of L<Attean::API::T
 
 =head1 VERSION
 
-This document describes Attean::API::MixedStatementSerializer version 0.001
+This document describes Attean::API::MixedStatementSerializer version 0.001_01
 
 =head1 DESCRIPTION
 

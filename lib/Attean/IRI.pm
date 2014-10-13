@@ -7,7 +7,7 @@ Attean::IRI - RDF Internationalized Resource Identifiers (IRIs)
 
 =head1 VERSION
 
-This document describes Attean::IRI version 0.001
+This document describes Attean::IRI version 0.001_01
 
 =head1 SYNOPSIS
 

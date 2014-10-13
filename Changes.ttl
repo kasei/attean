@@ -10,17 +10,34 @@
         dcterms:references      <http://kasei.us/code/attean/#project> .
 
 
-<http://kasei.us/code/files/Attean-0.001.tar.gz>
+<http://kasei.us/code/files/Attean-0.002.tar.gz>
         dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
-#        dcterms:replaces    <http://kasei.us/code/files/Attean-0.001.tar.gz> ;
+        dcterms:replaces    <http://kasei.us/code/files/Attean-0.001.tar.gz> ;
 
         doap:Version    [
-                        doap:revision     "0.001" ;
+                        doap:revision     "0.002" ;
                         doap:created      "2014-XX-XX" ;
                         ];
         asc:changes     [
-                        asc:addition    "" ;
-                        asc:update      "" ;
+                        asc:addition    "Added POD for many classes and roles." ;
+                        asc:addition    "Added Attean->negotiate_serializer method." ;
+                        asc:update      "Wrap mutating methods in a single bulk-update." ;
+                        asc:update      "Moved RDF::Query algebra translator to AtteanX::RDFQueryTranslator." ;
+                        asc:update      "Updated Attean->get_serializer to support media_type argument." ;
+                        asc:update      "Changed media_type attributes to class methods in Serializer classes." ;
+                        asc:update      "Switched from Sub::Name to Sub::Util (github issue #5)." ;
+                        ] .
+
+
+<http://kasei.us/code/files/Attean-0.001.tar.gz>
+        dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
+
+        doap:Version    [
+                        doap:revision     "0.001" ;
+                        doap:created      "2014-09-27" ;
+                        ];
+        asc:changes     [
+                        asc:addition    "Initial release." ;
                         ] .
 
 

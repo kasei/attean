@@ -7,7 +7,7 @@ AtteanX::Parser::Turtle::Token - Token objects used for parsing of Turtle
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle::Token version 0.001
+This document describes AtteanX::Parser::Turtle::Token version 0.001_01
 
 =head1 SYNOPSIS
 

@@ -4,7 +4,7 @@ Attean::API::BlankOrIRI - Role representing blank or IRI terms
 
 =head1 VERSION
 
-This document describes Attean::API::BlankOrIRI version 0.001
+This document describes Attean::API::BlankOrIRI version 0.001_01
 
 =head1 SYNOPSIS
 

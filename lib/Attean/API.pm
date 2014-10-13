@@ -7,7 +7,7 @@ Attean::API - Utility package for loading all Attean role packages.
 
 =head1 VERSION
 
-This document describes Attean::API version 0.001
+This document describes Attean::API version 0.001_01
 
 =head1 SYNOPSIS
 
