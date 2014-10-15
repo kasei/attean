@@ -4,7 +4,7 @@ Attean::API::TermOrVariable - Role representing terms and variables
 
 =head1 VERSION
 
-This document describes Attean::API::TermOrVariable version 0.001_01
+This document describes Attean::API::TermOrVariable version 0.002
 
 =head1 SYNOPSIS
 

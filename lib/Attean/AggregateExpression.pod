@@ -4,7 +4,7 @@ Attean::AggregateExpression - Representation of aggregate expression trees
 
 =head1 VERSION
 
-This document describes Attean::AggregateExpression version 0.001_01
+This document describes Attean::AggregateExpression version 0.002
 
 =head1 DESCRIPTION
 

@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.002" ;
-                        doap:created      "2014-XX-XX" ;
+                        doap:created      "2014-10-15" ;
                         ];
         asc:changes     [
                         asc:addition    "Added POD for many classes and roles." ;

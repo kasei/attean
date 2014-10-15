@@ -7,7 +7,7 @@ Attean::API::Query - Utility package defining query-related roles
 
 =head1 VERSION
 
-This document describes Attean::API::Query version 0.001_01
+This document describes Attean::API::Query version 0.002
 
 =head1 SYNOPSIS
 
