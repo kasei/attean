@@ -19,13 +19,17 @@ The Attean::Store role is an empty role that more specialized roles conform to:
 
 =item * L<Attean::API::MutableTripleStore>
 
-=item * L<Attean::API::CacheableTripleStore>
+=item * L<Attean::API::ETagCacheableTripleStore>
+
+=item * L<Attean::API::TimeCacheableTripleStore>
 
 =item * L<Attean::API::QuadStore>
 
 =item * L<Attean::API::MutableQuadStore>
 
-=item * L<Attean::API::CacheableQuadStore>
+=item * L<Attean::API::ETagCacheableQuadStore>
+
+=item * L<Attean::API::TimeCacheableQuadStore>
 
 =back
 
@@ -65,11 +69,18 @@ package Attean::API::MutableTripleStore 0.001 {
 	requires 'remove_triple';
 }
 
-package Attean::API::CacheableTripleStore 0.001 {
+package Attean::API::ETagCacheableTripleStore 0.001 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'etag_value_for_triples';
+}
+
+package Attean::API::TimeCacheableTripleStore 0.001 {
+	use Moo::Role;
+	with 'Attean::API::TripleStore';
+	
+	requires 'metime_for_triples';
 }
 
 package Attean::API::QuadStore 0.001 {
@@ -127,11 +138,18 @@ package Attean::API::MutableQuadStore 0.001 {
 	}
 }
 
-package Attean::API::CacheableQuadStore 0.001 {
+package Attean::API::ETagCacheableQuadStore 0.001 {
 	use Moo::Role;
 	with 'Attean::API::QuadStore';
 	
 	requires 'etag_value_for_quads';
+}
+
+package Attean::API::TimeCacheableQuadStore 0.001 {
+	use Moo::Role;
+	with 'Attean::API::QuadStore';
+	
+	requires 'mtime_for_quads';
 }
 
 1;

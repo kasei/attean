@@ -295,10 +295,17 @@ package Attean::API::MutableModel 0.001 {
 }
 
 
-package Attean::API::CacheableModel 0.001 {
+package Attean::API::ETagCacheableModel 0.001 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
+}
+
+
+package Attean::API::TimeCacheableModel 0.001 {
+	use Moo::Role;
+	
+	requires 'mtime_for_quads';
 }
 
 
