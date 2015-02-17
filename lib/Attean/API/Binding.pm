@@ -106,6 +106,11 @@ package Attean::API::Binding 0.001 {
 		my @blanks	= grep { $_->does('Attean::API::Blank') } $self->values;
 		return scalar(@blanks);
 	}
+	
+	sub tree_attributes {
+		my $self	= shift;
+		return $self->variables;
+	};
 }
 
 package Attean::API::TripleOrQuadPattern 0.001 {

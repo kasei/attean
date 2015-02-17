@@ -48,6 +48,7 @@ package Attean::Algebra::LeftJoin 0.001 {
 		my $self	= shift;
 		return sprintf('LeftJoin { %s }', $self->expression->as_string);
 	}
+	sub tree_attributes { return qw(expression) };
 }
 
 =item * L<Attean::Algebra::Filter>
@@ -63,6 +64,7 @@ package Attean::Algebra::Filter 0.001 {
 		my $self	= shift;
 		return sprintf('Filter { %s }', $self->expression->as_string);
 	}
+	sub tree_attributes { return qw(expression) };
 }
 
 =item * L<Attean::Algebra::Union>
@@ -99,6 +101,7 @@ package Attean::Algebra::Graph 0.001 {
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
+	sub tree_attributes { return qw(graph) };
 }
 
 =item * L<Attean::Algebra::Extend>
@@ -121,7 +124,7 @@ package Attean::Algebra::Extend 0.001 {
 		my $self	= shift;
 		return sprintf('Extend { %s=%s }', $self->variable->as_string, $self->expression->as_string);
 	}
-	
+	sub tree_attributes { return qw(variable expression) };
 }
 
 =item * L<Attean::Algebra::Minus>
@@ -198,6 +201,7 @@ package Attean::Algebra::Project 0.001 {
 		my $self	= shift;
 		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
 	}
+	sub tree_attributes { return qw(variables) };
 }
 
 =item * L<Attean::Algebra::Comparator>
@@ -209,6 +213,7 @@ package Attean::Algebra::Comparator 0.001 {
 	use Types::Standard qw(Bool ConsumerOf);
 	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	sub tree_attributes { return qw(expression) };
 }
 
 =item * L<Attean::Algebra::OrderBy>
@@ -220,6 +225,7 @@ package Attean::Algebra::OrderBy 0.001 {
 	use Types::Standard qw(ArrayRef InstanceOf);
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
+	sub tree_attributes { return qw(comparators) };
 }
 
 =item * L<Attean::Algebra::BGP>
@@ -275,6 +281,7 @@ package Attean::Algebra::BGP 0.001 {
 		my $algebra	= Attean::Algebra::BGP->new( triples => $triples );
 		return ($algebra, $mapping);
 	}
+	sub tree_attributes { return qw(triples) };
 }
 
 =item * L<Attean::Algebra::Path>
@@ -293,6 +300,7 @@ package Attean::Algebra::Path 0.001 {
 	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
+	sub tree_attributes { return qw(subject path object) };
 }
 
 =item * L<Attean::Algebra::Group>
@@ -310,6 +318,7 @@ package Attean::Algebra::Group 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
 	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
+	sub tree_attributes { return qw(groupby aggregates) };
 }
 
 =item * L<Attean::Algebra::NegatedPropertySet>
@@ -325,6 +334,8 @@ package Attean::Algebra::NegatedPropertySet 0.001 {
 		my $self	= shift;
 		return sprintf("!(%s)", join('|', map { $_->ntriples_string } @{ $self->predicates }));
 	}
+	sub algebra_as_string { return 'NPS' }
+	sub tree_attributes { return qw(predicates) };
 }
 
 =item * L<Attean::Algebra::PredicatePath>
@@ -340,6 +351,11 @@ package Attean::Algebra::PredicatePath 0.001 {
 		my $self	= shift;
 		return $self->predicate->ntriples_string;
 	}
+	sub algebra_as_string {
+		my $self	= shift;
+		return 'Property Path ' . $self->as_string;
+	}
+	sub tree_attributes { return qw(predicate) };
 }
 
 =item * L<Attean::Algebra::InversePath>
@@ -421,6 +437,7 @@ package Attean::Algebra::Table 0.001 {
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	sub tree_attributes { return qw(variables rows) };
 }
 
 =item * L<Attean::Algebra::Ask>
@@ -443,6 +460,7 @@ package Attean::Algebra::Construct 0.001 {
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
 	sub in_scope_variables { return qw(subject predicate object); }
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	sub tree_attributes { return qw(triples) };
 }
 
 

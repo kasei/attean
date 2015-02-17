@@ -233,6 +233,10 @@ package Attean::API::UnaryPropertyPath 0.001 {
 		my $str	= sprintf("%s%s%s", $self->prefix_name, $pstr, $self->postfix_name);
 		return $str;
 	}
+	sub algebra_as_string {
+		my $self	= shift;
+		return "Property Path " . $self->prefix_name . $self->postfix_name;
+	}
 	with 'Attean::API::PropertyPath', 'Attean::API::UnaryQueryTree';
 }
 
@@ -255,6 +259,10 @@ package Attean::API::NaryPropertyPath 0.001 {
 		} else {
 			return sprintf("(%s)", join($self->separator, map { $_->as_string } @children));
 		}
+	}
+	sub algebra_as_string {
+		my $self	= shift;
+		return "Property Path " . $self->separator;
 	}
 	with 'Attean::API::PropertyPath';
 }
