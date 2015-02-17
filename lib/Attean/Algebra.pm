@@ -7,7 +7,7 @@ Attean::Algebra - Representation of SPARQL algebra operators
 
 =head1 VERSION
 
-This document describes Attean::Algebra version 0.002
+This document describes Attean::Algebra version 0.002_01
 
 =head1 SYNOPSIS
 

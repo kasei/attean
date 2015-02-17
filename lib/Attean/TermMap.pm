@@ -7,7 +7,7 @@ Attean::TermMap - Mapping terms to new terms
 
 =head1 VERSION
 
-This document describes Attean::TermMap version 0.002
+This document describes Attean::TermMap version 0.002_01
 
 =head1 SYNOPSIS
 

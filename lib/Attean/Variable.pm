@@ -7,7 +7,7 @@ Attean::Variable - Pattern matching variables
 
 =head1 VERSION
 
-This document describes Attean::Variable version 0.002
+This document describes Attean::Variable version 0.002_01
 
 =head1 SYNOPSIS
 

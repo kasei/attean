@@ -7,7 +7,7 @@ Attean::TreeRewriter - Walk and rewrite subtrees
 
 =head1 VERSION
 
-This document describes Attean::TreeRewriter version 0.002
+This document describes Attean::TreeRewriter version 0.002_01
 
 =head1 SYNOPSIS
 

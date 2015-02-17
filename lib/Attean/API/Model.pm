@@ -7,7 +7,7 @@ Attean::API::Model - RDF Model
 
 =head1 VERSION
 
-This document describes Attean::API::Model version 0.002
+This document describes Attean::API::Model version 0.002_01
 
 =head1 DESCRIPTION
 

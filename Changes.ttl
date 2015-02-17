@@ -10,6 +10,22 @@
         dcterms:references      <http://kasei.us/code/attean/#project> .
 
 
+<http://kasei.us/code/files/Attean-0.003.tar.gz>
+        dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
+        dcterms:replaces    <http://kasei.us/code/files/Attean-0.002.tar.gz> ;
+
+        doap:Version    [
+                        doap:revision     "0.003" ;
+                        doap:created      "2015-02-XX" ;
+                        ];
+        asc:changes     [
+                        asc:addition    "Added missing algebra_as_string impelementations in Attean::API::Query and Attean::Algebra." ;
+                        asc:addition    "Added tree_attributes methods to tree classes." ;
+                        asc:addition    "Added Attean::TreeRewriter class." ;
+                        asc:update      "Split Cacheable roles into ETagCacheable and TimeCacheable variants." ;
+                        ] .
+
+
 <http://kasei.us/code/files/Attean-0.002.tar.gz>
         dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
         dcterms:replaces    <http://kasei.us/code/files/Attean-0.001.tar.gz> ;

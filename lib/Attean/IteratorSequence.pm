@@ -7,7 +7,7 @@ Attean::IteratorSequence - Iterator implementation backed by zero or more sub-it
 
 =head1 VERSION
 
-This document describes Attean::IteratorSequence version 0.002
+This document describes Attean::IteratorSequence version 0.002_01
 
 =head1 SYNOPSIS
 
