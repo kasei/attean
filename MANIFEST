@@ -72,6 +72,7 @@ lib/Attean/RDF.pm
 lib/Attean/Result.pm
 lib/Attean/SimpleQueryEvaluator.pm
 lib/Attean/TermMap.pm
+lib/Attean/TreeRewriter.pm
 lib/Attean/Triple.pm
 lib/Attean/Variable.pm
 lib/AtteanX/Parser/NQuads.pm
@@ -121,5 +122,6 @@ t/store-memory.t
 t/store-simple.t
 t/term-map.t
 t/term.t
+t/treerewrite.t
 xt/pod-coverage.t
 xt/pod.t
