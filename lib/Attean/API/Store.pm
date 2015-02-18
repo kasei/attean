@@ -83,6 +83,13 @@ package Attean::API::TimeCacheableTripleStore 0.001 {
 	requires 'metime_for_triples';
 }
 
+package Attean::API::CountEstimatableTripleStore 0.001 {
+	use Moo::Role;
+	with 'Attean::API::TripleStore';
+	
+	requires 'estimated_count_triples';
+}
+
 package Attean::API::QuadStore 0.001 {
 	use Moo::Role;
 	with 'Attean::API::Store';
@@ -150,6 +157,13 @@ package Attean::API::TimeCacheableQuadStore 0.001 {
 	with 'Attean::API::QuadStore';
 	
 	requires 'mtime_for_quads';
+}
+
+package Attean::API::CountEstimatableQuadStore 0.001 {
+	use Moo::Role;
+	with 'Attean::API::QuadStore';
+	
+	requires 'estimated_count_quads';
 }
 
 1;
