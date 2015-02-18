@@ -80,7 +80,7 @@ package Attean::API::TimeCacheableTripleStore 0.001 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
-	requires 'metime_for_triples';
+	requires 'mtime_for_triples';
 }
 
 package Attean::API::QuadStore 0.001 {
