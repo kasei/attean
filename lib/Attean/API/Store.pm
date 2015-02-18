@@ -55,6 +55,11 @@ package Attean::API::TripleStore 0.001 {
 		return $count;
 	}
 	
+	sub count_triples_estimate {
+		my $self	= shift;
+		return $self->count_triples(@_);
+	}
+	
 	sub size {
 		my $self	= shift;
 		return $self->count_triples();
@@ -97,6 +102,11 @@ package Attean::API::QuadStore 0.001 {
 			$count++;
 		}
 		return $count;
+	}
+	
+	sub count_quads_estimate {
+		my $self	= shift;
+		return $self->count_quads(@_);
 	}
 	
 	sub get_graphs {
