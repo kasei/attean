@@ -19,10 +19,12 @@
                         doap:created      "2015-02-XX" ;
                         ];
         asc:changes     [
+                        asc:addition    "Added count estimate methods to TripleStore QuadStore roles (in lieu of github pull request #6)." ;
                         asc:addition    "Added missing algebra_as_string impelementations in Attean::API::Query and Attean::Algebra." ;
                         asc:addition    "Added tree_attributes methods to tree classes." ;
                         asc:addition    "Added Attean::TreeRewriter class." ;
                         asc:update      "Split Cacheable roles into ETagCacheable and TimeCacheable variants." ;
+                        asc:update      "Fixed method name typo in Attean::API::TimeCacheableTripleStore." ;
                         ] .
 
 
