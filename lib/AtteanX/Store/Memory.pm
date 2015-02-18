@@ -4,7 +4,7 @@ AtteanX::Store::Memory - Simple in-memory RDF store
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Memory version 0.002_01
+This document describes AtteanX::Store::Memory version 0.002_02
 
 =head1 SYNOPSIS
 

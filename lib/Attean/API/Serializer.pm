@@ -7,7 +7,7 @@ Attean::API::Serializer - Serializer role
 
 =head1 VERSION
 
-This document describes Attean::API::Serializer version 0.002_01
+This document describes Attean::API::Serializer version 0.002_02
 
 =head1 DESCRIPTION
 

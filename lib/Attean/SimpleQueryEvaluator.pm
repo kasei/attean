@@ -7,7 +7,7 @@ Attean::SimpleQueryEvaluator - Simple query evaluator
 
 =head1 VERSION
 
-This document describes Attean::SimpleQueryEvaluator version 0.002_01
+This document describes Attean::SimpleQueryEvaluator version 0.002_02
 
 =head1 SYNOPSIS
 
