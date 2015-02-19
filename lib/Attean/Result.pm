@@ -7,7 +7,7 @@ Attean::Result - SPARQL Result
 
 =head1 VERSION
 
-This document describes Attean::Result version 0.002_02
+This document describes Attean::Result version 0.003
 
 =head1 SYNOPSIS
 

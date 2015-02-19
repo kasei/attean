@@ -7,7 +7,7 @@ Attean::Triple - RDF Triples
 
 =head1 VERSION
 
-This document describes Attean::Triple version 0.002_02
+This document describes Attean::Triple version 0.003
 
 =head1 SYNOPSIS
 

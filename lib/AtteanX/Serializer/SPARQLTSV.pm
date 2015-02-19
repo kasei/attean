@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLTSV - SPARQL Results TSV Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLTSV version 0.002_02
+This document describes AtteanX::Serializer::SPARQLTSV version 0.003
 
 =head1 SYNOPSIS
 

@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.002_02
+This document describes Attean::API::Binding version 0.003
 
 =head1 DESCRIPTION
 

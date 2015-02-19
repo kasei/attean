@@ -10,7 +10,7 @@ AtteanX::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle version 0.002_02
+This document describes AtteanX::Parser::Turtle version 0.003
 
 =head1 SYNOPSIS
 

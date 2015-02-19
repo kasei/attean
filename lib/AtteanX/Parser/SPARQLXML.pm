@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLXML - SPARQL XML Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLXML version 0.002_02
+This document describes AtteanX::Parser::SPARQLXML version 0.003
 
 =head1 SYNOPSIS
 

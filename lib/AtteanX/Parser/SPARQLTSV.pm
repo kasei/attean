@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLTSV - SPARQL Results TSV Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLTSV version 0.002_02
+This document describes AtteanX::Parser::SPARQLTSV version 0.003
 
 =head1 SYNOPSIS
 

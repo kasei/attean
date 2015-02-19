@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.003" ;
-                        doap:created      "2015-02-XX" ;
+                        doap:created      "2015-02-19" ;
                         ];
         asc:changes     [
                         asc:addition    "Added count estimate methods to TripleStore QuadStore roles (in lieu of github pull request #6)." ;
