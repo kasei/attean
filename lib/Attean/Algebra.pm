@@ -438,6 +438,7 @@ package Attean::Algebra::Table 0.001 {
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub tree_attributes { return qw(variables rows) };
+	sub algebra_as_string { return 'Table' }
 }
 
 =item * L<Attean::Algebra::Ask>
@@ -448,6 +449,7 @@ package Attean::Algebra::Ask 0.001 {
 	use Moo;
 	sub in_scope_variables { return; }
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	sub algebra_as_string { return 'Ask' }
 }
 
 =item * L<Attean::Algebra::Construct>
@@ -461,6 +463,7 @@ package Attean::Algebra::Construct 0.001 {
 	sub in_scope_variables { return qw(subject predicate object); }
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub tree_attributes { return qw(triples) };
+	sub algebra_as_string { return 'Construct' }
 }
 
 
