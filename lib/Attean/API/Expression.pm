@@ -70,7 +70,7 @@ package Attean::API::Expression 0.001 {
 	use Types::Standard qw(Str);
 	use namespace::clean;
 
-	with 'Attean::API::DirectedAcyclicGraph';
+	with 'Attean::API::DirectedAcyclicGraph', 'Attean::API::UnionScopeVariables';
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
 	requires 'as_string';

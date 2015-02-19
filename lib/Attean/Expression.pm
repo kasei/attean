@@ -62,6 +62,14 @@ package Attean::ValueExpression 0.001 {
 		}
 		return $str;
 	}
+	
+	sub in_scope_variables {
+		my $self	= shift;
+		if ($self->value->does('Attean::API::Variable')) {
+			return $self->value->value;
+		}
+		return;
+	}
 }
 
 =item * L<Attean::UnaryExpression>
