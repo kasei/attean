@@ -284,6 +284,22 @@ package Attean::Algebra::BGP 0.001 {
 	sub tree_attributes { return qw(triples) };
 }
 
+=item * L<Attean::Algebra::Service>
+
+=cut
+
+package Attean::Algebra::Service 0.001 {
+	use Moo;
+	use Types::Standard qw(ConsumerOf);
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Service %s', $self->endpoint->as_string);
+	}
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree', 'Attean::API::UnionScopeVariables';
+	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
+	sub tree_attributes { return qw(endpoint) };
+}
+
 =item * L<Attean::Algebra::Path>
 
 =cut
