@@ -122,6 +122,10 @@ package AtteanX::RDFQueryTranslator 0.001 {
 			my $o		= $self->translate($a->end);
 			my $path	= $self->translate_path($a->path);
 			return Attean::Algebra::Path->new( subject => $s, path => $path, object => $o );
+		} elsif ($a->isa('RDF::Query::Algebra::Service')) {
+			my $endpoint	= $self->translate($a->endpoint);
+			my $p			= $self->translate($a->pattern);
+			return Attean::Algebra::Service->new( children => [$p], endpoint => $endpoint );
 		} elsif ($a->isa('RDF::Query::Algebra::NamedGraph')) {
 			my $graph	= $self->translate($a->graph);
 			my $p		= $self->translate($a->pattern);
