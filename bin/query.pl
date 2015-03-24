@@ -18,9 +18,9 @@ use Benchmark qw(timethese);
 
 BEGIN { $Error::TypeTiny::StackTrace	= 1; }
 
-if (scalar(@ARGV) < 2) {
+if (scalar(@ARGV) < 1) {
 	print STDERR <<"END";
-Usage: $0 data.ttl query.rq
+Usage: $0 query.rq [data.ttl ...]
 
 Uses RDF::Query to parse the supplied SPARQL query, translates the parsed query
 form to an Attean::Algebra object, and executes it against a model containing
@@ -35,11 +35,7 @@ my $debug	= 0;
 my $benchmark	= 0;
 my $result	= GetOptions ("verbose" => \$verbose, "debug" => \$debug, "benchmark" => \$benchmark);
 
-my $data	= shift;
 my $qfile	= shift;
-my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($data));
-
-open(my $fh, '<:encoding(UTF-8)', $data);
 
 try {
 	warn "Constructing model...\n" if ($verbose);
@@ -47,15 +43,17 @@ try {
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 
-	{
-		warn "Parsing data...\n" if ($verbose);
+	while (my $data = shift) {
+		my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($data));
+		open(my $fh, '<:encoding(UTF-8)', $data);
+		warn "Parsing data from $data...\n" if ($verbose);
 		my $pclass	= Attean->get_parser( filename => $data ) // 'AtteanX::Parser::Turtle';
 		my $parser	= $pclass->new(base => $base);
 		my $iter	= $parser->parse_iter_from_io($fh);
 		my $quads	= $iter->as_quads($graph);
 		$model->add_iter($quads);
 	}
-
+	
 	if ($debug) {
 		my $iter	= $model->get_quads();
 		while (my $q = $iter->next) {
