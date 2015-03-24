@@ -5,8 +5,8 @@ use v5.14;
 use warnings;
 no warnings 'redefine';
 
+use Test::LWP::UserAgent;
 use Attean parsers => ['Turtle'];
-
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 
@@ -351,7 +351,7 @@ END
 			push(@got, $str);
 		}
 		is_deeply([sort @got], \@expected);
-		while (my $q = $iter->next) { say $q->as_string }
+# 		while (my $q = $iter->next) { say $q->as_string }
 	}
 	
 	if (0) {
@@ -364,6 +364,47 @@ END
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => iri('pp11') );
 		my $iter	= $e->evaluate($path, iri('pp11'));
 		while (my $q = $iter->next) { say $q->as_string }
+	}
+
+	{
+		note('Service');
+		my $ua		= Test::LWP::UserAgent->new();
+		$ua->map_response(qr{example.org/sparql}, HTTP::Response->new('200', 'OK', ['Content-Type' => 'application/sparql-results+xml'], <<'XML'));
+<?xml version="1.0"?>
+<sparql xmlns="http://www.w3.org/2005/sparql-results#">
+  <head>
+	<variable name="s"/>
+	<variable name="p"/>
+	<variable name="o"/>
+  </head>
+  <results>
+	<result>
+		<binding name="s"><uri>http://example.org/s4</uri></binding>
+		<binding name="p"><uri>http://example.org/p</uri></binding>
+		<binding name="o"><literal datatype="http://www.w3.org/2001/XMLSchema#integer">4</literal></binding>
+	</result>
+	<result>
+		<binding name="s"><uri>http://example.org/s3</uri></binding>
+		<binding name="p"><uri>http://example.org/p</uri></binding>
+		<binding name="o"><literal datatype="http://www.w3.org/2001/XMLSchema#integer">3</literal></binding>
+	</result>
+  </results>
+</sparql>
+XML
+		my $g		= iri('g');
+		my $ep		= iri('http://example.org/sparql');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g, user_agent => $ua );
+		my $t		= triplepattern(variable('s'), variable('p'), variable('o'));
+		my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
+		my $algebra	= Attean::Algebra::Service->new(
+			endpoint => $ep,
+			children => [$bgp],
+		);
+		my $iter	= $e->evaluate($algebra, $g);
+		my @results	= $iter->elements;
+		is(scalar(@results), 2, 'expected result count');
+		my @objects	= sort { $a <=> $b } map { $_->value('o')->value } @results;
+		is_deeply(\@objects, [3,4], 'expected values');
 	}
 }
 

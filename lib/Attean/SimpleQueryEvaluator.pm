@@ -34,10 +34,13 @@ use Attean::Expression;
 
 package Attean::SimpleQueryEvaluator 0.001 {
 	use Moo;
+	use Encode qw(encode);
 	use Attean::RDF;
+	use LWP::UserAgent;
 	use Scalar::Util qw(blessed);
 	use List::Util qw(all any reduce);
-	use Types::Standard qw(ConsumerOf);
+	use Types::Standard qw(ConsumerOf InstanceOf);
+	use URI::Escape;
 	use namespace::clean;
 
 =item C<< model >>
@@ -58,6 +61,8 @@ features such as C<< GRAPH ?g {} >>.
 
 	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 
+	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent'], default => sub { my $ua = LWP::UserAgent->new(); $ua->agent("Attean/$Attean::VERSION " . $ua->_agent); $ua });
+	
 =back
 
 =head1 METHODS
@@ -169,6 +174,28 @@ supplied C<< $active_graph >>.
 				$c
 			} map { my $r = $_; [$r, [map { $expr_eval->evaluate_expression( $_, $r, $active_graph, {} ) } @exprs]] } @rows;
 			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type);
+		} elsif ($algebra->isa('Attean::Algebra::Service')) {
+			my $endpoint	= $algebra->endpoint->value;
+			my ($pattern)	= @{ $algebra->children };
+			my $sparql		= Attean::Algebra::Project->new( variables => [ map { variable($_) } $pattern->in_scope_variables ], children => [ $pattern ] )->as_sparql;
+			my $url			= $endpoint . '?query=' . uri_escape($sparql); # TODO: fix for cases where $endpoint already contains query parameters
+			my $ua			= $self->user_agent;
+			my $req			= HTTP::Request->new('GET', $url );
+			my $response	= $ua->request($req);
+			if (blessed($response) and $response->is_success) {
+				my $type	= $response->header('Content-Type');
+				my $pclass	= Attean->get_parser(media_type => $type) or die "No parser for media type: $type";
+				my $parser	= $pclass->new();
+				my $xml		= $response->decoded_content;
+				my $bytes	= encode('UTF-8', $xml, Encode::FB_CROAK);
+				return $parser->parse_iter_from_bytes($bytes);
+			} elsif ($algebra->silent) {
+				my $b	= Attean::Result->new( bindings => {} );
+				return Attean::ListIterator->new(values => [$b], item_type => 'Attean::API::Result');
+			} else {
+				warn $req->as_string;
+				die "Service error: " . $response->status_line;
+			}
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
 			my $graph	= $algebra->graph;
 			return $self->evaluate($child, $graph) if ($graph->does('Attean::API::Term'));

@@ -150,7 +150,12 @@ package Attean::API::TriplePattern 0.001 {
 		my @values	= ($self->values, $graph);
 		return Attean::QuadPattern->new(zip @keys, @values);
 	}
-
+	
+	sub as_sparql {
+		my $self	= shift;
+		return join(' ', map { $_->ntriples_string } $self->values) . " .\n";
+	}
+	
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';

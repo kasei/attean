@@ -45,6 +45,11 @@ package Attean::Mapper 0.001 {
 package Attean::API::Variable 0.001 {
 	use Moo::Role;
 	with 'Attean::API::TermOrVariable';
+	sub as_sparql {
+		my $self	= shift;
+		return '?' . $self->value;
+	}
+	
 	sub as_string {
 		my $self	= shift;
 		return '?' . $self->value;

@@ -118,6 +118,8 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 package Attean::API::Algebra 0.001 {
 	use Moo::Role;
 
+	requires 'as_sparql';
+
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
 # TODO: require these algebra methods:
 # 	requires 'necessarily_bound_variables';	# variables that will necessarily be bound to a term after this operation is evaluated
@@ -208,6 +210,7 @@ package Attean::API::PropertyPath 0.001 {
 	use Moo::Role;
 	with 'Attean::API::QueryTree';
 	requires 'as_string';
+	requires 'as_sparql';
 }
 
 =item * L<Attean::API::UnaryPropertyPath>

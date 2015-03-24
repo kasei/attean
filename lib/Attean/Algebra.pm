@@ -33,6 +33,15 @@ package Attean::Algebra::Join 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 	sub algebra_as_string { return 'Join' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children });
+	}
 }
 
 =item * L<Attean::Algebra::LeftJoin>
@@ -49,6 +58,20 @@ package Attean::Algebra::LeftJoin 0.001 {
 		return sprintf('LeftJoin { %s }', $self->expression->as_string);
 	}
 	sub tree_attributes { return qw(expression) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($lhs, $rhs)	= @{ $self->children };
+		
+		return "${indent}{\n"
+			. $lhs->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}} OPTIONAL {\n"
+			. $rhs->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Filter>
@@ -65,6 +88,18 @@ package Attean::Algebra::Filter 0.001 {
 		return sprintf('Filter { %s }', $self->expression->as_string);
 	}
 	sub tree_attributes { return qw(expression) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($lhs, $rhs)	= @{ $self->children };
+		
+		my ($child)	= @{ $self->children };
+		return $child->as_sparql( level => $level, indent => $sp )
+			. "${indent}FILTER(" . $self->expression->as_sparql . ")\n";
+	}
 }
 
 =item * L<Attean::Algebra::Union>
@@ -75,6 +110,20 @@ package Attean::Algebra::Union 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 	sub algebra_as_string { return 'Union' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($lhs, $rhs)	= @{ $self->children };
+		
+		return "${indent}{\n"
+			. $lhs->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}} UNION {\n"
+			. $rhs->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Graph>
@@ -102,6 +151,19 @@ package Attean::Algebra::Graph 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	sub tree_attributes { return qw(graph) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		my ($child)	= @{ $self->children };
+		my $g		= $self->graph->as_sparql;
+		return "${indent}GRAPH $g {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Extend>
@@ -125,6 +187,18 @@ package Attean::Algebra::Extend 0.001 {
 		return sprintf('Extend { %s=%s }', $self->variable->as_string, $self->expression->as_string);
 	}
 	sub tree_attributes { return qw(variable expression) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($lhs, $rhs)	= @{ $self->children };
+		
+		my ($child)	= @{ $self->children };
+		return $child->as_sparql( level => $level, indent => $sp )
+			. "${indent}EXTEND(" . $self->expression->as_sparql . " AS " . $self->variable->as_sparql . ")\n";
+	}
 }
 
 =item * L<Attean::Algebra::Minus>
@@ -140,6 +214,20 @@ package Attean::Algebra::Minus 0.001 {
 	}
 	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 	sub algebra_as_string { return 'Minus' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($lhs, $rhs)	= @{ $self->children };
+		
+		return "${indent}{\n"
+			. $lhs->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}} MINUS {\n"
+			. $rhs->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Distinct>
@@ -150,6 +238,18 @@ package Attean::Algebra::Distinct 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub algebra_as_string { return 'Distinct' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($child)	= @{ $self->children };
+		
+		return "${indent}SELECT DISTINCT * WHERE {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Reduced>
@@ -160,6 +260,18 @@ package Attean::Algebra::Reduced 0.001 {
 	use Moo;
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub algebra_as_string { return 'Reduced' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($child)	= @{ $self->children };
+		
+		return "${indent}SELECT REDUCED * WHERE {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Slice>
@@ -176,8 +288,23 @@ package Attean::Algebra::Slice 0.001 {
 		my $self	= shift;
 		my @str	= ('Filter');
 		push(@str, "Limit=" . $self->limit) if ($self->limit >= 0);
-		push(@str, "Offset=" . $self->offset) if ($self->limit > 0);
+		push(@str, "Offset=" . $self->offset) if ($self->offset > 0);
 		return join(' ', @str);
+	}
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($child)	= @{ $self->children };
+		
+		my $sparql	= "${indent}SELECT * WHERE {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+		$sparql	.= "${indent}LIMIT " . $self->limit . "\n" if ($self->limit >= 0);
+		$sparql	.= "${indent}OFFSET " . $self->offset . "\n" if ($self->offset > 0);
+		return $sparql;
 	}
 }
 
@@ -202,6 +329,19 @@ package Attean::Algebra::Project 0.001 {
 		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
 	}
 	sub tree_attributes { return qw(variables) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($child)	= @{ $self->children };
+		
+		my $pvars	= join(' ', map { $_->as_sparql } @{ $self->variables });
+		return "${indent}SELECT $pvars WHERE {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Comparator>
@@ -214,6 +354,14 @@ package Attean::Algebra::Comparator 0.001 {
 	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 	sub tree_attributes { return qw(expression) };
+	sub as_sparql {
+		my $self	= shift;
+		if ($self->ascending) {
+			return $self->expression->as_sparql;
+		} else {
+			return 'DESC(' . $self->expression->as_sparql . ')';
+		}
+	}
 }
 
 =item * L<Attean::Algebra::OrderBy>
@@ -226,6 +374,20 @@ package Attean::Algebra::OrderBy 0.001 {
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
 	sub tree_attributes { return qw(comparators) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($child)	= @{ $self->children };
+		
+		my $pvars	= join(' ', map { $_->as_sparql } @{ $self->variables });
+		return "${indent}SELECT * WHERE {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n"
+			. "${indent}ORDER BY " . join(' ', map { $_->as_sparql } @{ $self->comparators }) . "\n";
+	}
 }
 
 =item * L<Attean::Algebra::BGP>
@@ -246,6 +408,18 @@ package Attean::Algebra::BGP 0.001 {
 			$set->insert(@vars);
 		}
 		return $set->members;
+	}
+	
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return "${indent}{\n"
+			. join('', map { $indent . $sp . $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->triples })
+			. "${indent}}\n";
 	}
 	
 	sub algebra_as_string {
@@ -290,14 +464,29 @@ package Attean::Algebra::BGP 0.001 {
 
 package Attean::Algebra::Service 0.001 {
 	use Moo;
-	use Types::Standard qw(ConsumerOf);
+	use Types::Standard qw(ConsumerOf Bool);
 	sub algebra_as_string {
 		my $self	= shift;
 		return sprintf('Service %s', $self->endpoint->as_string);
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree', 'Attean::API::UnionScopeVariables';
 	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	
 	sub tree_attributes { return qw(endpoint) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		my ($child)	= @{ $self->children };
+		my $ep		= $self->endpoint->as_sparql;
+		return "${indent}SERVICE $ep {\n"
+			. $child->as_sparql( level => $level+1, indent => $sp )
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Path>
@@ -317,6 +506,21 @@ package Attean::Algebra::Path 0.001 {
 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	sub tree_attributes { return qw(subject path object) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return "${indent}"
+			. $self->subject->as_sparql
+			. ' '
+			. $self->path->as_sparql
+			. ' '
+			. $self->object->as_sparql
+			. "\n";
+	}
 }
 
 =item * L<Attean::Algebra::Group>
@@ -335,6 +539,17 @@ package Attean::Algebra::Group 0.001 {
 	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
 	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
 	sub tree_attributes { return qw(groupby aggregates) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return "${indent}{\n"
+			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children })
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::NegatedPropertySet>
@@ -352,6 +567,10 @@ package Attean::Algebra::NegatedPropertySet 0.001 {
 	}
 	sub algebra_as_string { return 'NPS' }
 	sub tree_attributes { return qw(predicates) };
+	sub as_sparql {
+		my $self	= shift;
+		return "!(" . join('|', map { $_->as_sparql } @{$self->predicates}) . ")";
+	}
 }
 
 =item * L<Attean::Algebra::PredicatePath>
@@ -372,6 +591,10 @@ package Attean::Algebra::PredicatePath 0.001 {
 		return 'Property Path ' . $self->as_string;
 	}
 	sub tree_attributes { return qw(predicate) };
+	sub as_sparql {
+		my $self	= shift;
+		return $self->predicate->as_sparql;
+	}
 }
 
 =item * L<Attean::Algebra::InversePath>
@@ -383,6 +606,11 @@ package Attean::Algebra::InversePath 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnaryPropertyPath';
 	sub prefix_name { return "^" }
+	sub as_sparql {
+		my $self	= shift;
+		my ($path)	= @{ $self->children };
+		return '^' . $self->path->as_sparql;
+	}
 }
 
 =item * L<Attean::Algebra::SequencePath>
@@ -393,6 +621,11 @@ package Attean::Algebra::SequencePath 0.001 {
 	use Moo;
 	with 'Attean::API::NaryPropertyPath';
 	sub separator { return "/" }
+	sub as_sparql {
+		my $self	= shift;
+		my @paths	= @{ $self->children };
+		return '(' . join('/', map { $_->as_sparql } @paths) . ')';
+	}
 }
 
 =item * L<Attean::Algebra::AlternativePath>
@@ -403,6 +636,11 @@ package Attean::Algebra::AlternativePath 0.001 {
 	use Moo;
 	with 'Attean::API::NaryPropertyPath';
 	sub separator { return "|" }
+	sub as_sparql {
+		my $self	= shift;
+		my @paths	= @{ $self->children };
+		return '(' . join('|', map { $_->as_sparql } @paths) . ')';
+	}
 }
 
 =item * L<Attean::Algebra::ZeroOrMorePath>
@@ -414,6 +652,11 @@ package Attean::Algebra::ZeroOrMorePath 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnaryPropertyPath';
 	sub postfix_name { return "*" }
+	sub as_sparql {
+		my $self	= shift;
+		my ($path)	= @{ $self->children };
+		return $self->path->as_sparql . '*';
+	}
 }
 
 =item * L<Attean::Algebra::OneOrMorePath>
@@ -425,6 +668,11 @@ package Attean::Algebra::OneOrMorePath 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnaryPropertyPath';
 	sub postfix_name { return "+" }
+	sub as_sparql {
+		my $self	= shift;
+		my ($path)	= @{ $self->children };
+		return $self->path->as_sparql . '+';
+	}
 }
 
 =item * L<Attean::Algebra::ZeroOrOnePath>
@@ -436,6 +684,11 @@ package Attean::Algebra::ZeroOrOnePath 0.001 {
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnaryPropertyPath';
 	sub postfix_name { return "?" }
+	sub as_sparql {
+		my $self	= shift;
+		my ($path)	= @{ $self->children };
+		return $self->path->as_sparql . '?';
+	}
 }
 
 =item * L<Attean::Algebra::Table>
@@ -455,6 +708,20 @@ package Attean::Algebra::Table 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub tree_attributes { return qw(variables rows) };
 	sub algebra_as_string { return 'Table' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		my $sparql	= "${indent}VALUES (" . join(' ', map { $_->as_sparql } @{ $self->variables }) . ") {\n";
+		foreach my $row (@{ $self->rows }) {
+			$sparql	.= "${indent}${sp}(" . join(' ', map { $_->as_sparql } $row->values) . ")\n";
+		}
+		$sparql		.= "${indent}}\n";
+		return $sparql;
+	}
 }
 
 =item * L<Attean::Algebra::Ask>
@@ -466,6 +733,17 @@ package Attean::Algebra::Ask 0.001 {
 	sub in_scope_variables { return; }
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub algebra_as_string { return 'Ask' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return "${indent}ASK {\n"
+			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children })
+			. "${indent}}\n";
+	}
 }
 
 =item * L<Attean::Algebra::Construct>
@@ -480,6 +758,19 @@ package Attean::Algebra::Construct 0.001 {
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	sub tree_attributes { return qw(triples) };
 	sub algebra_as_string { return 'Construct' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return "${indent}CONSTRUCT {\n"
+			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->triples })
+			. "${indent}} WHERE {\n"
+			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children })
+			. "${indent}}\n";
+	}
 }
 
 
