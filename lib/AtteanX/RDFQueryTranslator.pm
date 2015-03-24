@@ -8,6 +8,8 @@ package AtteanX::RDFQueryTranslator 0.001 {
 	use Data::Dumper;
 	use namespace::clean;
 	
+	use Attean::Algebra;
+	use Attean::Expression;
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Bool ConsumerOf HashRef);
@@ -17,6 +19,7 @@ package AtteanX::RDFQueryTranslator 0.001 {
 	sub translate_query {
 		my $class	= shift;
 		my $query	= shift;
+		return unless blessed($query);
 		my $parsed	= $query->{parsed};
 		my $t		= $class->new();
 		if (exists $parsed->{base} and my $base = $t->translate($parsed->{base})) {
