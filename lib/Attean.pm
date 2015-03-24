@@ -166,6 +166,7 @@ returns undef.
 		if (my $method = $method{ $type }) {
 			my $value	= shift;
 			$value	=~ s/^.*[.]// if ($type eq 'filename');
+			$value	=~ s/;.*$// if ($type eq 'media_type');
 			foreach my $p ($self->parsers()) {
 				if (can_load( modules => { $p => 0 })) {
 					next unless ($p->does($role));
