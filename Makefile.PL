@@ -45,6 +45,7 @@ resources(
 author_tests('xt');
 
 install_script glob('bin/attean_parse');
+install_script glob('bin/attean_query');
 
 sign;
 
