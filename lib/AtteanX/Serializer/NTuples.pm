@@ -9,8 +9,8 @@ This document describes AtteanX::Serializer::NTuples version 0.003
 =head1 SYNOPSIS
 
  use Attean;
- my $parser = Attean->get_serializer('NTriples')->new();
- $parser->serialize_iter_to_io( $fh );
+ my $serializer = Attean->get_serializer('NTriples')->new();
+ $serializer->serialize_iter_to_io( $io, $fh );
 
 =head1 DESCRIPTION
 

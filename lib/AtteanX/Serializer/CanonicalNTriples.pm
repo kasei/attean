@@ -10,7 +10,7 @@ This document describes AtteanX::Serializer::CanonicalNTriples version 0.003
 
  use Attean;
  my $serializer = Attean->get_serializer('NTriples')->new();
- $serializer->serialize_iter_to_io( $iter, $fh );
+ $serializer->serialize_iter_to_io( $io, $iter );
 
 =head1 DESCRIPTION
 
