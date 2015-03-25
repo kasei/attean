@@ -74,6 +74,7 @@ package Attean::API::Expression 0.001 {
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
 	requires 'as_string';
+	requires 'as_sparql';
 	
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -105,6 +106,10 @@ package Attean::API::UnaryExpression 0.001 {
 		my ($data)	= @{ $self->children };
 		return sprintf("%s(%s)", $self->operator, $data->as_string);
 	}
+	sub as_sparql {
+		my $self	= shift;
+		return $self->as_string;
+	}
 }
 
 package Attean::API::BinaryExpression 0.001 {
@@ -115,6 +120,10 @@ package Attean::API::BinaryExpression 0.001 {
 		my ($lhs, $rhs)	= @{ $self->children };
 		return sprintf("(%s %s %s)", $lhs->as_string, $self->operator, $rhs->as_string);
 	}
+	sub as_sparql {
+		my $self	= shift;
+		return $self->as_string;
+	}
 }
 
 package Attean::API::NaryExpression 0.001 {
@@ -124,6 +133,10 @@ package Attean::API::NaryExpression 0.001 {
 		my $self	= shift;
 		my @children	= map { $_->as_string } @{ $self->children };
 		return sprintf("%s(%s)", $self->operator, join(', ', @children));
+	}
+	sub as_sparql {
+		my $self	= shift;
+		return $self->as_string;
 	}
 }
 

@@ -70,6 +70,11 @@ package Attean::ValueExpression 0.001 {
 		}
 		return;
 	}
+	
+	sub as_sparql {
+		my $self	= shift;
+		return $self->value->as_sparql;
+	}
 }
 
 =item * L<Attean::UnaryExpression>
@@ -202,7 +207,19 @@ package Attean::ExistsExpression 0.001 {
 	sub as_string {
 		my $self	= shift;
 		# TODO: implement as_string for EXISTS patterns
+		warn "TODO: Attean::ExistsExpression->as_string";
 		return "EXISTS { ... }";
+	}
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+
+		# TODO: implement as_string for EXISTS patterns
+		warn "TODO: Attean::ExistsExpression->as_string";
+		return "EXISTS " . $self->pattern->as_sparql( level => $level+1, indent => $sp );
 	}
 }
 
