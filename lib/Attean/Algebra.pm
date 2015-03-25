@@ -246,9 +246,13 @@ package Attean::Algebra::Distinct 0.001 {
 		my $indent	= $sp x $level;
 		my ($child)	= @{ $self->children };
 		
-		return "${indent}SELECT DISTINCT * WHERE {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
-			. "${indent}}\n";
+		if ($child->isa('Attean::Algebra::Project')) {
+			return $child->as_sparql( level => $level, indent => $sp, distinct => 1 );
+		} else {
+			return "${indent}SELECT DISTINCT * WHERE {\n"
+				. $child->as_sparql( level => $level+1, indent => $sp )
+				. "${indent}}\n";
+		}
 	}
 }
 
@@ -268,9 +272,13 @@ package Attean::Algebra::Reduced 0.001 {
 		my $indent	= $sp x $level;
 		my ($child)	= @{ $self->children };
 		
-		return "${indent}SELECT REDUCED * WHERE {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
-			. "${indent}}\n";
+		if ($child->isa('Attean::Algebra::Project')) {
+			return $child->as_sparql( level => $level+1, indent => $sp, reduced => 1 );
+		} else {
+			return "${indent}SELECT REDUCED * WHERE {\n"
+				. $child->as_sparql( level => $level, indent => $sp )
+				. "${indent}}\n";
+		}
 	}
 }
 
@@ -286,7 +294,7 @@ package Attean::Algebra::Slice 0.001 {
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
 	sub algebra_as_string {
 		my $self	= shift;
-		my @str	= ('Filter');
+		my @str	= ('Slice');
 		push(@str, "Limit=" . $self->limit) if ($self->limit >= 0);
 		push(@str, "Offset=" . $self->offset) if ($self->offset > 0);
 		return join(' ', @str);
@@ -299,9 +307,16 @@ package Attean::Algebra::Slice 0.001 {
 		my $indent	= $sp x $level;
 		my ($child)	= @{ $self->children };
 		
-		my $sparql	= "${indent}SELECT * WHERE {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
-			. "${indent}}\n";
+		my $sparql;
+		if ($child->isa('Attean::Algebra::Project')
+				or $child->isa('Attean::Algebra::Distinct')
+				or $child->isa('Attean::Algebra::Reduced')) {
+			$sparql	= $child->as_sparql( level => $level, indent => $sp );
+		} else {
+			$sparql	= "${indent}SELECT * WHERE {\n"
+				. $child->as_sparql( level => $level+1, indent => $sp )
+				. "${indent}}\n";
+		}
 		$sparql	.= "${indent}LIMIT " . $self->limit . "\n" if ($self->limit >= 0);
 		$sparql	.= "${indent}OFFSET " . $self->offset . "\n" if ($self->offset > 0);
 		return $sparql;
@@ -336,11 +351,25 @@ package Attean::Algebra::Project 0.001 {
 		my $sp		= $args{indent} // '    ';
 		my $indent	= $sp x $level;
 		my ($child)	= @{ $self->children };
+		my $order;
+		if ($child->isa('Attean::Algebra::OrderBy')) {
+			$order	= $child;
+			($child)	= @{ $child->children };
+		}
 		
+		my $modifier	= '';
+		$modifier		= 'DISTINCT ' if ($args{distinct});
+		$modifier		= 'REDUCED ' if ($args{reduced});
 		my $pvars	= join(' ', map { $_->as_sparql } @{ $self->variables });
-		return "${indent}SELECT $pvars WHERE {\n"
+		my $sparql	= "${indent}SELECT $modifier$pvars WHERE {\n"
 			. $child->as_sparql( level => $level+1, indent => $sp )
 			. "${indent}}\n";
+		
+		if ($order) {
+			$sparql	.= "${indent}ORDER BY " . join(' ', map { $_->as_sparql } @{ $order->comparators }) . "\n";
+		}
+		
+		return $sparql;
 	}
 }
 
@@ -354,6 +383,14 @@ package Attean::Algebra::Comparator 0.001 {
 	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 	sub tree_attributes { return qw(expression) };
+	sub as_string {
+		my $self	= shift;
+		if ($self->ascending) {
+			return $self->expression->as_string;
+		} else {
+			return 'DESC(' . $self->expression->as_string . ')';
+		}
+	}
 	sub as_sparql {
 		my $self	= shift;
 		if ($self->ascending) {
@@ -374,6 +411,10 @@ package Attean::Algebra::OrderBy 0.001 {
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
 	sub tree_attributes { return qw(comparators) };
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Order { %s }', join(', ', map { $_->as_string } @{ $self->comparators }));
+	}
 	sub as_sparql {
 		my $self	= shift;
 		my %args	= @_;
@@ -382,7 +423,6 @@ package Attean::Algebra::OrderBy 0.001 {
 		my $indent	= $sp x $level;
 		my ($child)	= @{ $self->children };
 		
-		my $pvars	= join(' ', map { $_->as_sparql } @{ $self->variables });
 		return "${indent}SELECT * WHERE {\n"
 			. $child->as_sparql( level => $level+1, indent => $sp )
 			. "${indent}}\n"
@@ -470,7 +510,7 @@ package Attean::Algebra::Service 0.001 {
 		return sprintf('Service %s', $self->endpoint->as_string);
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree', 'Attean::API::UnionScopeVariables';
-	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
+	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
 	
 	sub tree_attributes { return qw(endpoint) };
