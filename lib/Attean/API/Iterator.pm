@@ -123,7 +123,8 @@ package Attean::API::Iterator 0.001 {
 	around 'BUILD' => sub {
 		my $orig	= shift;
 		my $self	= shift;
-		$self->$orig(@_);
+		my $args	= shift;
+		$self->$orig($args);
 		my $role	= $self->item_type;
 		if (Role::Tiny->is_role($role)) {
 			my $check	= sub {
@@ -138,10 +139,12 @@ package Attean::API::Iterator 0.001 {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 			} elsif ($check->('Attean::API::Result')) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
+				$self->variables($args->{variables} || []);
 			} elsif ($check->('Attean::API::Term')) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
 			} elsif ($check->('Attean::API::ResultOrTerm')) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
+				$self->variables($args->{variables} || []);
 			}
 
 			if ($self->does('Attean::API::RepeatableIterator') and $check->('Attean::API::Binding')) {
@@ -198,7 +201,13 @@ package Attean::API::Iterator 0.001 {
 			}
 		}
 		
-		return Attean::CodeIterator->new( item_type => $type, generator => $generator );
+		# copy variables into new iterator if $self does ::ResultIterator or ::ResultOrTermIterator
+		my %args;
+		if ($self->can('variables')) {
+			$args{variables}	= $self->variables;
+		}
+		
+		return Attean::CodeIterator->new( %args, item_type => $type, generator => $generator );
 	}
 
 	sub grep {
@@ -292,6 +301,8 @@ package Attean::API::CanonicalizingBindingIterator {
 
 package Attean::API::ResultOrTermIterator 0.001 {
 	use Moo::Role;
+	use Types::Standard qw(ArrayRef Str);
+	has 'variables' => (is => 'rw', isa => ArrayRef[Str], default => sub { [] });
 	sub canonicalize {
 		my $self	= shift;
 		my $mapper	= Attean::TermMap->canonicalization_map;
@@ -337,7 +348,9 @@ package Attean::API::MixedStatementIterator 0.001 {
 
 package Attean::API::ResultIterator 0.001 {
 	use Moo::Role;
+	use Types::Standard qw(Str ArrayRef);
 	with 'Attean::API::CanonicalizingBindingIterator';
+	has 'variables' => (is => 'rw', isa => ArrayRef[Str], required => 1);
 	sub join {
 		my $self	= shift;
 		my $rhs		= shift;
