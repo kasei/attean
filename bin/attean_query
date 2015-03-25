@@ -27,13 +27,27 @@ form to an Attean::Algebra object, and executes it against a model containing
 the RDF data parsed from the data file using Attean::SimpleQueryEvaluator.
 
 END
-	exit;
+	exit(0);
 }
 
-my $verbose	= 0;
-my $debug	= 0;
-my $benchmark	= 0;
-my $result	= GetOptions ("verbose" => \$verbose, "debug" => \$debug, "benchmark" => \$benchmark);
+my $dryrun			= 0;
+my $check_syntax	= 0;
+my $verbose			= 0;
+my $debug			= 0;
+my $benchmark		= 0;
+my $print_sparql	= 0;
+my $print_algebra	= 0;
+my $out_format;
+my $result			= GetOptions(
+	"verbose"	=> \$verbose,
+	"debug"		=> \$debug,
+	"benchmark"	=> \$benchmark,
+	'algebra'	=> \$print_algebra,
+	"sparql"	=> \$print_sparql,
+	'n'			=> \$dryrun,
+	'c'			=> \$check_syntax,
+	'output=s'	=> \$out_format,
+);
 
 my $qfile	= shift;
 
@@ -43,7 +57,7 @@ try {
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 
-	while (my $data = shift) {
+	while (my $data = shift(@ARGV)) {
 		my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($data));
 		open(my $fh, '<:encoding(UTF-8)', $data);
 		warn "Parsing data from $data...\n" if ($verbose);
@@ -65,32 +79,53 @@ try {
 	my $sparql	= read_file($qfile);
 	my $query	= RDF::Query->new($sparql);
 	unless ($query) {
+		if ($check_syntax) {
+			warn RDF::Query->error;
+			print "Syntax invalid: $qfile\n";
+			exit(1);
+		}
 		die RDF::Query->error;
 	}
 
 	warn "Translating query...\n" if ($verbose);
 	my $t	= AtteanX::RDFQueryTranslator->new();
 	my $a	= $t->translate_query($query);
-	if ($debug) {
-		warn "Walking algebra:\n";
+	if ($print_algebra) {
 		warn $a->as_string;
 	}
 	
-	warn "Evaluating query...\n" if ($verbose);
-	my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
-	if ($benchmark) {
-		timethese(5, {
-			'baseline'	=> sub { my @e = $e->evaluate($a, $graph)->elements },
-		});
-	} else {
-		my $iter	= $e->evaluate($a, $graph);
-		my $count	= 1;
-		while (my $r = $iter->next) {
-			printf("%3d %s\n", $count++, $r->as_string);
+	if ($check_syntax) {
+		print "Syntax OK: $qfile\n";
+		exit(0);
+	}
+	
+	if ($print_sparql) {
+		warn $a->as_sparql;
+	}
+	
+	unless ($dryrun) {
+		warn "Evaluating query...\n" if ($verbose);
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
+		if ($benchmark) {
+			timethese(5, {
+				'baseline'	=> sub { my @e = $e->evaluate($a, $graph)->elements },
+			});
+		} else {
+			my $iter	= $e->evaluate($a, $graph);
+			my $count	= 1;
+			my $s		= my $serializer = Attean->get_serializer($out_format);
+			if ($out_format and $s) {
+				$s->serialize_iter_to_io(\*STDOUT, $iter);
+			} else {
+				while (my $r = $iter->next) {
+					printf("%3d %s\n", $count++, $r->as_string);
+				}
+			}
 		}
 	}
 } catch {
 	my $exception	= $_;
 	warn "Caught error: $exception";
 	warn $exception->stack_trace;
+	exit(1);
 };
