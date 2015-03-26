@@ -8,6 +8,8 @@ use Attean;
 use Attean::RDF;
 
 requires 'create_store';       # create_store( quads => \@quads )
+with 'Test::Attean::TimeCacheableQuadStore';
+
 sub caching_sleep_time {
 	return 30;
 }
@@ -18,7 +20,7 @@ test 'mutable timecacheablequadstore' => sub {
     my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
     my $store	= $self->create_store(quads => [$q1, $q2]);
     my $start	= $store->mtime_for_quads();
-    my $s		= $self->sleep_time;
+    my $s		= $self->caching_sleep_time;
     note("Sleeping for $s seconds");
     sleep($s);
     $store->remove_quad($q1);

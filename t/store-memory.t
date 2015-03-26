@@ -8,7 +8,7 @@ no warnings 'redefine';
 
 use Attean;
 with 'Test::Attean::QuadStore', 'Test::Attean::MutableQuadStore';
-with 'Test::Attean::TimeCacheableQuadStore', 'Test::Attean::MutableTimeCacheableQuadStore';
+with 'Test::Attean::MutableTimeCacheableQuadStore';
 
 sub create_store {
 	my $self	= shift;
@@ -21,7 +21,7 @@ sub create_store {
 	return $store;
 }
 
-sub sleep_time {
+sub caching_sleep_time {
 	return 2;
 }
 

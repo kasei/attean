@@ -7,6 +7,9 @@ use Attean;
 use Attean::RDF;
 
 requires 'create_store';       # create_store( quads => \@quads )
+sub acceptable_mtime_delta {
+	return 60 * 60 * 24;
+}
 
 test 'timecacheablequadstore' => sub {
     my $self	= shift;
@@ -14,7 +17,8 @@ test 'timecacheablequadstore' => sub {
     my $store	= $self->create_store(quads => []);
     my $mtime	= $store->mtime_for_quads();
     my $diff	= abs($mtime - $time);
-    cmp_ok($diff, '<', 60 * 60 * 24, "mtime within delta ($diff seconds from expected)");
+    my $delta	= $self->acceptable_mtime_delta;
+    cmp_ok($diff, '<', $delta, "mtime within delta ($diff seconds from expected)");
 };
 
 1;
