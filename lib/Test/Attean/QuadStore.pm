@@ -1,6 +1,6 @@
 package Test::Attean::QuadStore;
 
-use v5.18;
+use v5.14;
 use Test::Roo::Role;
 use Test::Moose;
 use Attean;

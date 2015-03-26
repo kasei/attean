@@ -1,6 +1,6 @@
 package Test::Attean::MutableTimeCacheableQuadStore;
 
-use v5.18;
+use v5.14;
 use Test::Roo::Role;
 use Test::Moose;
 use Test::More;
