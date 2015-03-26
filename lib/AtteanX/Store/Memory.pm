@@ -32,6 +32,8 @@ use namespace::clean;
 
 with 'Attean::API::MutableQuadStore';
 with 'Attean::API::QuadStore';
+with 'Attean::API::ETagCacheableQuadStore';
+with 'Attean::API::TimeCacheableQuadStore';
 
 my @pos_names	= Attean::API::Quad->variables;
 
@@ -56,6 +58,7 @@ has object => (is => 'ro', isa => HashRef[InstanceOf['Set::Scalar']], init_arg =
 has graph => (is => 'ro', isa => HashRef[InstanceOf['Set::Scalar']], init_arg => undef, default => sub { +{} });
 has graph_nodes	=> (is => 'rw', isa => HashRef[ConsumerOf['Attean::API::IRI']], init_arg => undef, default => sub { +{} });
 has hash		=> (is => 'rw', isa => InstanceOf['Digest::SHA'], default => sub { Digest::SHA->new });
+has mtime		=> (is => 'rw', isa => Int, default => sub { return time() });
 
 =item C<< size >>
 
@@ -184,6 +187,7 @@ sub add_quad {
 		$self->_size($self->_size + 1);
 		my $id	= scalar(@{ $self->statements });
 		$self->hash->add('+' . encode_utf8($st->as_string));
+		$self->mtime(time());
 		push( @{ $self->statements }, $st );
 		foreach my $pos (0 .. $#pos_names) {
 			my $name	= $pos_names[ $pos ];
@@ -222,6 +226,7 @@ sub remove_quad {
 		$self->_size( $self->_size - 1 );
 		my $id	= $self->_statement_id( $st->values );
 		$self->hash->add('-' . encode_utf8($st->as_string));
+		$self->mtime(time());
 		$self->statements->[ $id ]	= undef;
 		foreach my $pos (0 .. 3) {
 			my $name	= $pos_names[ $pos ];
@@ -372,6 +377,11 @@ change. This token is acceptable for use as an HTTP ETag.
 sub etag_value_for_quads {
 	my $self	= shift;
 	return $self->hash->b64digest;
+}
+
+sub mtime_for_quads {
+	my $self	= shift;
+	return $self->mtime;
 }
 
 sub _statement_id {
