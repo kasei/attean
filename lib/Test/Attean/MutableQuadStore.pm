@@ -58,6 +58,9 @@ test 'mutablequadstore create_graph' => sub {
 };
 
 test 'mutablequadstore drop_graph' => sub {
+	# drop_graph removes all the quads in a specific graph and removes the
+	# graph from the list of graphs returned as an iterator from
+	# $store->get_graphs
     my $self	= shift;
     my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
     my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
@@ -80,6 +83,10 @@ test 'mutablequadstore drop_graph' => sub {
 };
 
 test 'mutablequadstore clear_graph' => sub {
+	# clear_graph removes all the quads in a specific graph
+	# depending on whether the implementation supports empty graphs,
+	# the cleared graph may or may not disappear from the list of graphs
+	# returned as an iterator from $store->get_graphs
     my $self	= shift;
     my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
     my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
