@@ -24,7 +24,7 @@ sub caching_sleep_time {
 }
 
 with 'Test::Attean::QuadStore', 'Test::Attean::MutableQuadStore';
-with 'Test::Attean::MutableTimeCacheableQuadStore';
+with 'Test::Attean::MutableTimeCacheableQuadStore', 'Test::Attean::MutableETagCacheableQuadStore';
 run_me; # run these Test::Attean tests
 
 {
