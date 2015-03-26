@@ -7,8 +7,6 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
-with 'Test::Attean::QuadStore', 'Test::Attean::MutableQuadStore';
-with 'Test::Attean::MutableTimeCacheableQuadStore';
 
 sub create_store {
 	my $self	= shift;
@@ -25,7 +23,9 @@ sub caching_sleep_time {
 	return 2;
 }
 
-run_me;
+with 'Test::Attean::QuadStore', 'Test::Attean::MutableQuadStore';
+with 'Test::Attean::MutableTimeCacheableQuadStore';
+run_me; # run these Test::Attean tests
 
 {
 	my $store	= Attean->get_store('Memory')->new();

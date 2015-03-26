@@ -7,14 +7,14 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
-with 'Test::Attean::QuadStore';
 
 sub create_store {
 	my $self	= shift;
 	return Attean->get_store('Simple')->new(@_);
 }
 
-run_me;
+with 'Test::Attean::QuadStore';
+run_me; # run these Test::Attean tests
 
 # use Try::Tiny;
 # $Error::TypeTiny::StackTrace	= 1;
