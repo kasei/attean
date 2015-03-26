@@ -1,0 +1,100 @@
+package Test::Attean::QuadStore;
+
+use v5.18;
+use Test::Roo::Role;
+use Test::Moose;
+use Attean;
+use Attean::RDF;
+
+requires 'create_store';       # create_store( quads => \@quads )
+
+test 'quadstore roles' => sub {
+    my $self	= shift;
+    my $store	= $self->create_store(quads => []);
+    ok $store->does('Attean::API::Store');
+    ok $store->does('Attean::API::QuadStore');
+	my $qiter	= $store->get_quads();
+	ok $qiter->does('Attean::API::Iterator');
+	is($qiter->item_type, 'Attean::API::Quad');
+
+    my $giter	= $store->get_graphs;
+	ok $giter->does('Attean::API::Iterator');
+	is($giter->item_type, 'Attean::API::Term');
+};
+
+test 'quadstore get_quads empty' => sub {
+    my $self	= shift;
+    my $store	= $self->create_store(quads => []);
+    {
+		my $iter	= $store->get_quads();
+		my @elements	= $iter->elements;
+		is(scalar(@elements), 0);
+	}
+    {
+		my $iter	= $store->get_quads(iri('s'), iri('p'));
+		my @elements	= $iter->elements;
+		is(scalar(@elements), 0);
+	}
+};
+
+test 'quadstore get_quads with quads' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $store	= $self->create_store(quads => [$q1, $q2]);
+    {
+		my $iter	= $store->get_quads();
+		my @elements	= $iter->elements;
+		is(scalar(@elements), 2);
+	}
+    {
+		my $iter	= $store->get_quads(iri('s'));
+		my @elements	= $iter->elements;
+		is(scalar(@elements), 1);
+	}
+    {
+		my $iter	= $store->get_quads(variable('s'), undef, undef, iri('g'));
+		my @elements	= $iter->elements;
+		is(scalar(@elements), 2);
+	}
+    {
+		my $iter	= $store->get_quads(iri('abc'));
+		my @elements	= $iter->elements;
+		is(scalar(@elements), 0);
+	}
+};
+
+test 'count_quads' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $store	= $self->create_store(quads => [$q1, $q2]);
+    is($store->count_quads(), 2);
+    is($store->count_quads(iri('s')), 1);
+    is($store->count_quads(variable('s'), undef, undef, iri('g')), 2);
+    is($store->count_quads(iri('abc')), 0);
+};
+
+# test 'count_quads_estimate' => sub {};
+
+test 'size' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $q3		= quad(iri('x'), iri('y'), iri('z'), iri('g2'));
+    my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
+    is($store->size(), 3);
+};
+
+test 'get_graphs' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $q3		= quad(iri('x'), iri('y'), iri('z'), iri('g2'));
+    my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
+    my $iter	= $store->get_graphs;
+	my @graphs	= sort map { $_->value } $iter->elements;
+	is_deeply(\@graphs, ['g', 'g2']);
+};
+
+1;

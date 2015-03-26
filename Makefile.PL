@@ -10,6 +10,7 @@ license			'perl';
 
 build_requires	'Test::More'				=> 0.88;
 build_requires	'Test::Exception'			=> 0;
+build_requires	'Test::Roo'					=> 0;
 
 perl_version	'5.014';
 

@@ -1,3 +1,4 @@
+use Test::Roo;
 use Test::More;
 use Test::Exception;
 
@@ -6,6 +7,14 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+with 'Test::Attean::QuadStore';
+
+sub create_store {
+	my $self	= shift;
+	return Attean->get_store('Simple')->new(@_);
+}
+
+run_me;
 
 # use Try::Tiny;
 # $Error::TypeTiny::StackTrace	= 1;

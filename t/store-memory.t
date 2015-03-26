@@ -1,3 +1,4 @@
+use Test::Roo;
 use Test::More;
 use Test::Exception;
 
@@ -6,6 +7,20 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+with 'Test::Attean::QuadStore', 'Test::Attean::MutableQuadStore';
+
+sub create_store {
+	my $self	= shift;
+	my %args	= @_;
+	my $quads	= $args{quads} // [];
+	my $store	= Attean->get_store('Memory')->new();
+	foreach my $q (@$quads) {
+		$store->add_quad($q);
+	}
+	return $store;
+}
+
+run_me;
 
 {
 	my $store	= Attean->get_store('Memory')->new();

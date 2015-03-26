@@ -1,0 +1,106 @@
+package Test::Attean::MutableQuadStore;
+
+use v5.18;
+use Test::Roo::Role;
+use Test::Moose;
+use Attean;
+use Attean::RDF;
+
+requires 'create_store';       # create_store( quads => \@quads )
+
+test 'mutablequadstore add_quad' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $q3		= quad(iri('x'), iri('y'), iri('z'), iri('g2'));
+    
+    my $store	= $self->create_store(quads => []);
+    my $size	= 0;
+    for my $q ($q1, $q2, $q3) {
+    	$store->add_quad($q);
+    	is($store->size, ++$size, "size $size");
+    }
+};
+
+test 'mutablequadstore remove_quad' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $q3		= quad(iri('x'), iri('y'), iri('z'), iri('g2'));
+    
+    my $store	= $self->create_store(quads => [$q3, $q2, $q1]);
+    my $size	= 3;
+    for my $q ($q1, $q2, $q3) {
+    	is($store->size, $size, "size $size");
+    	$store->remove_quad($q);
+    	$size--;
+    }
+	$store->remove_quad($q2);
+	is($store->size, 0, "size $size");
+};
+
+test 'mutablequadstore create_graph' => sub {
+    my $self	= shift;
+    my $store	= $self->create_store(quads => []);
+    
+    my $count	= 0;
+    foreach my $g (iri('g1'), iri('g2'), iri('g3')) {
+		$store->create_graph($g);
+		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
+		my $graphs	= scalar(@graphs);
+		ok($graphs == 0 or $graphs == ++$count);
+    }
+
+	$store->create_graph(iri('g2'));
+	my @graphs	= sort map { $_->value } $store->get_graphs->elements;
+	my $graphs	= scalar(@graphs);
+	ok($graphs == 0 or $graphs == $count);
+};
+
+test 'mutablequadstore drop_graph' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $q3		= quad(iri('x'), iri('y'), iri('z'), iri('g2'));
+    
+    {
+		my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
+		$store->drop_graph(iri('g'));
+		is($store->size, 1);
+		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
+		is_deeply(\@graphs, ['g2']);
+	}
+    {
+		my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
+		$store->drop_graph(iri('g2'));
+		is($store->size, 2);
+		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
+		is_deeply(\@graphs, ['g']);
+	}
+};
+
+test 'mutablequadstore clear_graph' => sub {
+    my $self	= shift;
+    my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
+    my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
+    my $q3		= quad(iri('x'), iri('y'), iri('z'), iri('g2'));
+    
+    {
+		my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
+		$store->clear_graph(iri('g'));
+		is($store->size, 1);
+		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
+		my $graphs	= scalar(@graphs);
+		ok($graphs == 1 or $graphs == 2);
+	}
+    {
+		my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
+		$store->clear_graph(iri('g2'));
+		is($store->size, 2);
+		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
+		my $graphs	= scalar(@graphs);
+		ok($graphs == 1 or $graphs == 2);
+	}
+};
+
+1;
