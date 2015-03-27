@@ -76,12 +76,18 @@ try {
 	}
 
 	warn "Parsing query...\n" if ($verbose);
-	my $sparql	= read_file($qfile);
+	my $sparql;
+	if ($qfile eq '-') {
+		local($/) = undef;
+		$sparql	= <STDIN>;
+	} else {
+		$sparql	= read_file($qfile);
+	}
 	my $query	= RDF::Query->new($sparql);
 	unless ($query) {
 		if ($check_syntax) {
 			warn RDF::Query->error;
-			print "Syntax invalid: $qfile\n";
+			print "Syntax invalid: $qfile\n---\n$sparql\n---\n";
 			exit(1);
 		}
 		die RDF::Query->error;
@@ -91,7 +97,7 @@ try {
 	my $t	= AtteanX::RDFQueryTranslator->new();
 	my $a	= $t->translate_query($query);
 	if ($print_algebra) {
-		warn $a->as_string;
+		print $a->as_string;
 	}
 	
 	if ($check_syntax) {
@@ -100,7 +106,8 @@ try {
 	}
 	
 	if ($print_sparql) {
-		warn $a->as_sparql;
+		print "# $qfile\n";
+		print $a->as_sparql;
 	}
 	
 	unless ($dryrun) {
