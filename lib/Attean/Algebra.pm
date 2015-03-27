@@ -40,7 +40,7 @@ package Attean::Algebra::Join 0.001 {
 		my $sp		= $args{indent} // '    ';
 		my $indent	= $sp x $level;
 		
-		return join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children });
+		return join('', map { $_->as_sparql( %args ) } @{ $self->children });
 	}
 }
 
@@ -67,9 +67,9 @@ package Attean::Algebra::LeftJoin 0.001 {
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		return "${indent}{\n"
-			. $lhs->as_sparql( level => $level+1, indent => $sp )
+			. $lhs->as_sparql( %args, level => $level+1 )
 			. "${indent}} OPTIONAL {\n"
-			. $rhs->as_sparql( level => $level+1, indent => $sp )
+			. $rhs->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n";
 	}
 }
@@ -97,7 +97,7 @@ package Attean::Algebra::Filter 0.001 {
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		my ($child)	= @{ $self->children };
-		return $child->as_sparql( level => $level, indent => $sp )
+		return $child->as_sparql( %args )
 			. "${indent}FILTER(" . $self->expression->as_sparql . ")\n";
 	}
 }
@@ -119,9 +119,9 @@ package Attean::Algebra::Union 0.001 {
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		return "${indent}{\n"
-			. $lhs->as_sparql( level => $level+1, indent => $sp )
+			. $lhs->as_sparql( %args, level => $level+1 )
 			. "${indent}} UNION {\n"
-			. $rhs->as_sparql( level => $level+1, indent => $sp )
+			. $rhs->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n";
 	}
 }
@@ -161,7 +161,7 @@ package Attean::Algebra::Graph 0.001 {
 		my ($child)	= @{ $self->children };
 		my $g		= $self->graph->as_sparql;
 		return "${indent}GRAPH $g {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
+			. $child->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n";
 	}
 }
@@ -184,20 +184,39 @@ package Attean::Algebra::Extend 0.001 {
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 	sub algebra_as_string {
 		my $self	= shift;
-		return sprintf('Extend { %s=%s }', $self->variable->as_string, $self->expression->as_string);
+		return sprintf('Extend { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
 	}
 	sub tree_attributes { return qw(variable expression) };
 	sub as_sparql {
 		my $self	= shift;
 		my %args	= @_;
+		my %vmap	= %{ $args{ aggregate_variables } // {} };
 		my $level	= $args{level} // 0;
 		my $sp		= $args{indent} // '    ';
 		my $indent	= $sp x $level;
 		my ($lhs, $rhs)	= @{ $self->children };
 		
+		my $expr	= $self->expression;
+		my $var		= $self->variable;
+		if ($expr->isa('Attean::ValueExpression')) {
+			$vmap{ $expr->value->value }	= $var->as_sparql;
+		}
 		my ($child)	= @{ $self->children };
-		return $child->as_sparql( level => $level, indent => $sp )
-			. "${indent}EXTEND(" . $self->expression->as_sparql . " AS " . $self->variable->as_sparql . ")\n";
+
+		my %in_scope	= map { $_ => 1 } $child->in_scope_variables;
+		my $sparql;
+		if ($child->isa('Attean::Algebra::Group')) {
+			$sparql	= "${indent}{\n";
+			$sparql	.= $child->as_sparql( %args, level => $level+1, aggregate_variables => \%vmap );
+			$sparql	.= "${indent}}\n";
+		} else {
+			$sparql	= $child->as_sparql( %args, aggregate_variables => \%vmap );
+		}
+		my $evar	= $expr->isa('Attean::ValueExpression') ? $expr->value->value : $expr->as_sparql;
+		unless (exists $in_scope{$evar}) {
+			$sparql	.= "${indent}BIND(" . $expr->as_sparql . " AS " . $var->as_sparql . ")\n";
+		}
+		return $sparql;
 	}
 }
 
@@ -223,9 +242,9 @@ package Attean::Algebra::Minus 0.001 {
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		return "${indent}{\n"
-			. $lhs->as_sparql( level => $level+1, indent => $sp )
+			. $lhs->as_sparql( %args, level => $level+1 )
 			. "${indent}} MINUS {\n"
-			. $rhs->as_sparql( level => $level+1, indent => $sp )
+			. $rhs->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n";
 	}
 }
@@ -247,10 +266,10 @@ package Attean::Algebra::Distinct 0.001 {
 		my ($child)	= @{ $self->children };
 		
 		if ($child->isa('Attean::Algebra::Project')) {
-			return $child->as_sparql( level => $level, indent => $sp, distinct => 1 );
+			return $child->as_sparql( %args, distinct => 1 );
 		} else {
 			return "${indent}SELECT DISTINCT * WHERE {\n"
-				. $child->as_sparql( level => $level+1, indent => $sp )
+				. $child->as_sparql( %args, level => $level+1 )
 				. "${indent}}\n";
 		}
 	}
@@ -273,10 +292,10 @@ package Attean::Algebra::Reduced 0.001 {
 		my ($child)	= @{ $self->children };
 		
 		if ($child->isa('Attean::Algebra::Project')) {
-			return $child->as_sparql( level => $level+1, indent => $sp, reduced => 1 );
+			return $child->as_sparql( %args, level => $level+1, reduced => 1 );
 		} else {
 			return "${indent}SELECT REDUCED * WHERE {\n"
-				. $child->as_sparql( level => $level, indent => $sp )
+				. $child->as_sparql( %args )
 				. "${indent}}\n";
 		}
 	}
@@ -311,10 +330,10 @@ package Attean::Algebra::Slice 0.001 {
 		if ($child->isa('Attean::Algebra::Project')
 				or $child->isa('Attean::Algebra::Distinct')
 				or $child->isa('Attean::Algebra::Reduced')) {
-			$sparql	= $child->as_sparql( level => $level, indent => $sp );
+			$sparql	= $child->as_sparql( %args );
 		} else {
 			$sparql	= "${indent}SELECT * WHERE {\n"
-				. $child->as_sparql( level => $level+1, indent => $sp )
+				. $child->as_sparql( %args, level => $level+1 )
 				. "${indent}}\n";
 		}
 		$sparql	.= "${indent}LIMIT " . $self->limit . "\n" if ($self->limit >= 0);
@@ -360,10 +379,19 @@ package Attean::Algebra::Project 0.001 {
 		my $modifier	= '';
 		$modifier		= 'DISTINCT ' if ($args{distinct});
 		$modifier		= 'REDUCED ' if ($args{reduced});
-		my $pvars	= join(' ', map { $_->as_sparql } @{ $self->variables });
-		my $sparql	= "${indent}SELECT $modifier$pvars WHERE {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
-			. "${indent}}\n";
+		my $pvars		= join(' ', map { $_->as_sparql } @{ $self->variables });
+		$pvars			= '*' if ($pvars eq '');
+		
+		my @pvars	= sort map { $_->does('Attean::API::Variable') ? $_->value : $_->as_sparql } @{ $self->variables };
+		my @vars	= sort $child->in_scope_variables;
+		my $sparql;
+		if (join(' ', @pvars) eq join(' ', @vars)) {
+			$sparql	= $child->as_sparql( %args );
+		} else {
+			$sparql	= "${indent}SELECT $modifier$pvars WHERE {\n"
+				. $child->as_sparql( %args, level => $level+1 )
+				. "${indent}}\n";
+		}
 		
 		if ($order) {
 			$sparql	.= "${indent}ORDER BY " . join(' ', map { $_->as_sparql } @{ $order->comparators }) . "\n";
@@ -424,7 +452,7 @@ package Attean::Algebra::OrderBy 0.001 {
 		my ($child)	= @{ $self->children };
 		
 		return "${indent}SELECT * WHERE {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
+			. $child->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n"
 			. "${indent}ORDER BY " . join(' ', map { $_->as_sparql } @{ $self->comparators }) . "\n";
 	}
@@ -458,7 +486,7 @@ package Attean::Algebra::BGP 0.001 {
 		my $indent	= $sp x $level;
 		
 		return "${indent}{\n"
-			. join('', map { $indent . $sp . $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->triples })
+			. join('', map { $indent . $sp . $_->as_sparql( %args, level => $level+1 ) } @{ $self->triples })
 			. "${indent}}\n";
 	}
 	
@@ -524,7 +552,7 @@ package Attean::Algebra::Service 0.001 {
 		my ($child)	= @{ $self->children };
 		my $ep		= $self->endpoint->as_sparql;
 		return "${indent}SERVICE $ep {\n"
-			. $child->as_sparql( level => $level+1, indent => $sp )
+			. $child->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n";
 	}
 }
@@ -572,8 +600,26 @@ package Attean::Algebra::Group 0.001 {
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	sub in_scope_variables {
 		my $self	= shift;
-		# TODO: implement Attean::Algebra::Group->in_scope_variables
-		die "Attean::Algebra::Group->in_scope_variables unimplemented";
+		my $aggs	= $self->aggregates // [];
+		my @vars;
+		foreach my $a (@$aggs) {
+			push(@vars, $a->variable->value);
+		}
+		return @vars;
+	}
+	sub algebra_as_string {
+		my $self	= shift;
+		my @aggs;
+		my $aggs	= $self->aggregates // [];
+		my $groups	= $self->groupby // [];
+		foreach my $a (@$aggs) {
+			my $v	= $a->variable->as_sparql;
+			my $op	= $a->operator;
+			my $d	= $a->distinct ? "DISTINCT " : '';
+			my ($e)	= map { $_->value->as_sparql } @{ $a->children };
+			push(@aggs, "$v ← ${op}($d$e)");
+		}
+		return sprintf('Group { %s } aggregate { %s }', join(', ', map { $_->as_sparql() } @$groups), join(', ', @aggs));
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
@@ -585,10 +631,29 @@ package Attean::Algebra::Group 0.001 {
 		my $level	= $args{level} // 0;
 		my $sp		= $args{indent} // '    ';
 		my $indent	= $sp x $level;
+		my $groups	= $self->groupby // [];
+		my $aggs	= $self->aggregates // [];
+		my %vmap	= %{ $args{ aggregate_variables } // {} };
+		my @aggs;
+		foreach my $a (@$aggs) {
+			my $av	= $a->variable->value;
+			my $v	= exists $vmap{$av} ? $vmap{$av} : $av;
+			my $op	= $a->operator;
+			my $d	= $a->distinct ? "DISTINCT " : '';
+			my ($e)	= map { $_->value->as_sparql } @{ $a->children };
+			push(@aggs, "(${op}($d$e) AS $v)");
+		}
 		
-		return "${indent}{\n"
-			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children })
-			. "${indent}}\n";
+		warn "TODO: as_sparql serialization of GROUPing";
+		my $sparql	= "${indent}SELECT " . join(' ', @aggs) . " WHERE {\n"
+			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
+			. "${indent}}";
+		if (scalar(@$groups)) {
+			my @g	= map { $_->as_sparql() } @$groups;
+			$sparql	.= " GROUP BY " . join(' ', @g);
+		}
+		$sparql	.= "\n";
+		return $sparql;
 	}
 }
 
@@ -781,7 +846,7 @@ package Attean::Algebra::Ask 0.001 {
 		my $indent	= $sp x $level;
 		
 		return "${indent}ASK {\n"
-			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children })
+			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
 			. "${indent}}\n";
 	}
 }
@@ -806,9 +871,9 @@ package Attean::Algebra::Construct 0.001 {
 		my $indent	= $sp x $level;
 		
 		return "${indent}CONSTRUCT {\n"
-			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->triples })
+			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->triples })
 			. "${indent}} WHERE {\n"
-			. join('', map { $_->as_sparql( level => $level+1, indent => $sp ) } @{ $self->children })
+			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
 			. "${indent}}\n";
 	}
 }

@@ -41,7 +41,7 @@ package AtteanX::RDFQueryTranslator 0.001 {
 				push(@bindings, Attean::Result->new( bindings => \%binding ));
 			}
 			my $table	= Attean::Algebra::Table->new( rows => \@bindings, variables => \@vars );
-			$algebra	= Attean::Algebra::Join->new( children => [$table, $algebra] );
+			$algebra	= Attean::Algebra::Join->new( children => [$algebra, $table] );
 		}
 		if ($method eq 'ASK') {
 			$algebra	= Attean::Algebra::Ask->new( children => [$algebra] );

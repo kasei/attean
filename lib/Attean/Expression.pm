@@ -147,6 +147,17 @@ package Attean::FunctionExpression 0.001 {
 	has 'operator'		=> (is => 'ro', isa => UpperCaseStr, coerce => UpperCaseStr->coercion, required => 1);
 	has 'base'			=> (is => 'rw', isa => ConsumerOf['Attean::IRI'], predicate => 'has_base');
 	with 'Attean::API::NaryExpression';
+	sub as_sparql {
+		my $self	= shift;
+		if ($self->operator =~ /^(NOT)?IN$/) {
+			my $op	= $self->operator;
+			$op		=~ s/NOT/NOT /;
+			my ($t, @values)	= map { $_->as_string } @{ $self->children };
+			return sprintf("%s %s (%s)", $t, $op, join(', ', @values));
+		} else {
+			return $self->SUPER::as_string();
+		}
+	}
 }
 
 package Attean::AggregateExpression 0.001 {
