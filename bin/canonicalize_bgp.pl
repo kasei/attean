@@ -55,7 +55,7 @@ try {
 
 	my ($canon, $mapping)	= $bgp->canonical_bgp_with_mapping();
 	my $hash	= sha1_hex( join("\n", map { $_->tuples_string } (@{$canon->triples}) ) );
-	my @proj	= sort map { sprintf("(?v_%03d AS $_)", $mapping->{$_}{id}) } grep { $mapping->{$_}{type} eq 'variable' } (keys %$mapping);
+	my @proj	= sort map { sprintf("(?%s AS $_)", $mapping->{$_}{id}) } grep { $mapping->{$_}{type} eq 'variable' } (keys %$mapping);
 	say "# Hash key: $hash";
 	say "SELECT " . join(' ', @proj) . " WHERE {";
 	foreach my $t (@{$canon->triples}) {
