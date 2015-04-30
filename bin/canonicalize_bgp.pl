@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use v5.20;
+use v5.16;
 use warnings;
 no warnings 'once';
 use autodie;
@@ -133,7 +133,7 @@ sub translate {
 		return Attean::Algebra::Graph->new( children => [$p], graph => $graph );
 	} elsif ($a->isa('')) {
 	}
-	die "Unrecognized algebra " . ref($a);
+	die "Query must be a simple BGP (but unexpectedly found " . ref($a) . ")";
 }
 
 sub translate_path {
