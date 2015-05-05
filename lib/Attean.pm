@@ -59,6 +59,8 @@ package Attean {
 	use Attean::CodeIterator;
 	use Attean::ListIterator;
 	use Attean::IteratorSequence;
+
+	use Attean::IDPQueryPlanner;
 	
 	use Attean::TermMap;
 	

@@ -156,7 +156,8 @@ package Attean::API 0.001 {
 	use Attean::API::Serializer;
 	use Attean::API::Query;
 	use Attean::API::Expression;
-
+	use Attean::API::Plan;
+	
 	use Attean::Variable;
 	use Attean::Blank;
 	use Attean::IRI;
