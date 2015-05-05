@@ -58,6 +58,17 @@ package Attean::TriplePattern 0.001 {
 		}
 		return $class->$orig(@_);
 	};
+	
+	sub as_quadpattern {
+		my $self	= shift;
+		my $graph	= shift;
+		return Attean::QuadPattern->new(
+			subject		=> $self->subject,
+			predicate	=> $self->predicate,
+			object		=> $self->object,
+			graph		=> $graph,
+		);
+	}
 }
 
 package Attean::Triple 0.001 {
