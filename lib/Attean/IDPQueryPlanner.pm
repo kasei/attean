@@ -46,7 +46,7 @@ package Attean::IDPQueryPlanner 0.001 {
 	use List::Util qw(min);
 	use namespace::clean;
 
-	with 'Attean::API::Planner';
+	with 'Attean::API::CostPlanner';
 	
 =back
 
@@ -54,29 +54,26 @@ package Attean::IDPQueryPlanner 0.001 {
 
 =over 4
 
-=item C<< plan_for_algebra( $algebra, $model, $active_graph ) >>
+=item C<< plans_for_algebra( $algebra, $model, $active_graph ) >>
 
-Returns an L<Attean::API::Plan> object representing a query plan for
+Returns L<Attean::API::Plan> objects representing alternate query plans for
 evaluating the query C<< $algebra >> against the C<< $model >>, using
 the supplied C<< $active_graph >>.
 
 =cut
 
-	sub plan_for_algebra {
-		my $self			= shift;
-		my $algebra			= shift;
-		my $model			= shift;
-		my $active_graph	= shift;
-		my @plans			= sort { $self->cost_for_plan($a) <=> $self->cost_for_plan($b) } $self->plans_for_algebra($algebra, $model, $active_graph);
-		my $plan			= shift(@plans);
-		return $plan;
-	}
-	
 	sub plans_for_algebra {
 		my $self			= shift;
 		my $algebra			= shift;
 		my $model			= shift;
 		my $active_graph	= shift;
+		
+		if ($model->does('Attean::API::CostPlanner')) {
+			my @plans	= $model->plans_for_algebra($algebra, $model, $active_graph, @_);
+			if (@plans) {
+				return @plans; # trust that the model knows better than us what plans are best
+			}
+		}
 		
 		Carp::confess "No algebra passed for evaluation" unless ($algebra);
 		
@@ -89,10 +86,10 @@ the supplied C<< $active_graph >>.
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
 			return $self->_IDPJoin($model, $active_graph, map {
-				[$self->plans_for_algebra($_, $model, $active_graph)]
+				[$self->plans_for_algebra($_, $model, $active_graph, @_)]
 			} @children);
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
-			my @plans	= $self->plans_for_algebra($child, $model, $active_graph);
+			my @plans	= $self->plans_for_algebra($child, $model, $active_graph, @_);
 			my @dist;
 			foreach my $p (@plans) {
 				if ($p->distinct) {
@@ -108,14 +105,14 @@ the supplied C<< $active_graph >>.
 			my $expr	= $algebra->expression;
 			my @plans	= map {
 				Attean::Plan::Filter->new(children => [$_], expression => $expr, distinct => $_->distinct, in_scope_variables => $_->in_scope_variables, ordered => $_->ordered)
-			} $self->plans_for_algebra($child, $model, $active_graph);
+			} $self->plans_for_algebra($child, $model, $active_graph, @_);
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 			# TODO: no-op if already ordered
 			my @cmps	= map { Attean::Plan::Comparator->new(ascending => $_->ascending, expression => $_->expression) } @{ $algebra->comparators };
 			my @plans	= map {
 				Attean::Plan::OrderBy->new(children => [$_], comparators => \@cmps, distinct => $_->distinct, in_scope_variables => $_->in_scope_variables, ordered => \@cmps)
-			} $self->plans_for_algebra($child, $model, $active_graph);
+			} $self->plans_for_algebra($child, $model, $active_graph, @_);
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::LeftJoin')) {
 			return $self->join_plans($model, $active_graph, @children[0,1], 1, 0, $algebra->expression);
@@ -130,12 +127,12 @@ the supplied C<< $active_graph >>.
 				($vars_key eq join(' ', sort @{ $_->in_scope_variables }))
 					? $_ # no-op if plan is already properly-projected
 					: Attean::Plan::Project->new(children => [$_], variables => $vars, distinct => 0, in_scope_variables => \@vars, ordered => [])
-			} $self->plans_for_algebra($child, $model, $active_graph);
+			} $self->plans_for_algebra($child, $model, $active_graph, @_);
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
 			my $graph	= $algebra->graph;
 			if ($graph->does('Attean::API::Term')) {
-				return $self->plans_for_algebra($child, $model, $graph);
+				return $self->plans_for_algebra($child, $model, $graph, @_);
 			} else {
 				die "handle GRAPH ?var query forms";
 			}
@@ -164,7 +161,7 @@ the supplied C<< $active_graph >>.
 		# initialize $optPlan{$i} to be a set of alternate plans for evaluating element $i
 		my %optPlan;
 		foreach my $i (0 .. $#args) {
-			$optPlan{$i}	= [$self->prune_plans(@{ $args[$i] })];
+			$optPlan{$i}	= [$self->prune_plans($model, @{ $args[$i] })];
 		}
 		
 		my @todo	= (0 .. $#args); # initialize the todo list to all elements
@@ -189,7 +186,7 @@ the supplied C<< $active_graph >>.
 						
 						# compute and store all the possible ways to evaluate s (o ⋈ not_o)
 						push(@{ $optPlan{$s_key} }, $self->join_plans($model, $active_graph, $lhs, $rhs, 0, 0));
-						$optPlan{$s_key}	= [$self->prune_plans(@{ $optPlan{$s_key} })];
+						$optPlan{$s_key}	= [$self->prune_plans($model, @{ $optPlan{$s_key} })];
 					}
 				}
 			}
@@ -199,7 +196,7 @@ the supplied C<< $active_graph >>.
 			foreach my $w (subsets(\@todo, $k)) {
 				my $w_key	= join('.', sort @$w);
 				my $plans	= $optPlan{$w_key};
-				my %costs	= map { $self->cost_for_plan($_) => [$_, $w] } @$plans;
+				my %costs	= map { $self->cost_for_plan($_, $model) => [$_, $w] } @$plans;
 				my $min		= min keys %costs;
 				my $min_plan	= $costs{ $min };
 				$min_plans{ $min }	= $min_plan;
@@ -228,12 +225,13 @@ the supplied C<< $active_graph >>.
 		}
 		
 		my $final_key	= join('.', sort @todo);
-		return $self->prune_plans(@{ $optPlan{$final_key} });
+		return $self->prune_plans($model, @{ $optPlan{$final_key} });
 	}
 	
 	sub prune_plans {
 		my $self	= shift;
-		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_), $_] } @_;
+		my $model	= shift;
+		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @_;
 		return splice(@sorted, 0, 5);
 	}
 	
@@ -320,9 +318,17 @@ the supplied C<< $active_graph >>.
 	sub cost_for_plan {
 		my $self	= shift;
 		my $plan	= shift;
+		my $model	= shift;
+
 		if ($plan->has_cost) {
 			return $plan->cost;
 		} else {
+			if ($model->does('Attean::API::CostPlanner')) {
+				if (defined(my $cost = $model->cost_for_plan($plan, $model))) {
+					return $cost;
+				}
+			}
+
 			my $cost	= 1;
 			my @children	= @{ $plan->children };
 			if ($plan->isa('Attean::Plan::Quad')) {
@@ -331,18 +337,18 @@ the supplied C<< $active_graph >>.
 			} elsif (ref($plan) =~ /^Attean::Plan::NestedLoop\w*Join/) {
 				my $jv			= $plan->join_variables;
 				my $mult		= scalar(@$jv) ? 1 : 5;	# penalize cartesian joins
-				my $lcost		= $self->cost_for_plan($children[0]);
-				my $rcost		= $self->cost_for_plan($children[1]);
+				my $lcost		= $self->cost_for_plan($children[0], $model);
+				my $rcost		= $self->cost_for_plan($children[1], $model);
 				$cost			= $mult * $lcost * $rcost;
 			} elsif (ref($plan) =~ /^Attean::Plan::Hash\w*Join/) {
 				my $jv			= $plan->join_variables;
 				my $mult		= scalar(@$jv) ? 1 : 5;	# penalize cartesian joins
-				my $lcost		= $self->cost_for_plan($children[0]);
-				my $rcost		= $self->cost_for_plan($children[1]);
+				my $lcost		= $self->cost_for_plan($children[0], $model);
+				my $rcost		= $self->cost_for_plan($children[1], $model);
 				$cost			= $mult * ($lcost + $rcost);
 			} else {
 				foreach my $c (@{ $plan->children }) {
-					$cost	+= $self->cost_for_plan($c);
+					$cost	+= $self->cost_for_plan($c, $model);
 				}
 			}
 			

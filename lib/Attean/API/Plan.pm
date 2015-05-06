@@ -76,6 +76,26 @@ package Attean::API::Planner 0.001 {
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, $active_graph)
 }
 
+package Attean::API::CostPlanner 0.001 {
+	use Moo::Role;
+	use Types::Standard qw(CodeRef);
+	use namespace::clean;
+	with 'Attean::API::Planner';
+	
+	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, $active_graph)
+	requires 'cost_for_plan'; # cost_for_plan($plan, $model)
+	
+	sub plan_for_algebra {
+		my $self			= shift;
+		my $algebra			= shift;
+		my $model			= shift;
+		my $active_graph	= shift;
+		my @plans			= sort { $self->cost_for_plan($a) <=> $self->cost_for_plan($b) } $self->plans_for_algebra($algebra, $model, $active_graph);
+		my $plan			= shift(@plans);
+		return $plan;
+	}
+}
+
 package Attean::API::QueryEngine 0.001 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
