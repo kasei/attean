@@ -246,18 +246,89 @@ package Attean::Plan::OrderBy 0.001 {
 
 package Attean::Plan::Service 0.001 {
 	use Moo;
-	use Types::Standard qw(ConsumerOf Bool);
+	use Types::Standard qw(ConsumerOf Bool Str);
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('Service %s', $self->endpoint->as_string);
+		my $sparql	= $self->sparql;
+		$sparql		=~ s/\s+/ /g;
+		return sprintf('Service <%s> %s', $self->endpoint->as_string, $sparql);
 	}
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'sparql' => (is => 'ro', isa => Str, required => 1);
 	
 	sub tree_attributes { return qw(endpoint) };
 }
 
+=item * L<Attean::Plan::Table>
+
+=cut
+
+package Attean::Plan::Table 0.001 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+	sub in_scope_variables {
+		my $self	= shift;
+		return map { $_->value } @{ $self->variables };
+	}
+	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
+	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	sub tree_attributes { return qw(variables rows) };
+	sub plan_as_string { return 'Table' }
+}
+
+# =item * L<Attean::Algebra::Ask>
+# 
+# =cut
+# 
+# package Attean::Algebra::Ask 0.001 {
+# 	use Moo;
+# 	sub in_scope_variables { return; }
+# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+# 	sub algebra_as_string { return 'Ask' }
+# 	sub as_sparql {
+# 		my $self	= shift;
+# 		my %args	= @_;
+# 		my $level	= $args{level} // 0;
+# 		my $sp		= $args{indent} // '    ';
+# 		my $indent	= $sp x $level;
+# 		
+# 		return "${indent}ASK {\n"
+# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
+# 			. "${indent}}\n";
+# 	}
+# }
+# 
+# =item * L<Attean::Algebra::Construct>
+# 
+# =cut
+# 
+# package Attean::Algebra::Construct 0.001 {
+# 	use Moo;
+# 	use Types::Standard qw(ArrayRef ConsumerOf);
+# 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
+# 	sub in_scope_variables { return qw(subject predicate object); }
+# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+# 	sub tree_attributes { return qw(triples) };
+# 	sub algebra_as_string { return 'Construct' }
+# 	sub as_sparql {
+# 		my $self	= shift;
+# 		my %args	= @_;
+# 		my $level	= $args{level} // 0;
+# 		my $sp		= $args{indent} // '    ';
+# 		my $indent	= $sp x $level;
+# 		
+# 		return "${indent}CONSTRUCT {\n"
+# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->triples })
+# 			. "${indent}} WHERE {\n"
+# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
+# 			. "${indent}}\n";
+# 	}
+# }
+# 
 # =item * L<Attean::Algebra::Path>
 # 
 # =cut
@@ -295,68 +366,6 @@ package Attean::Plan::Service 0.001 {
 # =item * L<Attean::Algebra::Group>
 # 
 # =cut
-# 
-# package Attean::Algebra::Group 0.001 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	sub in_scope_variables {
-# 		my $self	= shift;
-# 		my $aggs	= $self->aggregates // [];
-# 		my @vars;
-# 		foreach my $a (@$aggs) {
-# 			push(@vars, $a->variable->value);
-# 		}
-# 		return @vars;
-# 	}
-# 	sub algebra_as_string {
-# 		my $self	= shift;
-# 		my @aggs;
-# 		my $aggs	= $self->aggregates // [];
-# 		my $groups	= $self->groupby // [];
-# 		foreach my $a (@$aggs) {
-# 			my $v	= $a->variable->as_sparql;
-# 			my $op	= $a->operator;
-# 			my $d	= $a->distinct ? "DISTINCT " : '';
-# 			my ($e)	= map { $_->value->as_sparql } @{ $a->children };
-# 			push(@aggs, "$v ← ${op}($d$e)");
-# 		}
-# 		return sprintf('Group { %s } aggregate { %s }', join(', ', map { $_->as_sparql() } @$groups), join(', ', @aggs));
-# 	}
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
-# 	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
-# 	sub tree_attributes { return qw(groupby aggregates) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		my $groups	= $self->groupby // [];
-# 		my $aggs	= $self->aggregates // [];
-# 		my %vmap	= %{ $args{ aggregate_variables } // {} };
-# 		my @aggs;
-# 		foreach my $a (@$aggs) {
-# 			my $av	= $a->variable->value;
-# 			my $v	= exists $vmap{$av} ? $vmap{$av} : $av;
-# 			my $op	= $a->operator;
-# 			my $d	= $a->distinct ? "DISTINCT " : '';
-# 			my ($e)	= map { $_->value->as_sparql } @{ $a->children };
-# 			push(@aggs, "(${op}($d$e) AS $v)");
-# 		}
-# 		
-# 		warn "TODO: as_sparql serialization of GROUPing";
-# 		my $sparql	= "${indent}SELECT " . join(' ', @aggs) . " WHERE {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}";
-# 		if (scalar(@$groups)) {
-# 			my @g	= map { $_->as_sparql() } @$groups;
-# 			$sparql	.= " GROUP BY " . join(' ', @g);
-# 		}
-# 		$sparql	.= "\n";
-# 		return $sparql;
-# 	}
-# }
 # 
 # =item * L<Attean::Algebra::NegatedPropertySet>
 # 
@@ -497,87 +506,6 @@ package Attean::Plan::Service 0.001 {
 # 	}
 # }
 # 
-# =item * L<Attean::Algebra::Table>
-# 
-# =cut
-# 
-# package Attean::Algebra::Table 0.001 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	use namespace::clean;
-# 	sub in_scope_variables {
-# 		my $self	= shift;
-# 		return map { $_->value } @{ $self->variables };
-# 	}
-# 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
-# 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub tree_attributes { return qw(variables rows) };
-# 	sub algebra_as_string { return 'Table' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		my $sparql	= "${indent}VALUES (" . join(' ', map { $_->as_sparql } @{ $self->variables }) . ") {\n";
-# 		foreach my $row (@{ $self->rows }) {
-# 			$sparql	.= "${indent}${sp}(" . join(' ', map { $_->as_sparql } $row->values) . ")\n";
-# 		}
-# 		$sparql		.= "${indent}}\n";
-# 		return $sparql;
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Ask>
-# 
-# =cut
-# 
-# package Attean::Algebra::Ask 0.001 {
-# 	use Moo;
-# 	sub in_scope_variables { return; }
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub algebra_as_string { return 'Ask' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}ASK {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Construct>
-# 
-# =cut
-# 
-# package Attean::Algebra::Construct 0.001 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
-# 	sub in_scope_variables { return qw(subject predicate object); }
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub tree_attributes { return qw(triples) };
-# 	sub algebra_as_string { return 'Construct' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}CONSTRUCT {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->triples })
-# 			. "${indent}} WHERE {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}\n";
-# 	}
-# }
 
 
 1;

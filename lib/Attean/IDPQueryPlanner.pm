@@ -44,6 +44,7 @@ package Attean::IDPQueryPlanner 0.001 {
 	use URI::Escape;
 	use Algorithm::Combinatorics qw(subsets);
 	use List::Util qw(min);
+	use Math::Cartesian::Product;
 	use namespace::clean;
 
 	with 'Attean::API::CostPlanner';
@@ -136,16 +137,41 @@ the supplied C<< $active_graph >>.
 			} else {
 				die "handle GRAPH ?var query forms";
 			}
-		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
-		} elsif ($algebra->isa('Attean::Algebra::Service')) {
-		} elsif ($algebra->isa('Attean::Algebra::Group')) {
-		} elsif ($algebra->isa('Attean::Algebra::Path')) {
-		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
-		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
-		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		} elsif ($algebra->isa('Attean::Algebra::Table')) {
+			my $rows	= $algebra->rows;
+			my $vars	= $algebra->variables;
+			my @vars	= map { $_->value } @{ $vars };
+			my $plan	= Attean::Plan::Table->new( variables => $vars, rows => $rows, distinct => 0, in_scope_variables => \@vars, ordered => [] );
+			return $plan;
+		} elsif ($algebra->isa('Attean::Algebra::Service')) {
+			my $endpoint	= $algebra->endpoint;
+			my $silent		= $algebra->silent;
+			my $sparql		= sprintf('SELECT * WHERE { %s }', $child->as_sparql);
+			my @vars		= $child->in_scope_variables;
+			my $plan		= Attean::Plan::Service->new( endpoint => $endpoint, silent => $silent, sparql => $sparql, distinct => 0, in_scope_variables => \@vars, ordered => [] );
+			return $plan;
+		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
+			my $limit	= $algebra->limit;
+			my $offset	= $algebra->offset;
+			my @plans;
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graph, @_)) {
+				my $vars	= $plan->in_scope_variables;
+				push(@plans, Attean::Plan::Slice->new(children => [$plan], limit => $limit, offset => $offset, distinct => $plan->distinct, in_scope_variables => $vars, ordered => $plan->ordered));
+			}
+			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
 			# TODO: if both branches are similarly ordered, we can merge the branches and keep the ordering
+			my @vars	= keys %{ { map { map { $_ => 1 } $_->in_scope_variables } @children } };
+			my @plansets	= map { [$self->plans_for_algebra($_, $model, $active_graph, @_)] } @children;
+
+			my @plans;
+			cartesian { push(@plans, Attean::Plan::Union->new(children => \@_, distinct => 0, in_scope_variables => \@vars, ordered => [])) } @plansets;
+			return @plans;
+		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
+		} elsif ($algebra->isa('Attean::Algebra::Group')) {
+		} elsif ($algebra->isa('Attean::Algebra::Path')) {
+		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
+		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		}
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
@@ -339,13 +365,25 @@ the supplied C<< $active_graph >>.
 				my $mult		= scalar(@$jv) ? 1 : 5;	# penalize cartesian joins
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
-				$cost			= $mult * $lcost * $rcost;
+				if ($lcost == 0) {
+					$cost	= $rcost;
+				} elsif ($rcost == 0) {
+					$cost	= $lcost;
+				} else {
+					$cost	= $mult * $lcost * $rcost;
+				}
 			} elsif (ref($plan) =~ /^Attean::Plan::Hash\w*Join/) {
 				my $jv			= $plan->join_variables;
 				my $mult		= scalar(@$jv) ? 1 : 5;	# penalize cartesian joins
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
-				$cost			= $mult * ($lcost + $rcost);
+				if ($lcost == 0) {
+					$cost	= $rcost;
+				} elsif ($rcost == 0) {
+					$cost	= $lcost;
+				} else {
+					$cost	= $mult * ($lcost + $rcost);
+				}
 			} else {
 				foreach my $c (@{ $plan->children }) {
 					$cost	+= $self->cost_for_plan($c, $model);
