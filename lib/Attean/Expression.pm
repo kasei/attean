@@ -149,13 +149,15 @@ package Attean::FunctionExpression 0.001 {
 	with 'Attean::API::NaryExpression';
 	sub as_sparql {
 		my $self	= shift;
-		if ($self->operator =~ /^(NOT)?IN$/) {
-			my $op	= $self->operator;
+		my $op		= $self->operator;
+		my @args	= @{ $self->children };
+		if ($op =~ /^(NOT)?IN$/) {
 			$op		=~ s/NOT/NOT /;
-			my ($t, @values)	= map { $_->as_string } @{ $self->children };
+			my ($t, @values)	= map { $_->as_sparql } @args;
 			return sprintf("%s %s (%s)", $t, $op, join(', ', @values));
 		} else {
-			return $self->SUPER::as_string();
+			my @values	= map { $_->as_sparql } @args;
+			return sprintf("%s(%s)", $op, join(', ', @values));
 		}
 	}
 }
