@@ -90,7 +90,24 @@ L<Attean::API::QuadIterator>.
 		}
 	}
 	
+	sub plans_for_algebra {
+		my $self	= shift;
+		if ($self->store->does('Attean::API::CostPlanner')) {
+			return $self->store->plans_for_algebra(@_);
+		}
+		return;
+	}
+	
+	sub cost_for_plan {
+		my $self	= shift;
+		if ($self->store->does('Attean::API::CostPlanner')) {
+			return $self->store->cost_for_plan(@_);
+		}
+		return;
+	}
+	
 	with 'Attean::API::Model';
+	with 'Attean::API::CostPlanner';
 }
 
 

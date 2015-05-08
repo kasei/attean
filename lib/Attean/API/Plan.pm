@@ -82,15 +82,16 @@ package Attean::API::CostPlanner 0.001 {
 	use namespace::clean;
 	with 'Attean::API::Planner';
 	
-	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, $active_graph)
+	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, \@active_graphs, \@default_graphs)
 	requires 'cost_for_plan'; # cost_for_plan($plan, $model)
 	
 	sub plan_for_algebra {
 		my $self			= shift;
 		my $algebra			= shift;
 		my $model			= shift;
-		my $active_graph	= shift;
-		my @plans			= sort { $self->cost_for_plan($a) <=> $self->cost_for_plan($b) } $self->plans_for_algebra($algebra, $model, $active_graph);
+		my $default_graphs	= shift;
+		my $active_graphs	= $default_graphs;
+		my @plans			= sort { $self->cost_for_plan($a, $model) <=> $self->cost_for_plan($b, $model) } $self->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs);
 		my $plan			= shift(@plans);
 		return $plan;
 	}

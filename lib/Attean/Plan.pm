@@ -31,12 +31,38 @@ use Attean::API::Query;
 
 package Attean::Plan::Quad 0.001 {
 	use Moo;
-	use Types::Standard qw(ConsumerOf);
+	use Types::Standard qw(ConsumerOf ArrayRef);
 	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
-	has 'quad' => (is => 'ro', isa => ConsumerOf['Attean::API::QuadPattern'], required => 1);
+	has 'values' => (is => 'ro', isa => ArrayRef, default => sub { [] });
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('Quad { %s }', $self->quad->as_string);
+		my @nodes	= @{ $self->values };
+		my @strings;
+		foreach my $t (@nodes) {
+			if (ref($t) eq 'ARRAY') {
+				my @tstrings	= map { $_->ntriples_string } @$t;
+				if (scalar(@tstrings) == 1) {
+					push(@strings, @tstrings);
+				} else {
+					push(@strings, '[' . join(', ', @tstrings) . ']');
+				}
+			} elsif ($t->does('Attean::API::TermOrVariable')) {
+				push(@strings, $t->ntriples_string);
+			} else {
+				use Data::Dumper;
+				die "Unrecognized node in quad pattern: " . Dumper($t);
+			}
+		}
+		return sprintf('Quad { %s }', join(', ', @strings));
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my @values	= @{ $self->values };
+		return sub {
+			return $model->get_bindings( @values );
+		}
 	}
 }
 
@@ -46,42 +72,132 @@ package Attean::Plan::Quad 0.001 {
 
 package Attean::Plan::NestedLoopJoin 0.001 {
 	use Moo;
-	use Types::Standard qw(ArrayRef Str);
+	use Types::Standard qw(ArrayRef Str Bool ConsumerOf);
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
 	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
-	sub plan_as_string { return 'NestedLoopJoin' }
+	has 'left' => (is => 'ro', isa => Bool, default => 0);
+	has 'anti' => (is => 'ro', isa => Bool, default => 0);
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+	sub plan_as_string {
+		my $self	= shift;
+		if ($self->left) {
+			return 'NestedLoop Left Join';
+		} elsif ($self->anti) {
+			return 'NestedLoop Anti Join';
+		} else {
+			return 'NestedLoop Join';
+		}
+	}
+
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $left	= $self->left;
+		my $anti	= $self->anti;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			my ($lhs, $rhs)	= map { $_->() } @children;
+			my @right	= $rhs->elements;
+			my @results;
+			while (my $l = $lhs->next) {
+				my $seen	= 0;
+				foreach my $r (@right) {
+					if (my $j = $l->join($r)) {
+						$seen++;
+						if ($left) {
+							# TODO: filter with expression
+							push(@results, $j);
+						} elsif ($anti) {
+						} else {
+							push(@results, $j);
+						}
+					}
+				}
+				if ($left and not($seen)) {
+					push(@results, $l);
+				} elsif ($anti and not($seen)) {
+					push(@results, $l);
+				}
+			}
+			return Attean::ListIterator->new(
+				item_type => 'Attean::API::Result',
+				values => \@results
+			);
+		}
+	}
 }
 
-=item * L<Attean::Plan::NestedLoopJoin>
+=item * L<Attean::Plan::HashJoin>
 
 =cut
 
 package Attean::Plan::HashJoin 0.001 {
 	use Moo;
-	use Types::Standard qw(ArrayRef Str);
+	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
 	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	has 'left' => (is => 'ro', isa => Bool, default => 0);
+	has 'anti' => (is => 'ro', isa => Bool, default => 0);
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('HashJoin { %s }', join(', ', @{$self->join_variables}));
+		my $name;
+		if ($self->left) {
+			$name	= "Hash Left Join";
+		} elsif ($self->anti) {
+			$name	= "Hash Left Anti Join";
+		} else {
+			$name	= "Hash Join";
+		}
+		return sprintf('%s { %s }', $name, join(', ', @{$self->join_variables}));
 	}
-}
 
-=item * L<Attean::Plan::NestedLoopLeftJoin>
-
-=cut
-
-package Attean::Plan::NestedLoopLeftJoin 0.001 {
-	use Moo;
-	use Types::Standard qw(ConsumerOf ArrayRef Str);
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
-	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
-	sub plan_as_string {
+	sub impl {
 		my $self	= shift;
-		return sprintf('NestedLoopLeftJoin { %s }', $self->expression->as_string);
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		my $left	= $self->left;
+		my $anti	= $self->anti;
+		return sub {
+			my %hash;
+			my @vars	= @{ $self->join_variables };
+			my $rhs		= $children[1]->();
+			while (my $r = $rhs->next()) {
+				my $key	= join(',', map { ref($_) ? $_->as_string : '' } map { $r->value($_) } @vars);
+				push(@{ $hash{$key} }, $r);
+			}
+			
+			my @results;
+			my $lhs		= $children[0]->();
+			while (my $l = $lhs->next()) {
+				my $seen	= 0;
+				my $key		= join(',', map { ref($_) ? $_->as_string : '' } map { $l->value($_) } @vars);
+				if (my $rows = $hash{$key}) {
+					foreach my $r (@$rows) {
+						if (my $j = $l->join($r)) {
+							$seen++;
+							if ($left) {
+								# TODO: filter with expression
+								push(@results, $j);
+							} elsif ($anti) {
+							} else {
+								push(@results, $j);
+							}
+						}
+					}
+				}
+				if ($left and not($seen)) {
+					push(@results, $l);
+				} elsif ($anti and not($seen)) {
+					push(@results, $l);
+				}
+			}
+			return Attean::ListIterator->new(
+				item_type => 'Attean::API::Result',
+				values => \@results
+			);
+		}
 	}
-	sub tree_attributes { return qw(expression) };
 }
 
 =item * L<Attean::Plan::Filter>
@@ -98,6 +214,11 @@ package Attean::Plan::Filter 0.001 {
 		return sprintf('Filter { %s }', $self->expression->as_string);
 	}
 	sub tree_attributes { return qw(expression) };
+	
+	sub impl {
+		# TODO: implement
+		die "Unimplemented";
+	}
 }
 
 =item * L<Attean::Plan::Union>
@@ -108,22 +229,26 @@ package Attean::Plan::Union 0.001 {
 	use Moo;
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
 	sub plan_as_string { return 'Union' }
-}
-
-=item * L<Attean::Plan::Graph>
-
-=cut
-
-package Attean::Plan::Graph 0.001 {
-	use Moo;
-	use Types::Standard qw(ConsumerOf);
-	sub plan_as_string {
+	
+	sub impl {
 		my $self	= shift;
-		return sprintf('Graph %s', $self->graph->as_string);
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			my @results;
+			while (my $current = shift(@children)) {
+				my $iter	= $current->();
+				while (my $row = $iter->next()) {
+					push(@results, $row);
+				}
+			}
+			
+			return Attean::ListIterator->new(
+				item_type => 'Attean::API::Result',
+				values => \@results
+			);
+		};
 	}
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
-	sub tree_attributes { return qw(graph) };
 }
 
 =item * L<Attean::Plan::Extend>
@@ -132,25 +257,78 @@ package Attean::Plan::Graph 0.001 {
 
 package Attean::Plan::Extend 0.001 {
 	use Moo;
-	use Types::Standard qw(ConsumerOf);
+	use Types::Standard qw(ConsumerOf HashRef);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], ,required => 1);
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('Extend { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
+		my @strings	= map { sprintf('?%s ← %s', $_, $self->expressions->{$_}->as_string) } keys %{ $self->expressions };
+		return sprintf('Extend { %s }', join(', ', @strings));
 	}
 	sub tree_attributes { return qw(variable expression) };
-}
-
-=item * L<Attean::Plan::Minus>
-
-=cut
-
-package Attean::Plan::Minus 0.001 {
-	use Moo;
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
-	sub plan_as_string { return 'Minus' }
+	
+	sub evaluate {
+		my $self	= shift;
+		my $model	= shift;
+		my $expr	= shift;
+		my $r		= shift;
+		my $op		= $expr->operator;
+		my $true	= Attean::Literal->true;
+		my $false	= Attean::Literal->false;
+		if ($expr->isa('Attean::ValueExpression')) {
+			my $node	= $expr->value;
+			if ($node->does('Attean::API::Variable')) {
+				return $r->value($node->value);
+			} else {
+				return $node;
+			}
+		} elsif ($expr->isa('Attean::UnaryExpression')) {
+			my ($child)	= @{ $expr->children };
+			my $term	= $self->evaluate($model, $child, $r);
+			if ($op eq '!') {
+				return ($term->ebv) ? $false : $true;
+			} elsif ($op eq '-' or $op eq '+') {
+				die "TypeError $op" unless (blessed($term) and $term->does('Attean::API::NumericLiteral'));
+				my $v	= $term->numeric_value;
+				return Attean::Literal->new( value => eval "$op$v", datatype => $term->datatype );
+			}
+			die "Unimplemented UnaryExpression evaluation: " . $expr->operator;
+		} else {
+			die "Expression evaluation unimplemented: " . $expr->as_string;
+		}
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my %exprs	= %{ $self->expressions };
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			my $iter	= $impl->();
+			my @results;
+			ROW: while (my $r = $iter->next) {
+				my %row	= map { $_ => $r->value($_) } $r->variables;
+				foreach my $var (keys %exprs) {
+					my $expr	= $exprs{$var};
+					my $term	= $self->evaluate($model, $expr, $r);
+					if ($term and $row{ $var } and $term->as_string ne $row{ $var }->as_string) {
+						next ROW;
+					}
+					
+					if ($term) {
+						$row{ $var }	= $term;
+					}
+				}
+				push(@results, Attean::Result->new( bindings => \%row ));
+			}
+			return Attean::ListIterator->new(
+				item_type => 'Attean::API::Result',
+				values => \@results
+			);
+		};
+		# TODO: implement
+		die "Unimplemented";
+	}
 }
 
 =item * L<Attean::Plan::Distinct>
@@ -161,6 +339,17 @@ package Attean::Plan::Distinct 0.001 {
 	use Moo;
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	sub plan_as_string { return 'Distinct' }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my %seen;
+		return sub {
+			my $iter	= $impl->();
+			return $iter->grep(sub { return not($seen{ shift->as_string }++); });
+		};
+	}
 }
 
 =item * L<Attean::Plan::Slice>
@@ -175,10 +364,24 @@ package Attean::Plan::Slice 0.001 {
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
 	sub plan_as_string {
 		my $self	= shift;
-		my @str	= ('Slice');
+		my @str;
 		push(@str, "Limit=" . $self->limit) if ($self->limit >= 0);
 		push(@str, "Offset=" . $self->offset) if ($self->offset > 0);
-		return join(' ', @str);
+		return sprintf('Slice { %s }', join(' ', @str));
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my $offset	= $self->offset;
+		my $limit	= $self->limit;
+		return sub {
+			my $iter	= $impl->();
+			$iter		= $iter->offset($offset) if ($offset > 0);
+			$iter		= $iter->limit($limit) if ($limit >= 0);
+			return $iter;
+		};
 	}
 }
 
@@ -196,31 +399,20 @@ package Attean::Plan::Project 0.001 {
 		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
 	}
 	sub tree_attributes { return qw(variables) };
-}
-
-=item * L<Attean::Plan::Comparator>
-
-=cut
-
-package Attean::Plan::Comparator 0.001 {
-	use Moo;
-	use Types::Standard qw(Bool ConsumerOf);
-	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
-	sub tree_attributes { return qw(expression) };
-	sub as_string {
-		my $self	= shift;
-		if ($self->ascending) {
-			return $self->expression->as_string;
-		} else {
-			return 'DESC(' . $self->expression->as_string . ')';
-		}
-	}
 	
-	sub satisfies_ordering {
+	sub impl {
 		my $self	= shift;
-		my $cmp		= shift;
-		return ($self->as_string eq $cmp->as_string);
+		my $model	= shift;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my @vars	= map { $_->value } @{ $self->variables };
+		return sub {
+			my $iter	= $impl->();
+			return $iter->map(sub {
+				my $r	= shift;
+				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
+				return Attean::Result->new( bindings => $b );
+			});
+		};
 	}
 }
 
@@ -230,13 +422,45 @@ package Attean::Plan::Comparator 0.001 {
 
 package Attean::Plan::OrderBy 0.001 {
 	use Moo;
-	use Types::Standard qw(ArrayRef InstanceOf);
+	use Types::Standard qw(HashRef ArrayRef InstanceOf Bool Str);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Plan::Comparator']], required => 1);
-	sub tree_attributes { return qw(comparators) };
+	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	has 'ascending' => (is => 'ro', isa => HashRef[Bool], required => 1);
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('Order { %s }', join(', ', map { $_->as_string } @{ $self->comparators }));
+		my @vars	= @{ $self->variables };
+		my $ascending	= $self->ascending;
+		my @strings	= map { sprintf('%s(?%s)', ($ascending->{$_} ? 'ASC' : 'DESC'), $_) } @vars;
+		return sprintf('Order { %s }', join(', ', @strings));
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $vars	= $self->variables;
+		my $ascending	= $self->ascending;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			my $iter	= $impl->();
+			my @rows	= $iter->elements;
+			my @sorted	= map { $_->[0] } sort {
+				my ($ar, $avalues)	= @$a;
+				my ($br, $bvalues)	= @$b;
+				my $c	= 0;
+				foreach my $i (0 .. $#{ $vars }) {
+					my $ascending	= $ascending->{ $vars->[$i] };
+					my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
+					$c		= $av ? $av->compare($bv) : 1;
+					$c		*= -1 unless ($ascending);
+					last unless ($c == 0);
+				}
+				$c
+			} map {
+				my $r = $_;
+				[$r, [map { $r->value($_) } @$vars]]
+			} @rows;
+			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type);
+		}
 	}
 }
 
@@ -269,15 +493,23 @@ package Attean::Plan::Table 0.001 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
-	sub in_scope_variables {
-		my $self	= shift;
-		return map { $_->value } @{ $self->variables };
-	}
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	sub tree_attributes { return qw(variables rows) };
 	sub plan_as_string { return 'Table' }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $rows	= $self->rows;
+		return sub {
+			return Attean::ListIterator->new(
+				item_type => 'Attean::API::Result',
+				values => $rows
+			);
+		};
+	}
 }
 
 # =item * L<Attean::Algebra::Ask>
