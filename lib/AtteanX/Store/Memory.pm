@@ -28,12 +28,14 @@ use Set::Scalar;
 use Digest::SHA;
 use List::Util qw(first);
 use Scalar::Util qw(refaddr reftype blessed);
+use Math::Cartesian::Product;
 use namespace::clean;
 
 with 'Attean::API::MutableQuadStore';
 with 'Attean::API::QuadStore';
 with 'Attean::API::ETagCacheableQuadStore';
 with 'Attean::API::TimeCacheableQuadStore';
+with 'Attean::API::CostPlanner';
 
 my @pos_names	= Attean::API::Quad->variables;
 
@@ -78,6 +80,14 @@ predicate and objects. Any of the arguments may be undef to match any value.
 =cut
 
 sub get_quads {
+	my $self	= shift;
+	my @nodes	= map { ref($_) eq 'ARRAY' ? $_ : [$_] } @_;
+	my @iters;
+	cartesian { push(@iters, $self->_get_quads(@_)) } @nodes;
+	return Attean::IteratorSequence->new( iterators => \@iters, item_type => 'Attean::API::Quad' );
+}
+
+sub _get_quads {
 	my $self	= shift;
 	my @nodes	= @_;
 	my $bound	= 0;
@@ -253,6 +263,13 @@ Removes the specified C<$statement> from the underlying model.
 
 sub remove_quads {
 	my $self	= shift;
+	my @nodes	= map { ref($_) eq 'ARRAY' ? $_ : [$_] } @_;
+	my @iters;
+	cartesian { $self->_remove_quads(@_) } @nodes;
+}
+
+sub _remove_quads {
+	my $self	= shift;
 	my $subj	= shift;
 	my $pred	= shift;
 	my $obj		= shift;
@@ -312,6 +329,14 @@ value.
 =cut
 
 sub count_quads {
+	my $self	= shift;
+	my @nodes	= map { ref($_) eq 'ARRAY' ? $_ : [$_] } @_;
+	my $count	= 0;
+	cartesian { $count += $self->_count_quads(@_) } @nodes;
+	return $count;
+}
+
+sub _count_quads {
 	my $self	= shift;
 	my @nodes	= @_[0..3];
 	my $bound	= 0;
@@ -418,6 +443,23 @@ sub _statement_id {
 	} else {
 		return -1;
 	}
+}
+
+sub plans_for_algebra {
+	my $self	= shift;
+	my $algebra	= shift;
+	return;
+}
+
+sub cost_for_plan {
+	my $self	= shift;
+	my $plan	= shift;
+	if ($plan->isa('Attean::Plan::Quad')) {
+		my @values	= @{ $plan->values };
+		my $count	= $self->count_quads(@values);
+		return $count;
+	}
+	return;
 }
 
 }
