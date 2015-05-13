@@ -414,6 +414,7 @@ the supplied C<< $active_graph >>.
 		} else {
 			if ($model->does('Attean::API::CostPlanner')) {
 				if (defined(my $cost = $model->cost_for_plan($plan, $model))) {
+					$plan->cost($cost);
 					return $cost;
 				}
 			}
@@ -421,7 +422,7 @@ the supplied C<< $active_graph >>.
 			my $cost	= 1;
 			my @children	= @{ $plan->children };
 			if ($plan->isa('Attean::Plan::Quad')) {
-				my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } $plan->quad->values;
+				my @vars	= map { $_->value } grep { blessed($_) and $_->does('Attean::API::Variable') } @{ $plan->values };
 				return 3 * scalar(@vars);
 			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
 				my $jv			= $plan->join_variables;
