@@ -54,6 +54,7 @@ package Attean {
 	use Attean::Result;
 	
 	use Attean::QuadModel;
+	use Attean::TripleModel;
 	use Attean::BindingEqualityTest;
 	
 	use Attean::CodeIterator;
