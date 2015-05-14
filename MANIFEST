@@ -1,4 +1,5 @@
 bin/attean_parse
+bin/attean_query
 bin/canonicalize_bgp.pl
 bin/query.pl
 Changes.ttl
@@ -35,6 +36,7 @@ lib/Attean/API/Model.pm
 lib/Attean/API/MutableModel.pod
 lib/Attean/API/MutableTripleStore.pod
 lib/Attean/API/Parser.pm
+lib/Attean/API/Plan.pm
 lib/Attean/API/PullParser.pod
 lib/Attean/API/PushParser.pod
 lib/Attean/API/Quad.pod
@@ -62,10 +64,12 @@ lib/Attean/BindingEqualityTest.pm
 lib/Attean/Blank.pm
 lib/Attean/CodeIterator.pm
 lib/Attean/Expression.pm
+lib/Attean/IDPQueryPlanner.pm
 lib/Attean/IRI.pm
 lib/Attean/IteratorSequence.pm
 lib/Attean/ListIterator.pm
 lib/Attean/Literal.pm
+lib/Attean/Plan.pm
 lib/Attean/Quad.pm
 lib/Attean/QuadModel.pm
 lib/Attean/RDF.pm
@@ -74,6 +78,7 @@ lib/Attean/SimpleQueryEvaluator.pm
 lib/Attean/TermMap.pm
 lib/Attean/TreeRewriter.pm
 lib/Attean/Triple.pm
+lib/Attean/TripleModel.pm
 lib/Attean/Variable.pm
 lib/AtteanX/Parser/NQuads.pm
 lib/AtteanX/Parser/NTriples.pm
@@ -92,9 +97,19 @@ lib/AtteanX/Serializer/CanonicalNTriples.pm
 lib/AtteanX/Serializer/NQuads.pm
 lib/AtteanX/Serializer/NTriples.pm
 lib/AtteanX/Serializer/NTuples.pm
+lib/AtteanX/Serializer/SPARQLCSV.pm
 lib/AtteanX/Serializer/SPARQLTSV.pm
+lib/AtteanX/Serializer/SPARQLXML.pm
 lib/AtteanX/Store/Memory.pm
 lib/AtteanX/Store/Simple.pm
+lib/Test/Attean/ETagCacheableQuadStore.pm
+lib/Test/Attean/MutableETagCacheableQuadStore.pm
+lib/Test/Attean/MutableQuadStore.pm
+lib/Test/Attean/MutableTimeCacheableQuadStore.pm
+lib/Test/Attean/MutableTripleStore.pm
+lib/Test/Attean/QuadStore.pm
+lib/Test/Attean/TimeCacheableQuadStore.pm
+lib/Test/Attean/TripleStore.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
