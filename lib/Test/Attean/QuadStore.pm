@@ -1,6 +1,7 @@
 package Test::Attean::QuadStore;
 
 use v5.14;
+use warnings;
 use Test::Roo::Role;
 use Test::Moose;
 use Attean;

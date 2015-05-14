@@ -1,6 +1,7 @@
 package Test::Attean::MutableETagCacheableQuadStore;
 
 use v5.14;
+use warnings;
 use Test::Roo::Role;
 use Test::Moose;
 use Test::More;
