@@ -107,6 +107,12 @@ package Attean::API::Binding 0.001 {
 		return scalar(@blanks);
 	}
 	
+	sub values_consuming_role {
+		my $self	= shift;
+		my $role	= shift;
+		return grep { $_->does($role) } $self->values;
+	}
+	
 	sub tree_attributes {
 		my $self	= shift;
 		return $self->variables;
