@@ -10,6 +10,43 @@
         dcterms:references      <http://kasei.us/code/attean/#project> .
 
 
+<http://kasei.us/code/files/Attean-0.004.tar.gz>
+        dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
+        dcterms:replaces    <http://kasei.us/code/files/Attean-0.003.tar.gz> ;
+
+        doap:Version    [
+                        doap:revision     "0.004" ;
+                        doap:created      "2015-XX-XX" ;
+                        ];
+        asc:changes     [
+                        asc:addition    "Added SPARQL CSV and XML serializers." ;
+                        asc:addition    "Add initial implementation of Attean::TripleModel." ;
+                        asc:addition    "Added an IDP-based query planner and associated classes and roles." ;
+                        asc:addition    "Added Test::Attean roles for caching quadstores." ;
+                        asc:addition    "Added Test::Attean::MutableTripleStore." ;
+                        asc:addition    "Added initial support for representing, translating, and evaluating SERVICE patterns." ;
+                        asc:addition    "Added Attean::API::Binding->values_consuming_role method." ;
+                        asc:addition    "Added Attean::TriplePattern->as_quadpattern method." ;
+                        asc:addition    "Add Attean::ValueExpression->in_scope_variables method." ;
+                        asc:update      "Fixed serialization bug in Attean::FunctionExpression->as_sparql." ;
+                        asc:update      "Updated Memory store matching methods to accept node arrays for any quad pattern position." ;
+                        asc:update      "Updated AtteanX::Store::Memory to conform to both etag and time caching roles." ;
+                        asc:update      "Add variables to result iterators." ;
+                        asc:update      "Improve SPARQL serialization for projection, slicing, ordering, and distinct/reduced modifiers." ;
+                        asc:update      "Update Attean::API::Expression to consume Attean::API::UnionScopeVariables." ;
+                        asc:update      "Add SPARQL serialization support for Expression classes." ;
+                        asc:update      "Improve SPARQL serialization of algebra trees." ;
+                        asc:update      "Fixed Attean->get_parser to accept media types with parameters." ;
+                        asc:update      "Add algebra_as_string methods for some algebra classes missing an implementation." ;
+                        asc:update      "Added missing use statements." ;
+                        asc:update      "Fixed required version of perl in store test roles to be v5.14." ;
+                        asc:update      "Added Math::Cartesian::Product to prerequisite list." ;
+                        asc:update      "Added Test::Roo-based store tests." ;
+                        asc:update      "Fix documentation of serialize_iter_to_io method." ;
+                        asc:update      "Added comments about handling of graphs in Test::Attean::MutableQuadStore." ;
+                        ] .
+
+
 <http://kasei.us/code/files/Attean-0.003.tar.gz>
         dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
         dcterms:replaces    <http://kasei.us/code/files/Attean-0.002.tar.gz> ;
