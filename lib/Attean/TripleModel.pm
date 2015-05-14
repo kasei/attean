@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package Attean::TripleModel 0.001 {
+package Attean::TripleModel 0.003 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
 	use Scalar::Util qw(reftype);

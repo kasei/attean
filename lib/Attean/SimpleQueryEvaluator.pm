@@ -32,7 +32,7 @@ model, and returns a query result.
 use Attean::Algebra;
 use Attean::Expression;
 
-package Attean::SimpleQueryEvaluator 0.001 {
+package Attean::SimpleQueryEvaluator 0.003 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -516,7 +516,7 @@ supplied C<< $active_graph >>.
 	}
 }
 
-package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.001 {
+package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.003 {
 	use Moo;
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);

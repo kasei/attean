@@ -29,7 +29,7 @@ It conforms to the L<Attean::API::Result|Attean::API::Binding> role.
 
 =cut
 
-package Attean::Result 0.001 {
+package Attean::Result 0.003 {
 	use Moo;
 	use Types::Standard qw(HashRef ConsumerOf);
 	use Attean::API::Binding;

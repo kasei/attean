@@ -38,7 +38,7 @@ This role consumes L<Attean::API::Triple>.
 
 =cut
 
-package Attean::TriplePattern 0.001 {
+package Attean::TriplePattern 0.003 {
 	use Moo;
 	use Attean::API::Binding;
 	
@@ -71,7 +71,7 @@ package Attean::TriplePattern 0.001 {
 	}
 }
 
-package Attean::Triple 0.001 {
+package Attean::Triple 0.003 {
 	use Moo;
 	use Attean::API::Binding;
 	

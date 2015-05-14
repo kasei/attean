@@ -40,7 +40,7 @@ use Attean::API::Expression;
 
 =cut
 
-package Attean::ValueExpression 0.001 {
+package Attean::ValueExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -81,7 +81,7 @@ package Attean::ValueExpression 0.001 {
 
 =cut
 
-package Attean::UnaryExpression 0.001 {
+package Attean::UnaryExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -108,7 +108,7 @@ package Attean::UnaryExpression 0.001 {
 
 =cut
 
-package Attean::BinaryExpression 0.001 {
+package Attean::BinaryExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -126,7 +126,7 @@ package Attean::BinaryExpression 0.001 {
 
 =cut
 
-package Attean::FunctionExpression 0.001 {
+package Attean::FunctionExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf HashRef);
 	use Types::Common::String qw(UpperCaseStr);
@@ -162,7 +162,7 @@ package Attean::FunctionExpression 0.001 {
 	}
 }
 
-package Attean::AggregateExpression 0.001 {
+package Attean::AggregateExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf);
 	use Types::Common::String qw(UpperCaseStr);
@@ -186,7 +186,7 @@ package Attean::AggregateExpression 0.001 {
 	with 'Attean::API::AggregateExpression';
 }
 
-package Attean::CastExpression 0.001 {
+package Attean::CastExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf);
 	use namespace::clean;
@@ -205,7 +205,7 @@ package Attean::CastExpression 0.001 {
 	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
 
-package Attean::ExistsExpression 0.001 {
+package Attean::ExistsExpression 0.003 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;

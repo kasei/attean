@@ -22,7 +22,7 @@ This document describes AtteanX::Serializer::NQuads version 0.003_01
 
 =cut
 
-package AtteanX::Serializer::NQuads 0.001 {
+package AtteanX::Serializer::NQuads 0.003 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);

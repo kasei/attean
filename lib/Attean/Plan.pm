@@ -29,7 +29,7 @@ use Attean::API::Query;
 
 =cut
 
-package Attean::Plan::Quad 0.001 {
+package Attean::Plan::Quad 0.003 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf ArrayRef);
 	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
@@ -70,7 +70,7 @@ package Attean::Plan::Quad 0.001 {
 
 =cut
 
-package Attean::Plan::NestedLoopJoin 0.001 {
+package Attean::Plan::NestedLoopJoin 0.003 {
 	use Moo;
 	use Types::Standard qw(ArrayRef Str Bool ConsumerOf);
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
@@ -131,7 +131,7 @@ package Attean::Plan::NestedLoopJoin 0.001 {
 
 =cut
 
-package Attean::Plan::HashJoin 0.001 {
+package Attean::Plan::HashJoin 0.003 {
 	use Moo;
 	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
@@ -204,7 +204,7 @@ package Attean::Plan::HashJoin 0.001 {
 
 =cut
 
-package Attean::Plan::Filter 0.001 {
+package Attean::Plan::Filter 0.003 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -225,7 +225,7 @@ package Attean::Plan::Filter 0.001 {
 
 =cut
 
-package Attean::Plan::Union 0.001 {
+package Attean::Plan::Union 0.003 {
 	use Moo;
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
 	sub plan_as_string { return 'Union' }
@@ -255,7 +255,7 @@ package Attean::Plan::Union 0.001 {
 
 =cut
 
-package Attean::Plan::Extend 0.001 {
+package Attean::Plan::Extend 0.003 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf HashRef);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -335,7 +335,7 @@ package Attean::Plan::Extend 0.001 {
 
 =cut
 
-package Attean::Plan::Distinct 0.001 {
+package Attean::Plan::Distinct 0.003 {
 	use Moo;
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	sub plan_as_string { return 'Distinct' }
@@ -356,7 +356,7 @@ package Attean::Plan::Distinct 0.001 {
 
 =cut
 
-package Attean::Plan::Slice 0.001 {
+package Attean::Plan::Slice 0.003 {
 	use Moo;
 	use Types::Standard qw(Int);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -389,7 +389,7 @@ package Attean::Plan::Slice 0.001 {
 
 =cut
 
-package Attean::Plan::Project 0.001 {
+package Attean::Plan::Project 0.003 {
 	use Moo;
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -420,7 +420,7 @@ package Attean::Plan::Project 0.001 {
 
 =cut
 
-package Attean::Plan::OrderBy 0.001 {
+package Attean::Plan::OrderBy 0.003 {
 	use Moo;
 	use Types::Standard qw(HashRef ArrayRef InstanceOf Bool Str);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -468,7 +468,7 @@ package Attean::Plan::OrderBy 0.001 {
 
 =cut
 
-package Attean::Plan::Service 0.001 {
+package Attean::Plan::Service 0.003 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf Bool Str);
 	sub plan_as_string {
@@ -489,7 +489,7 @@ package Attean::Plan::Service 0.001 {
 
 =cut
 
-package Attean::Plan::Table 0.001 {
+package Attean::Plan::Table 0.003 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -516,7 +516,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::Ask 0.001 {
+# package Attean::Algebra::Ask 0.003 {
 # 	use Moo;
 # 	sub in_scope_variables { return; }
 # 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
@@ -538,7 +538,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::Construct 0.001 {
+# package Attean::Algebra::Construct 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ArrayRef ConsumerOf);
 # 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
@@ -565,7 +565,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::Path 0.001 {
+# package Attean::Algebra::Path 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	sub in_scope_variables {
@@ -603,7 +603,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::NegatedPropertySet 0.001 {
+# package Attean::Algebra::NegatedPropertySet 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ArrayRef ConsumerOf);
 # 	with 'Attean::API::PropertyPath';
@@ -624,7 +624,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::PredicatePath 0.001 {
+# package Attean::Algebra::PredicatePath 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::PropertyPath';
@@ -648,7 +648,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::InversePath 0.001 {
+# package Attean::Algebra::InversePath 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
@@ -664,7 +664,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::SequencePath 0.001 {
+# package Attean::Algebra::SequencePath 0.003 {
 # 	use Moo;
 # 	with 'Attean::API::NaryPropertyPath';
 # 	sub separator { return "/" }
@@ -679,7 +679,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::AlternativePath 0.001 {
+# package Attean::Algebra::AlternativePath 0.003 {
 # 	use Moo;
 # 	with 'Attean::API::NaryPropertyPath';
 # 	sub separator { return "|" }
@@ -694,7 +694,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::ZeroOrMorePath 0.001 {
+# package Attean::Algebra::ZeroOrMorePath 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
@@ -710,7 +710,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::OneOrMorePath 0.001 {
+# package Attean::Algebra::OneOrMorePath 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
@@ -726,7 +726,7 @@ package Attean::Plan::Table 0.001 {
 # 
 # =cut
 # 
-# package Attean::Algebra::ZeroOrOnePath 0.001 {
+# package Attean::Algebra::ZeroOrOnePath 0.003 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';

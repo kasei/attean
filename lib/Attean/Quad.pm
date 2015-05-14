@@ -40,7 +40,7 @@ This role consumes L<Attean::API::Quad>.
 
 =cut
 
-package Attean::QuadPattern 0.001 {
+package Attean::QuadPattern 0.003 {
 	use Moo;
 	use Attean::API;
 	
@@ -63,7 +63,7 @@ package Attean::QuadPattern 0.001 {
 	};
 }
 
-package Attean::Quad 0.001 {
+package Attean::Quad 0.003 {
 	use Moo;
 	use Attean::API::Binding;
 	

@@ -23,7 +23,7 @@ This document describes AtteanX::Parser::Turtle::Lexer version 0.003_01
 
 =cut
 
-package AtteanX::Parser::Turtle::Lexer 0.001 {
+package AtteanX::Parser::Turtle::Lexer 0.003 {
 	use AtteanX::Parser::Turtle::Constants;
 	use v5.14;
 	use strict;

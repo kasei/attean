@@ -43,7 +43,7 @@ iterator.
 
 =cut
 
-package Attean::IteratorSequence 0.001 {
+package Attean::IteratorSequence 0.003 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;

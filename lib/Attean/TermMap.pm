@@ -31,7 +31,7 @@ It conforms to the L<Attean::API::Mapper> role.
 
 =cut
 
-package Attean::TermMap 0.001 {
+package Attean::TermMap 0.003 {
 	use Moo;
 	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;

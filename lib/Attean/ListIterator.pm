@@ -49,7 +49,7 @@ iterator.
 
 =cut
 
-package Attean::ListIterator 0.001 {
+package Attean::ListIterator 0.003 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(ArrayRef Int);

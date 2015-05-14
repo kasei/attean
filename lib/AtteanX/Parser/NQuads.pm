@@ -25,7 +25,7 @@ This document describes AtteanX::Parser::NQuads version 0.003_01
 
 =cut
 
-package AtteanX::Parser::NQuads 0.001 {
+package AtteanX::Parser::NQuads 0.003 {
 	use utf8;
 	
 	use Attean;

@@ -19,7 +19,7 @@ This document describes AtteanX::Parser::Turtle::Constants version 0.003_01
 
 =cut
 
-package AtteanX::Parser::Turtle::Constants 0.001 {
+package AtteanX::Parser::Turtle::Constants 0.003 {
 	use v5.14;
 	use warnings;
 

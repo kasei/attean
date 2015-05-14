@@ -25,7 +25,7 @@ This document describes AtteanX::Serializer::NTriples version 0.003_01
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::NTriples 0.001 {
+package AtteanX::Serializer::NTriples 0.003 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);

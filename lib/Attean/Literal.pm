@@ -26,7 +26,7 @@ It conforms to the L<Attean::API::Literal|Attean::API::Term> role.
 
 =cut
 
-package Attean::Literal 0.001 {
+package Attean::Literal 0.003 {
 	use Moo;
 	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;

@@ -52,7 +52,7 @@ that will be returned from the iterator.
 
 =cut
 
-package Attean::CodeIterator 0.001 {
+package Attean::CodeIterator 0.003 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(CodeRef ArrayRef);

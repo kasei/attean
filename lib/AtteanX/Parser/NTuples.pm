@@ -23,7 +23,7 @@ This document describes AtteanX::Parser::NTuples version 0.003_01
 
 =cut
 
-package AtteanX::Parser::NTuples 0.001 {
+package AtteanX::Parser::NTuples 0.003 {
 	use utf8;
 	use Moo;
 	use Attean;

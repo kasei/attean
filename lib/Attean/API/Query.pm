@@ -24,7 +24,7 @@ This is a utility package for defining query-related roles:
 
 =cut
 
-package Attean::API::DirectedAcyclicGraph 0.001 {
+package Attean::API::DirectedAcyclicGraph 0.003 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -115,7 +115,7 @@ package Attean::API::DirectedAcyclicGraph 0.001 {
 
 =cut
 
-package Attean::API::Algebra 0.001 {
+package Attean::API::Algebra 0.003 {
 	use Moo::Role;
 
 	requires 'as_sparql';
@@ -167,7 +167,7 @@ package Attean::API::Algebra 0.001 {
 
 =cut
 
-package Attean::API::QueryTree 0.001 {
+package Attean::API::QueryTree 0.003 {
 	use Moo::Role;
 	with 'Attean::API::DirectedAcyclicGraph';
 }
@@ -176,7 +176,7 @@ package Attean::API::QueryTree 0.001 {
 
 =cut
 
-package Attean::API::NullaryQueryTree 0.001 {
+package Attean::API::NullaryQueryTree 0.003 {
 	use Moo::Role;
 	sub arity { return 0 }
 	with 'Attean::API::QueryTree';
@@ -186,7 +186,7 @@ package Attean::API::NullaryQueryTree 0.001 {
 
 =cut
 
-package Attean::API::UnaryQueryTree 0.001 {
+package Attean::API::UnaryQueryTree 0.003 {
 	use Moo::Role;
 	sub arity { return 1 }
 	with 'Attean::API::QueryTree';
@@ -196,7 +196,7 @@ package Attean::API::UnaryQueryTree 0.001 {
 
 =cut
 
-package Attean::API::BinaryQueryTree 0.001 {
+package Attean::API::BinaryQueryTree 0.003 {
 	use Moo::Role;
 	sub arity { return 2 }
 	with 'Attean::API::QueryTree';
@@ -206,7 +206,7 @@ package Attean::API::BinaryQueryTree 0.001 {
 
 =cut
 
-package Attean::API::PropertyPath 0.001 {
+package Attean::API::PropertyPath 0.003 {
 	use Moo::Role;
 	with 'Attean::API::QueryTree';
 	requires 'as_string';
@@ -217,7 +217,7 @@ package Attean::API::PropertyPath 0.001 {
 
 =cut
 
-package Attean::API::UnaryPropertyPath 0.001 {
+package Attean::API::UnaryPropertyPath 0.003 {
 	use Moo::Role;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -247,7 +247,7 @@ package Attean::API::UnaryPropertyPath 0.001 {
 
 =cut
 
-package Attean::API::NaryPropertyPath 0.001 {
+package Attean::API::NaryPropertyPath 0.003 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -274,7 +274,7 @@ package Attean::API::NaryPropertyPath 0.001 {
 
 =cut
 
-package Attean::API::UnionScopeVariables 0.001 {
+package Attean::API::UnionScopeVariables 0.003 {
 	use Moo::Role;
 	sub in_scope_variables {
 		my $self	= shift;
@@ -290,7 +290,7 @@ package Attean::API::UnionScopeVariables 0.001 {
 
 =cut
 
-package Attean::API::IntersectionScopeVariables 0.001 {
+package Attean::API::IntersectionScopeVariables 0.003 {
 	use Moo::Role;
 	sub in_scope_variables {
 		my $self	= shift;

@@ -30,7 +30,7 @@ None.
 
 =cut
 
-package Attean::TreeRewriter 0.001 {
+package Attean::TreeRewriter 0.003 {
 	use Moo;
 	use Types::Standard qw(CodeRef ArrayRef Str);
 	use Data::UUID;

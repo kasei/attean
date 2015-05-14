@@ -23,7 +23,7 @@ It conforms to the L<Attean::API::TermOrVariable|Attean::API> role.
 
 =cut
 
-package Attean::Variable 0.001 {
+package Attean::Variable 0.003 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use Data::UUID;

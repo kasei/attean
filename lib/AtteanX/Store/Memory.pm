@@ -19,7 +19,7 @@ AtteanX::Store::Memory provides an in-memory quad-store.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Memory 0.001 {
+package AtteanX::Store::Memory 0.003 {
 use Moo;
 use Type::Tiny::Role;
 use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);

@@ -25,7 +25,7 @@ This document describes AtteanX::Parser::NTriples version 0.003_01
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::NTriples 0.001 {
+package AtteanX::Parser::NTriples 0.003 {
 	use utf8;
 	
 	use Attean;

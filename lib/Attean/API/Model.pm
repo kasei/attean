@@ -115,7 +115,7 @@ subjects and objects present in the specified C<< $graph >>.
 
 use Attean::API::Binding;
 
-package Attean::API::Model 0.001 {
+package Attean::API::Model 0.003 {
 	use Moo::Role;
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
@@ -236,7 +236,7 @@ package Attean::API::Model 0.001 {
 }
 
 
-package Attean::API::MutableModel 0.001 {
+package Attean::API::MutableModel 0.003 {
 	use Moo::Role;
 	use Encode qw(encode);
 	use namespace::clean;
@@ -295,21 +295,21 @@ package Attean::API::MutableModel 0.001 {
 }
 
 
-package Attean::API::ETagCacheableModel 0.001 {
+package Attean::API::ETagCacheableModel 0.003 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
-package Attean::API::TimeCacheableModel 0.001 {
+package Attean::API::TimeCacheableModel 0.003 {
 	use Moo::Role;
 	
 	requires 'mtime_for_quads';
 }
 
 
-package Attean::API::BulkUpdatableModel 0.001 {
+package Attean::API::BulkUpdatableModel 0.003 {
 	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';

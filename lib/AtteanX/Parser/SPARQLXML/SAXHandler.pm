@@ -26,7 +26,7 @@ please L<get in touch|http://www.perlrdf.org/>.
 
 =cut
 
-package AtteanX::Parser::SPARQLXML::SAXHandler 0.001;
+package AtteanX::Parser::SPARQLXML::SAXHandler 0.003;
 
 use v5.14;
 use warnings;

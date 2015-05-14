@@ -38,7 +38,7 @@ quad-store.
 
 =cut
 
-package Attean::QuadModel 0.001 {
+package Attean::QuadModel 0.003 {
 	use Moo;
 	use Scalar::Util qw(reftype);
 	use namespace::clean;
@@ -111,7 +111,7 @@ L<Attean::API::QuadIterator>.
 }
 
 
-package Attean::MutableQuadModel 0.001 {
+package Attean::MutableQuadModel 0.003 {
 	use Moo;
 	extends 'Attean::QuadModel';
 	

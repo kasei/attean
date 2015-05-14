@@ -33,7 +33,7 @@ This role consumes L<Attean::API::Blank>, which provides the following methods:
 
 =cut
 
-package Attean::Blank 0.001 {
+package Attean::Blank 0.003 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use Data::UUID;

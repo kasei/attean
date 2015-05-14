@@ -28,7 +28,7 @@ This document describes AtteanX::Parser::SPARQLXML version 0.003_01
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::SPARQLXML 0.001 {
+package AtteanX::Parser::SPARQLXML 0.003 {
 	use XML::SAX::ParserFactory;
 	use Attean;
 	use Moo;

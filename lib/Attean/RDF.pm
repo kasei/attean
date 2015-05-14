@@ -31,7 +31,7 @@ by default).
 
 =cut
 
-package Attean::RDF 0.001 {
+package Attean::RDF 0.003 {
 	use v5.14;
 	use warnings;
 

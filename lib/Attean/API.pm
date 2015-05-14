@@ -21,15 +21,15 @@ in the Attean::API namespace.
 
 =cut
 
-package Attean::API::ResultOrTerm 0.001 {
+package Attean::API::ResultOrTerm 0.003 {
 	use Moo::Role;
 }
 
-package Attean::API::BlankOrIRI 0.001 {
+package Attean::API::BlankOrIRI 0.003 {
 	use Moo::Role;
 }
 
-package Attean::API::TermOrVariable 0.001 {
+package Attean::API::TermOrVariable 0.003 {
 	use Moo::Role;
 	sub equals {
 		my ($a, $b)	= @_;
@@ -37,12 +37,12 @@ package Attean::API::TermOrVariable 0.001 {
 	}
 }
 
-package Attean::Mapper 0.001 {
+package Attean::Mapper 0.003 {
 	use Moo::Role;
 	requires 'map'; # my $that = $object->map($this)
 }
 
-package Attean::API::Variable 0.001 {
+package Attean::API::Variable 0.003 {
 	use Moo::Role;
 	with 'Attean::API::TermOrVariable';
 	sub as_sparql {
@@ -56,7 +56,7 @@ package Attean::API::Variable 0.001 {
 	}
 }
 
-package Attean::API::CanonicalizingBindingSet 0.001 {
+package Attean::API::CanonicalizingBindingSet 0.003 {
 	use Moo::Role;
 	use Attean::RDF;
 	use namespace::clean;
@@ -147,7 +147,7 @@ package Attean::API::CanonicalizingBindingSet 0.001 {
 	}
 }
 
-package Attean::API 0.001 {
+package Attean::API 0.003 {
 	use Attean::API::Term;
 	use Attean::API::Store;
 	use Attean::API::Model;

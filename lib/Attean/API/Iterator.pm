@@ -96,7 +96,7 @@ elements from the referent.
 
 =cut
 
-package Attean::API::Iterator 0.001 {
+package Attean::API::Iterator 0.003 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str Object InstanceOf);
@@ -263,7 +263,7 @@ package Attean::API::Iterator 0.001 {
 	}
 }
 
-package Attean::API::RepeatableIterator 0.001 {
+package Attean::API::RepeatableIterator 0.003 {
 	use Moo::Role;
 	requires 'reset';
 	
@@ -299,7 +299,7 @@ package Attean::API::CanonicalizingBindingIterator {
 	}
 }
 
-package Attean::API::ResultOrTermIterator 0.001 {
+package Attean::API::ResultOrTermIterator 0.003 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef Str);
 	has 'variables' => (is => 'rw', isa => ArrayRef[Str], default => sub { [] });
@@ -318,7 +318,7 @@ package Attean::API::ResultOrTermIterator 0.001 {
 	}
 }
 
-package Attean::API::TripleIterator 0.001 {
+package Attean::API::TripleIterator 0.003 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
 	sub as_quads {
@@ -328,12 +328,12 @@ package Attean::API::TripleIterator 0.001 {
 	}
 }
 
-package Attean::API::QuadIterator 0.001 {
+package Attean::API::QuadIterator 0.003 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
 }
 
-package Attean::API::MixedStatementIterator 0.001 {
+package Attean::API::MixedStatementIterator 0.003 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
 	sub as_quads {
@@ -346,7 +346,7 @@ package Attean::API::MixedStatementIterator 0.001 {
 	}
 }
 
-package Attean::API::ResultIterator 0.001 {
+package Attean::API::ResultIterator 0.003 {
 	use Moo::Role;
 	use Types::Standard qw(Str ArrayRef);
 	with 'Attean::API::CanonicalizingBindingIterator';
@@ -367,7 +367,7 @@ package Attean::API::ResultIterator 0.001 {
 	}
 }
 
-package Attean::API::TermIterator 0.001 {
+package Attean::API::TermIterator 0.003 {
 	use Moo::Role;
 	sub canonicalize {
 		my $self	= shift;

@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.001 {
+package Attean::API::Binding 0.003 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use namespace::clean;
@@ -119,7 +119,7 @@ package Attean::API::Binding 0.001 {
 	};
 }
 
-package Attean::API::TripleOrQuadPattern 0.001 {
+package Attean::API::TripleOrQuadPattern 0.003 {
 	use Moo::Role;
 	sub apply_map {
 		my $self	= shift;
@@ -130,12 +130,12 @@ package Attean::API::TripleOrQuadPattern 0.001 {
 	}
 }
 
-package Attean::API::TripleOrQuad 0.001 {
+package Attean::API::TripleOrQuad 0.003 {
 	use Moo::Role;
 	with 'Attean::API::TripleOrQuadPattern';
 }
 
-package Attean::API::TriplePattern 0.001 {
+package Attean::API::TriplePattern 0.003 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use namespace::clean;
@@ -169,7 +169,7 @@ package Attean::API::TriplePattern 0.001 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Triple 0.001 {
+package Attean::API::Triple 0.003 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -204,7 +204,7 @@ package Attean::API::Triple 0.001 {
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
 }
 
-package Attean::API::QuadPattern 0.001 {
+package Attean::API::QuadPattern 0.003 {
 	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object graph) }
@@ -223,7 +223,7 @@ package Attean::API::QuadPattern 0.001 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.001 {
+package Attean::API::Quad 0.003 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -250,7 +250,7 @@ package Attean::API::Quad 0.001 {
 }
 
 
-package Attean::API::Result 0.001 {
+package Attean::API::Result 0.003 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use namespace::clean;

@@ -28,10 +28,10 @@ and extends the L<IRI> class.
 
 =cut
 
-package Attean::IRI 0.001 {
+package Attean::IRI 0.003 {
 	use Moo;
 	use Types::Standard qw(Str);
-	use IRI 0.003;
+	use IRI 0.003_01;
 	use namespace::clean;
 
 	extends 'IRI';

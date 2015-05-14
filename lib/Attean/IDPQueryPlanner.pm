@@ -33,7 +33,7 @@ use Attean::Algebra;
 use Attean::Plan;
 use Attean::Expression;
 
-package Attean::IDPQueryPlanner 0.001 {
+package Attean::IDPQueryPlanner 0.003 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;

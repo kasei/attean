@@ -25,7 +25,7 @@ This document describes AtteanX::Serializer::CanonicalNTriples version 0.003_01
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::CanonicalNTriples 0.001 {
+package AtteanX::Serializer::CanonicalNTriples 0.003 {
 	use Moo;
 	use Encode;
 	extends 'AtteanX::Serializer::NTriples';
