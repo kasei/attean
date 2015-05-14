@@ -7,7 +7,7 @@ Attean::Literal - RDF Literals
 
 =head1 VERSION
 
-This document describes Attean::Literal version 0.003
+This document describes Attean::Literal version 0.003_01
 
 =head1 SYNOPSIS
 

@@ -7,7 +7,7 @@ Attean::API::Parser - Parser role
 
 =head1 VERSION
 
-This document describes Attean::API::Parser version 0.003
+This document describes Attean::API::Parser version 0.003_01
 
 =head1 DESCRIPTION
 

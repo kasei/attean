@@ -4,7 +4,7 @@ AtteanX::Serializer::NTriples - N-Triples Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::NTriples version 0.003
+This document describes AtteanX::Serializer::NTriples version 0.003_01
 
 =head1 SYNOPSIS
 

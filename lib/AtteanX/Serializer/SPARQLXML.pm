@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLXML - SPARQL Results XML Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLXML version 0.003
+This document describes AtteanX::Serializer::SPARQLXML version 0.003_01
 
 =head1 SYNOPSIS
 

@@ -7,7 +7,7 @@ Attean::API::Plan - Query plan
 
 =head1 VERSION
 
-This document describes Attean::API::Plan version 0.003
+This document describes Attean::API::Plan version 0.003_01
 
 =head1 DESCRIPTION
 

@@ -7,7 +7,7 @@ Attean::API::Expression - SPARQL expressions
 
 =head1 VERSION
 
-This document describes Attean::API::Expression version 0.003
+This document describes Attean::API::Expression version 0.003_01
 
 =head1 DESCRIPTION
 
