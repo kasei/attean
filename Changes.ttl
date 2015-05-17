@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.004" ;
-                        doap:created      "2015-XX-XX" ;
+                        doap:created      "2015-05-17" ;
                         ];
         asc:changes     [
                         asc:addition    "Added SPARQL CSV and XML serializers." ;
