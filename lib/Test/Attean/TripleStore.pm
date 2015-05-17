@@ -5,19 +5,54 @@ use warnings;
 use Test::Roo::Role;
 use Test::Moose;
 use Attean;
+use Attean::RDF;
 
-requires 'create_store';       # create_store( triples => \@triples )
+requires 'create_store';	   # create_store( triples => \@triples )
 
 test 'get_triples' => sub {
-    my $self	= shift;
-    my @triples;
-    my $store	= $self->create_store(triples => \@triples);
-    ok $store->does('Attean::API::Store');
-    ok $store->does('Attean::API::TripleStore');
+	my $self	= shift;
+	my $t1		= triple(iri('http://example.org/s'), iri('http://example.org/p'), iri('http://example.org/o'));
+	my $t2		= triple(iri('http://example.org/x'), iri('http://example.org/y'), iri('http://example.org/z'));
+	my @triples = ($t1, $t2);
+	my $store	= $self->create_store(triples => \@triples);
+	ok $store->does('Attean::API::Store');
+	ok $store->does('Attean::API::TripleStore');
 };
 
-# test 'count_triples' => sub {};
+test 'count_triples' => sub {
+	my $self	= shift;
+	my @triples;
+	foreach (1 .. 20) {
+		push(@triples, triple(iri('http://example.org/s'), iri('http://example.org/p'), literal($_)));
+	}
+	foreach (1,10,20,50) {
+		push(@triples, triple(iri('http://example.org/z'), iri('http://example.org/p'), literal($_)));
+	}
+	foreach (1 .. 20) {
+		push(@triples, triple(iri('http://example.org/s'), iri('http://example.org/q'), blank("b$_")));
+	}
+	my $store	= $self->create_store(triples => \@triples);
+	is($store->count_triples(iri('http://example.org/UNEXPECTED')), 0, 'unexpected IRI');
+	is($store->count_triples(iri('http://example.org/s')), 40, 'expected subject');
+	is($store->count_triples(undef, iri('http://example.org/q')), 20, 'expected predicate');
+	is($store->count_triples(undef, undef, literal('7')), 1, 'expected object');
+	is($store->count_triples(undef, undef, literal('10')), 2, 'expected object (2)');
+	is($store->count_triples(iri('http://example.org/z'), undef, literal('10')), 1, 'expected subject/object');
+};
+
+
 # test 'count_triples_estimate' => sub {};
-# test 'size' => sub {};
+
+test 'size' => sub {
+	my $self	= shift;
+	foreach my $size (1, 10, 25, 57) {
+		my @triples;
+		foreach (1 .. $size) {
+			push(@triples, triple(iri('http://example.org/s'), iri('http://example.org/p'), literal($_)));
+		}
+		my $store	= $self->create_store(triples => \@triples);
+		is($store->size(), $size);
+	}
+};
 
 1;
