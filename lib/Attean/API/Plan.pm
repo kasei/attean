@@ -33,7 +33,9 @@ package Attean::API::Plan 0.004 {
 	has 'item_type' => (is => 'ro', isa => Str, required => 1, default => 'Attean::API::Result');
 	has 'in_scope_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
 	has 'ordered' => (is => 'ro', isa => ArrayRef, required => 1, default => sub { [] });
-
+	
+	requires 'impl';
+	
 	sub plan_as_string {
 		my $self	= shift;
 		return "$self";
@@ -66,6 +68,12 @@ package Attean::API::Plan 0.004 {
 		});
 		return $string;
 	}
+
+	sub evaluate {
+		my $self	= shift;
+		my $impl	= $self->impl(@_);
+		return $impl->();
+	}
 }
 
 package Attean::API::Planner 0.004 {
@@ -95,14 +103,6 @@ package Attean::API::CostPlanner 0.004 {
 		my $plan			= shift(@plans);
 		return $plan;
 	}
-}
-
-package Attean::API::QueryEngine 0.004 {
-	use Moo::Role;
-	use Types::Standard qw(CodeRef);
-	use namespace::clean;
-	
-	requires 'evaluate'; # evaluate_plan($plan, $model)
 }
 
 1;

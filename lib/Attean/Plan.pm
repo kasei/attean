@@ -483,6 +483,11 @@ package Attean::Plan::Service 0.004 {
 	has 'sparql' => (is => 'ro', isa => Str, required => 1);
 	
 	sub tree_attributes { return qw(endpoint) };
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		die __PACKAGE__ . " unimplemented";
+	}
 }
 
 =item * L<Attean::Plan::Table>

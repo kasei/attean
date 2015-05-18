@@ -14,9 +14,10 @@ This document describes Attean::IDPQueryPlanner version 0.004
   use v5.14;
   use Attean;
   my $planner = Attean::IDPQueryPlanner->new();
-  my $plan = $planner->plan_for_algebra( $algebra, $model, $dataset );
-  my $e = Attean::QueryEvaluator->new();
-  my $iter = $e->evaluate( $algebra, $active_graph );
+  my $default_graphs = [ Attean::IRI->new('http://example.org/') ];
+  my $plan = $planner->plan_for_algebra( $algebra, $model, $default_graphs );
+  my $iter = $plan->evaluate($model);
+  my $iter = $e->evaluate( $model );
 
 =head1 DESCRIPTION
 
