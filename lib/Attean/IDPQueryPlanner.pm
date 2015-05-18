@@ -55,12 +55,6 @@ package Attean::IDPQueryPlanner 0.004 {
 
 =over 4
 
-=item C<< plans_for_algebra( $algebra, $model, \@active_graphs, \@default_graphs ) >>
-
-Returns L<Attean::API::Plan> objects representing alternate query plans for
-evaluating the query C<< $algebra >> against the C<< $model >>, using
-the supplied C<< $active_graph >>.
-
 =cut
 
 	sub new_temporary {
@@ -71,6 +65,14 @@ the supplied C<< $active_graph >>.
 		return sprintf('.%s-%d', $type, $c);
 	}
 	
+=item C<< plans_for_algebra( $algebra, $model, \@active_graphs, \@default_graphs ) >>
+
+Returns L<Attean::API::Plan> objects representing alternate query plans for
+evaluating the query C<< $algebra >> against the C<< $model >>, using
+the supplied C<< $active_graph >>.
+
+=cut
+
 	sub plans_for_algebra {
 		my $self			= shift;
 		my $algebra			= shift;
@@ -90,12 +92,12 @@ the supplied C<< $active_graph >>.
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::BGP')) {
-			my @plans	= $self->_IDPJoin($model, $active_graphs, $default_graphs, map {
+			my @plans	= $self->bgp_join_plans($model, $active_graphs, $default_graphs, map {
 				[$self->access_plans($model, $active_graphs, $_)]
 			} @{ $algebra->triples });
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
-			return $self->_IDPJoin($model, $active_graphs, $default_graphs, map {
+			return $self->group_join_plans($model, $active_graphs, $default_graphs, map {
 				[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
 			} @children);
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
@@ -227,6 +229,32 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		}
 		die "Unimplemented algebra evaluation for: $algebra";
+	}
+	
+=item C<< bgp_join_plans( $model, \@active_graphs, \@default_graphs, \@plansA, \@plansB, ... ) >>
+
+Returns a list of alternative plans for the join of a set of triples.
+The arguments C<@plansA>, C<@plansB>, etc. represent alternative plans for each
+triple participating in the join.
+
+=cut
+
+	sub bgp_join_plans {
+		my $self			= shift;
+		return $self->_IDPJoin(@_);
+	}
+	
+=item C<< group_join_plans( $model, \@active_graphs, \@default_graphs, \@plansA, \@plansB, ... ) >>
+
+Returns a list of alternative plans for the join of a set of sub-plans.
+The arguments C<@plansA>, C<@plansB>, etc. represent alternative plans for each
+sub-plan participating in the join.
+
+=cut
+
+	sub group_join_plans {
+		my $self			= shift;
+		return $self->_IDPJoin(@_);
 	}
 	
 	sub _IDPJoin {
