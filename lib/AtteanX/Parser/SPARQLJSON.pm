@@ -4,7 +4,7 @@ AtteanX::Parser::SPARQLJSON - SPARQL JSON Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLJSON version 0.003_01
+This document describes AtteanX::Parser::SPARQLJSON version 0.004
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ This document describes AtteanX::Parser::SPARQLJSON version 0.003_01
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::SPARQLJSON 0.003 {
+package AtteanX::Parser::SPARQLJSON 0.004 {
 	use Attean;
 	use Moo;
 	use JSON;
