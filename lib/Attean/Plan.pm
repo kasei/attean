@@ -206,14 +206,14 @@ package Attean::Plan::HashJoin 0.004 {
 	}
 }
 
-=item * L<Attean::Plan::Filter>
+=item * L<Attean::Plan::EBVFilter>
 
 Filters results from a sub-plan based on the effective boolean value of a
 named variable binding.
 
 =cut
 
-package Attean::Plan::Filter 0.004 {
+package Attean::Plan::EBVFilter 0.004 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ConsumerOf);
@@ -300,8 +300,12 @@ package Attean::Plan::Extend 0.004 {
 		my $expr	= shift;
 		my $r		= shift;
 		my $op		= $expr->operator;
-		my $true	= Attean::Literal->true;
-		my $false	= Attean::Literal->false;
+
+		state $true			= Attean::Literal->true;
+		state $false		= Attean::Literal->false;
+		state $type_roles	= { qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral) };
+		state $type_classes	= { qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal) };
+		
 		if ($expr->isa('Attean::ValueExpression')) {
 			my $node	= $expr->value;
 			if ($node->does('Attean::API::Variable')) {
@@ -323,9 +327,10 @@ package Attean::Plan::Extend 0.004 {
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
 			my $func	= $expr->operator;
 			my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-			if ($func eq 'ISIRI') {
-				my $t	= shift(@terms);
-				my $ok	= (blessed($t) and $t->does('Attean::API::IRI'));
+			if ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC)$/) {
+				my $role	= "Attean::API::$type_roles->{$1}";
+				my $t		= shift(@terms);
+				my $ok		= (blessed($t) and $t->does($role));
 				return $ok ? $true : $false;
 			} else {
 				die "Expression evaluation unimplemented: " . $expr->as_string;

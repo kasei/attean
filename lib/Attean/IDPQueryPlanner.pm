@@ -137,7 +137,7 @@ the supplied C<< $active_graph >>.
 				my @vars		= ($var);
 				my @pvars		= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
 				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $ordered);
-				my $filtered	= Attean::Plan::Filter->new(children => [$extend], variable => $var, distinct => 0, in_scope_variables => \@vars, ordered => $ordered);
+				my $filtered	= Attean::Plan::EBVFilter->new(children => [$extend], variable => $var, distinct => 0, in_scope_variables => \@vars, ordered => $ordered);
 				my $proj		= $self->new_projection($filtered, $distinct, @{ $plan->in_scope_variables });
 				push(@plans, $proj);
 			}
