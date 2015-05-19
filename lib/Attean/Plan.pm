@@ -250,6 +250,7 @@ Evaluates a set of sub-plans, returning the union of results.
 
 package Attean::Plan::Union 0.004 {
 	use Moo;
+	use Scalar::Util qw(blessed);
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
 	sub plan_as_string { return 'Union' }
 	
@@ -258,17 +259,25 @@ package Attean::Plan::Union 0.004 {
 		my $model	= shift;
 		my @children	= map { $_->impl($model) } @{ $self->children };
 		return sub {
-			my @results;
-			while (my $current = shift(@children)) {
-				my $iter	= $current->();
-				while (my $row = $iter->next()) {
-					push(@results, $row);
-				}
-			}
-			
-			return Attean::ListIterator->new(
+			my $current	= shift(@children);
+			my $iter	= $current->();
+			return Attean::CodeIterator->new(
 				item_type => 'Attean::API::Result',
-				values => \@results
+				generator => sub {
+					while (blessed($iter)) {
+						my $row	= $iter->next();
+						if ($row) {
+							return $row;
+						} else {
+							$current	= shift(@children);
+							if ($current) {
+								$iter	= $current->();
+							} else {
+								undef $iter;
+							}
+						}
+					}
+				},
 			);
 		};
 	}
@@ -347,29 +356,28 @@ package Attean::Plan::Extend 0.004 {
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		return sub {
 			my $iter	= $impl->();
-			my @results;
-			ROW: while (my $r = $iter->next) {
-				my %row	= map { $_ => $r->value($_) } $r->variables;
-				foreach my $var (keys %exprs) {
-					my $expr	= $exprs{$var};
-					my $term	= $self->evaluate_expression($model, $expr, $r);
-					if ($term and $row{ $var } and $term->as_string ne $row{ $var }->as_string) {
-						next ROW;
-					}
-					
-					if ($term) {
-						$row{ $var }	= $term;
-					}
-				}
-				push(@results, Attean::Result->new( bindings => \%row ));
-			}
-			return Attean::ListIterator->new(
+			return Attean::CodeIterator->new(
 				item_type => 'Attean::API::Result',
-				values => \@results
+				generator => sub {
+					ROW: while (my $r = $iter->next) {
+						my %row	= map { $_ => $r->value($_) } $r->variables;
+						foreach my $var (keys %exprs) {
+							my $expr	= $exprs{$var};
+							my $term	= $self->evaluate_expression($model, $expr, $r);
+							if ($term and $row{ $var } and $term->as_string ne $row{ $var }->as_string) {
+								next ROW;
+							}
+					
+							if ($term) {
+								$row{ $var }	= $term;
+							}
+						}
+						return Attean::Result->new( bindings => \%row );
+					}
+					return;
+				}
 			);
 		};
-		# TODO: implement
-		die "Unimplemented";
 	}
 }
 
