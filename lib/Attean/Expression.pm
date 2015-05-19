@@ -52,6 +52,11 @@ package Attean::ValueExpression 0.004 {
 		return $class->SUPER::BUILDARGS(@_, operator => '_value');
 	}
 	has 'value' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable']);
+	
+	sub is_stable {
+		return 1;
+	}
+	
 	sub as_string {
 		my $self	= shift;
 		my $str		= $self->value->ntriples_string;
@@ -101,6 +106,14 @@ package Attean::UnaryExpression 0.004 {
 		$type->assert_valid($self->operator);
 	}
 	
+	sub is_stable {
+		my $self	= shift;
+		foreach my $c (@{ $self->children }) {
+			return 0 unless ($c->is_stable);
+		}
+		return 1;
+	}
+	
 	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
 
@@ -117,6 +130,14 @@ package Attean::BinaryExpression 0.004 {
 		my $self	= shift;
 		state $type	= Enum[qw(+ - * / < <= > >= != = && ||)];
 		$type->assert_valid($self->operator);
+	}
+	
+	sub is_stable {
+		my $self	= shift;
+		foreach my $c (@{ $self->children }) {
+			return 0 unless ($c->is_stable);
+		}
+		return 1;
 	}
 	
 	with 'Attean::API::BinaryExpression';
@@ -160,6 +181,15 @@ package Attean::FunctionExpression 0.004 {
 			return sprintf("%s(%s)", $op, join(', ', @values));
 		}
 	}
+
+	sub is_stable {
+		my $self	= shift;
+		return 0 if ($self->operator =~ m/^(?:RAND|BNODE|UUID|STRUUID|NOW)$/);
+		foreach my $c (@{ $self->children }) {
+			return 0 unless ($c->is_stable);
+		}
+		return 1;
+	}
 }
 
 package Attean::AggregateExpression 0.004 {
@@ -202,6 +232,14 @@ package Attean::CastExpression 0.004 {
 		$type->assert_valid($self->datatype->value);
 	}
 	
+	sub is_stable {
+		my $self	= shift;
+		foreach my $c (@{ $self->children }) {
+			return 0 unless ($c->is_stable);
+		}
+		return 1;
+	}
+
 	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
 
@@ -233,6 +271,13 @@ package Attean::ExistsExpression 0.004 {
 		# TODO: implement as_string for EXISTS patterns
 		warn "TODO: Attean::ExistsExpression->as_string";
 		return "EXISTS " . $self->pattern->as_sparql( level => $level+1, indent => $sp );
+	}
+
+	sub is_stable {
+		my $self	= shift;
+		# TODO: need deep analysis of exists pattern to tell if this is stable
+		# (there might be an unstable filter expression deep inside the pattern)
+		return 0;
 	}
 }
 

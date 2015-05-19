@@ -73,6 +73,7 @@ package Attean::API::Expression 0.004 {
 	with 'Attean::API::DirectedAcyclicGraph', 'Attean::API::UnionScopeVariables';
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
+	requires 'is_stable'; # is stable for sorting (won't change across evaluations)
 	requires 'as_string';
 	requires 'as_sparql';
 	

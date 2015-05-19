@@ -352,6 +352,38 @@ package Attean::Plan::HashDistinct 0.004 {
 	}
 }
 
+=item * L<Attean::Plan::Unique>
+
+=cut
+
+package Attean::Plan::Unique 0.004 {
+	use Moo;
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	sub plan_as_string { return 'Unique' }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			my $iter	= $impl->();
+			my $last;
+			return $iter->grep(sub {
+				my $r	= shift;
+				if ($last) {
+					my $s	= $r->as_string;
+					my $ok	= $s ne $last;
+					$last	= $s;
+					return $ok;
+				} else {
+					$last	= $r->as_string;
+					return 1;
+				}
+			});
+		};
+	}
+}
+
 =item * L<Attean::Plan::Slice>
 
 =cut

@@ -112,8 +112,15 @@ the supplied C<< $active_graph >>.
 				if ($p->distinct) {
 					push(@dist, $p);
 				} else {
-					# TODO: if the plan isn't distinct, but is ordered, we can use a batched implementation
-					push(@dist, Attean::Plan::HashDistinct->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
+					my @vars	= @{ $p->in_scope_variables };
+					my $cmps	= $p->ordered;
+					if ($self->_comparators_are_stable_and_cover_vars($cmps, @vars)) {
+						# the plan has a stable ordering which covers all the variables, so we can just uniq the iterator
+						push(@dist, Attean::Plan::Unique->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
+					} else {
+						# TODO: if the plan isn't distinct, but is ordered, we can use a batched implementation
+						push(@dist, Attean::Plan::HashDistinct->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
+					}
 				}
 			}
 			return @dist;
@@ -539,6 +546,11 @@ sub-plan participating in the join.
 				} else {
 					$cost	= $mult * ($lcost + $rcost);
 				}
+			} elsif ($plan->isa('Attean::Plan::Unique')) {
+				$cost	= 0; # consider a filter on the iterator to be essentially free
+				foreach my $c (@{ $plan->children }) {
+					$cost	+= $self->cost_for_plan($c, $model);
+				}
 			} else {
 				foreach my $c (@{ $plan->children }) {
 					$cost	+= $self->cost_for_plan($c, $model);
@@ -552,13 +564,29 @@ sub-plan participating in the join.
 	
 	sub _comparator_referenced_variables {
 		my $self	= shift;
-		my $c		= shift;
 		my %vars;
-		my $expr	= $c->expression;
-		foreach my $v ($expr->in_scope_variables) {
-			$vars{$v}++;
+		while (my $c = shift) {
+			my $expr	= $c->expression;
+			foreach my $v ($expr->in_scope_variables) {
+				$vars{$v}++;
+			}
 		}
 		return keys %vars;
+	}
+	
+	sub _comparators_are_stable_and_cover_vars {
+		my $self	= shift;
+		my $cmps	= shift;
+		my @vars	= @_;
+		my %unseen	= map { $_ => 1 } @vars;
+		foreach my $c (@$cmps) {
+			return 0 unless ($c->expression->is_stable);
+			foreach my $v ($self->_comparator_referenced_variables($c)) {
+				delete $unseen{$v};
+			}
+		}
+		my @keys	= keys %unseen;
+		return (scalar(@keys) == 0);
 	}
 }
 
