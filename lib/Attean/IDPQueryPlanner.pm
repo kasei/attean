@@ -80,6 +80,7 @@ the supplied C<< $active_graph >>.
 		my $model			= shift;
 		my $active_graphs	= shift;
 		my $default_graphs	= shift;
+		my %args			= @_;
 		
 		if ($model->does('Attean::API::CostPlanner')) {
 			my @plans	= $model->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs, @_);
@@ -90,15 +91,18 @@ the supplied C<< $active_graph >>.
 		
 		Carp::confess "No algebra passed for evaluation" unless ($algebra);
 		
+		# TODO: propagate interesting orders
+		my $interesting	= [];
+		
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::BGP')) {
-			my @plans	= $self->bgp_join_plans($model, $active_graphs, $default_graphs, map {
+			my @plans	= $self->bgp_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
 				[$self->access_plans($model, $active_graphs, $_)]
 			} @{ $algebra->triples });
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
-			return $self->group_join_plans($model, $active_graphs, $default_graphs, map {
+			return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
 				[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
 			} @children);
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
@@ -135,7 +139,7 @@ the supplied C<< $active_graph >>.
 			}
 			
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, interesting_order => $algebra->comparators, @_)) {
 				my @vars	= (@{ $plan->in_scope_variables }, keys %exprs);
 				my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
 				my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => \@vars, ordered => $plan->ordered);
@@ -232,7 +236,7 @@ the supplied C<< $active_graph >>.
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
 	
-=item C<< bgp_join_plans( $model, \@active_graphs, \@default_graphs, \@plansA, \@plansB, ... ) >>
+=item C<< bgp_join_plans( $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
 
 Returns a list of alternative plans for the join of a set of triples.
 The arguments C<@plansA>, C<@plansB>, etc. represent alternative plans for each
@@ -245,7 +249,7 @@ triple participating in the join.
 		return $self->_IDPJoin(@_);
 	}
 	
-=item C<< group_join_plans( $model, \@active_graphs, \@default_graphs, \@plansA, \@plansB, ... ) >>
+=item C<< group_join_plans( $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
 
 Returns a list of alternative plans for the join of a set of sub-plans.
 The arguments C<@plansA>, C<@plansB>, etc. represent alternative plans for each
@@ -263,6 +267,7 @@ sub-plan participating in the join.
 		my $model			= shift;
 		my $active_graphs	= shift;
 		my $default_graphs	= shift;
+		my $interesting		= shift;
 		my @args			= @_; # each $args[$i] here is an array reference containing alternate plans for element $i
 
 		my $k				= 3; # this is the batch size over which to do full dynamic programming
@@ -270,7 +275,7 @@ sub-plan participating in the join.
 		# initialize $optPlan{$i} to be a set of alternate plans for evaluating element $i
 		my %optPlan;
 		foreach my $i (0 .. $#args) {
-			$optPlan{$i}	= [$self->prune_plans($model, @{ $args[$i] })];
+			$optPlan{$i}	= [$self->prune_plans($model, $interesting, $args[$i])];
 		}
 		
 		my @todo	= (0 .. $#args); # initialize the todo list to all elements
@@ -295,7 +300,7 @@ sub-plan participating in the join.
 						
 						# compute and store all the possible ways to evaluate s (o ⋈ not_o)
 						push(@{ $optPlan{$s_key} }, $self->join_plans($model, $active_graphs, $default_graphs, $lhs, $rhs, 0, 0));
-						$optPlan{$s_key}	= [$self->prune_plans($model, @{ $optPlan{$s_key} })];
+						$optPlan{$s_key}	= [$self->prune_plans($model, $interesting, $optPlan{$s_key})];
 					}
 				}
 			}
@@ -334,13 +339,16 @@ sub-plan participating in the join.
 		}
 		
 		my $final_key	= join('.', sort @todo);
-		return $self->prune_plans($model, @{ $optPlan{$final_key} });
+		return $self->prune_plans($model, $interesting, $optPlan{$final_key});
 	}
 	
 	sub prune_plans {
-		my $self	= shift;
-		my $model	= shift;
-		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @_;
+		my $self		= shift;
+		my $model		= shift;
+		my $interesting	= shift;
+		my @plans		= @{ shift || [] };
+		
+		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @plans;
 		return splice(@sorted, 0, 5);
 	}
 	
