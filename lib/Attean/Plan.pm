@@ -208,24 +208,37 @@ package Attean::Plan::HashJoin 0.004 {
 
 =item * L<Attean::Plan::Filter>
 
-Filters results from a sub-plan.
+Filters results from a sub-plan based on the effective boolean value of a
+named variable binding.
 
 =cut
 
 package Attean::Plan::Filter 0.004 {
 	use Moo;
-	use Types::Standard qw(ConsumerOf);
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Str ConsumerOf);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	has 'variable' => (is => 'ro', isa => Str, required => 1);
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('Filter { %s }', $self->expression->as_string);
+		return sprintf('Filter { ?%s }', $self->variable);
 	}
 	sub tree_attributes { return qw(expression) };
 	
 	sub impl {
-		# TODO: implement
-		die "Unimplemented";
+		my $self	= shift;
+		my $model	= shift;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my $var		= $self->variable;
+		return sub {
+			my $iter	= $impl->();
+			return $iter->grep(sub {
+				my $r		= shift;
+				my $term	= $r->value($var);
+				return 0 unless (blessed($term) and $term->does('Attean::API::Term'));
+				return $term->ebv;
+			});
+		};
 	}
 }
 
@@ -270,6 +283,7 @@ expressions, binding the produced values to new variables.
 
 package Attean::Plan::Extend 0.004 {
 	use Moo;
+	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ConsumerOf HashRef);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], ,required => 1);
@@ -280,7 +294,7 @@ package Attean::Plan::Extend 0.004 {
 	}
 	sub tree_attributes { return qw(variable expression) };
 	
-	sub evaluate {
+	sub evaluate_expression {
 		my $self	= shift;
 		my $model	= shift;
 		my $expr	= shift;
@@ -297,7 +311,7 @@ package Attean::Plan::Extend 0.004 {
 			}
 		} elsif ($expr->isa('Attean::UnaryExpression')) {
 			my ($child)	= @{ $expr->children };
-			my $term	= $self->evaluate($model, $child, $r);
+			my $term	= $self->evaluate_expression($model, $child, $r);
 			if ($op eq '!') {
 				return ($term->ebv) ? $false : $true;
 			} elsif ($op eq '-' or $op eq '+') {
@@ -306,6 +320,16 @@ package Attean::Plan::Extend 0.004 {
 				return Attean::Literal->new( value => eval "$op$v", datatype => $term->datatype );
 			}
 			die "Unimplemented UnaryExpression evaluation: " . $expr->operator;
+		} elsif ($expr->isa('Attean::FunctionExpression')) {
+			my $func	= $expr->operator;
+			my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+			if ($func eq 'ISIRI') {
+				my $t	= shift(@terms);
+				my $ok	= (blessed($t) and $t->does('Attean::API::IRI'));
+				return $ok ? $true : $false;
+			} else {
+				die "Expression evaluation unimplemented: " . $expr->as_string;
+			}
 		} else {
 			die "Expression evaluation unimplemented: " . $expr->as_string;
 		}
@@ -323,7 +347,7 @@ package Attean::Plan::Extend 0.004 {
 				my %row	= map { $_ => $r->value($_) } $r->variables;
 				foreach my $var (keys %exprs) {
 					my $expr	= $exprs{$var};
-					my $term	= $self->evaluate($model, $expr, $r);
+					my $term	= $self->evaluate_expression($model, $expr, $r);
 					if ($term and $row{ $var } and $term->as_string ne $row{ $var }->as_string) {
 						next ROW;
 					}

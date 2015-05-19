@@ -127,9 +127,20 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			# TODO: simple range relation filters can be handled differently if that filter operates on a variable that is part of the ordering
 			my $expr	= $algebra->expression;
-			my @plans	= map {
-				Attean::Plan::Filter->new(children => [$_], expression => $expr, distinct => $_->distinct, in_scope_variables => $_->in_scope_variables, ordered => $_->ordered)
-			} $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			my $var		= $self->new_temporary('filter');
+			my %exprs	= ($var => $expr);
+			
+			my @plans;
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+				my $distinct	= $plan->distinct;
+				my $ordered		= $plan->ordered;
+				my @vars		= ($var);
+				my @pvars		= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
+				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $ordered);
+				my $filtered	= Attean::Plan::Filter->new(children => [$extend], variable => $var, distinct => 0, in_scope_variables => \@vars, ordered => $ordered);
+				my $proj		= $self->new_projection($filtered, $distinct, @{ $plan->in_scope_variables });
+				push(@plans, $proj);
+			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 			# TODO: no-op if already ordered
