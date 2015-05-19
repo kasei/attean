@@ -331,14 +331,14 @@ package Attean::Plan::Extend 0.004 {
 	}
 }
 
-=item * L<Attean::Plan::Distinct>
+=item * L<Attean::Plan::HashDistinct>
 
 =cut
 
-package Attean::Plan::Distinct 0.004 {
+package Attean::Plan::HashDistinct 0.004 {
 	use Moo;
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	sub plan_as_string { return 'Distinct' }
+	sub plan_as_string { return 'HashDistinct' }
 	
 	sub impl {
 		my $self	= shift;

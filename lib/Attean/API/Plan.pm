@@ -29,7 +29,7 @@ package Attean::API::Plan 0.004 {
 	use namespace::clean;
 	
 	has 'cost' => (is => 'rw', isa => Num, predicate => 'has_cost');
-	has 'distinct' => (is => 'ro', isa => Bool, required => 1, default => 0);
+	has 'distinct' => (is => 'rw', isa => Bool, required => 1, default => 0);
 	has 'item_type' => (is => 'ro', isa => Str, required => 1, default => 'Attean::API::Result');
 	has 'in_scope_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
 	has 'ordered' => (is => 'ro', isa => ArrayRef, required => 1, default => sub { [] });

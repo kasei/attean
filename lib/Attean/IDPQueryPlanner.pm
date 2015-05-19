@@ -97,7 +97,7 @@ the supplied C<< $active_graph >>.
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::BGP')) {
-			my @plans	= $self->bgp_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
+			my @plans	= $self->bgp_join_plans($algebra, $model, $active_graphs, $default_graphs, $interesting, map {
 				[$self->access_plans($model, $active_graphs, $_)]
 			} @{ $algebra->triples });
 			return @plans;
@@ -113,7 +113,7 @@ the supplied C<< $active_graph >>.
 					push(@dist, $p);
 				} else {
 					# TODO: if the plan isn't distinct, but is ordered, we can use a batched implementation
-					push(@dist, Attean::Plan::Distinct->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
+					push(@dist, Attean::Plan::HashDistinct->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
 				}
 			}
 			return @dist;
@@ -140,11 +140,12 @@ the supplied C<< $active_graph >>.
 			
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, interesting_order => $algebra->comparators, @_)) {
+				my $distinct	= $plan->distinct;
 				my @vars	= (@{ $plan->in_scope_variables }, keys %exprs);
 				my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
 				my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => \@vars, ordered => $plan->ordered);
 				my $ordered	= Attean::Plan::OrderBy->new(children => [$extend], variables => \@svars, ascending => \%ascending, distinct => 0, in_scope_variables => \@vars, ordered => \@cmps);
-				my $proj	= Attean::Plan::Project->new(children => [$ordered], variables => \@pvars, distinct => 0, in_scope_variables => \@vars, ordered => \@cmps);
+				my $proj	= $self->new_projection($ordered, $distinct, @{ $plan->in_scope_variables });
 				push(@plans, $proj);
 			}
 			
@@ -159,11 +160,11 @@ the supplied C<< $active_graph >>.
 			my $vars	= $algebra->variables;
 			my @vars	= map { $_->value } @{ $vars };
 			my $vars_key	= join(' ', sort @vars);
+			my $distinct	= 0;
 			my @plans	= map {
-				# TODO: compute the correct `ordered` array
 				($vars_key eq join(' ', sort @{ $_->in_scope_variables }))
 					? $_ # no-op if plan is already properly-projected
-					: Attean::Plan::Project->new(children => [$_], variables => $vars, distinct => 0, in_scope_variables => \@vars, ordered => [])
+					: $self->new_projection($_, $distinct, @vars)
 			} $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
@@ -236,7 +237,36 @@ the supplied C<< $active_graph >>.
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
 	
-=item C<< bgp_join_plans( $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
+	sub new_projection {
+		my $self		= shift;
+		my $plan		= shift;
+		my $distinct	= shift;
+		my @vars		= @_;
+		my $order		= $plan->ordered;
+		my @pvars		= map { Attean::Variable->new($_) } @vars;
+		
+		my %pvars		= map { $_ => 1 } @vars;
+		my @porder;
+		CMP: foreach my $cmp (@{ $order }) {
+			my @cmpvars	= $self->_comparator_referenced_variables($cmp);
+			foreach my $v (@cmpvars) {
+				unless ($pvars{ $v }) {
+					# projection is dropping a variable used in this comparator
+					# so we lose any remaining ordering that the sub-plan had.
+					last CMP;
+				}
+			}
+			
+			# all the variables used by this comparator are available after
+			# projection, so the resulting plan will continue to be ordered
+			# by this comparator
+			push(@porder, $cmp);
+		}
+		
+		return Attean::Plan::Project->new(children => [$plan], variables => \@pvars, distinct => $distinct, in_scope_variables => \@vars, ordered => \@porder);
+	}
+	
+=item C<< bgp_join_plans( $bgp, $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
 
 Returns a list of alternative plans for the join of a set of triples.
 The arguments C<@plansA>, C<@plansB>, etc. represent alternative plans for each
@@ -246,7 +276,31 @@ triple participating in the join.
 
 	sub bgp_join_plans {
 		my $self			= shift;
-		return $self->_IDPJoin(@_);
+		my $bgp				= shift;
+		my @plans			= $self->_IDPJoin(@_);
+		my @triples			= @{ $bgp->triples };
+		
+		# If the BGP does not contain any blanks, then the results are
+		# guaranteed to be distinct. Otherwise, we have to assume they're
+		# not distinct.
+		my $distinct		= 1;
+		LOOP: foreach my $t (@triples) {
+			foreach my $b ($t->values_consuming_role('Attean::API::Blank')) {
+				$distinct	= 0;
+				last LOOP;
+			}
+		}
+		
+		# Set the distinct flag on each of the top-level join plans that
+		# represents the entire BGP. (Sub-plans won't ever be marked as
+		# distinct, but that shouldn't matter to the rest of the planning
+		# process.)
+		if ($distinct) {
+			foreach my $p (@plans) {
+				$p->distinct(1);
+			}
+		}
+		return @plans;
 	}
 	
 =item C<< group_join_plans( $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
@@ -494,6 +548,17 @@ sub-plan participating in the join.
 			$plan->cost($cost);
 			return $cost;
 		}
+	}
+	
+	sub _comparator_referenced_variables {
+		my $self	= shift;
+		my $c		= shift;
+		my %vars;
+		my $expr	= $c->expression;
+		foreach my $v ($expr->in_scope_variables) {
+			$vars{$v}++;
+		}
+		return keys %vars;
 	}
 }
 
