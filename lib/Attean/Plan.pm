@@ -27,6 +27,8 @@ use Attean::API::Query;
 
 =item * L<Attean::Plan::Quad>
 
+Evaluates a quad pattern against the model.
+
 =cut
 
 package Attean::Plan::Quad 0.004 {
@@ -67,6 +69,8 @@ package Attean::Plan::Quad 0.004 {
 }
 
 =item * L<Attean::Plan::NestedLoopJoin>
+
+Evaluates a join (natural-, anti-, or left-) using a nested loop.
 
 =cut
 
@@ -128,6 +132,8 @@ package Attean::Plan::NestedLoopJoin 0.004 {
 }
 
 =item * L<Attean::Plan::HashJoin>
+
+Evaluates a join (natural-, anti-, or left-) using a hash join.
 
 =cut
 
@@ -202,6 +208,8 @@ package Attean::Plan::HashJoin 0.004 {
 
 =item * L<Attean::Plan::Filter>
 
+Filters results from a sub-plan.
+
 =cut
 
 package Attean::Plan::Filter 0.004 {
@@ -222,6 +230,8 @@ package Attean::Plan::Filter 0.004 {
 }
 
 =item * L<Attean::Plan::Union>
+
+Evaluates a set of sub-plans, returning the union of results.
 
 =cut
 
@@ -252,6 +262,9 @@ package Attean::Plan::Union 0.004 {
 }
 
 =item * L<Attean::Plan::Extend>
+
+Evaluates a sub-plan, and extends each result by evaluating a set of
+expressions, binding the produced values to new variables.
 
 =cut
 
@@ -333,6 +346,9 @@ package Attean::Plan::Extend 0.004 {
 
 =item * L<Attean::Plan::HashDistinct>
 
+Evaluates a sub-plan, and returns distinct results by checking a persistent
+hash of already-seen results.
+
 =cut
 
 package Attean::Plan::HashDistinct 0.004 {
@@ -353,6 +369,9 @@ package Attean::Plan::HashDistinct 0.004 {
 }
 
 =item * L<Attean::Plan::Unique>
+
+Evaluates an already-ordered sub-plan, and returns distinct results by
+filtering out sequential duplicates.
 
 =cut
 
@@ -385,6 +404,10 @@ package Attean::Plan::Unique 0.004 {
 }
 
 =item * L<Attean::Plan::Slice>
+
+Evaluates a sub-plan, and returns the results after optionally skipping some
+number of results ("offset") and limiting the total number of returned results
+("limit").
 
 =cut
 
@@ -419,6 +442,9 @@ package Attean::Plan::Slice 0.004 {
 
 =item * L<Attean::Plan::Project>
 
+Evaluates a sub-plan and returns projected results by only keeping a fixed-set
+of variable bindings in each result.
+
 =cut
 
 package Attean::Plan::Project 0.004 {
@@ -449,6 +475,9 @@ package Attean::Plan::Project 0.004 {
 }
 
 =item * L<Attean::Plan::OrderBy>
+
+Evaluates a sub-plan and returns the results after fully materializing and
+sorting is applied.
 
 =cut
 
@@ -498,6 +527,8 @@ package Attean::Plan::OrderBy 0.004 {
 
 =item * L<Attean::Plan::Service>
 
+Evaluates a SPARQL query against a remove endpoint.
+
 =cut
 
 package Attean::Plan::Service 0.004 {
@@ -523,6 +554,8 @@ package Attean::Plan::Service 0.004 {
 }
 
 =item * L<Attean::Plan::Table>
+
+Returns a constant set of results.
 
 =cut
 
