@@ -106,19 +106,6 @@ package Attean::API::Iterator 0.004 {
 	has 'item_type' => (is => 'ro', isa => Str, required => 1);
 	requires 'next';
 
-# TODO: remove	
-	around BUILDARGS => sub {
-		my $orig	= shift;
-		my $self	= shift;
-		my $args	= $self->$orig(@_);
-		use Data::Dumper;
-		my $type	= $args->{item_type};
-		if (ref($type)) {
-			Carp::cluck Dumper($type);
-		}
-		return $args;
-	};
-	
 	sub BUILD {}
 	around 'BUILD' => sub {
 		my $orig	= shift;

@@ -121,9 +121,6 @@ package Attean::API::Algebra 0.004 {
 	requires 'as_sparql';
 
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
-# TODO: require these algebra methods:
-# 	requires 'necessarily_bound_variables';	# variables that will necessarily be bound to a term after this operation is evaluated
-# 	requires 'required_variables';			# variables that must be bound before this operation for its evaluation to be successful
 	
 	sub algebra_as_string {
 		my $self	= shift;
