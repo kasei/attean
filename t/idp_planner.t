@@ -113,9 +113,26 @@ does_ok($p, 'Attean::API::CostPlanner');
 		is($expr->value->value, 's');
 	};
 	
-	{
-		# A join on two 1-triple BGPs that are similarly sorted should result in a 
-	}
+	subtest 'Join planning is equivalent to BGP planning' => sub {
+		# A join between two 1-triple BGPs should result in the same plan as the equivalent 2-triple BGP
+		my $plan1		= $p->plan_for_algebra(Attean::Algebra::BGP->new(triples => [$t, $u]), $model, [$graph]);
+		my $bgp1		= Attean::Algebra::BGP->new(triples => [$t]);
+		my $bgp2		= Attean::Algebra::BGP->new(triples => [$u]);
+		my $join		= Attean::Algebra::Join->new(children => [$bgp1, $bgp2]);
+		my $plan2		= $p->plan_for_algebra($join, $model, [$graph]);
+		
+		does_ok($_, 'Attean::API::Plan') for ($plan1, $plan2);
+		isa_ok($_, 'Attean::Plan::HashJoin') for ($plan1, $plan2);
+		
+		# we don't do a single deep comparison on the plans here, because while they are equivalent plans,
+		# BGP planning handles the annotating of the distinct flag on sub-plans differently than the
+		# general join planning.
+		foreach my $pos (0,1) {
+			does_ok($_->children->[$pos], 'Attean::API::Plan') for ($plan1, $plan2);
+			isa_ok($_->children->[$pos], 'Attean::Plan::Quad') for ($plan1, $plan2);
+			is_deeply([$plan1->children->[$pos]->values], [$plan2->children->[$pos]->values]);
+		}
+	};
 }
 
 
