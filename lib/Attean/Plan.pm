@@ -455,18 +455,13 @@ package Attean::Plan::Unique 0.004 {
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		return sub {
 			my $iter	= $impl->();
-			my $last;
+			my $last	= '';
 			return $iter->grep(sub {
 				my $r	= shift;
-				if ($last) {
-					my $s	= $r->as_string;
-					my $ok	= $s ne $last;
-					$last	= $s;
-					return $ok;
-				} else {
-					$last	= $r->as_string;
-					return 1;
-				}
+				my $s	= $r->as_string;
+				my $ok	= $s ne $last;
+				$last	= $s;
+				return $ok;
 			});
 		};
 	}
