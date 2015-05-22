@@ -297,30 +297,44 @@ triple participating in the join.
 	sub bgp_join_plans {
 		my $self			= shift;
 		my $bgp				= shift;
-		my @plans			= $self->_IDPJoin(@_);
-		my @triples			= @{ $bgp->triples };
+		my $model			= shift;
+		my $active			= shift;
+		my $default			= shift;
+		my $interesting		= shift;
+		my @triples			= @_;
 		
-		# If the BGP does not contain any blanks, then the results are
-		# guaranteed to be distinct. Otherwise, we have to assume they're
-		# not distinct.
-		my $distinct		= 1;
-		LOOP: foreach my $t (@triples) {
-			foreach my $b ($t->values_consuming_role('Attean::API::Blank')) {
-				$distinct	= 0;
-				last LOOP;
-			}
-		}
+		if (scalar(@triples)) {
+			my @plans			= $self->_IDPJoin($model, $active, $default, $interesting, @triples);
+			my @triples			= @{ $bgp->triples };
 		
-		# Set the distinct flag on each of the top-level join plans that
-		# represents the entire BGP. (Sub-plans won't ever be marked as
-		# distinct, but that shouldn't matter to the rest of the planning
-		# process.)
-		if ($distinct) {
-			foreach my $p (@plans) {
-				$p->distinct(1);
+			# If the BGP does not contain any blanks, then the results are
+			# guaranteed to be distinct. Otherwise, we have to assume they're
+			# not distinct.
+			my $distinct		= 1;
+			LOOP: foreach my $t (@triples) {
+				foreach my $b ($t->values_consuming_role('Attean::API::Blank')) {
+					$distinct	= 0;
+					last LOOP;
+				}
 			}
+		
+			# Set the distinct flag on each of the top-level join plans that
+			# represents the entire BGP. (Sub-plans won't ever be marked as
+			# distinct, but that shouldn't matter to the rest of the planning
+			# process.)
+			if ($distinct) {
+				foreach my $p (@plans) {
+					$p->distinct(1);
+				}
+			}
+
+			return @plans;
+		} else {
+			# The empty BGP is a special case -- it results in a single join-identity result
+			my $r		= Attean::Result->new( bindings => {} );
+			my $plan	= Attean::Plan::Table->new( rows => [$r], variables => [], distinct => 1, in_scope_variables => [], ordered => [] );
+			return $plan;
 		}
-		return @plans;
 	}
 	
 =item C<< group_join_plans( $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
@@ -517,6 +531,7 @@ sub-plan participating in the join.
 				}
 			}
 		}
+		
 		return @plans;
 	}
 	
@@ -542,7 +557,7 @@ sub-plan participating in the join.
 			my $cost	= 1;
 			my @children	= @{ $plan->children };
 			if ($plan->isa('Attean::Plan::Quad')) {
-				my @vars	= map { $_->value } grep { blessed($_) and $_->does('Attean::API::Variable') } @{ $plan->values };
+				my @vars	= map { $_->value } grep { blessed($_) and $_->does('Attean::API::Variable') } $plan->values;
 				return 3 * scalar(@vars);
 			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
 				my $jv			= $plan->join_variables;
