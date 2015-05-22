@@ -120,6 +120,7 @@ t/binding-equality.t
 t/binding.t
 t/expression.t
 t/http-negotiation.t
+t/idp_planner.t
 t/iter.t
 t/model-quad.t
 t/parser-nquads.t
