@@ -34,11 +34,18 @@ Evaluates a quad pattern against the model.
 package Attean::Plan::Quad 0.004 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf ArrayRef);
+
+	has 'subject'	=> (is => 'ro', required => 1);
+	has 'predicate'	=> (is => 'ro', required => 1);
+	has 'object'	=> (is => 'ro', required => 1);
+	has 'graph'		=> (is => 'ro', required => 1);
+	
 	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
-	has 'values' => (is => 'ro', isa => ArrayRef, default => sub { [] });
+	with 'Attean::API::QuadPattern';
+
 	sub plan_as_string {
 		my $self	= shift;
-		my @nodes	= @{ $self->values };
+		my @nodes	= $self->values;
 		my @strings;
 		foreach my $t (@nodes) {
 			if (ref($t) eq 'ARRAY') {
@@ -61,7 +68,7 @@ package Attean::Plan::Quad 0.004 {
 	sub impl {
 		my $self	= shift;
 		my $model	= shift;
-		my @values	= @{ $self->values };
+		my @values	= $self->values;
 		return sub {
 			return $model->get_bindings( @values );
 		}
@@ -242,6 +249,31 @@ package Attean::Plan::EBVFilter 0.004 {
 	}
 }
 
+=item * L<Attean::Plan::Merge>
+
+Evaluates a set of sub-plans, returning the merged union of results, preserving
+ordering.
+
+=cut
+
+package Attean::Plan::Merge 0.004 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Str ArrayRef ConsumerOf);
+	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
+	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	sub plan_as_string { return 'Merge' }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			die "Unimplemented";
+		};
+	}
+}
+
 =item * L<Attean::Plan::Union>
 
 Evaluates a set of sub-plans, returning the union of results.
@@ -295,7 +327,7 @@ package Attean::Plan::Extend 0.004 {
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ConsumerOf HashRef);
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], ,required => 1);
+	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
 	sub plan_as_string {
 		my $self	= shift;
 		my @strings	= map { sprintf('?%s ← %s', $_, $self->expressions->{$_}->as_string) } keys %{ $self->expressions };

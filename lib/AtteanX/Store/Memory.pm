@@ -455,7 +455,7 @@ sub cost_for_plan {
 	my $self	= shift;
 	my $plan	= shift;
 	if ($plan->isa('Attean::Plan::Quad')) {
-		my @values	= @{ $plan->values };
+		my @values	= $plan->values;
 		my $count	= $self->count_quads(@values);
 		return $count;
 	}

@@ -239,12 +239,14 @@ the supplied C<< $active_graph >>.
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
-			# TODO: if both branches are similarly ordered, we can merge the branches and keep the ordering
+			# TODO: if both branches are similarly ordered, we can use Attean::Plan::Merge to keep the resulting plan ordered
 			my @vars		= keys %{ { map { map { $_ => 1 } $_->in_scope_variables } @children } };
 			my @plansets	= map { [$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)] } @children;
 
 			my @plans;
-			cartesian { push(@plans, Attean::Plan::Union->new(children => \@_, distinct => 0, in_scope_variables => \@vars, ordered => [])) } @plansets;
+			cartesian {
+				push(@plans, Attean::Plan::Union->new(children => \@_, distinct => 0, in_scope_variables => \@vars, ordered => []))
+			} @plansets;
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
@@ -445,7 +447,16 @@ sub-plan participating in the join.
 		unless ($nodes[3]) {
 			$nodes[3]	= $active_graphs;
 		}
-		my $plan		= Attean::Plan::Quad->new( values => \@nodes, distinct => $distinct, in_scope_variables => \@vars, ordered => [] );
+		my $plan		= Attean::Plan::Quad->new(
+			subject	=> $nodes[0],
+			predicate	=> $nodes[1],
+			object	=> $nodes[2],
+			graph	=> $nodes[3],
+			values => \@nodes,
+			distinct => $distinct,
+			in_scope_variables => \@vars,
+			ordered => [],
+		);
 		return $plan;
 	}
 	
