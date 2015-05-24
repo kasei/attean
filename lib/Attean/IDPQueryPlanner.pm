@@ -255,9 +255,25 @@ the supplied C<< $active_graph >>.
 			} @plansets;
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
+			my $var			= $algebra->variable->value;
+			my $expr		= $algebra->expression;
+			my %exprs		= ($var => $expr);
+			my @vars		= $algebra->in_scope_variables;
+
+			my @plans;
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $plan->ordered);
+				push(@plans, $extend);
+			}
+			return @plans;
+		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
+			my @plans;
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+				return Attean::Plan::Exists->new(children => [$plan], distinct => 1, in_scope_variables => [], ordered => []);
+			}
+			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Path')) {
-		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		}
 		die "Unimplemented algebra evaluation for: $algebra";

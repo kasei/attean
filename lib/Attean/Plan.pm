@@ -646,6 +646,35 @@ package Attean::Plan::Table 0.004 {
 	}
 }
 
+=item * L<Attean::Plan::Exists>
+
+Returns an iterator containing a single boolean term indicating whether any
+results were produced by evaluating the sub-plan.
+
+=cut
+
+package Attean::Plan::Exists 0.004 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
+	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	sub tree_attributes { return qw(variables rows) };
+	sub plan_as_string { return 'Exists' }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			my $iter	= $impl->();
+			my $term	= ($iter->next) ? Attean::Literal->true : Attean::Literal->false;
+			return Attean::ListIterator->new(values => [$term], item_type => 'Attean::API::Term');
+		}
+	}
+}
+
 # =item * L<Attean::Algebra::Ask>
 # 
 # =cut
