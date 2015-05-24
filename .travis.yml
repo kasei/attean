@@ -10,6 +10,10 @@ install:
   - "cpanm --quiet --notest IRI"
   - "cpanm --quiet --notest URI::Namespace"
   - "cpanm --quiet --notest DBD::Pg"
+  - "cpanm --quiet --notest Moo"
+  - "cpanm --quiet --notest Type::Tiny"
+  - "cpanm --quiet --notest Math::Cartesian::Product"
+  - "cpanm --quiet --notest Test::Roo"
 env:
   - RDFTRINE_STORE_PG_DATABASE="travis_ci_test" RDFTRINE_STORE_PG_MODEL="testmodel"
 script:
