@@ -8,6 +8,7 @@ install:
   - "cpanm --quiet --installdeps --notest RDF::Query"
   - "cpanm --quiet --notest Module::Install::AuthorTests"
   - "cpanm --quiet --notest IRI"
+  - "cpanm --quiet --notest URI::Namespace"
   - "cpanm --quiet --notest DBD::Pg"
 env:
   - RDFTRINE_STORE_PG_DATABASE="travis_ci_test" RDFTRINE_STORE_PG_MODEL="testmodel"
