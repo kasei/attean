@@ -127,19 +127,25 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			# TODO: simple range relation filters can be handled differently if that filter operates on a variable that is part of the ordering
 			my $expr	= $algebra->expression;
+			
 			my $var		= $self->new_temporary('filter');
 			my %exprs	= ($var => $expr);
-			
+		
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
 				my $distinct	= $plan->distinct;
 				my $ordered		= $plan->ordered;
-				my @vars		= ($var);
-				my @pvars		= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
-				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $ordered);
-				my $filtered	= Attean::Plan::EBVFilter->new(children => [$extend], variable => $var, distinct => 0, in_scope_variables => \@vars, ordered => $ordered);
-				my $proj		= $self->new_projection($filtered, $distinct, @{ $plan->in_scope_variables });
-				push(@plans, $proj);
+				if ($expr->isa('Attean::ValueExpression') and $expr->value->does('Attean::API::Variable')) {
+					my $filtered	= Attean::Plan::EBVFilter->new(children => [$plan], variable => $expr->value->value, distinct => $distinct, in_scope_variables => $plan->in_scope_variables, ordered => $ordered);
+					push(@plans, $filtered);
+				} else {
+					my @vars		= ($var);
+					my @pvars		= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
+					my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $ordered);
+					my $filtered	= Attean::Plan::EBVFilter->new(children => [$extend], variable => $var, distinct => 0, in_scope_variables => \@vars, ordered => $ordered);
+					my $proj		= $self->new_projection($filtered, $distinct, @{ $plan->in_scope_variables });
+					push(@plans, $proj);
+				}
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
@@ -396,30 +402,46 @@ sub-plan participating in the join.
 			# find the minimum cost plan $p that computes the join over $k elements (the elements end up in @v)
 			my %min_plans;
 			foreach my $w (subsets(\@todo, $k)) {
-				my $w_key	= join('.', sort @$w);
-				my $plans	= $optPlan{$w_key};
-				my %costs	= map { $self->cost_for_plan($_, $model) => [$_, $w] } @$plans;
-				my $min		= min keys %costs;
-				my $min_plan	= $costs{ $min };
-				$min_plans{ $min }	= $min_plan;
+				my $w_key		= join('.', sort @$w);
+				my $plans		= $optPlan{$w_key};
+				my @costs		= map { $self->cost_for_plan($_, $model) => [$_, $w] } @$plans;
+				my %costs		= @costs;
+				my $min			= min keys %costs;
+				my @min_plans;
+				while (my ($cost, $data) = splice(@costs, 0, 2)) {
+					if ($cost == $min) {
+						push(@min_plans, $data);
+					}
+				}
+				$min_plans{ $min }	= \@min_plans;
 			}
 			my $min_cost	= min keys %min_plans;
-			my $min_plan	= $min_plans{$min_cost};
-			my ($p, $v)		= @$min_plan;
-			my $v_key		= join('.', sort @$v);
+			my $min_plans	= $min_plans{$min_cost};
+			my @min_plans;
+			my $min_key;
+			foreach my $d (@$min_plans) {
+				my ($p, $v)		= @$d;
+				my $v_key		= join('.', sort @$v);
+				if (not(defined($min_key)) or $min_key eq $v_key) {
+					push(@min_plans, $p);
+					$min_key	= $v_key;
+				}
+			}
+# 			my ($p, $v)		= @$min_plan;
+# 			my $v_key		= join('.', sort @$v);
 # 			warn "Choosing join for $v_key\n";
 			
 			# generate a new symbol $t to stand in for $p, the join over the elements in @v
 			my $t	= $next_symbol++;
 			
 			# remove elements in @v from the todo list, and replace them by the new composite element $t
-			$optPlan{$t}	= [$p];
-			my %v	= map { $_ => 1 } @$v;
+			$optPlan{$t}	= [@min_plans];
+			my %v	= map { $_ => 1 } split(/[.]/, $min_key);
 			push(@todo, $t);
 			@todo	= grep { not exists $v{$_} } @todo;
 			
 			# also remove subsets of @v from the optPlan hash as they are now covered by $optPlan{$t}
-			foreach my $o (subsets($v)) {
+			foreach my $o (subsets([keys %v])) {
 				my $o_key	= join('.', sort @$o);
 # 				warn "deleting $o_key\n";
 				delete $optPlan{$o_key};
@@ -427,6 +449,8 @@ sub-plan participating in the join.
 		}
 		
 		my $final_key	= join('.', sort @todo);
+# 		use Data::Dumper;
+# 		warn Dumper($optPlan{$final_key});
 		return $self->prune_plans($model, $interesting, $optPlan{$final_key});
 	}
 	

@@ -10,8 +10,25 @@ use Attean::RDF;
 use Attean::IDPQueryPlanner;
 use AtteanX::Store::Memory;
 
+package TestStore {
+	use Moo;
+	use namespace::clean;
+	extends 'AtteanX::Store::Memory';
+	
+	sub cost_for_plan {
+		# we do this because the superclass would return a cost of 0 for quads when the store is empty
+		# and if 0 was returned, there won't be any meaningful difference between the cost of different join algorithms 
+		my $self	= shift;
+		my $plan	= shift;
+		if ($plan->isa('Attean::Plan::Quad')) {
+			return 3;
+		}
+		return;
+	}
+}
 
-# √ Attean::Plan::Quad
+
+# Attean::Plan::Quad
 # Attean::Plan::NestedLoopJoin
 # Attean::Plan::HashJoin
 # Attean::Plan::EBVFilter
@@ -35,7 +52,7 @@ does_ok($p, 'Attean::API::CostPlanner');
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= iri('http://example.org/');
 	my $t		= triple(variable('s'), iri('p'), literal('1'));
-	my $u		= triple(variable('s'), iri('p'), literal('2'));
+	my $u		= triple(variable('s'), iri('p'), variable('o'));
 	my $v		= triple(variable('s'), iri('q'), blank('xyz'));
 	my $w		= triple(variable('a'), iri('b'), iri('c'));
 
@@ -114,7 +131,7 @@ does_ok($p, 'Attean::API::CostPlanner');
 	};
 	
 	subtest 'Join planning is equivalent to BGP planning' => sub {
-		# A join between two 1-triple BGPs should result in the same plan as the equivalent 2-triple BGP
+		note("A join between two 1-triple BGPs should result in the same plan as the equivalent 2-triple BGP");
 		my $plan1		= $p->plan_for_algebra(Attean::Algebra::BGP->new(triples => [$t, $u]), $model, [$graph]);
 		my $bgp1		= Attean::Algebra::BGP->new(triples => [$t]);
 		my $bgp2		= Attean::Algebra::BGP->new(triples => [$u]);
@@ -133,7 +150,56 @@ does_ok($p, 'Attean::API::CostPlanner');
 			is_deeply([$plan1->children->[$pos]->values], [$plan2->children->[$pos]->values]);
 		}
 	};
+	
+	subtest 'Variable Filter' => sub {
+		note("FILTER(?o) should result in a EBVFilter(...) pattern");
+		my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+		my $expr	= Attean::ValueExpression->new(value => variable('o'));
+		my $filter	= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
+		my $plan	= $p->plan_for_algebra($filter, $model, [$graph]);
+		does_ok($plan, 'Attean::API::Plan', 'Variable filter');
+		isa_ok($plan, 'Attean::Plan::EBVFilter');
+		is($plan->variable, 'o');
+	};
+	
+	subtest 'Expression Filter' => sub {
+		note("FILTER(?s && ?o) should result in a Project(EBVFilter(Extend(...))) pattern");
+		my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+		my $expr1	= Attean::ValueExpression->new(value => variable('s'));
+		my $expr2	= Attean::ValueExpression->new(value => variable('o'));
+		my $expr	= Attean::BinaryExpression->new( operator => '&&', children => [$expr1, $expr2] );
+		my $filter	= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
+		my $plan	= $p->plan_for_algebra($filter, $model, [$graph]);
+		does_ok($plan, 'Attean::API::Plan', 'Expression filter');
+		isa_ok($plan, 'Attean::Plan::Project');
+		isa_ok($plan->children->[0], 'Attean::Plan::EBVFilter');
+		isa_ok($plan->children->[0]->children->[0], 'Attean::Plan::Extend');
+	};
+	
+	subtest 'IRI named graph' => sub {
+		note("1-triple BGP restricted to an IRI-named graph should result in a Quad plan");
+		my $ng		= iri('http://eample.org/named/');
+		my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+		my $named	= Attean::Algebra::Graph->new(children => [$bgp], graph => $ng);
+		my $plan	= $p->plan_for_algebra($named, $model, [$graph]);
+		does_ok($plan, 'Attean::API::Plan', 'IRI-named graph');
+		isa_ok($plan, 'Attean::Plan::Quad');
+	};
+	
+	subtest 'Variable named graph (model with 0 named graphs)' => sub {
+		note("1-triple BGP restricted to a variable-named graph should result in an empty Union plan");
+		my $ng		= variable('g');
+		my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+		my $named	= Attean::Algebra::Graph->new(children => [$bgp], graph => $ng);
+		my $plan	= $p->plan_for_algebra($named, $model, [$graph]);
+		does_ok($plan, 'Attean::API::Plan', 'IRI-named graph');
+		isa_ok($plan, 'Attean::Plan::Union');
+		is(scalar(@{ $plan->children }), 0);
+	};
 }
+
+done_testing();
+
 
 
 sub order_algebra_by_variables {
@@ -149,93 +215,6 @@ sub order_algebra_by_variables {
 	return $sorted;
 }
 
-
-
-# 
-# {
-# 	my $t	= triple(variable('s'), iri('p'), literal('1'));
-# 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-# 	my $join	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
-# 	my @walk;
-# 	$join->walk(prefix => sub { push(@walk, shift) });
-# 	is(scalar(@walk), 3, 'expected walk count');
-# 	
-# 	my @cover;
-# 	$join->cover(prefix => sub { push(@cover, shift) });
-# 	is(scalar(@cover), 2, 'expected cover count');
-# }
-# 
-# {
-# 	my $p1	= iri('p1');
-# 	my $pp1	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
-# 	ok($pp1->does('Attean::API::PropertyPath'), 'PredicatePath consumes PropertyPath');
-# 	is($pp1->as_string, '<p1>', 'PredicatePath as_string');
-# 	
-# 	my $p2	= iri('p2');
-# 	my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
-# 
-# 	my $nps	= Attean::Algebra::NegatedPropertySet->new( predicates => [$p1, $p2] );
-# 	ok($nps->does('Attean::API::PropertyPath'), 'NegatedPropertySet consumes PropertyPath');
-# 	is($nps->as_string, '!(<p1>|<p2>)', 'NegatedPropertySet as_string');
-# 	
-# 	my $seq1	= Attean::Algebra::SequencePath->new( children => [$pp2] );
-# 	is($seq1->as_string, '<p2>', 'unary SequencePath as_string');
-# 
-# 	my $seq	= Attean::Algebra::SequencePath->new( children => [$pp1, $pp2] );
-# 	is($seq->as_string, '(<p1>/<p2>)', 'SequencePath as_string');
-# 
-# 	my $alt1	= Attean::Algebra::AlternativePath->new( children => [$pp2] );
-# 	is($alt1->as_string, '<p2>', 'unary AlternativePath as_string');
-# 
-# 	my $alt	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
-# 	is($alt->as_string, '(<p1>|<p2>)', 'AlternativePath as_string');
-# 
-# 	my $inv1	= Attean::Algebra::InversePath->new( children => [$pp2] );
-# 	is($inv1->as_string, '^<p2>', 'InversePath as_string');
-# 	
-# 	my $inv_seq	= Attean::Algebra::InversePath->new( children => [$seq] );
-# 	is($inv_seq->as_string, '^(<p1>/<p2>)', 'complex InversePath as_string');
-# 	
-# 	my $inv_seq_star	= Attean::Algebra::ZeroOrMorePath->new( children => [$inv_seq] );
-# 	is($inv_seq_star->as_string, '(^(<p1>/<p2>))*', 'complex ZeroOrMorePath as_string');
-# }
-# 
-# {
-# 	note('BGP canonicalization');
-# 	my $b		= blank('person');
-# 	my $rdf_type	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-# 	my $foaf_name	= iri('http://xmlns.com/foaf/0.1/name');
-# 	my $foaf_knows	= iri('http://xmlns.com/foaf/0.1/knows');
-# 	my $foaf_Person	= iri('http://xmlns.com/foaf/0.1/Person');
-# 	my $bgp1	= Attean::Algebra::BGP->new( triples => [
-# 		triplepattern($b, $rdf_type, $foaf_Person),
-# 		triplepattern($b, $foaf_name, variable('name')),
-# 		triplepattern($b, $foaf_knows, variable('knows')),
-# 	] );
-# 	my $bgp2	= Attean::Algebra::BGP->new( triples => [
-# 		triplepattern(blank('s'), $foaf_knows, variable('person')),
-# 		triplepattern(blank('s'), $rdf_type, $foaf_Person),
-# 		triplepattern(blank('s'), $foaf_name, variable('myname')),
-# 	] );
-# 
-# 	my $hash1	= sha1_hex( join("\n", map { $_->tuples_string } (@{$bgp1->triples}) ) );
-# 	my $hash2	= sha1_hex( join("\n", map { $_->tuples_string } (@{$bgp2->triples}) ) );
-# 	isnt($hash1, $hash2, 'non-matching pre-canonicalized BGP hashes');
-# 	
-# 	my ($cbgp1, $m1)	= $bgp1->canonical_bgp_with_mapping;
-# 	my ($cbgp2, $m2)	= $bgp2->canonical_bgp_with_mapping;
-# 	
-# 	my $chash1	= sha1_hex( join("\n", map { $_->tuples_string } (@{$cbgp1->triples}) ) );
-# 	my $chash2	= sha1_hex( join("\n", map { $_->tuples_string } (@{$cbgp2->triples}) ) );
-# 	is($chash1, $chash2, 'matching canonicalized BGP hashes' );
-# 	
-# 	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 'v003', 'type' => 'variable' }, '?knows' => { 'id' => 'v002', 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 'v001', 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
-# 	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
-# }
-
-done_testing();
-
-
 sub does_ok {
     my ($class_or_obj, $does, $message) = @_;
     $message ||= "The object does $does";
@@ -243,12 +222,3 @@ sub does_ok {
 }
 
 
-package TestStore {
-	use Moo;
-	extends 'AtteanX::Store::Memory';
-	sub cost_for_plan {
-		# we do this because the superclass would return a cost of 0 for quads when the store is empty
-		# and if 0 was returned, there won't be any meaningful difference between the cost of different join algorithms 
-		return 2;
-	}
-}

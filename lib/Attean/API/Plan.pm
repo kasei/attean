@@ -81,7 +81,7 @@ package Attean::API::Planner 0.004 {
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
 	
-	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, $active_graph)
+	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
 package Attean::API::CostPlanner 0.004 {

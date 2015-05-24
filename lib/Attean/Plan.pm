@@ -228,7 +228,7 @@ package Attean::Plan::EBVFilter 0.004 {
 	has 'variable' => (is => 'ro', isa => Str, required => 1);
 	sub plan_as_string {
 		my $self	= shift;
-		return sprintf('Filter { ?%s }', $self->variable);
+		return sprintf('EBVFilter { ?%s }', $self->variable);
 	}
 	sub tree_attributes { return qw(expression) };
 	
