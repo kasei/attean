@@ -465,6 +465,7 @@ package Attean::Algebra::OrderBy 0.004 {
 package Attean::Algebra::BGP 0.004 {
 	use Moo;
 	use Attean::RDF;
+	use Set::Scalar;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 
