@@ -10,6 +10,40 @@
         dcterms:references      <http://kasei.us/code/attean/#project> .
 
 
+<http://kasei.us/code/files/Attean-0.005.tar.gz>
+        dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
+        dcterms:replaces    <http://kasei.us/code/files/Attean-0.004.tar.gz> ;
+
+        doap:Version    [
+                        doap:revision     "0.005" ;
+                        doap:created      "2015-XX-XX" ;
+                        ];
+        asc:changes     [
+                        asc:update      "Improved query planning." ;
+                        asc:update      "Split handling of BGP and GGP join planning in Attean::IDPQueryPlanner for easier subclass overriding." ;
+                        asc:update      "Improve propagation of distinct and ordered attributes during query planning." ;
+                        asc:update      "Added query planning tests." ;
+                        asc:update      "Updated IDP query planner to produce correct plans for empty BGPs." ;
+                        asc:update      "Fixed bug in IDPQueryPlanner->cost_for_plan to reflect recently changed Attean::Plan::Quad API." ;
+                        asc:update      "Add initial code to support interesting orders in Attean::IDPQueryPlanner." ;
+                        asc:update      "Simplified implementation of Attean::Plan::Unique." ;
+                        asc:update      "Updated Attean::Plan::Quad to consume Attean::API::QuadPattern." ;
+                        asc:update      "Added POD description of each Attean::Plan class." ;
+                        asc:update      "Added planning support for Unique plans for DISTINCT queries which are already ordered." ;
+                        asc:update      "Added planning support for Extend and Ask algebra operations." ;
+                        asc:update      "Allow store-planning of more than just BGPs in Attean::TripleModel." ;
+                        asc:update      "Added Attean::Plan::Unique class." ;
+                        asc:update      "Change use of ListIterator to CodeIterator in plan classes that can be pipelined." ;
+                        asc:update      "Renamed Attean::Plan::Filter to Attean::Plan::EBVFilter." ;
+                        asc:update      "Added evaluation support for type checking functions (ISIRI, ISLITERAL, etc.)." ;
+                        asc:update      "Changed Attean::Plan::Filter to check the EBV of a single, named variable binding." ;
+                        asc:update      "Rename Attean::Plan::Distinct to Attean::Plan::HashDistinct (making room for different implementation strategies)." ;
+                        asc:update      "Added use Set::Scalar in lib/Attean/Algebra.pm." ;
+                        asc:update      "Removed unused/unnecessary code and comments." ;
+                        asc:update      "Removed references to Attean::QueryEvaluator (obviated by $plan->evaluate)." ;
+                        ] .
+
+
 <http://kasei.us/code/files/Attean-0.004.tar.gz>
         dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
         dcterms:replaces    <http://kasei.us/code/files/Attean-0.003.tar.gz> ;

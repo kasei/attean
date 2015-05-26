@@ -7,7 +7,7 @@ Attean::Plan - Representation of SPARQL query plan operators
 
 =head1 VERSION
 
-This document describes Attean::Plan version 0.004
+This document describes Attean::Plan version 0.004_01
 
 =head1 SYNOPSIS
 

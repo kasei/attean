@@ -7,7 +7,7 @@ Attean::IDPQueryPlanner - Iterative dynamic programming query planner
 
 =head1 VERSION
 
-This document describes Attean::IDPQueryPlanner version 0.004
+This document describes Attean::IDPQueryPlanner version 0.004_01
 
 =head1 SYNOPSIS
 

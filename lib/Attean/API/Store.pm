@@ -7,7 +7,7 @@ Attean::API::Store - Triple/quad store role
 
 =head1 VERSION
 
-This document describes Attean::Store version 0.004
+This document describes Attean::Store version 0.004_01
 
 =head1 DESCRIPTION
 

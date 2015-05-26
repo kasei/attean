@@ -7,7 +7,7 @@ Attean::QuadModel - RDF model backed by a quad-store
 
 =head1 VERSION
 
-This document describes Attean::QuadModel version 0.004
+This document describes Attean::QuadModel version 0.004_01
 
 =head1 SYNOPSIS
 

@@ -7,7 +7,7 @@ Attean::ListIterator - Iterator implementation backed by a list/array of values
 
 =head1 VERSION
 
-This document describes Attean::ListIterator version 0.004
+This document describes Attean::ListIterator version 0.004_01
 
 =head1 SYNOPSIS
 
