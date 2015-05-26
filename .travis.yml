@@ -14,6 +14,7 @@ install:
   - "cpanm --quiet --notest Type::Tiny"
   - "cpanm --quiet --notest Math::Cartesian::Product"
   - "cpanm --quiet --notest Test::Roo"
+  - "cpanm --quiet --notest Test::LWP::UserAgent"
 env:
   - RDFTRINE_STORE_PG_DATABASE="travis_ci_test" RDFTRINE_STORE_PG_MODEL="testmodel"
 script:
