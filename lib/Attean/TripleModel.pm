@@ -1,6 +1,10 @@
 use v5.14;
 use warnings;
 
+=over 4
+
+=cut
+
 package Attean::TripleModel 0.004 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
@@ -103,13 +107,11 @@ L<Attean::API::QuadIterator>.
 		my $active_graphs	= shift;
 		my $default_graphs	= shift;
 		my @plans;
-		if ($algebra->isa('Attean::Algebra::BGP')) {
-			if (scalar(@$active_graphs) == 1) {
-				my $graph	= $active_graphs->[0];
-				if (my $store = $self->stores->{ $graph->value }) {
-					if ($store->does('Attean::API::CostPlanner')) {
-						push(@plans, $store->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs));
-					}
+		if (scalar(@$active_graphs) == 1) {
+			my $graph	= $active_graphs->[0];
+			if (my $store = $self->stores->{ $graph->value }) {
+				if ($store->does('Attean::API::CostPlanner')) {
+					push(@plans, $store->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs));
 				}
 			}
 		}
