@@ -7,7 +7,7 @@ Attean::Expression - SPARQL Expressions
 
 =head1 VERSION
 
-This document describes Attean::Expression version 0.004_01
+This document describes Attean::Expression version 0.005
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ use Attean::API::Expression;
 
 =cut
 
-package Attean::ValueExpression 0.004 {
+package Attean::ValueExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -86,7 +86,7 @@ package Attean::ValueExpression 0.004 {
 
 =cut
 
-package Attean::UnaryExpression 0.004 {
+package Attean::UnaryExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -121,7 +121,7 @@ package Attean::UnaryExpression 0.004 {
 
 =cut
 
-package Attean::BinaryExpression 0.004 {
+package Attean::BinaryExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -147,7 +147,7 @@ package Attean::BinaryExpression 0.004 {
 
 =cut
 
-package Attean::FunctionExpression 0.004 {
+package Attean::FunctionExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf HashRef);
 	use Types::Common::String qw(UpperCaseStr);
@@ -192,7 +192,7 @@ package Attean::FunctionExpression 0.004 {
 	}
 }
 
-package Attean::AggregateExpression 0.004 {
+package Attean::AggregateExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf);
 	use Types::Common::String qw(UpperCaseStr);
@@ -216,7 +216,7 @@ package Attean::AggregateExpression 0.004 {
 	with 'Attean::API::AggregateExpression';
 }
 
-package Attean::CastExpression 0.004 {
+package Attean::CastExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf);
 	use namespace::clean;
@@ -243,7 +243,7 @@ package Attean::CastExpression 0.004 {
 	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
 
-package Attean::ExistsExpression 0.004 {
+package Attean::ExistsExpression 0.005 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;

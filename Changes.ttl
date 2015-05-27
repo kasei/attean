@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.005" ;
-                        doap:created      "2015-XX-XX" ;
+                        doap:created      "2015-05-27" ;
                         ];
         asc:changes     [
                         asc:update      "Improved query planning." ;

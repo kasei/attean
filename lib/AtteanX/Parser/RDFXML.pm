@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::RDFXML 0.004 {
+package AtteanX::Parser::RDFXML 0.005 {
 	use Moo;
 	use Types::Standard qw(Str Object);
 	use Attean;

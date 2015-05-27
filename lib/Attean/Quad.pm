@@ -7,7 +7,7 @@ Attean::Quad - RDF Quads
 
 =head1 VERSION
 
-This document describes Attean::Quad version 0.004_01
+This document describes Attean::Quad version 0.005
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ This role consumes L<Attean::API::Quad>.
 
 =cut
 
-package Attean::QuadPattern 0.004 {
+package Attean::QuadPattern 0.005 {
 	use Moo;
 	use Attean::API;
 	
@@ -63,7 +63,7 @@ package Attean::QuadPattern 0.004 {
 	};
 }
 
-package Attean::Quad 0.004 {
+package Attean::Quad 0.005 {
 	use Moo;
 	use Attean::API::Binding;
 	

@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLXML - SPARQL Results XML Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLXML version 0.004_01
+This document describes AtteanX::Serializer::SPARQLXML version 0.005
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ This document describes AtteanX::Serializer::SPARQLXML version 0.004_01
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLXML 0.004 {
+package AtteanX::Serializer::SPARQLXML 0.005 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);

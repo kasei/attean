@@ -7,7 +7,7 @@ use warnings;
 
 =cut
 
-package Attean::BindingEqualityTest 0.004 {
+package Attean::BindingEqualityTest 0.005 {
 	use v5.14;
 	use warnings;
 	use Moo;
