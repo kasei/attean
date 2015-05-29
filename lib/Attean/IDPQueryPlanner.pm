@@ -598,7 +598,8 @@ sub-plan participating in the join.
 			my @children	= @{ $plan->children };
 			if ($plan->isa('Attean::Plan::Quad')) {
 				my @vars	= map { $_->value } grep { blessed($_) and $_->does('Attean::API::Variable') } $plan->values;
-				return 3 * scalar(@vars);
+				# This gives a cost increasing at a reasonable pace
+				return $self->_hsp_heuristic_triple_sum($plan) * scalar(@vars);
 			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
 				my $jv			= $plan->join_variables;
 				my $mult		= scalar(@$jv) ? 1 : 5;	# penalize cartesian joins
