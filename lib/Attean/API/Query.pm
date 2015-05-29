@@ -80,6 +80,23 @@ package Attean::API::DirectedAcyclicGraph 0.005 {
 		}
 	}
 	
+	sub has_only_subtree_types {
+		my $self	= shift;
+		my @types	= @_;
+		my %classes;
+		$self->walk( prefix => sub {
+			my $plan	= shift;
+			$classes{ref($plan)}++;
+		});
+		foreach my $type (@types) {
+			delete $classes{$type};
+		}
+		use Data::Dumper;
+		warn Dumper(\%classes);
+		my @keys	= keys %classes;
+		return (scalar(@keys) == 0) ? 1 : 0;
+	}
+
 # =item C<< cover( prefix => \&pre_cb, postfix => \&pre_cb ) >>
 # 
 # Similar to C<< walk >>, walks the graph rooted at the referent, calling
