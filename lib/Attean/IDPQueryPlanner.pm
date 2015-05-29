@@ -665,6 +665,70 @@ sub-plan participating in the join.
 		my @keys	= keys %unseen;
 		return (scalar(@keys) == 0);
 	}
+
+# The below function finds a number to aid sorting
+# It takes into account Heuristic 1 and 4 of the HSP paper, see REFERENCES
+# as well as that it was noted in the text that rdf:type is usually less selective.
+
+# By assigning the integers to nodes, depending on whether they are in
+# triple (subject, predicate, object), variables, rdf:type and
+# literals, and sum them, they may be sorted. See code for the actual
+# values used.
+
+# Denoting s for bound subject, p for bound predicate, a for rdf:type
+# as predicate, o for bound object and l for literal object and ? for
+# variable, we get the following order, most of which are identical to
+# the HSP:
+
+# spl: 6
+# spo: 8
+# sao: 10
+# s?l: 14
+# s?p: 16
+# ?pl: 25
+# ?po: 27
+# ?ao: 29
+# sp?: 30
+# sa?: 32
+# ??l: 33
+# ??o: 35
+# s??: 38
+# ?p?: 49
+# ?a?: 51
+# ???: 57
+
+# Note that this number is not intended as an estimate of selectivity,
+# merely a sorting key, but further research may possibly create such
+# numbers.
+
+	sub _hsp_heuristic_triple_sum {
+		my ($self, $t) = @_;
+		my $sum = 0;
+		if ($t->subject->does('Attean::API::Variable')) {
+			$sum = 20;
+		} else {
+			$sum = 1;
+		}
+		if ($t->predicate->does('Attean::API::Variable')) {
+			$sum += 10;
+		} else {
+			if ($t->predicate->equals(iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'))) {
+				$sum += 4;
+			} else {
+				$sum += 2;
+			}
+		}
+		if ($t->object->does('Attean::API::Variable')) {
+			$sum += 27;
+		} elsif ($t->object->does('Attean::API::Literal')) {
+			$sum += 3;
+		} else {
+			$sum += 5;
+		}
+		return $sum;
+	}
+
+
 }
 
 1;
