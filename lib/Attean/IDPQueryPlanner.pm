@@ -742,6 +742,18 @@ __END__
 Please report any bugs or feature requests to through the GitHub web interface
 at L<https://github.com/kasei/attean/issues>.
 
+=head1 REFERENCES
+
+The seminal reference for Iterative Dynamic Programming is "Iterative
+dynamic programming: a new class of query optimization algorithms" by
+D. Kossmann and K. Stocker, ACM Transactions on Database Systems
+(2000).
+
+The heuristics to order triple patterns in this module is
+influenced by L<The ICS-FORTH Heuristics-based SPARQL Planner
+(HSP)|http://www.ics.forth.gr/isl/index_main.php?l=e&c=645>.
+
+
 =head1 SEE ALSO
 
 L<http://www.perlrdf.org/>
