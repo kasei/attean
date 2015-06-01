@@ -80,9 +80,19 @@ package Attean::API::DirectedAcyclicGraph 0.005 {
 		}
 	}
 	
+# =item C<< has_only_subtree_types( @classes ) >>
+# 
+# Returns true if the invocant and all of its sub-trees are instances of only
+# the listed classes, false otherwise.
+# 
+# =cut
+
 	sub has_only_subtree_types {
 		my $self	= shift;
 		my @types	= @_;
+		my %types	= map { $_ => 1 } @types;
+		return 0 unless (exists $types{ ref($self) });
+		
 		my %classes;
 		$self->walk( prefix => sub {
 			my $plan	= shift;
