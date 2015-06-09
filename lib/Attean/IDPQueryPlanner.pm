@@ -751,24 +751,16 @@ sub-plan participating in the join.
 					last if scalar keys(%joinpos) >= 2; # Perhaps a bit premature optimization
 				}
 				my $joinpos = join("", sort values(%joinpos)); # We can now match on this string
-				if ($joinpos eq '12') { # The penalization numbers come mostly out from thin air
-					$mult = 1.1;
+				my %costs = ('12' => 1.1, # The penalty numbers come mostly out from thin air
+								 '01' => 1.2,
+								 '02' => 1.5,
+								 '22' => 1.6,
+								 '00' => 1.8,
+								 '11' => 2);
+				if (exists $costs{$joinpos}) {
+					$mult = $costs{$joinpos};
 				}
-				elsif ($joinpos eq '01') {
-					$mult = 1.2;
-				}
-				elsif ($joinpos eq '02') {
-					$mult = 1.5;
-				}
-				elsif ($joinpos eq '22') {
-					$mult = 1.6;
-				}
-				elsif ($joinpos eq '00') {
-					$mult = 1.8;
-				}
-				elsif ($joinpos eq '11') {
-					$mult = 2;
-				}
+				#warn "Penalty: $mult for quads:\n" . $children[0]->as_string . $children[1]->as_string
 			}
 		} else {
 			$mult = 5; # penalize cartesian joins
