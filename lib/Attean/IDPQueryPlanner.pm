@@ -601,47 +601,7 @@ sub-plan participating in the join.
 				# This gives a cost increasing at a reasonable pace
 				return $self->_hsp_heuristic_triple_sum($plan) * scalar(@vars);
 			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
-				my $jv			= $plan->join_variables;
-				my $mult		   = 1;
-				if (scalar(@$jv)) {
-					if ( all { $_->isa('Attean::Plan::Quad') } @children[0..1]) {
-						my $var = ${$jv}[0]; # We will join on this
-						my @lnodes = $children[0]->values;
-						my @rnodes = $children[1]->values;
-						# Now, find where the join variables are in the triple patterns
-						my %joinpos;
-						for (my $i = 0; $i <= 2; $i++) {
-							if ($lnodes[$i]->does('Attean::API::Variable') && $lnodes[$i]->value eq $var) {
-								$joinpos{l} = $i;
-							}
-							if ($rnodes[$i]->does('Attean::API::Variable') && $rnodes[$i]->value eq $var) {
-								$joinpos{r} = $i;
-							}
-							last if scalar keys(%joinpos) >= 2; # Perhaps a bit premature optimization
-						}
-						my $joinpos = join("", sort values(%joinpos)); # We can now match on this string
-						if ($joinpos eq '12') { # The penalization numbers come mostly out from thin air
-							$mult = 1.1;
-						}
-						elsif ($joinpos eq '01') {
-							$mult = 1.2;
-						}
-						elsif ($joinpos eq '02') {
-							$mult = 1.5;
-						}
-						elsif ($joinpos eq '22') {
-							$mult = 1.6;
-						}
-						elsif ($joinpos eq '00') {
-							$mult = 1.8;
-						}
-						elsif ($joinpos eq '11') {
-							$mult = 2;
-						}
-					}
-				} else {
-					$mult = 5; # penalize cartesian joins
-				}
+				my $mult = $self->_penalize_joins($plan);
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
 				if ($lcost == 0) {
@@ -766,6 +726,55 @@ sub-plan participating in the join.
 			$sum += 5;
 		}
 		return $sum;
+	}
+
+	# The following method returns a factor used to penalize certain types of joins.
+	# It penalizes cartesian joins heavily, but also uses HSP Heuristic 2 (see REFERENCES)
+	sub _penalize_joins {
+		my ($self, $plan) = @_;
+		my $jv			= $plan->join_variables;
+		my @children	= @{ $plan->children };
+		my $mult		   = 1;
+		if (scalar(@$jv)) {
+			if ( all { $_->isa('Attean::Plan::Quad') } @children[0..1]) {
+				my $var = ${$jv}[0]; # We will join on this
+				my @lnodes = $children[0]->values;
+				my @rnodes = $children[1]->values;
+				# Now, find where the join variables are in the triple patterns
+				my %joinpos;
+				for (my $i = 0; $i <= 2; $i++) {
+					if ($lnodes[$i]->does('Attean::API::Variable') && $lnodes[$i]->value eq $var) {
+						$joinpos{l} = $i;
+					}
+					if ($rnodes[$i]->does('Attean::API::Variable') && $rnodes[$i]->value eq $var) {
+						$joinpos{r} = $i;
+					}
+					last if scalar keys(%joinpos) >= 2; # Perhaps a bit premature optimization
+				}
+				my $joinpos = join("", sort values(%joinpos)); # We can now match on this string
+				if ($joinpos eq '12') { # The penalization numbers come mostly out from thin air
+					$mult = 1.1;
+				}
+				elsif ($joinpos eq '01') {
+					$mult = 1.2;
+				}
+				elsif ($joinpos eq '02') {
+					$mult = 1.5;
+				}
+				elsif ($joinpos eq '22') {
+					$mult = 1.6;
+				}
+				elsif ($joinpos eq '00') {
+					$mult = 1.8;
+				}
+				elsif ($joinpos eq '11') {
+					$mult = 2;
+				}
+			}
+		} else {
+			$mult = 5; # penalize cartesian joins
+		}
+		return $mult;
 	}
 
 
