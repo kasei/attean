@@ -601,7 +601,6 @@ sub-plan participating in the join.
 				# This gives a cost increasing at a reasonable pace
 				return $self->_hsp_heuristic_triple_sum($plan) * scalar(@vars);
 			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
-				my $mult = $self->_penalize_joins($plan);
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
 				if ($lcost == 0) {
@@ -609,11 +608,10 @@ sub-plan participating in the join.
 				} elsif ($rcost == 0) {
 					$cost	= $lcost;
 				} else {
+					my $mult = $self->_penalize_joins($plan);
 					$cost	= $mult * $lcost * $rcost;
 				}
 			} elsif ($plan->isa('Attean::Plan::HashJoin')) {
-				my $jv			= $plan->join_variables;
-				my $mult		= scalar(@$jv) ? 1 : 5;	# penalize cartesian joins
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
 				if ($lcost == 0) {
@@ -621,6 +619,7 @@ sub-plan participating in the join.
 				} elsif ($rcost == 0) {
 					$cost	= $lcost;
 				} else {
+					my $mult = $self->_penalize_joins($plan);
 					$cost	= $mult * ($lcost + $rcost);
 				}
 			} elsif ($plan->isa('Attean::Plan::Unique')) {
