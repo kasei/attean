@@ -475,7 +475,7 @@ sub-plan participating in the join.
 		my $model		= shift;
 		my $interesting	= shift;
 		my @plans		= @{ shift || [] };
-		
+	        no  sort 'stable';
 		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @plans;
 		return splice(@sorted, 0, 5);
 	}
