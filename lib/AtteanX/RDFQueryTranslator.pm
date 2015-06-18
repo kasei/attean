@@ -236,6 +236,10 @@ package AtteanX::RDFQueryTranslator 0.006 {
 			my $p		= $self->translate($a->pattern);
 			my $o		= $self->translate($a->optional);
 			return Attean::Algebra::LeftJoin->new( children => [$p, $o] );
+		} elsif ($a->isa('RDF::Query::Algebra::OptPlus')) {
+			my $p		= $self->translate($a->pattern);
+			my $o		= $self->translate($a->optional);
+			return Attean::Algebra::OptPlus->new( children => [$p, $o] );
 		} elsif ($a->isa('RDF::Query::Algebra::SubSelect')) {
 			my $q	= $a->query;
 			my $p	= $self->translate_query($q);

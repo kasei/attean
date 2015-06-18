@@ -81,6 +81,36 @@ package Attean::Algebra::LeftJoin 0.006 {
 	}
 }
 
+=item * L<Attean::Algebra::OptPlus>
+
+=cut
+
+package Attean::Algebra::OptPlus 0.005 {
+	use Moo;
+	use Types::Standard qw(ConsumerOf);
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('OptPlus { %s }', $self->expression->as_string);
+	}
+	sub tree_attributes { return qw(expression) };
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		my ($lhs, $rhs)	= @{ $self->children };
+		
+		return "${indent}{\n"
+			. $lhs->as_sparql( %args, level => $level+1 )
+			. "${indent}} OPTPLUS {\n"
+			. $rhs->as_sparql( %args, level => $level+1 )
+			. "${indent}}\n";
+	}
+}
+
 =item * L<Attean::Algebra::Filter>
 
 =cut
