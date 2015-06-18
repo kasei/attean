@@ -37,7 +37,7 @@ my $debug			= 0;
 my $benchmark		= 0;
 my $print_sparql	= 0;
 my $print_algebra	= 0;
-my $out_format;
+my $out_format		= '';
 my $result			= GetOptions(
 	"verbose"	=> \$verbose,
 	"debug"		=> \$debug,
@@ -111,22 +111,18 @@ try {
 	}
 	
 	unless ($dryrun) {
-		warn "Evaluating query...\n" if ($verbose);
-		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
-		if ($benchmark) {
-			timethese(5, {
-				'baseline'	=> sub { my @e = $e->evaluate($a, $graph)->elements },
-			});
+		my $default_graphs	= [$graph];
+		my $planner	= Attean::IDPQueryPlanner->new();
+		my $plan	= $planner->plan_for_algebra($a, $model, $default_graphs);
+		warn $plan->as_string;
+		my $iter	= $plan->evaluate($model);
+		my $count	= 1;
+		my $s		= Attean->get_serializer($out_format);
+		if ($out_format and $s) {
+			$s->serialize_iter_to_io(\*STDOUT, $iter);
 		} else {
-			my $iter	= $e->evaluate($a, $graph);
-			my $count	= 1;
-			my $s		= my $serializer = Attean->get_serializer($out_format);
-			if ($out_format and $s) {
-				$s->serialize_iter_to_io(\*STDOUT, $iter);
-			} else {
-				while (my $r = $iter->next) {
-					printf("%3d %s\n", $count++, $r->as_string);
-				}
+			while (my $r = $iter->next) {
+				printf("%3d %s\n", $count++, $r->as_string);
 			}
 		}
 	}
