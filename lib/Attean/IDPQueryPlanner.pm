@@ -177,9 +177,11 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::LeftJoin')) {
 			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, @_)];
 			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, @_)];
-			return $self->join_plans($model, $active_graphs, $default_graphs, $l, $r, 1, 0, $algebra->expression);
+			return $self->join_plans($model, $active_graphs, $default_graphs, $l, $r, 'left', $algebra->expression);
 		} elsif ($algebra->isa('Attean::Algebra::Minus')) {
-			return $self->join_plans($model, $active_graphs, $default_graphs, @children[0,1], 0, 1);
+			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, @_)];
+			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, @_)];
+			return $self->join_plans($model, $active_graphs, $default_graphs, $l, $r, 'minus');
 		} elsif ($algebra->isa('Attean::Algebra::Project')) {
 			my $vars	= $algebra->variables;
 			my @vars	= map { $_->value } @{ $vars };
@@ -409,7 +411,7 @@ sub-plan participating in the join.
 						my $rhs		= $optPlan{$not_o_key}; # get the plans for evaluating not_o
 						
 						# compute and store all the possible ways to evaluate s (o ⋈ not_o)
-						push(@{ $optPlan{$s_key} }, $self->join_plans($model, $active_graphs, $default_graphs, $lhs, $rhs, 0, 0));
+						push(@{ $optPlan{$s_key} }, $self->join_plans($model, $active_graphs, $default_graphs, $lhs, $rhs, 'inner'));
 						$optPlan{$s_key}	= [$self->prune_plans($model, $interesting, $optPlan{$s_key})];
 					}
 				}
@@ -525,8 +527,9 @@ sub-plan participating in the join.
 		my $default_graphs	= shift;
 		my $lplans			= shift;
 		my $rplans			= shift;
-		my $left			= shift;
-		my $minus			= shift;
+		my $type			= shift;
+		my $left			= ($type eq 'left');
+		my $minus			= ($type eq 'minus');
 		my $expr			= shift;
 		
 		my @plans;
@@ -535,19 +538,14 @@ sub-plan participating in the join.
 			foreach my $rhs (@{ $rplans }) {
 				my @vars	= (@{ $lhs->in_scope_variables }, @{ $rhs->in_scope_variables });
 				my %vars;
-				foreach my $v (@vars) {
-					$vars{$v}++;
-				}
 				my %join_vars;
-				foreach my $l (@{ $lhs->in_scope_variables }) {
-					foreach my $r (@{ $rhs->in_scope_variables }) {
-						if ($l eq $r) {
-							$join_vars{$l}++;
-						}
+				foreach my $v (@vars) {
+					if ($vars{$v}++) {
+						$join_vars{$v}++;
 					}
 				}
 				my @join_vars	= keys %join_vars;
-		
+				
 				if ($left) {
 					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], left => 1, expression => $expr, join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => $lhs->ordered));
 					if (scalar(@join_vars) > 0) {
