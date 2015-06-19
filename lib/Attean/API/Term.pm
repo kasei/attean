@@ -45,9 +45,6 @@ Returns a string serialization of the term.
 
 package Attean::API::Term 0.005 {
 	use Moo::Role;
-	use Sub::Install;
-	use Sub::Util qw(set_subname);
-	use namespace::clean;
 	
 	with 'Attean::API::TermOrVariable', 'Attean::API::ResultOrTerm';
 	
@@ -104,23 +101,6 @@ package Attean::API::Term 0.005 {
 			}
 		}
 		return $string;
-	}
-
-	{
-		my %types	= (
-			blank		=> 'Blank',
-			literal		=> 'Literal',
-			iri			=> 'IRI',
-			resource	=> 'IRI',
-		);
-		while (my ($name, $role) = each(%types)) {
-			my $method	= "is_$name";
-			my $code	= sub { return shift->does("Attean::API::$role") };
-			Sub::Install::install_sub({
-				code	=> set_subname($method, $code),
-				as		=> $method
-			});
-		}
 	}
 }
 

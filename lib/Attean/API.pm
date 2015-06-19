@@ -31,9 +31,31 @@ package Attean::API::BlankOrIRI 0.005 {
 
 package Attean::API::TermOrVariable 0.005 {
 	use Moo::Role;
+	use Sub::Install;
+	use Sub::Util qw(set_subname);
+	use namespace::clean;
+
 	sub equals {
 		my ($a, $b)	= @_;
 		return ($a->as_string eq $b->as_string);
+	}
+	
+	BEGIN {
+		my %types	= (
+			variable	=> 'Variable',
+			blank		=> 'Blank',
+			literal		=> 'Literal',
+			resource	=> 'IRI',
+			iri			=> 'IRI',
+		);
+		while (my ($name, $role) = each(%types)) {
+			my $method	= "is_$name";
+			my $code	= sub { return shift->does("Attean::API::$role") };
+			Sub::Install::install_sub({
+				code	=> set_subname($method, $code),
+				as		=> $method
+			});
+		}
 	}
 }
 
