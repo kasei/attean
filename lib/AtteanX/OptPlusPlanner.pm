@@ -19,12 +19,6 @@ This document describes AtteanX::OptPlusPlanner version 0.005
   my $iter = $plan->evaluate($model);
   my $iter = $e->evaluate( $model );
 
-=head1 DESCRIPTION
-
-=head1 ATTRIBUTES
-
-=over 4
-
 =cut
 
 use Attean::Algebra;
@@ -36,34 +30,33 @@ package AtteanX::OptPlusPlanner 0.005 {
 	use namespace::clean;
 	extends 'Attean::IDPQueryPlanner';
 
-	sub plans_for_algebra {
+	around 'plans_for_algebra' => sub {
+		my $orig			= shift;
+		my @args			= @_;
 		my $self			= shift;
 		my $algebra			= shift;
 		my $model			= shift;
-		my $active_graphs	= shift;
-		my $default_graphs	= shift;
-		my %args			= @_;
-		
 		if ($model->does('Attean::API::CostPlanner')) {
-			my @plans	= $model->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs, @_);
-			if (@plans) {
-				return @plans; # trust that the model knows better than us what plans are best
-			}
+			my @plans	= $model->plans_for_algebra($algebra, $model, @_);
+			return @plans if (scalar(@plans)); # trust that the model knows better than us what plans are best
 		}
 		
 		if ($algebra->isa('Attean::Algebra::OptPlus')) {
-			my @children	= @{ $algebra->children };
-			my @vars		= keys %{ { map { map { $_ => 1 } $_->in_scope_variables } @children } };
-			my @plansets	= map { [$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)] } @children;
-			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, @_)];
-			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, @_)];
+			my $active_graphs	= shift;
+			my $default_graphs	= shift;
+			my @children		= @{ $algebra->children };
+			my @vars			= keys %{ { map { map { $_ => 1 } $_->in_scope_variables } @children } };
+			my @plansets		= map { [$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)] } @children;
+			my $l				= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, @_)];
+			my $r				= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, @_)];
 			return $self->join_plans($model, $active_graphs, $default_graphs, $l, $r, 'optplus');
-		} else {
-			return $self->SUPER::plans_for_algebra($algebra, $model, $active_graphs, $default_graphs, %args);
 		}
-	}
+		return $orig->(@args);
+	};
 	
-	sub join_plans {
+	around 'join_plans' => sub {
+		my $orig			= shift;
+		my @args			= @_;
 		my $self			= shift;
 		my $model			= shift;
 		my $active_graphs	= shift;
@@ -92,10 +85,12 @@ package AtteanX::OptPlusPlanner 0.005 {
 				}
 			}
 			return @plans;
-		} else {
-			return $self->SUPER::join_plans($model, $active_graphs, $default_graphs, $lplans, $rplans, $type, @_);
 		}
-	}
+		
+		return $orig->(@args);
+	};
+	
+	
 }
 
 package AtteanX::OptPlusPlanner::NestedLoopJoin 0.005 {
@@ -127,12 +122,6 @@ package AtteanX::OptPlusPlanner::NestedLoopJoin 0.005 {
 		}
 	}
 }
-
-=item * L<Attean::Plan::HashJoin>
-
-Evaluates a join (natural-, anti-, or left-) using a hash join.
-
-=cut
 
 package AtteanX::OptPlusPlanner::HashJoin 0.005 {
 	use Moo;
@@ -182,24 +171,10 @@ package AtteanX::OptPlusPlanner::HashJoin 0.005 {
 
 __END__
 
-=back
-
 =head1 BUGS
 
 Please report any bugs or feature requests to through the GitHub web interface
 at L<https://github.com/kasei/attean/issues>.
-
-=head1 REFERENCES
-
-The seminal reference for Iterative Dynamic Programming is "Iterative
-dynamic programming: a new class of query optimization algorithms" by
-D. Kossmann and K. Stocker, ACM Transactions on Database Systems
-(2000).
-
-The heuristics to order triple patterns in this module is
-influenced by L<The ICS-FORTH Heuristics-based SPARQL Planner
-(HSP)|http://www.ics.forth.gr/isl/index_main.php?l=e&c=645>.
-
 
 =head1 SEE ALSO
 
