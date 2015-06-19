@@ -13,8 +13,8 @@ This document describes Attean::Result version 0.005
 
   use v5.14;
   use Attean;
-  my $result = Attean::Result->new( { name => $literal, homepage => $iri } );
-  my @vars = $result->variables; # ('name', 'iri')
+  my $result = Attean::Result->new(bindings => { name => $literal, homepage => $iri } );
+  my @vars = $result->variables; # ('name', 'homepage')
   my $term = $result->value('name'); # $term == $literal
 
 =head1 DESCRIPTION
