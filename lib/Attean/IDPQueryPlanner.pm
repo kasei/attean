@@ -97,9 +97,33 @@ the supplied C<< $active_graph >>.
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::BGP')) {
-			my @plans	= $self->bgp_join_plans($algebra, $model, $active_graphs, $default_graphs, $interesting, map {
+			my $triples	= $algebra->triples;
+			my @triples	= @$triples;
+			my %blanks;
+			foreach my $i (0 .. $#triples) {
+				my $t	= $triples[$i];
+				my @nodes	= $t->values;
+				my $changed	= 0;
+				foreach (@nodes) {
+					if ($_->does('Attean::API::Blank')) {
+						$changed++;
+						my $id	= $_->value;
+						unless (exists $blanks{$id}) {
+							$blanks{$id}	= variable($self->new_temporary('blank'));
+						}
+						$_	= $blanks{$id};
+					}
+				}
+				
+				if ($changed) {
+					my $new	= triple(@nodes);
+					$triples[$i]	= $new;
+				}
+			}
+			my $bgp		= Attean::Algebra::BGP->new( triples => \@triples );
+			my @plans	= $self->bgp_join_plans($bgp, $model, $active_graphs, $default_graphs, $interesting, map {
 				[$self->access_plans($model, $active_graphs, $_)]
-			} @{ $algebra->triples });
+			} @triples);
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
 			return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
@@ -490,7 +514,7 @@ sub-plan participating in the join.
 		my $model			= shift;
 		my $active_graphs	= shift;
 		my $pattern			= shift;
-		my @vars			= map { $_->value } grep { $_->does('Attean::API::Variable') } $pattern->values;
+		my @vars			= map { $_->value } $pattern->values_consuming_role('Attean::API::Variable');
 		my %vars;
 		my $dup				= 0;
 		foreach my $v (@vars) {
