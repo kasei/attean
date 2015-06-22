@@ -364,6 +364,14 @@ triple participating in the join.
 					$distinct	= 0;
 					last LOOP;
 				}
+				foreach my $b ($t->values_consuming_role('Attean::API::Variable')) {
+					if ($b->value =~ /^[.]/) {
+						# variable names starting with a dot represent placeholders introduced during query planning (with C<new_temporary>)
+						# they are not projectable, and so may cause an otherwise distinct result to become non-distinct
+						$distinct	= 0;
+						last LOOP;
+					}
+				}
 			}
 		
 			# Set the distinct flag on each of the top-level join plans that
