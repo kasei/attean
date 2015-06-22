@@ -308,6 +308,71 @@ The subsequent code will have to find out how to return a representation.
 			die "No appropriate serializer found for content-negotiation";
 		}
 	}
+	
+=item C<< acceptable_parsers ( handles => $item_role, prefer => $parser_role ) >>
+
+Returns a string value expressing the media types that are acceptable to the
+parsers available to the system. This string may be used as an 'Accept' HTTP
+header value.
+
+If a C<< handles >> role is supplied, only parsers that produce objects that
+conform to C<< $item_role >> will be included.
+
+If a C<< prefer >> role is supplied, only parsers that conform to
+C<< $parser_role >> will be included.
+
+Parsers are given a quality-value (expressing a preferred order or use) based
+on the roles each parser consumes. Parsers consuming L<Attean::API::PullParser>
+are preferred, while those consuming L<Attean::API::AtOnceParser> are not
+preferred. An exact ordering between parsers consuming similar roles is
+currently undefined.
+
+=cut
+
+	sub acceptable_parsers {
+		my $class	= shift;
+		my %options	= @_;
+		my $handles	= delete $options{ 'handles' };
+		my $prefer	= delete $options{ 'prefer' };
+
+		if (defined($handles) and $handles !~ /::/) {
+			$handles	= ucfirst(lc($handles));
+			$handles	= "Attean::API::$handles";
+		}
+		if (defined($prefer) and $prefer !~ /::/) {
+			$prefer	= "Attean::API::" . ucfirst($prefer);
+			$prefer	= "${prefer}Parser" unless ($prefer =~ /Parser$/);
+		}
+		
+		my %media_types;
+		foreach my $pclass ($class->list_parsers) {
+			if (defined($handles)) {
+				my $type	= $pclass->handled_type;
+				next unless ($type->can('role'));
+				my $role	= $type->role;
+				next unless Role::Tiny::does_role($handles, $role);
+			}
+			
+			if (defined($prefer)) {
+				next unless ($pclass->does($prefer));
+			}
+			
+			my $q	= 0.5;
+			if ($pclass->does('Attean::API::PullParser')) {
+				$q	+= 0.25;
+			} elsif ($pclass->does('Attean::API::AtOnceParser')) {
+				$q	-= 0.25;
+			}
+			
+			for (@{ $pclass->media_types }) {
+				my $mt	= "$_;q=$q";
+				$media_types{$mt}	= $q;
+			}
+		}
+		
+		my @sorted	= sort { $media_types{$b} <=> $media_types{$a} } keys %media_types;
+		return join(',', @sorted);
+	}
 }
 
 1;
