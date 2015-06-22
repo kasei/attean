@@ -371,8 +371,6 @@ currently undefined.
 		}
 		
 		my @sorted	= sort { $media_types{$b} <=> $media_types{$a} } keys %media_types;
-		use Data::Dumper;
-		warn Dumper(\@sorted);
 		return join(',', @sorted);
 	}
 }
