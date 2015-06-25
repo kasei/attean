@@ -33,7 +33,7 @@ package AtteanX::Parser::SPARQLJSON 0.005 {
 	
 =item C<< canonical_media_type >>
 
-Returns the canonical media type for SPARQL XML: application/sparql-results+json.
+Returns the canonical media type for SPARQL JSON: application/sparql-results+json.
 
 =cut
 
@@ -41,7 +41,7 @@ Returns the canonical media type for SPARQL XML: application/sparql-results+json
 
 =item C<< media_types >>
 
-Returns a list of media types that may be parsed with the SPARQL XML parser:
+Returns a list of media types that may be parsed with the SPARQL JSON parser:
 application/sparql-results+json.
 
 =cut
