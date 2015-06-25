@@ -445,11 +445,30 @@ sub _statement_id {
 	}
 }
 
+
+=item C<< plans_for_algebra >>
+
+The store implements a cost-based query planner, but this method is
+reimplemented to hand the overall control of the planning process to
+an external planner by returning C<undef>.
+
+=cut
+
 sub plans_for_algebra {
 	my $self	= shift;
 	my $algebra	= shift;
 	return;
 }
+
+
+=item C<< cost_for_plan >>
+
+This store provides a cost estimate only for retrieving individual
+quad patterns in this method. It will allow other planners to estimate
+the cost for any other parts of the plan by returning C<undef> for
+those parts.
+
+=cut
 
 sub cost_for_plan {
 	my $self	= shift;
