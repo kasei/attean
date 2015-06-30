@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.006" ;
-                        doap:created      "2015-XX-XX" ;
+                        doap:created      "2015-06-30" ;
                         ];
         asc:changes     [
                         asc:addition    "Added Attean->acceptable_parsers method (GH issue #11)." ;

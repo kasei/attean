@@ -7,7 +7,7 @@ Attean::TermMap - Mapping terms to new terms
 
 =head1 VERSION
 
-This document describes Attean::TermMap version 0.005
+This document describes Attean::TermMap version 0.006
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ It conforms to the L<Attean::API::Mapper> role.
 
 =cut
 
-package Attean::TermMap 0.005 {
+package Attean::TermMap 0.006 {
 	use Moo;
 	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;
