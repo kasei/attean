@@ -50,6 +50,7 @@ package Attean::IDPQueryPlanner 0.006 {
 
 	with 'Attean::API::CostPlanner';
 	has 'counter' => (is => 'rw', isa => Int, default => 0);
+
 =back
 
 =head1 METHODS
@@ -65,7 +66,7 @@ package Attean::IDPQueryPlanner 0.006 {
 		$self->counter($c+1);
 		return sprintf('.%s-%d', $type, $c);
 	}
-	
+
 =item C<< plans_for_algebra( $algebra, $model, \@active_graphs, \@default_graphs ) >>
 
 Returns L<Attean::API::Plan> objects representing alternate query plans for
@@ -333,7 +334,7 @@ the supplied C<< $active_graph >>.
 		
 		return Attean::Plan::Project->new(children => [$plan], variables => \@pvars, distinct => $distinct, in_scope_variables => \@vars, ordered => \@porder);
 	}
-	
+
 =item C<< bgp_join_plans( $bgp, $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
 
 Returns a list of alternative plans for the join of a set of triples.
@@ -392,7 +393,7 @@ triple participating in the join.
 			return $plan;
 		}
 	}
-	
+
 =item C<< group_join_plans( $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
 
 Returns a list of alternative plans for the join of a set of sub-plans.
