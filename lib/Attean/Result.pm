@@ -44,19 +44,20 @@ Returns the HASH reference containing the variable bindings for this result.
 =cut
 
 	has 'bindings' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Term']], default => sub { +{} });
-	
+
 =item C<< value( $name ) >>
 
 Returns the term object bound to the C<< $name >>d variable, or undef if the
 name does not map to a term.
 
 =cut
+
 	sub value {
 		my $self	= shift;
 		my $k		= shift;
 		return $self->bindings->{$k};
 	}
-	
+
 =item C<< variables >>
 
 Returns a list of the variable names that are bound to terms in this result
@@ -68,7 +69,7 @@ object.
 		my $self	= shift;
 		return keys %{ $self->bindings };
 	}
-	
+
 =item C<< as_string >>
 
 Returns a string serialization of the variable bindings contained in the result.

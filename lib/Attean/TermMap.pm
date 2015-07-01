@@ -49,7 +49,7 @@ package Attean::TermMap 0.006 {
 		}
 		return $class->$orig(@_);
 	};
-	
+
 =item C<< canonicalization_map >>
 
 Returns a new L<Attean::TermMap> that canonicalizes recognized typed
@@ -71,7 +71,7 @@ L<Attean::API::Literal> values.
 			return $term;
 		});
 	}
-	
+
 =item C<< uuid_blank_map >>
 
 Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.
@@ -93,7 +93,7 @@ Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.
 			return $new;
 		});
 	}
-	
+
 =item C<< short_blank_map >>
 
 Returns a new L<Attean::TermMap> that renames blank nodes with short
@@ -134,7 +134,7 @@ alphabetic names (e.g. _:a, _:b).
 =head1 METHODS
 
 =over 4
-	
+
 =item C<< map( $term ) >>
 
 Returns the term that is mapped to by the supplied C<< $term >>.
@@ -146,7 +146,7 @@ Returns the term that is mapped to by the supplied C<< $term >>.
 		my $term	= shift;
 		return $self->mapper->( $term );
 	}
-	
+
 =item C<< binding_mapper >>
 
 Returns a mapping function reference that maps L<Attean::API::Binding>
