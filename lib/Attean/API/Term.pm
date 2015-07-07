@@ -474,6 +474,17 @@ package Attean::API::IRI 0.006 {
 		my $self	= shift;
 		return sprintf('<%s>', $self->__ntriples_string);
 	}
+
+	around as_sparql => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		
+		if ($self->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type') {
+			return 'a';
+		}
+
+		return $self->$orig(@_);
+	};
 }
 
 1;

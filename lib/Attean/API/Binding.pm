@@ -159,7 +159,7 @@ package Attean::API::TriplePattern 0.006 {
 	
 	sub as_sparql {
 		my $self	= shift;
-		return join(' ', map { $_->ntriples_string } $self->values) . " .\n";
+		return join(' ', map { $_->as_sparql } $self->values) . " .\n";
 	}
 	
 	requires 'subject';
