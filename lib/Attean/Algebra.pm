@@ -66,11 +66,18 @@ package Attean::Algebra::LeftJoin 0.006 {
 		my $indent	= $sp x $level;
 		my ($lhs, $rhs)	= @{ $self->children };
 		
-		return "${indent}{\n"
+		my $s	= "${indent}{\n"
 			. $lhs->as_sparql( %args, level => $level+1 )
 			. "${indent}} OPTIONAL {\n"
-			. $rhs->as_sparql( %args, level => $level+1 )
-			. "${indent}}\n";
+			. $rhs->as_sparql( %args, level => $level+1 );
+		
+		my $e	= $self->expression->as_sparql( %args, level => $level+1 );
+		if ($e ne 'true') {
+			$s	.= "${indent}$e\n";
+		}
+		
+		$s	.= "${indent}}\n";
+		return $s;
 	}
 }
 

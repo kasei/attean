@@ -216,6 +216,18 @@ package Attean::API::Literal 0.006 {
 			}
 		}
 	}
+
+	around as_sparql => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $s		= $self->$orig(@_);
+		
+		if ($s =~ m[^"(true|false)"\^\^<http://www[.]w3[.]org/2001/XMLSchema#boolean>$]) {
+			return $1;
+		}
+		
+		return $s;
+	};
 }
 
 package Attean::API::DateTimeLiteral 0.006 {
