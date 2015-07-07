@@ -73,7 +73,7 @@ package Attean::Algebra::LeftJoin 0.006 {
 		
 		my $e	= $self->expression->as_sparql( %args, level => $level+1 );
 		if ($e ne 'true') {
-			$s	.= "${indent}$e\n";
+			$s	.= "${sp}${indent}$e\n";
 		}
 		
 		$s	.= "${indent}}\n";
@@ -110,7 +110,7 @@ package Attean::Algebra::OptPlus 0.005 {
 		
 		my $e	= $self->expression->as_sparql( %args, level => $level+1 );
 		if ($e ne 'true') {
-			$s	.= "${indent}$e\n";
+			$s	.= "${sp}${indent}$e\n";
 		}
 		
 		$s	.= "${indent}}\n";
