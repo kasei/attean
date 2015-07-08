@@ -326,6 +326,8 @@ package Attean::Plan::Extend 0.006 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ConsumerOf HashRef);
+	use namespace::clean;
+
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
 	sub plan_as_string {
@@ -335,6 +337,7 @@ package Attean::Plan::Extend 0.006 {
 	}
 	sub tree_attributes { return qw(variable expression) };
 	
+
 	sub evaluate_expression {
 		my $self	= shift;
 		my $model	= shift;
@@ -373,6 +376,17 @@ package Attean::Plan::Extend 0.006 {
 				my $t		= shift(@terms);
 				my $ok		= (blessed($t) and $t->does($role));
 				return $ok ? $true : $false;
+			} elsif ($func eq 'REGEX') {
+				my ($string, $pattern, $flags)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				# TODO: ensure that $string is a literal
+				($string, $pattern, $flags)	= map { blessed($_) ? $_->value : '' } ($string, $pattern, $flags);
+				my $re;
+				if ($flags =~ /i/) {
+					$re	= qr/$pattern/i;
+				} else {
+					$re	= qr/$pattern/;
+				}
+				return ($string =~ $re) ? $true : $false;
 			} else {
 				die "Expression evaluation unimplemented: " . $expr->as_string;
 			}
