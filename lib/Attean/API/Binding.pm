@@ -73,6 +73,7 @@ use Type::Tiny::Role;
 
 package Attean::API::Binding 0.006 {
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
 	use namespace::clean;
 	
@@ -107,6 +108,12 @@ package Attean::API::Binding 0.006 {
 		return scalar(@blanks);
 	}
 	
+	sub is_ground {
+		my $self	= shift;
+		my @bad	= grep { not($_->does('Attean::API::Term')) } $self->values;
+		return (scalar(@bad) == 0);
+	}
+	
 	sub values_consuming_role {
 		my $self	= shift;
 		my $role	= shift;
@@ -116,11 +123,47 @@ package Attean::API::Binding 0.006 {
 	sub tree_attributes {
 		my $self	= shift;
 		return $self->variables;
-	};
+	}
+	
+	sub apply_bindings {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $bind	= shift;
+		my %data;
+		foreach my $k ($self->variables) {
+			my $v	= $self->value($k);
+			if ($v->does('Attean::API::Variable')) {
+				my $name	= $v->value;
+				my $replace	= $bind->value($name);
+				if (defined($replace) and blessed($replace)) {
+					$data{ $k }	= $replace;
+				} else {
+					$data{ $k }	= $v;
+				}
+			} else {
+				$data{ $k }	= $v;
+			}
+		}
+		use Data::Dumper;
+		warn Dumper(\%data);
+		return $class->new( bindings => \%data );
+	}
 }
 
 package Attean::API::TripleOrQuadPattern 0.006 {
 	use Moo::Role;
+
+	around BUILDARGS => sub {
+		my $orig 	= shift;
+		my $class	= shift;
+		if (scalar(@_) == 2) {
+			if ($_[0] eq 'bindings') {
+				return $class->$orig(%{ $_[1] });
+			}
+		}
+		return $class->$orig(@_);
+	};
+
 	sub apply_map {
 		my $self	= shift;
 		my $class	= ref($self);
@@ -155,6 +198,14 @@ package Attean::API::TriplePattern 0.006 {
 		my @keys	= Attean::API::Quad->variables;
 		my @values	= ($self->values, $graph);
 		return Attean::QuadPattern->new(zip @keys, @values);
+	}
+	
+	sub as_triple {
+		my $self	= shift;
+		unless ($self->is_ground) {
+			die "Not a ground triple: " . $self->as_string;
+		}
+		return Attean::Triple->new($self->values);
 	}
 	
 	sub as_sparql {
@@ -213,6 +264,14 @@ package Attean::API::QuadPattern 0.006 {
 		my $key		= shift;
 		return $self->$key() if ($key =~ /^(subject|predicate|object|graph)$/);
 		die "Unrecognized binding name '$key'";
+	}
+	
+	sub as_quad {
+		my $self	= shift;
+		unless ($self->is_ground) {
+			die "Not a ground quad: " . $self->as_string;
+		}
+		return Attean::Quad->new($self->values);
 	}
 	
 	requires 'subject';
