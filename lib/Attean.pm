@@ -196,7 +196,7 @@ returns undef.
 				my @classes;
 				foreach my $class ($self->$method()) {
 					next unless (can_load( modules => { $class => 0 }));
-					push(@classes, $class) if ($class->does($role));
+					push(@classes, $class) if ($class->can('does') and $class->does($role));
 				}
 				return @classes;
 			};
