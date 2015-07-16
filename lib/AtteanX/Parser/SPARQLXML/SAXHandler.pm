@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLXML::SAXHandler - XML parser for SPARQL XML Results forma
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 0.006
+This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 0.007
 
 =head1 STATUS
 
@@ -26,7 +26,7 @@ please L<get in touch|http://www.perlrdf.org/>.
 
 =cut
 
-package AtteanX::Parser::SPARQLXML::SAXHandler 0.006;
+package AtteanX::Parser::SPARQLXML::SAXHandler 0.007;
 
 use v5.14;
 use warnings;

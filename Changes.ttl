@@ -10,6 +10,26 @@
         dcterms:references      <http://kasei.us/code/attean/#project> .
 
 
+<http://kasei.us/code/files/Attean-0.007.tar.gz>
+        dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
+        dcterms:replaces    <http://kasei.us/code/files/Attean-0.006.tar.gz> ;
+
+        doap:Version    [
+                        doap:revision     "0.007" ;
+                        doap:created      "2015-07-16" ;
+                        ];
+        asc:changes     [
+                        asc:addition    "Added Attean::API::Binding->apply_bindings to bind additional variables." ;
+                        asc:addition    "Added Attean::API::Binding->is_ground." ;
+                        asc:addition    "Added Attean::API::TriplePattern->as_triple, Attean::API::QuadPattern->as_quad." ;
+                        asc:update      "Fix Attean plugin loading to allow non-plugins nested below the plugin namespace." ;
+                        asc:update      "Added evaluation support for REGEX functions." ;
+                        asc:update      "Improve SPARQL serialization for IRIs and triple patterns." ;
+                        asc:update      "Improve SPARQL serialization of OPTIONAL and boolean literals." ;
+                        asc:update      "POD improvements (PR #15 from Kjetil Kjernsmo)." ;
+                        ] .
+
+
 <http://kasei.us/code/files/Attean-0.006.tar.gz>
         dcterms:isVersionOf <http://kasei.us/code/attean/#project> ;
         dcterms:replaces    <http://kasei.us/code/files/Attean-0.005.tar.gz> ;

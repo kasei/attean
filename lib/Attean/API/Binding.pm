@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.006
+This document describes Attean::API::Binding version 0.007
 
 =head1 DESCRIPTION
 
@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.006 {
+package Attean::API::Binding 0.007 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
@@ -150,7 +150,7 @@ package Attean::API::Binding 0.006 {
 	}
 }
 
-package Attean::API::TripleOrQuadPattern 0.006 {
+package Attean::API::TripleOrQuadPattern 0.007 {
 	use Moo::Role;
 
 	around BUILDARGS => sub {
@@ -173,12 +173,12 @@ package Attean::API::TripleOrQuadPattern 0.006 {
 	}
 }
 
-package Attean::API::TripleOrQuad 0.006 {
+package Attean::API::TripleOrQuad 0.007 {
 	use Moo::Role;
 	with 'Attean::API::TripleOrQuadPattern';
 }
 
-package Attean::API::TriplePattern 0.006 {
+package Attean::API::TriplePattern 0.007 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use namespace::clean;
@@ -220,7 +220,7 @@ package Attean::API::TriplePattern 0.006 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Triple 0.006 {
+package Attean::API::Triple 0.007 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -255,7 +255,7 @@ package Attean::API::Triple 0.006 {
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
 }
 
-package Attean::API::QuadPattern 0.006 {
+package Attean::API::QuadPattern 0.007 {
 	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object graph) }
@@ -282,7 +282,7 @@ package Attean::API::QuadPattern 0.006 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.006 {
+package Attean::API::Quad 0.007 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -309,7 +309,7 @@ package Attean::API::Quad 0.006 {
 }
 
 
-package Attean::API::Result 0.006 {
+package Attean::API::Result 0.007 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use namespace::clean;

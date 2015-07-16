@@ -7,7 +7,7 @@ Attean::API::Plan - Query plan
 
 =head1 VERSION
 
-This document describes Attean::API::Plan version 0.006
+This document describes Attean::API::Plan version 0.007
 
 =head1 DESCRIPTION
 
@@ -23,7 +23,7 @@ The following methods are required by the L<Attean::API::Plan> role:
 
 use Type::Tiny::Role;
 
-package Attean::API::Plan 0.006 {
+package Attean::API::Plan 0.007 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef CodeRef Str Object InstanceOf Bool Num);
 	use namespace::clean;
@@ -76,7 +76,7 @@ package Attean::API::Plan 0.006 {
 	}
 }
 
-package Attean::API::Planner 0.006 {
+package Attean::API::Planner 0.007 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -84,7 +84,7 @@ package Attean::API::Planner 0.006 {
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
-package Attean::API::CostPlanner 0.006 {
+package Attean::API::CostPlanner 0.007 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
