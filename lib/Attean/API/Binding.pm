@@ -151,6 +151,7 @@ package Attean::API::Binding 0.007 {
 }
 
 package Attean::API::TripleOrQuadPattern 0.007 {
+	use Scalar::Util qw(blessed);
 	use Moo::Role;
 
 	around BUILDARGS => sub {
@@ -171,6 +172,26 @@ package Attean::API::TripleOrQuadPattern 0.007 {
 		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
 		return $class->new( %values );
 	}
+	
+	sub apply_statement {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $bind	= shift;
+		my %data;
+		foreach my $k ($self->variables) {
+			my $v	= $self->value($k);
+			if ($v->does('Attean::API::Variable')) {
+				my $name	= $v->value;
+				my $replace	= $bind->value($name);
+				if (defined($replace) and blessed($replace)) {
+					$data{ $k }	= $replace;
+				} else {
+					$data{ $k }	= $v;
+				}
+			}
+		}
+		return Attean::Result->new( bindings => \%data );
+	}
 }
 
 package Attean::API::TripleOrQuad 0.007 {
@@ -181,6 +202,7 @@ package Attean::API::TripleOrQuad 0.007 {
 package Attean::API::TriplePattern 0.007 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
+	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
 	sub variables { return qw(subject predicate object) }
@@ -213,6 +235,11 @@ package Attean::API::TriplePattern 0.007 {
 		return join(' ', map { $_->as_sparql } $self->values) . " .\n";
 	}
 	
+	sub apply_triple {
+		my $self	= shift;
+		return $self->apply_statement(@_);
+	}
+
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
@@ -256,6 +283,7 @@ package Attean::API::Triple 0.007 {
 }
 
 package Attean::API::QuadPattern 0.007 {
+	use Scalar::Util qw(blessed);
 	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object graph) }
@@ -274,6 +302,11 @@ package Attean::API::QuadPattern 0.007 {
 		return Attean::Quad->new($self->values);
 	}
 	
+	sub apply_quad {
+		my $self	= shift;
+		return $self->apply_statement(@_);
+	}
+
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
