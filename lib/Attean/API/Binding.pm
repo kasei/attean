@@ -152,7 +152,9 @@ package Attean::API::Binding 0.007 {
 
 package Attean::API::TripleOrQuadPattern 0.007 {
 	use Scalar::Util qw(blessed);
+	use Attean::RDF;
 	use Moo::Role;
+	use namespace::clean;
 
 	around BUILDARGS => sub {
 		my $orig 	= shift;
@@ -162,7 +164,15 @@ package Attean::API::TripleOrQuadPattern 0.007 {
 				return $class->$orig(%{ $_[1] });
 			}
 		}
-		return $class->$orig(@_);
+		
+		my %args	= @_;
+		foreach my $k ($class->variables) {
+			if (not(exists $args{$k}) or not($args{$k})) {
+				$args{$k}	= variable($k);
+			}
+		}
+		
+		return $class->$orig(%args);
 	};
 
 	sub apply_map {

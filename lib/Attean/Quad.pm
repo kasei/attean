@@ -42,7 +42,9 @@ This role consumes L<Attean::API::Quad>.
 
 package Attean::QuadPattern 0.007 {
 	use Moo;
-	use Attean::API;
+	use Scalar::Util qw(blessed);
+	use Attean::RDF;
+	use Attean::API::Binding;
 	
 	has 'subject'	=> (is => 'ro', required => 1);
 	has 'predicate'	=> (is => 'ro', required => 1);
@@ -54,9 +56,18 @@ package Attean::QuadPattern 0.007 {
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;
-		if (scalar(@_) == 4) {
+		my @args	= @_;
+		if (scalar(@args) == 0 or blessed($args[0])) {
+			my @names	= $class->variables;
+			foreach my $i (0 .. $#names) {
+				my $k	= $names[$i];
+				my $v	= $args[$i];
+				unless (defined($v)) {
+					$args[$i]	= variable($k);
+				}
+			}
 			my %args;
-			@args{ $class->variables }	= @_;
+			@args{ $class->variables }	= @args;
 			return $class->$orig(%args);
 		}
 		return $class->$orig(@_);
