@@ -144,8 +144,6 @@ package Attean::API::Binding 0.007 {
 				$data{ $k }	= $v;
 			}
 		}
-		use Data::Dumper;
-		warn Dumper(\%data);
 		return $class->new( bindings => \%data );
 	}
 }
