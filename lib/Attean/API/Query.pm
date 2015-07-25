@@ -101,8 +101,6 @@ package Attean::API::DirectedAcyclicGraph 0.007 {
 		foreach my $type (@types) {
 			delete $classes{$type};
 		}
-		use Data::Dumper;
-		warn Dumper(\%classes);
 		my @keys	= keys %classes;
 		return (scalar(@keys) == 0) ? 1 : 0;
 	}
