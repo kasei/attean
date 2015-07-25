@@ -50,26 +50,6 @@ package Attean::TriplePattern 0.007 {
 	
 	with 'Attean::API::TriplePattern';
 	
-	around BUILDARGS => sub {
-		my $orig 	= shift;
-		my $class	= shift;
-		my @args	= @_;
-		if (scalar(@args) == 0 or blessed($args[0])) {
-			my @names	= $class->variables;
-			foreach my $i (0 .. $#names) {
-				my $k	= $names[$i];
-				my $v	= $args[$i];
-				unless (defined($v)) {
-					$args[$i]	= variable($k);
-				}
-			}
-			my %args;
-			@args{ $class->variables }	= @args;
-			return $class->$orig(%args);
-		}
-		return $class->$orig(@_);
-	};
-	
 	sub as_quadpattern {
 		my $self	= shift;
 		my $graph	= shift;

@@ -157,9 +157,22 @@ package Attean::API::TripleOrQuadPattern 0.007 {
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;
-		if (scalar(@_) == 2) {
-			if ($_[0] eq 'bindings') {
-				return $class->$orig(%{ $_[1] });
+		my @args	= @_;
+		if (scalar(@args) == 0 or not(defined($_[0])) or blessed($args[0])) {
+			my @names	= $class->variables;
+			foreach my $i (0 .. $#names) {
+				my $k	= $names[$i];
+				my $v	= $args[$i];
+				unless (defined($v)) {
+					$args[$i]	= variable($k);
+				}
+			}
+			my %args;
+			@args{ $class->variables }	= @args;
+			return $class->$orig(%args);
+		} elsif (scalar(@args) == 2) {
+			if (defined($args[0]) and $args[0] eq 'bindings') {
+				return $class->$orig(%{ $args[1] });
 			}
 		}
 		

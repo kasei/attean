@@ -52,26 +52,6 @@ package Attean::QuadPattern 0.007 {
 	has 'graph'		=> (is => 'ro', required => 1);
 	
 	with 'Attean::API::QuadPattern';
-
-	around BUILDARGS => sub {
-		my $orig 	= shift;
-		my $class	= shift;
-		my @args	= @_;
-		if (scalar(@args) == 0 or blessed($args[0])) {
-			my @names	= $class->variables;
-			foreach my $i (0 .. $#names) {
-				my $k	= $names[$i];
-				my $v	= $args[$i];
-				unless (defined($v)) {
-					$args[$i]	= variable($k);
-				}
-			}
-			my %args;
-			@args{ $class->variables }	= @args;
-			return $class->$orig(%args);
-		}
-		return $class->$orig(@_);
-	};
 }
 
 package Attean::Quad 0.007 {
