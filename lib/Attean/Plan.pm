@@ -83,12 +83,7 @@ Evaluates a join (natural-, anti-, or left-) using a nested loop.
 
 package Attean::Plan::NestedLoopJoin 0.007 {
 	use Moo;
-	use Types::Standard qw(ArrayRef Str Bool ConsumerOf);
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
-	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
-	has 'left' => (is => 'ro', isa => Bool, default => 0);
-	has 'anti' => (is => 'ro', isa => Bool, default => 0);
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+	with 'Attean::API::Plan::Join';
 	sub plan_as_string {
 		my $self	= shift;
 		if ($self->left) {
@@ -146,12 +141,7 @@ Evaluates a join (natural-, anti-, or left-) using a hash join.
 
 package Attean::Plan::HashJoin 0.007 {
 	use Moo;
-	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
-	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
-	has 'left' => (is => 'ro', isa => Bool, default => 0);
-	has 'anti' => (is => 'ro', isa => Bool, default => 0);
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+	with 'Attean::API::Plan::Join';
 	sub plan_as_string {
 		my $self	= shift;
 		my $name;
