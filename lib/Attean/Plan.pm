@@ -593,6 +593,67 @@ package Attean::Plan::OrderBy 0.007 {
 	}
 }
 
+package Attean::Plan::HeapSort 0.007 {
+	use Moo;
+	use Array::Heap;
+	use Types::Standard qw(Int HashRef ArrayRef InstanceOf Bool Str);
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	has 'limit' 	=> (is => 'ro', isa => Int, default => -1);
+	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	has 'ascending' => (is => 'ro', isa => HashRef[Bool], required => 1);
+	sub plan_as_string {
+		my $self	= shift;
+		my @vars	= @{ $self->variables };
+		my $ascending	= $self->ascending;
+		my @cmpstrs	= map { sprintf('%s(?%s)', ($ascending->{$_} ? 'ASC' : 'DESC'), $_) } @vars;
+
+		my @str;
+		push(@str, "Limit=" . $self->limit);
+		push(@str, "Order=" . join(', ', @cmpstrs));
+		return sprintf('HeapSort { %s }', join(' ', @str));
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $vars	= $self->variables;
+		my $ascending	= $self->ascending;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my $limit	= $self->limit;
+		my $cmp	= sub {
+			my $a	= shift;
+			my $b	= shift;
+			my ($ar, $avalues)	= ($a, [map { $a->value($_) } @$vars]);
+			my ($br, $bvalues)	= ($b, [map { $b->value($_) } @$vars]);
+			my $c	= 0;
+			foreach my $i (0 .. $#{ $vars }) {
+				my $ascending	= $ascending->{ $vars->[$i] };
+				my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
+				$c		= $av ? $av->compare($bv) : 1;
+				$c		*= -1 unless ($ascending);
+				last unless ($c == 0);
+			}
+			return -$c;	# negate the sort order so that we maintain the results we do want to keep in the heap
+		};
+		return sub {
+			my $iter	= $impl->();
+			my @heap;
+			while (my $r = $iter->next) {
+				push_heap_cmp(sub { $cmp->($a, $b) }, @heap, $r);
+				if (scalar(@heap) > $limit) {
+					pop_heap_cmp(sub { $cmp->($a, $b) }, @heap);
+				}
+			}
+			my @rows;
+			while (my $r = pop_heap_cmp(sub { $cmp->($a, $b) }, @heap)) {
+				unshift(@rows, $r);
+			}
+			warn scalar(@rows);
+			return Attean::ListIterator->new( values => \@rows, item_type => $iter->item_type);
+		}
+	}
+}
+
 =item * L<Attean::Plan::Service>
 
 Evaluates a SPARQL query against a remove endpoint.

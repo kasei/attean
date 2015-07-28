@@ -36,6 +36,7 @@ requires		'RDF::Query'				=> 2.910;
 requires		'Try::Tiny'					=> 0;
 requires		'HTTP::Negotiate'			=> 0;
 requires		'Math::Cartesian::Product'	=> 1.008;
+requires		'Array::Heap'				=> 3.21;
 
 
 resources(
