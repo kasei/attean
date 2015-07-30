@@ -176,26 +176,28 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 			# TODO: no-op if already ordered
 			my @cmps	= @{ $algebra->comparators };
-			my %ascending;
-			my %exprs;
-			my @svars;
-			foreach my $i (0 .. $#cmps) {
-				my $var	= $self->new_temporary('order');
-				my $cmp	= $cmps[$i];
-				push(@svars, $var);
-				$ascending{$var}	= $cmp->ascending;
-				$exprs{$var}		= $cmp->expression;
-			}
-			
+			my ($exprs, $ascending, $svars)	= $self->_order_by($algebra);
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, interesting_order => $algebra->comparators, @_)) {
 				my $distinct	= $plan->distinct;
-				my @vars	= (@{ $plan->in_scope_variables }, keys %exprs);
-				my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
-				my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => \@vars, ordered => $plan->ordered);
-				my $ordered	= Attean::Plan::OrderBy->new(children => [$extend], variables => \@svars, ascending => \%ascending, distinct => 0, in_scope_variables => \@vars, ordered => \@cmps);
-				my $proj	= $self->new_projection($ordered, $distinct, @{ $plan->in_scope_variables });
-				push(@plans, $proj);
+
+				if (scalar(@cmps) == 1 and $cmps[0]->expression->isa('Attean::ValueExpression') and $cmps[0]->expression->value->does('Attean::API::Variable')) {
+					# TODO: extend this to handle more than one comparator, so long as they are *all* just variables (and not complex expressions)
+					# If we're sorting by just a variable name, don't bother creating new variables for the sort expressions, use the underlying variable directy
+					my @vars	= @{ $plan->in_scope_variables };
+					my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
+					my $var		= $cmps[0]->expression->value->value;
+					my $ascending	= { $var => $cmps[0]->ascending };
+					my $ordered	= Attean::Plan::OrderBy->new(children => [$plan], variables => [$var], ascending => $ascending, distinct => $distinct, in_scope_variables => \@vars, ordered => \@cmps);
+					push(@plans, $ordered);
+				} else {
+					my @vars	= (@{ $plan->in_scope_variables }, keys %$exprs);
+					my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
+					my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, in_scope_variables => \@vars, ordered => $plan->ordered);
+					my $ordered	= Attean::Plan::OrderBy->new(children => [$extend], variables => $svars, ascending => $ascending, distinct => 0, in_scope_variables => \@vars, ordered => \@cmps);
+					my $proj	= $self->new_projection($ordered, $distinct, @{ $plan->in_scope_variables });
+					push(@plans, $proj);
+				}
 			}
 			
 			return @plans;
@@ -265,6 +267,40 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
 			my $limit	= $algebra->limit;
 			my $offset	= $algebra->offset;
+			if (my $child = $algebra->unary) {
+				my $vars;
+				if ($child->isa('Attean::Algebra::Project')) {
+					$vars		= $child->variables;
+					$child		= $child->unary;
+				}
+				
+				if ($child->isa('Attean::Algebra::OrderBy')) {
+					my $count	= $limit + $offset;
+					my @cmps	= @{ $child->comparators };
+					my ($exprs, $ascending, $svars)	= $self->_order_by($child);
+					my @plans;
+					foreach my $plan ($self->plans_for_algebra($child->children->[0], $model, $active_graphs, $default_graphs, @_)) {
+# 						TODO: planning $child above is adding an extra Order plan, which is unnecessary with the HeapSort... but we need to keep the Extends that the OrderBy planning introduces
+						my @vars	= @{ $plan->in_scope_variables };
+						my @evars	= (@vars, keys %$exprs);
+						my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, in_scope_variables => \@evars, ordered => $plan->ordered);
+						my $ordered	= Attean::Plan::HeapSort->new(children => [$extend], limit => $count, variables => $svars, ascending => $ascending, distinct => $plan->distinct, in_scope_variables => \@evars, ordered => \@cmps);
+						my $proj	= $self->new_projection($ordered, $plan->distinct, @{ $plan->in_scope_variables });
+						if ($offset) {
+							$proj	= Attean::Plan::Slice->new(children => [$proj], offset => $offset, distinct => $proj->distinct, in_scope_variables => \@vars, ordered => $proj->ordered);
+						}
+						push(@plans, $proj);
+					}
+					return @plans;
+					
+					
+					
+					
+				}
+			}
+			
+			
+			
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
 				my $vars	= $plan->in_scope_variables;
@@ -695,7 +731,25 @@ sub-plan participating in the join.
 		my @keys	= keys %unseen;
 		return (scalar(@keys) == 0);
 	}
-
+	
+	sub _order_by {
+		my $self	= shift;
+		my $algebra	= shift;
+		my ($exprs, $ascending, $svars);
+		my @cmps	= @{ $algebra->comparators };
+		my %ascending;
+		my %exprs;
+		my @svars;
+		foreach my $i (0 .. $#cmps) {
+			my $var	= $self->new_temporary('order');
+			my $cmp	= $cmps[$i];
+			push(@svars, $var);
+			$ascending{$var}	= $cmp->ascending;
+			$exprs{$var}		= $cmp->expression;
+		}
+		return (\%exprs, \%ascending, \@svars);
+	}
+	
 # The below function finds a number to aid sorting
 # It takes into account Heuristic 1 and 4 of the HSP paper, see REFERENCES
 # as well as that it was noted in the text that rdf:type is usually less selective.

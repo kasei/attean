@@ -602,8 +602,8 @@ package Attean::Plan::HeapSort 0.007 {
 	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
 	has 'ascending' => (is => 'ro', isa => HashRef[Bool], required => 1);
 	sub plan_as_string {
-		my $self	= shift;
-		my @vars	= @{ $self->variables };
+		my $self		= shift;
+		my @vars		= @{ $self->variables };
 		my $ascending	= $self->ascending;
 		my @cmpstrs	= map { sprintf('%s(?%s)', ($ascending->{$_} ? 'ASC' : 'DESC'), $_) } @vars;
 
@@ -648,7 +648,6 @@ package Attean::Plan::HeapSort 0.007 {
 			while (my $r = pop_heap_cmp(sub { $cmp->($a, $b) }, @heap)) {
 				unshift(@rows, $r);
 			}
-			warn scalar(@rows);
 			return Attean::ListIterator->new( values => \@rows, item_type => $iter->item_type);
 		}
 	}

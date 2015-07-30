@@ -36,6 +36,7 @@ my $verbose			= 0;
 my $debug			= 0;
 my $benchmark		= 0;
 my $print_sparql	= 0;
+my $print_plan		= 0;
 my $print_algebra	= 0;
 my $out_format		= '';
 my $result			= GetOptions(
@@ -43,6 +44,7 @@ my $result			= GetOptions(
 	"debug"		=> \$debug,
 	"benchmark"	=> \$benchmark,
 	'algebra'	=> \$print_algebra,
+	'plan'		=> \$print_plan,
 	"sparql"	=> \$print_sparql,
 	'n'			=> \$dryrun,
 	'c'			=> \$check_syntax,
@@ -97,7 +99,7 @@ try {
 	my $t	= AtteanX::RDFQueryTranslator->new();
 	my $a	= $t->translate_query($query);
 	if ($print_algebra) {
-		print $a->as_string;
+		print "# Algebra:\n" . $a->as_string;
 	}
 	
 	if ($check_syntax) {
@@ -114,7 +116,9 @@ try {
 		my $default_graphs	= [$graph];
 		my $planner	= Attean::IDPQueryPlanner->new();
 		my $plan	= $planner->plan_for_algebra($a, $model, $default_graphs);
-		warn $plan->as_string;
+		if ($print_plan) {
+			print "# Plan:\n" . $plan->as_string;
+		}
 		my $iter	= $plan->evaluate($model);
 		my $count	= 1;
 		my $s		= Attean->get_serializer($out_format);

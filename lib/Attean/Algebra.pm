@@ -421,7 +421,7 @@ package Attean::Algebra::Comparator 0.007 {
 	sub as_string {
 		my $self	= shift;
 		if ($self->ascending) {
-			return $self->expression->as_string;
+			return 'ASC(' . $self->expression->as_string . ')';
 		} else {
 			return 'DESC(' . $self->expression->as_string . ')';
 		}

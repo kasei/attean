@@ -144,8 +144,13 @@ package Attean::API::Algebra 0.007 {
 	use Moo::Role;
 
 	requires 'as_sparql';
-
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
+	
+	sub unary {
+		my $self	= shift;
+		return unless (scalar(@{ $self->children }) == 1);
+		return $self->children->[0];
+	}
 	
 	sub algebra_as_string {
 		my $self	= shift;
