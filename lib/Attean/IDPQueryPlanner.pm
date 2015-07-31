@@ -141,10 +141,10 @@ the supplied C<< $active_graph >>.
 					my $cmps	= $p->ordered;
 					if ($self->_comparators_are_stable_and_cover_vars($cmps, @vars)) {
 						# the plan has a stable ordering which covers all the variables, so we can just uniq the iterator
-						push(@dist, Attean::Plan::Unique->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
+						push(@dist, Attean::Plan::Unique->new(children => [$p], distinct => 1, ordered => $p->ordered));
 					} else {
 						# TODO: if the plan isn't distinct, but is ordered, we can use a batched implementation
-						push(@dist, Attean::Plan::HashDistinct->new(children => [$p], distinct => 1, in_scope_variables => $p->in_scope_variables, ordered => $p->ordered));
+						push(@dist, Attean::Plan::HashDistinct->new(children => [$p], distinct => 1, ordered => $p->ordered));
 					}
 				}
 			}
@@ -161,13 +161,14 @@ the supplied C<< $active_graph >>.
 				my $distinct	= $plan->distinct;
 				my $ordered		= $plan->ordered;
 				if ($expr->isa('Attean::ValueExpression') and $expr->value->does('Attean::API::Variable')) {
-					my $filtered	= Attean::Plan::EBVFilter->new(children => [$plan], variable => $expr->value->value, distinct => $distinct, in_scope_variables => $plan->in_scope_variables, ordered => $ordered);
+					my $filtered	= Attean::Plan::EBVFilter->new(children => [$plan], variable => $expr->value->value, distinct => $distinct, ordered => $ordered);
 					push(@plans, $filtered);
 				} else {
 					my @vars		= ($var);
+					my @inscope		= ($var, @{ $plan->in_scope_variables });
 					my @pvars		= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
-					my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $ordered);
-					my $filtered	= Attean::Plan::EBVFilter->new(children => [$extend], variable => $var, distinct => 0, in_scope_variables => \@vars, ordered => $ordered);
+					my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $ordered);
+					my $filtered	= Attean::Plan::EBVFilter->new(children => [$extend], variable => $var, distinct => 0, ordered => $ordered);
 					my $proj		= $self->new_projection($filtered, $distinct, @{ $plan->in_scope_variables });
 					push(@plans, $proj);
 				}
@@ -188,13 +189,13 @@ the supplied C<< $active_graph >>.
 					my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
 					my $var		= $cmps[0]->expression->value->value;
 					my $ascending	= { $var => $cmps[0]->ascending };
-					my $ordered	= Attean::Plan::OrderBy->new(children => [$plan], variables => [$var], ascending => $ascending, distinct => $distinct, in_scope_variables => \@vars, ordered => \@cmps);
+					my $ordered	= Attean::Plan::OrderBy->new(children => [$plan], variables => [$var], ascending => $ascending, distinct => $distinct, ordered => \@cmps);
 					push(@plans, $ordered);
 				} else {
 					my @vars	= (@{ $plan->in_scope_variables }, keys %$exprs);
 					my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
-					my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, in_scope_variables => \@vars, ordered => $plan->ordered);
-					my $ordered	= Attean::Plan::OrderBy->new(children => [$extend], variables => $svars, ascending => $ascending, distinct => 0, in_scope_variables => \@vars, ordered => \@cmps);
+					my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, ordered => $plan->ordered);
+					my $ordered	= Attean::Plan::OrderBy->new(children => [$extend], variables => $svars, ascending => $ascending, distinct => 0, ordered => \@cmps);
 					my $proj	= $self->new_projection($ordered, $distinct, @{ $plan->in_scope_variables });
 					push(@plans, $proj);
 				}
@@ -239,7 +240,7 @@ the supplied C<< $active_graph >>.
 					my %exprs	= ($gvar => Attean::ValueExpression->new(value => $graph));
 					# TODO: rewrite $child pattern here to replace any occurrences of the variable $gvar to $graph
 					my @plans	= map {
-						Attean::Plan::Extend->new(children => [$_], expressions => \%exprs, distinct => 0, in_scope_variables => \@vars, ordered => $_->ordered);
+						Attean::Plan::Extend->new(children => [$_], expressions => \%exprs, distinct => 0, ordered => $_->ordered);
 					} $self->plans_for_algebra($child, $model, [$graph], $default_graphs, @_);
 					push(@branches, \@plans);
 				}
@@ -247,7 +248,7 @@ the supplied C<< $active_graph >>.
 				if (scalar(@branches) == 1) {
 					@plans	= @{ shift(@branches) };
 				} else {
-					cartesian { push(@plans, Attean::Plan::Union->new(children => [@_], distinct => 0, in_scope_variables => \@vars, ordered => [])) } @branches;
+					cartesian { push(@plans, Attean::Plan::Union->new(children => [@_], distinct => 0, ordered => [])) } @branches;
 				}
 				return @plans;
 			}
@@ -255,7 +256,7 @@ the supplied C<< $active_graph >>.
 			my $rows	= $algebra->rows;
 			my $vars	= $algebra->variables;
 			my @vars	= map { $_->value } @{ $vars };
-			my $plan	= Attean::Plan::Table->new( variables => $vars, rows => $rows, distinct => 0, in_scope_variables => \@vars, ordered => [] );
+			my $plan	= Attean::Plan::Table->new( variables => $vars, rows => $rows, distinct => 0, ordered => [] );
 			return $plan;
 		} elsif ($algebra->isa('Attean::Algebra::Service')) {
 			my $endpoint	= $algebra->endpoint;
@@ -280,22 +281,17 @@ the supplied C<< $active_graph >>.
 					my ($exprs, $ascending, $svars)	= $self->_order_by($child);
 					my @plans;
 					foreach my $plan ($self->plans_for_algebra($child->children->[0], $model, $active_graphs, $default_graphs, @_)) {
-# 						TODO: planning $child above is adding an extra Order plan, which is unnecessary with the HeapSort... but we need to keep the Extends that the OrderBy planning introduces
 						my @vars	= @{ $plan->in_scope_variables };
 						my @evars	= (@vars, keys %$exprs);
-						my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, in_scope_variables => \@evars, ordered => $plan->ordered);
-						my $ordered	= Attean::Plan::HeapSort->new(children => [$extend], limit => $count, variables => $svars, ascending => $ascending, distinct => $plan->distinct, in_scope_variables => \@evars, ordered => \@cmps);
+						my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, ordered => $plan->ordered);
+						my $ordered	= Attean::Plan::HeapSort->new(children => [$extend], limit => $count, variables => $svars, ascending => $ascending, distinct => $plan->distinct, ordered => \@cmps);
 						my $proj	= $self->new_projection($ordered, $plan->distinct, @{ $plan->in_scope_variables });
 						if ($offset) {
-							$proj	= Attean::Plan::Slice->new(children => [$proj], offset => $offset, distinct => $proj->distinct, in_scope_variables => \@vars, ordered => $proj->ordered);
+							$proj	= Attean::Plan::Slice->new(children => [$proj], offset => $offset, distinct => $proj->distinct, ordered => $proj->ordered);
 						}
 						push(@plans, $proj);
 					}
 					return @plans;
-					
-					
-					
-					
 				}
 			}
 			
@@ -304,7 +300,7 @@ the supplied C<< $active_graph >>.
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
 				my $vars	= $plan->in_scope_variables;
-				push(@plans, Attean::Plan::Slice->new(children => [$plan], limit => $limit, offset => $offset, distinct => $plan->distinct, in_scope_variables => $vars, ordered => $plan->ordered));
+				push(@plans, Attean::Plan::Slice->new(children => [$plan], limit => $limit, offset => $offset, distinct => $plan->distinct, ordered => $plan->ordered));
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
@@ -314,7 +310,7 @@ the supplied C<< $active_graph >>.
 
 			my @plans;
 			cartesian {
-				push(@plans, Attean::Plan::Union->new(children => \@_, distinct => 0, in_scope_variables => \@vars, ordered => []))
+				push(@plans, Attean::Plan::Union->new(children => \@_, distinct => 0, ordered => []))
 			} @plansets;
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
@@ -325,14 +321,14 @@ the supplied C<< $active_graph >>.
 
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
-				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, in_scope_variables => [@vars, $var], ordered => $plan->ordered);
+				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $plan->ordered);
 				push(@plans, $extend);
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
-				return Attean::Plan::Exists->new(children => [$plan], distinct => 1, in_scope_variables => [], ordered => []);
+				return Attean::Plan::Exists->new(children => [$plan], distinct => 1, ordered => []);
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
@@ -368,7 +364,7 @@ the supplied C<< $active_graph >>.
 			push(@porder, $cmp);
 		}
 		
-		return Attean::Plan::Project->new(children => [$plan], variables => \@pvars, distinct => $distinct, in_scope_variables => \@vars, ordered => \@porder);
+		return Attean::Plan::Project->new(children => [$plan], variables => \@pvars, distinct => $distinct, ordered => \@porder);
 	}
 
 =item C<< bgp_join_plans( $bgp, $model, \@active_graphs, \@default_graphs, \@interesting_order, \@plansA, \@plansB, ... ) >>
@@ -425,7 +421,7 @@ triple participating in the join.
 		} else {
 			# The empty BGP is a special case -- it results in a single join-identity result
 			my $r		= Attean::Result->new( bindings => {} );
-			my $plan	= Attean::Plan::Table->new( rows => [$r], variables => [], distinct => 1, in_scope_variables => [], ordered => [] );
+			my $plan	= Attean::Plan::Table->new( rows => [$r], variables => [], distinct => 1, ordered => [] );
 			return $plan;
 		}
 	}
@@ -616,24 +612,24 @@ sub-plan participating in the join.
 				my @join_vars	= keys %join_vars;
 				
 				if ($left) {
-					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], left => 1, expression => $expr, join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => $lhs->ordered));
+					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], left => 1, expression => $expr, join_variables => \@join_vars, distinct => 0, ordered => $lhs->ordered));
 					if (scalar(@join_vars) > 0) {
-						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], left => 1, expression => $expr, join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => []));
+						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], left => 1, expression => $expr, join_variables => \@join_vars, distinct => 0, ordered => []));
 					}
 				} elsif ($minus) {
-					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], anti => 1, join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => $lhs->ordered));
+					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], anti => 1, join_variables => \@join_vars, distinct => 0, ordered => $lhs->ordered));
 					if (scalar(@join_vars) > 0) {
-						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], anti => 1, join_variables => \@join_vars, join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => []));
+						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], anti => 1, join_variables => \@join_vars, join_variables => \@join_vars, distinct => 0, ordered => []));
 					}
 				} else {
 					# nested loop joins work in all cases
-					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => $lhs->ordered));
-					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$rhs, $lhs], join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => $rhs->ordered));
+					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], join_variables => \@join_vars, distinct => 0, ordered => $lhs->ordered));
+					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$rhs, $lhs], join_variables => \@join_vars, distinct => 0, ordered => $rhs->ordered));
 			
 					if (scalar(@join_vars) > 0) {
 						# if there's shared variables (hopefully), we can also use a hash join
-						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => []));
-						push(@plans, Attean::Plan::HashJoin->new(children => [$rhs, $lhs], join_variables => \@join_vars, distinct => 0, in_scope_variables => [keys %vars], ordered => []));
+						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], join_variables => \@join_vars, distinct => 0, ordered => []));
+						push(@plans, Attean::Plan::HashJoin->new(children => [$rhs, $lhs], join_variables => \@join_vars, distinct => 0, ordered => []));
 					}
 				}
 			}

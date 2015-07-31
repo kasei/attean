@@ -25,6 +25,7 @@ use Type::Tiny::Role;
 
 package Attean::API::Plan 0.007 {
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ArrayRef CodeRef Str Object InstanceOf Bool Num);
 	use namespace::clean;
 	
@@ -74,6 +75,12 @@ package Attean::API::Plan 0.007 {
 		my $impl	= $self->impl(@_);
 		return $impl->();
 	}
+
+	sub in_scope_variables_union {
+		my @plans	= grep { blessed($_) } @_;
+		my %vars	= map { $_ => 1 } map { @{ $_->in_scope_variables } } @plans;
+		return keys %vars;
+	}
 }
 
 package Attean::API::Plan::Join 0.007 {
@@ -88,6 +95,21 @@ package Attean::API::Plan::Join 0.007 {
 	
 	# if this is a left, outer-join, this is the filter expression that acts as part of the join operation (see the SPARQL semantics for LeftJoin for more details)
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+
+	around 'BUILDARGS' => sub {
+		my $orig		= shift;
+		my $class		= shift;
+		my %args		= @_;
+		my @vars		=  Attean::API::Plan->in_scope_variables_union( @{ $args{children} } );
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= [@vars];
+
+		return $orig->( $class, %args );
+	}
+	
 }
 
 package Attean::API::Planner 0.007 {

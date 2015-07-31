@@ -112,13 +112,16 @@ does_ok($p, 'Attean::API::CostPlanner');
 		ok($plan->distinct);
 	};
 	
+	# TODO: A 1-triple BGP with ASC(-1 * ?s) sorting should result in a Project(Order(Extend(Quad(....)))) pattern
+	# TODO: A 1-triple BGP with ASC(?s) sorting and LIMIT 5 should result in a HeapSort(Quad(....))
+	
 	subtest 'Sorted 1-triple BGP' => sub {
-		note("A 1-triple BGP with ASC(?s) sorting should result in a Project(Order(Extend(Quad(....)))) pattern");
+		note("A 1-triple BGP with ASC(?s) sorting should result in a Order(Quad(....)) pattern");
 		my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 		my $sorted	= order_algebra_by_variables($bgp, 's');
 		my $plan	= $p->plan_for_algebra($sorted, $model, [$graph]);
 		does_ok($plan, 'Attean::API::Plan', 'Sorted 1-triple BGP'); # Sorting introduces a 
-		isa_ok($plan, 'Attean::Plan::Project');
+		isa_ok($plan, 'Attean::Plan::OrderBy');
 		ok($plan->distinct, 'Plan is distinct');
 		
 		my $order	= $plan->ordered;
