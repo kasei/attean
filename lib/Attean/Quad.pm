@@ -22,7 +22,7 @@ It conforms to the L<Attean::API::Quad|Attean::API::Binding> role.
 
 =head1 ROLES
 
-This role consumes L<Attean::API::Quad>.
+This class consumes L<Attean::API::Quad>.
 
 =head1 METHODS
 
