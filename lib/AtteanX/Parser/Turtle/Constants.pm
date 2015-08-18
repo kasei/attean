@@ -7,7 +7,7 @@ AtteanX::Parser::Turtle::Constants - Constant definitions for use in parsing Tur
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle::Constants version 0.007
+This document describes AtteanX::Parser::Turtle::Constants version 0.008
 
 =head1 SYNOPSIS
 
@@ -19,14 +19,14 @@ This document describes AtteanX::Parser::Turtle::Constants version 0.007
 
 =cut
 
-package AtteanX::Parser::Turtle::Constants 0.007 {
+package AtteanX::Parser::Turtle::Constants 0.008 {
 	use v5.14;
 	use warnings;
 
 	our $VERSION;
 	our @EXPORT;
 	BEGIN {
-		$VERSION				= 0.007;
+		$VERSION				= 0.008;
 		@EXPORT = qw(
 			LBRACKET
 			RBRACKET

@@ -5,7 +5,7 @@ use warnings;
 
 =cut
 
-package Attean::TripleModel 0.007 {
+package Attean::TripleModel 0.008 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
 	use Scalar::Util qw(reftype);

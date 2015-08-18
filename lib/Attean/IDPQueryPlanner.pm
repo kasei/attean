@@ -7,7 +7,7 @@ Attean::IDPQueryPlanner - Iterative dynamic programming query planner
 
 =head1 VERSION
 
-This document describes Attean::IDPQueryPlanner version 0.007
+This document describes Attean::IDPQueryPlanner version 0.008
 
 =head1 SYNOPSIS
 
@@ -34,7 +34,7 @@ use Attean::Algebra;
 use Attean::Plan;
 use Attean::Expression;
 
-package Attean::IDPQueryPlanner 0.007 {
+package Attean::IDPQueryPlanner 0.008 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;

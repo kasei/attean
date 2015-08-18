@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.008" ;
-                        doap:created      "2015-XX-XX" ;
+                        doap:created      "2015-08-18" ;
                         ];
         asc:changes     [
                         asc:addition    "Added heap sort plan implementation." ;
