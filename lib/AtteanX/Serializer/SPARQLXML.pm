@@ -129,8 +129,6 @@ and returns the serialization as a UTF-8 encoded byte string.
 		open(my $fh, '>', \$data);
 		$self->serialize_iter_to_io($fh, $iter);
 		close($fh);
-		use Devel::Peek;
-		Dump($data);
 		return $data;
 	}
 
