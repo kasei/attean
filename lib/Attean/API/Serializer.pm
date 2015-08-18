@@ -39,7 +39,7 @@ during serialization.
 Serializes the elements from the L<Attean::API::Iterator> C<< $iterator >> to
 the L<IO::Handle> object C<< $fh >>.
 
-=item C<< serialize_iter_to_bytes( $fh, $iterator ) >>
+=item C<< serialize_iter_to_bytes( $fh ) >>
 
 Serializes the elements from the L<Attean::API::Iterator> C<< $iterator >>
 and returns the serialization as a UTF-8 encoded byte string.
