@@ -56,6 +56,7 @@ our $RUN_UPDATE_TESTS	= 0;
 our $RUN_QUERY_TESTS	= 1;
 our $debug				= 0;
 our $STRICT_APPROVAL	= 0;
+our $USE_IDP_PLANNER	= 1;
 
 require XML::Simple;
 
@@ -382,8 +383,17 @@ sub get_actual_results {
 	my $testns	= 'http://example.com/test-results#';
 	my $rmodel	= memory_model();
 
-	my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $default_graph );
-	my $results	= $e->evaluate($algebra, $default_graph);
+	my $results;
+	if ($USE_IDP_PLANNER) {
+		my $default_graphs	= [$default_graph];
+		my $planner	= Attean::IDPQueryPlanner->new();
+		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
+# 		warn $plan->as_string;
+		$results	= $plan->evaluate($model);
+	} else {
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $default_graph );
+		$results	= $e->evaluate($algebra, $default_graph);
+	}
 	my $count	= 1;
 	
 	$results	= $results->materialize;
