@@ -19,6 +19,9 @@ package AtteanX::RDFQueryTranslator 0.008 {
 	sub translate_query {
 		my $class	= shift;
 		my $query	= shift;
+# 		unless ($self->has_base) {
+# 			$self->base(Attean::IRI->new(value => $query->{base_uri}->uri_value));
+# 		}
 		return unless blessed($query);
 		my $parsed	= $query->{parsed};
 		my $t		= $class->new();

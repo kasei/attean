@@ -388,7 +388,10 @@ sub get_actual_results {
 		my $default_graphs	= [$default_graph];
 		my $planner	= Attean::IDPQueryPlanner->new();
 		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
-# 		warn $plan->as_string;
+		if ($debug) {
+			warn "Walking plan:\n";
+			warn $plan->as_string;
+		}
 		$results	= $plan->evaluate($model);
 	} else {
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $default_graph );

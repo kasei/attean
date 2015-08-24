@@ -202,6 +202,27 @@ package Attean::API::Literal 0.008 {
 		return %args;
 	}
 	
+	sub argument_compatible {
+		my $self	= shift;
+		my @terms	= @_;
+		if (my $l = $self->language) {
+			foreach my $t (@terms) {
+				return 0 unless ($t->does('Attean::API::Literal'));
+				return 0 unless (defined($t->language));
+				return 0 unless ($t->language eq $l);
+			}
+			return 1;
+		} else {
+			my $dt	= $self->datatype->value;
+			foreach my $t (@terms) {
+				return 0 unless ($t->does('Attean::API::Literal'));
+				return 0 unless (blessed($t->datatype));
+				return 0 unless ($t->datatype->value eq $dt);
+			}
+			return 1;
+		}
+	}
+	
 	sub _ntriples_string {
 		my $self	= shift;
 		my $str		= sprintf('"%s"', $self->__ntriples_string);
