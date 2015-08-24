@@ -145,7 +145,17 @@ package Attean::API::AggregateExpression 0.008 {
 	use Moo::Role;
 	requires 'operator';
 	requires 'scalar_vars';
-	with 'Attean::API::DirectedAcyclicGraph';
+	with 'Attean::API::Expression', 'Attean::API::DirectedAcyclicGraph';
+
+	sub as_string {
+		my $self	= shift;
+		my @children	= map { $_->as_string } @{ $self->children };
+		return sprintf("%s(%s)", $self->operator, join(', ', @children));
+	}
+	sub as_sparql {
+		my $self	= shift;
+		return $self->as_string;
+	}
 }
 
 1;

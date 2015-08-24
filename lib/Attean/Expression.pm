@@ -214,6 +214,14 @@ package Attean::AggregateExpression 0.008 {
 	has 'distinct'		=> (is => 'ro', isa => Bool, default => 0);
 	has 'variable'		=> (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	with 'Attean::API::AggregateExpression';
+
+	sub is_stable {
+		my $self	= shift;
+		foreach my $expr (@{ $self->groups }, values %{ $self->aggregates }) {
+			return 0 unless ($expr->is_stable);
+		}
+		return 1;
+	}
 }
 
 package Attean::CastExpression 0.008 {

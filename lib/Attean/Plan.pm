@@ -401,6 +401,7 @@ package Attean::Plan::Extend 0.008 {
 		my $model	= shift;
 		my $expr	= shift;
 		my $r		= shift;
+		Carp::confess unless ($expr->can('operator'));
 		my $op		= $expr->operator;
 
 		state $true			= Attean::Literal->true;
@@ -1275,6 +1276,213 @@ package Attean::Plan::Exists 0.008 {
 			my $term	= ($iter->next) ? Attean::Literal->true : Attean::Literal->false;
 			return Attean::ListIterator->new(values => [$term], item_type => 'Attean::API::Term');
 		}
+	}
+}
+
+=item * L<Attean::Plan::Aggregate>
+
+=cut
+
+package Attean::Plan::Aggregate 0.008 {
+	use Moo;
+	use Encode;
+	use Data::UUID;
+	use URI::Escape;
+	use I18N::LangTags;
+	use POSIX qw(ceil floor);
+	use Digest::SHA;
+	use Digest::MD5 qw(md5_hex);
+	use Scalar::Util qw(blessed);
+	use List::MoreUtils qw(uniq);
+	use Types::Standard qw(ConsumerOf InstanceOf HashRef ArrayRef);
+	use namespace::clean;
+
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	has 'aggregates' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
+	has 'groups' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']], required => 1);
+	
+	sub plan_as_string {
+		my $self	= shift;
+		my @astrings	= map { sprintf('?%s ← %s', $_, $self->aggregates->{$_}->as_string) } keys %{ $self->aggregates };
+		my @gstrings	= map { sprintf('%s', $_->as_string) } @{ $self->groups };
+		return sprintf('Aggregate { %s } Groups { %s }', join(', ', @astrings), join(', ', @gstrings));
+	}
+	sub tree_attributes { return qw(aggregates groups) };
+	
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		my $aggs		= $args{ aggregates };
+		my @vars		= map { @{ $_->in_scope_variables } } @{ $args{ children } };
+		my @evars		= (@vars, keys %$aggs);
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= [@evars];
+		return $class->SUPER::BUILDARGS(%args);
+	}
+	
+	sub evaluate_aggregate {
+		my $self	= shift;
+		my $model	= shift;
+		my $expr	= shift;
+		my $rows	= shift;
+		my $op		= $expr->operator;
+		my ($e)		= @{ $expr->children };
+# 		my @children	= map { Attean::Plan::Extend->evaluate_expression($model, $_, $r) } @{ $expr->children };
+# 		warn "$op — " . join(' ', map { $_->as_string } @children);
+		if ($op eq 'COUNT') {
+			my $count	= 0;
+			foreach my $r (@$rows) {
+				$count++;
+			}
+			return Attean::Literal->new(value => $count, datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+		} elsif ($op eq 'SUM') {
+			my @cmp;
+			my @terms;
+			foreach my $r (@$rows) {
+				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+				if ($term->does('Attean::API::NumericLiteral')) {
+					push(@terms, $term);
+				}
+			}
+			my $lhs	= shift(@terms);
+			while (my $rhs = shift(@terms)) {
+				my $type	= $lhs->binary_promotion_type($rhs, '+');
+				my ($lv, $rv)	= map { $_->numeric_value } ($lhs, $rhs);
+				$lhs	= Attean::Literal->new(value => ($lv + $rv), datatype => $type);
+			}
+			return $lhs;
+		} elsif ($op eq 'AVG') {
+			my @cmp;
+			my $count	= 0;
+			my $sum		= 0;
+			my $all_ints	= 1;
+			foreach my $r (@$rows) {
+				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+				if ($term->does('Attean::API::NumericLiteral')) {
+					$count++;
+					$all_ints	= 0 unless ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#integer');
+					$sum	+= $term->numeric_value;
+				}
+			}
+			my $value	= $sum / $count;
+			my $type	= $all_ints ? 'decimal' : 'double';
+			return Attean::Literal->new(value => $value, datatype => "http://www.w3.org/2001/XMLSchema#$type");
+		} elsif ($op eq 'SAMPLE') {
+			foreach my $r (@$rows) {
+				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+				return $term if (blessed($term));
+			}
+		} elsif ($op =~ /^(MIN|MAX)$/) {
+			my @cmp;
+			foreach my $r (@$rows) {
+				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+				push(@cmp, $term);
+			}
+			@cmp	= sort { $a->compare($b) } @cmp;
+			return ($op eq 'MIN') ? shift(@cmp) : pop(@cmp);
+		} elsif ($op eq 'GROUP_CONCAT') {
+			my @values;
+			foreach my $r (@$rows) {
+				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+				push(@values, $term->value);
+			}
+			return Attean::Literal->new(value => join(' ', @values), datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+		}
+		die "$op not implemented";
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		
+		my %aggs	= %{ $self->aggregates };
+		my @groups	= @{ $self->groups };
+		my $group_key	= sub {
+			my $r	= shift;
+			my @components;
+			foreach my $g (@groups) {
+				my $value	= eval { Attean::Plan::Extend->evaluate_expression($model, $g, $r) };
+				my $key		= blessed($value) ? $value->as_string : '';
+				push(@components, $key);
+			}
+			my $group	= join('|', @components);
+			return $group;
+		};
+		
+		
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my %row_groups;
+		return sub {
+			my $iter	= $impl->();
+			while (my $r = $iter->next) {
+				my $group	= $group_key->($r);
+				push(@{ $row_groups{ $group } }, $r);
+			}
+			my @group_keys	= keys %row_groups;
+			my @results;
+			foreach my $group (@group_keys) {
+				my $rows	= $row_groups{$group};
+
+# 				warn "GROUP: $group\n";
+# 				foreach my $r (@{ $rows }) {
+# 					warn "- " . $r->as_string;
+# 				}
+# 				warn '------------';
+				
+				my %row;
+				foreach my $g (@groups) {
+					if ($g->isa('Attean::ValueExpression')) {
+						my $value	= $g->value;
+						if ($value->isa('Attean::Variable')) {
+							my $var	= $value->value;
+							$row{$var}	= Attean::Plan::Extend->evaluate_expression($model, $g, $rows->[0]);
+						}
+					}
+# 					warn $g;
+				}
+				foreach my $var (keys %aggs) {
+					my $expr	= $aggs{$var};
+					my $value	= $self->evaluate_aggregate($model, $expr, $rows);
+					$row{$var}	= $value;
+				}
+				my $result	= Attean::Result->new( bindings => \%row );
+# 				warn '################ ' . $result->as_string;
+				push(@results, $result);
+			}
+			
+			return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
+# 			return Attean::CodeIterator->new(
+# 				item_type => 'Attean::API::Result',
+# 				generator => sub {
+# 					my $group	= shift(@groups);
+# 					my $rows	= $groups{$group}{rows};
+# 					ROW: while (my $r = $iter->next) {
+# 						my %row;
+# # 						warn 'ROW-------------------------------';
+# # 						my %row	= map { $_ => $r->value($_) } $r->variables;
+# # 						foreach my $var (keys %exprs) {
+# # 							my $expr	= $exprs{$var};
+# # # 							warn "$var => "  . $expr->as_string;
+# # 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
+# # 							warn $@ if ($@);
+# # 							if (blessed($term)) {
+# # # 								warn "---> " . Dumper($term);
+# # 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
+# # 									next ROW;
+# # 								}
+# # 					
+# # 								$row{ $var }	= $term;
+# # 							}
+# # 						}
+# 						return Attean::Result->new( bindings => \%row );
+# 					}
+# 					return;
+# 				}
+# 			);
+		};
 	}
 }
 

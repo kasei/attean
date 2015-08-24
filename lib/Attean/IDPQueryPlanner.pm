@@ -325,6 +325,20 @@ the supplied C<< $active_graph >>.
 				push(@plans, $extend);
 			}
 			return @plans;
+		} elsif ($algebra->isa('Attean::Algebra::Group')) {
+			my $aggs	= $algebra->aggregates;
+			my $groups	= $algebra->groupby;
+			my %exprs;
+			foreach my $expr (@$aggs) {
+				my $var	= $expr->variable->value;
+				$exprs{$var}	= $expr;
+			}
+			my @plans;
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+				my $extend		= Attean::Plan::Aggregate->new(children => [$plan], aggregates => \%exprs, groups => $groups, distinct => 0, ordered => []);
+				push(@plans, $extend);
+			}
+			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
