@@ -1357,19 +1357,26 @@ package Attean::Plan::Aggregate 0.008 {
 		} elsif ($op eq 'AVG') {
 			my @cmp;
 			my $count	= 0;
-			my $sum		= 0;
 			my $all_ints	= 1;
+			my @terms;
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
 				if ($term->does('Attean::API::NumericLiteral')) {
+					push(@terms, $term);
 					$count++;
-					$all_ints	= 0 unless ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#integer');
-					$sum	+= $term->numeric_value;
 				}
 			}
-			my $value	= $sum / $count;
-			my $type	= $all_ints ? 'decimal' : 'double';
-			return Attean::Literal->new(value => $value, datatype => "http://www.w3.org/2001/XMLSchema#$type");
+			my $lhs	= shift(@terms);
+			while (my $rhs = shift(@terms)) {
+				my $type	= $lhs->binary_promotion_type($rhs, '+');
+				my ($lv, $rv)	= map { $_->numeric_value } ($lhs, $rhs);
+				$lhs	= Attean::Literal->new(value => ($lv + $rv), datatype => $type);
+			}
+			
+			my $rhs			= Attean::Literal->new(value => $count, datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+			my ($lv, $rv)	= map { $_->numeric_value } ($lhs, $rhs);
+			my $type	= $lhs->binary_promotion_type($rhs, '/');
+			return Attean::Literal->new(value => ($lv / $rv), datatype => $type);
 		} elsif ($op eq 'SAMPLE') {
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
@@ -1384,12 +1391,14 @@ package Attean::Plan::Aggregate 0.008 {
 			@cmp	= sort { $a->compare($b) } @cmp;
 			return ($op eq 'MIN') ? shift(@cmp) : pop(@cmp);
 		} elsif ($op eq 'GROUP_CONCAT') {
+			my $sep	= $expr->scalar_vars->{seperator} // ' ';
 			my @values;
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
 				push(@values, $term->value);
 			}
-			return Attean::Literal->new(value => join(' ', @values), datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+			my $string	= join($sep, @values);
+			return Attean::Literal->new(value => $string, datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 		}
 		die "$op not implemented";
 	}
