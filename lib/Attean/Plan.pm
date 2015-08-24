@@ -480,6 +480,30 @@ package Attean::Plan::Extend 0.008 {
 			die "Expression evaluation unimplemented: " . $expr->as_string;
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
 			my $func	= $expr->operator;
+			if ($func eq 'IF') {
+				my ($check, @children)	= @{ $expr->children };
+				my ($term)		= eval { $self->evaluate_expression($model, $check, $r) };
+# 				warn $@ if $@;
+				if (blessed($term) and $term->ebv) {
+					return $self->evaluate_expression($model, $children[0], $r);
+				} else {
+					return $self->evaluate_expression($model, $children[1], $r);
+				}
+			} elsif ($func eq 'COALESCE') {
+# 				warn "COALESCE: . " . $r->as_string . "\n";
+				foreach my $child (@{ $expr->children }) {
+# 					warn '- ' . $child->as_string . "\n";
+					my $term	= eval { $self->evaluate_expression($model, $child, $r) };
+# 					warn $@ if $@;
+					if (blessed($term)) {
+# 						warn '    returning ' . $term->as_string . "\n";
+						return $term;
+					}
+				}
+# 				warn "    no value\n";
+				return;
+			}
+			
 			my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 			if ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC)$/) {
 				my $role	= "Attean::API::$type_roles->{$1}";
@@ -487,7 +511,8 @@ package Attean::Plan::Extend 0.008 {
 				my $ok		= (blessed($t) and $t->does($role));
 				return $ok ? $true : $false;
 			} elsif ($func eq 'REGEX') {
-				my ($string, $pattern, $flags)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($string, $pattern, $flags)	= @terms;
+# 				my ($string, $pattern, $flags)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				# TODO: ensure that $string is a literal
 				($string, $pattern, $flags)	= map { blessed($_) ? $_->value : '' } ($string, $pattern, $flags);
 				my $re;
@@ -500,32 +525,17 @@ package Attean::Plan::Extend 0.008 {
 			} elsif ($func =~ /^(NOT)?IN$/) {
 				my $ok			= ($func eq 'IN') ? $true : $false;
 				my $notok		= ($func eq 'IN') ? $false : $true;
-				my @children	= @{ $expr->children };
-				my ($term)		= $self->evaluate_expression($model, shift(@children), $r);
-				foreach my $child (@{ $expr->children }) {
-					my $value	= $self->evaluate_expression($model, $child, $r);
+# 				my @children	= @{ $expr->children };
+				my ($term, @children)	= @terms;
+# 				my ($term)		= $self->evaluate_expression($model, shift(@children), $r);
+# 				foreach my $child (@{ $expr->children }) {
+				foreach my $value (@children) {
+# 					my $value	= $self->evaluate_expression($model, $child, $r);
 					if ($term->equals($value)) {
 						return $ok;
 					}
 				}
 				return $notok;
-			} elsif ($func eq 'EXISTS') {
-				warn Dumper($func);
-			} elsif ($func eq 'IF') {
-				my ($check, @children)	= @{ $expr->children };
-				my ($term)		= eval { $self->evaluate_expression($model, $check, $r) };
-# 				warn $@ if $@;
-				if (blessed($term) and $term->ebv) {
-					return $self->evaluate_expression($model, $children[0], $r);
-				} else {
-					return $self->evaluate_expression($model, $children[1], $r);
-				}
-			} elsif ($func eq 'COALESCE') {
-				foreach my $child (@{ $expr->children }) {
-					my $term	= $self->evaluate_expression($model, $child, $r);
-					return $term if (blessed($term));
-				}
-				return;
 			} elsif ($func eq 'NOW') {
 				my $dt		= DateTime->now;
 				my $value	= DateTime::Format::W3CDTF->new->format_datetime( $dt );
@@ -609,17 +619,25 @@ package Attean::Plan::Extend 0.008 {
 				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				return Attean::Literal->new(value => uri_escape_utf8($string->value));
 			} elsif ($func =~ /^[LU]CASE$/) {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value		= ($func eq 'LCASE') ? lc($string->value) : uc($string->value);
-				return Attean::Literal->new(value => $value);
+				my $term		= shift(@terms);
+				my $value		= ($func eq 'LCASE') ? lc($term->value) : uc($term->value);
+				return Attean::Literal->new(value => $value, $term->construct_args);
 			} elsif ($func eq 'STRLANG') {
-				my ($term, $lang)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($term, $lang)	= @terms;
+# 				my ($term, $lang)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				return Attean::Literal->new(value => $term->value, langauge => $lang->value);
 			} elsif ($func eq 'STRDT') {
-				my ($term, $dt)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($term, $dt)	= @terms;
+				die unless ($term->does('Attean::API::Literal'));
+				die unless ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				die if ($term->language);
+# 				my ($term, $dt)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				return Attean::Literal->new(value => $term->value, datatype => $dt->value);
 			} elsif ($func eq 'REPLACE') {
-				my ($term, $pat, $rep)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($term, $pat, $rep)	= @terms;
+				die unless ($term->does('Attean::API::Literal'));
+				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+# 				my ($term, $pat, $rep)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				my $value	= $term->value;
 				my $pattern	= $pat->value;
 				my $replace	= $rep->value;
@@ -633,7 +651,7 @@ package Attean::Plan::Extend 0.008 {
 				no warnings 'uninitialized';
 				$value	=~ s/$pattern/"$replace"/eeg;
 			# 	warn "==> " . Dumper($value);
-				return Attean::Literal->new($value, $term->construct_args);
+				return Attean::Literal->new(value => $value, $term->construct_args);
 			} elsif ($func eq 'SUBSTR') {
 				my ($term, @args)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				my $value	= $term->value;
@@ -665,7 +683,10 @@ package Attean::Plan::Extend 0.008 {
 				my ($string, $pat)	= map { $_->value } @terms;
 				return (substr($string, length($string) - length($pat)) eq $pat) ? $true : $false;
 			} elsif ($func eq 'STRAFTER') {
-				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($term, $pat)	= @terms;
+# 				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				die unless ($term->does('Attean::API::Literal'));
+				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
 				# TODO: check that the terms are argument compatible
 				my $value	= $term->value;
 				my $match	= $pat->value;
@@ -676,7 +697,10 @@ package Attean::Plan::Extend 0.008 {
 					return Attean::Literal->new(value => substr($value, $i+length($match)), $term->construct_args);
 				}
 			} elsif ($func eq 'STRBEFORE') {
-				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($term, $pat)	= @terms;
+# 				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				die unless ($term->does('Attean::API::Literal'));
+				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
 				# TODO: check that the terms are argument compatible
 				my $value	= $term->value;
 				my $match	= $pat->value;
@@ -742,7 +766,7 @@ package Attean::Plan::Extend 0.008 {
 				my $dt		= $term->datetime;
 				my $tz		= $dt->time_zone;
 				return Attean::Literal->new(value =>'') if ($tz->is_floating);
-				return RDF::Query::Node::Literal->new('Z') if ($tz->is_utc);
+				return Attean::Literal->new('Z') if ($tz->is_utc);
 				my $offset	= $tz->offset_for_datetime( $dt );
 				my $hours	= 0;
 				my $minutes	= 0;
@@ -794,10 +818,10 @@ package Attean::Plan::Extend 0.008 {
 							my $expr	= $exprs{$var};
 # 							warn "$var => "  . $expr->as_string;
 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-# 							warn $@ if ($@);
+							warn $@ if ($@);
 							if (blessed($term)) {
 # 								warn "---> " . Dumper($term);
-								if ($term and $row{ $var } and $term->as_string ne $row{ $var }->as_string) {
+								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
 									next ROW;
 								}
 					
