@@ -624,7 +624,7 @@ package Attean::Algebra::Group 0.008 {
 			my $v	= $a->variable->as_sparql;
 			my $op	= $a->operator;
 			my $d	= $a->distinct ? "DISTINCT " : '';
-			my ($e)	= map { $_->value->as_sparql } @{ $a->children };
+			my ($e)	= map { $_->as_sparql } @{ $a->children };
 			push(@aggs, "$v ← ${op}($d$e)");
 		}
 		return sprintf('Group { %s } aggregate { %s }', join(', ', map { $_->as_sparql() } @$groups), join(', ', @aggs));
