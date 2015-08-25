@@ -205,22 +205,29 @@ package Attean::API::Literal 0.008 {
 	sub argument_compatible {
 		my $self	= shift;
 		my @terms	= @_;
+		
 		if (my $l = $self->language) {
 			foreach my $t (@terms) {
 				return 0 unless ($t->does('Attean::API::Literal'));
-				return 0 unless (defined($t->language));
-				return 0 unless ($t->language eq $l);
+				if ($t->language) {
+					return 0 unless (defined($t->language));
+					return 0 unless ($t->language eq $l);
+				} else {
+					return 0 unless ($t->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				}
 			}
 			return 1;
-		} else {
-			my $dt	= $self->datatype->value;
+		} elsif ($self->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string') {
 			foreach my $t (@terms) {
 				return 0 unless ($t->does('Attean::API::Literal'));
+				return 0 if ($t->langauge);
 				return 0 unless (blessed($t->datatype));
-				return 0 unless ($t->datatype->value eq $dt);
+				return 0 unless ($t->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
 			}
 			return 1;
 		}
+		
+		return 0;
 	}
 	
 	sub _ntriples_string {
