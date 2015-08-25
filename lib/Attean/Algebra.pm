@@ -358,7 +358,7 @@ package Attean::Algebra::Project 0.008 {
 	sub in_scope_variables {
 		my $self	= shift;
 		my ($child)	= @{ $self->children };
-		my $set		= $child->in_scope_variables;
+		my $set		= Set::Scalar->new( $child->in_scope_variables );
 		my $proj	= Set::Scalar->new( map { $_->value } @{ $self->variables } );
 		return $set->intersection($proj);
 	}
