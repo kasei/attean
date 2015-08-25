@@ -632,7 +632,7 @@ package Attean::Plan::Extend 0.008 {
 			} elsif ($func eq 'STRLANG') {
 				my ($term, $lang)	= @terms;
 # 				my ($term, $lang)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return Attean::Literal->new(value => $term->value, langauge => $lang->value);
+				return Attean::Literal->new(value => $term->value, language => $lang->value);
 			} elsif ($func eq 'STRDT') {
 				my ($term, $dt)	= @terms;
 				die unless ($term->does('Attean::API::Literal'));
@@ -691,12 +691,9 @@ package Attean::Plan::Extend 0.008 {
 				return (substr($string, length($string) - length($pat)) eq $pat) ? $true : $false;
 			} elsif ($func eq 'STRAFTER') {
 				my ($term, $pat)	= @terms;
-				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				die "STRAFTER called without a literal" unless ($term->does('Attean::API::Literal'));
+				die "STRAFTER called without a plain literal" unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
 				die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
-				if ($term->as_string eq '"abc"') {
-					warn Dumper($term, $pat);
-				}
 				# TODO: check that the terms are argument compatible
 				my $value	= $term->value;
 				my $match	= $pat->value;
@@ -708,8 +705,8 @@ package Attean::Plan::Extend 0.008 {
 				}
 			} elsif ($func eq 'STRBEFORE') {
 				my ($term, $pat)	= @terms;
-				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				die "STRBEFORE called without a literal" unless ($term->does('Attean::API::Literal'));
+				die "STRBEFORE called without a plain literal" unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
 				die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
 				# TODO: check that the terms are argument compatible
 				my $value	= $term->value;
