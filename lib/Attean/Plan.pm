@@ -485,17 +485,12 @@ package Attean::Plan::Extend 0.008 {
 			my $func	= $expr->operator;
 			if ($func eq 'IF') {
 				my ($check, @children)	= @{ $expr->children };
-				my ($term)		= eval { $self->evaluate_expression($model, $check, $r) };
-# 				warn $@ if $@;
+				my ($term)		= $self->evaluate_expression($model, $check, $r);
+				warn $@ if $@;
 				my $expr	= $children[ (blessed($term) and $term->ebv) ? 0 : 1 ];
 				my $value	= $self->evaluate_expression($model, $expr, $r);
 # 				warn '############# ' . $value->as_string;
 				return $value;
-# 				if (blessed($term) and $term->ebv) {
-# 					return $self->evaluate_expression($model, $children[0], $r);
-# 				} else {
-# 					return $self->evaluate_expression($model, $children[1], $r);
-# 				}
 			} elsif ($func eq 'COALESCE') {
 # 				warn "COALESCE: . " . $r->as_string . "\n";
 				foreach my $child (@{ $expr->children }) {
