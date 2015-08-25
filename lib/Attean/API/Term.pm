@@ -220,7 +220,7 @@ package Attean::API::Literal 0.008 {
 		} elsif ($self->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string') {
 			foreach my $t (@terms) {
 				return 0 unless ($t->does('Attean::API::Literal'));
-				return 0 if ($t->langauge);
+				return 0 if ($t->language);
 				return 0 unless (blessed($t->datatype));
 				return 0 unless ($t->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
 			}
