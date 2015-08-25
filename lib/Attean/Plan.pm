@@ -409,7 +409,9 @@ package Attean::Plan::Extend 0.008 {
 		state $type_roles	= { qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral) };
 		state $type_classes	= { qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal) };
 		
-		if ($expr->isa('Attean::ValueExpression')) {
+		if ($expr->isa('Attean::CastExpression')) {
+			warn Dumper($expr);
+		} elsif ($expr->isa('Attean::ValueExpression')) {
 			my $node	= $expr->value;
 			if ($node->does('Attean::API::Variable')) {
 				return $r->value($node->value);
@@ -485,17 +487,21 @@ package Attean::Plan::Extend 0.008 {
 				my ($check, @children)	= @{ $expr->children };
 				my ($term)		= eval { $self->evaluate_expression($model, $check, $r) };
 # 				warn $@ if $@;
-				if (blessed($term) and $term->ebv) {
-					return $self->evaluate_expression($model, $children[0], $r);
-				} else {
-					return $self->evaluate_expression($model, $children[1], $r);
-				}
+				my $expr	= $children[ (blessed($term) and $term->ebv) ? 0 : 1 ];
+				my $value	= $self->evaluate_expression($model, $expr, $r);
+# 				warn '############# ' . $value->as_string;
+				return $value;
+# 				if (blessed($term) and $term->ebv) {
+# 					return $self->evaluate_expression($model, $children[0], $r);
+# 				} else {
+# 					return $self->evaluate_expression($model, $children[1], $r);
+# 				}
 			} elsif ($func eq 'COALESCE') {
 # 				warn "COALESCE: . " . $r->as_string . "\n";
 				foreach my $child (@{ $expr->children }) {
 # 					warn '- ' . $child->as_string . "\n";
 					my $term	= eval { $self->evaluate_expression($model, $child, $r) };
-# 					warn $@ if $@;
+					warn $@ if $@;
 					if (blessed($term)) {
 # 						warn '    returning ' . $term->as_string . "\n";
 						return $term;
@@ -685,9 +691,12 @@ package Attean::Plan::Extend 0.008 {
 				return (substr($string, length($string) - length($pat)) eq $pat) ? $true : $false;
 			} elsif ($func eq 'STRAFTER') {
 				my ($term, $pat)	= @terms;
-# 				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				die unless ($term->does('Attean::API::Literal'));
 				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
+				if ($term->as_string eq '"abc"') {
+					warn Dumper($term, $pat);
+				}
 				# TODO: check that the terms are argument compatible
 				my $value	= $term->value;
 				my $match	= $pat->value;
@@ -699,9 +708,9 @@ package Attean::Plan::Extend 0.008 {
 				}
 			} elsif ($func eq 'STRBEFORE') {
 				my ($term, $pat)	= @terms;
-# 				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				die unless ($term->does('Attean::API::Literal'));
 				die unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
 				# TODO: check that the terms are argument compatible
 				my $value	= $term->value;
 				my $match	= $pat->value;
@@ -813,15 +822,15 @@ package Attean::Plan::Extend 0.008 {
 				item_type => 'Attean::API::Result',
 				generator => sub {
 					ROW: while (my $r = $iter->next) {
-# 						warn 'ROW-------------------------------';
+# 						warn 'Extend Row -------------------------------> ' . $r->as_string;
 						my %row	= map { $_ => $r->value($_) } $r->variables;
 						foreach my $var (keys %exprs) {
 							my $expr	= $exprs{$var};
-# 							warn "$var => "  . $expr->as_string;
+# 							warn "-> $var => "  . $expr->as_string;
 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-							warn $@ if ($@);
+# 							warn $@ if ($@);
 							if (blessed($term)) {
-# 								warn "---> " . Dumper($term);
+# 								warn "===> " . $term->as_string;
 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
 									next ROW;
 								}
@@ -1361,10 +1370,9 @@ package Attean::Plan::Aggregate 0.008 {
 			my @terms;
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
-				if ($term->does('Attean::API::NumericLiteral')) {
-					push(@terms, $term);
-					$count++;
-				}
+				die unless ($term->does('Attean::API::NumericLiteral'));
+				push(@terms, $term);
+				$count++;
 			}
 			my $lhs	= shift(@terms);
 			while (my $rhs = shift(@terms)) {
@@ -1398,7 +1406,7 @@ package Attean::Plan::Aggregate 0.008 {
 				push(@values, $term->value);
 			}
 			my $string	= join($sep, @values);
-			return Attean::Literal->new(value => $string, datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+			return Attean::Literal->new(value => $string);
 		}
 		die "$op not implemented";
 	}
@@ -1409,7 +1417,24 @@ package Attean::Plan::Aggregate 0.008 {
 		
 		my %aggs	= %{ $self->aggregates };
 		my @groups	= @{ $self->groups };
-		my $group_key	= sub {
+		my $group_template_generator	= sub {
+			my $r	= shift;
+			my %components;
+			foreach my $g (@groups) {
+				if ($g->isa('Attean::ValueExpression')) {
+					my $value	= $g->value;
+					if ($value->isa('Attean::Variable')) {
+						my $var	= $value->value;
+						my $value	= eval { Attean::Plan::Extend->evaluate_expression($model, $g, $r) };
+						if (blessed($value)) {
+							$components{$var}	= $value;
+						}
+					}
+				}
+			}
+			return %components;
+		};
+		my $group_key_generator	= sub {
 			my $r	= shift;
 			my @components;
 			foreach my $g (@groups) {
@@ -1424,73 +1449,33 @@ package Attean::Plan::Aggregate 0.008 {
 		
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		my %row_groups;
+		my %group_templates;
 		return sub {
 			my $iter	= $impl->();
 			while (my $r = $iter->next) {
-				my $group	= $group_key->($r);
-				push(@{ $row_groups{ $group } }, $r);
+				my $group_key	= $group_key_generator->($r);
+				push(@{ $row_groups{ $group_key } }, $r);
+				unless (exists $group_templates{ $group_key }) {
+					$group_templates{ $group_key }	= { $group_template_generator->($r) };
+				}
 			}
 			my @group_keys	= keys %row_groups;
 			my @results;
 			foreach my $group (@group_keys) {
+				my %row	= %{ $group_templates{ $group } };
 				my $rows	= $row_groups{$group};
-
-# 				warn "GROUP: $group\n";
-# 				foreach my $r (@{ $rows }) {
-# 					warn "- " . $r->as_string;
-# 				}
-# 				warn '------------';
-				
-				my %row;
-				foreach my $g (@groups) {
-					if ($g->isa('Attean::ValueExpression')) {
-						my $value	= $g->value;
-						if ($value->isa('Attean::Variable')) {
-							my $var	= $value->value;
-							$row{$var}	= Attean::Plan::Extend->evaluate_expression($model, $g, $rows->[0]);
-						}
-					}
-# 					warn $g;
-				}
 				foreach my $var (keys %aggs) {
 					my $expr	= $aggs{$var};
-					my $value	= $self->evaluate_aggregate($model, $expr, $rows);
-					$row{$var}	= $value;
+					my $value	= eval { $self->evaluate_aggregate($model, $expr, $rows) };
+					if ($value) {
+						$row{$var}	= $value;
+					}
 				}
 				my $result	= Attean::Result->new( bindings => \%row );
-# 				warn '################ ' . $result->as_string;
 				push(@results, $result);
 			}
 			
 			return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
-# 			return Attean::CodeIterator->new(
-# 				item_type => 'Attean::API::Result',
-# 				generator => sub {
-# 					my $group	= shift(@groups);
-# 					my $rows	= $groups{$group}{rows};
-# 					ROW: while (my $r = $iter->next) {
-# 						my %row;
-# # 						warn 'ROW-------------------------------';
-# # 						my %row	= map { $_ => $r->value($_) } $r->variables;
-# # 						foreach my $var (keys %exprs) {
-# # 							my $expr	= $exprs{$var};
-# # # 							warn "$var => "  . $expr->as_string;
-# # 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-# # 							warn $@ if ($@);
-# # 							if (blessed($term)) {
-# # # 								warn "---> " . Dumper($term);
-# # 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
-# # 									next ROW;
-# # 								}
-# # 					
-# # 								$row{ $var }	= $term;
-# # 							}
-# # 						}
-# 						return Attean::Result->new( bindings => \%row );
-# 					}
-# 					return;
-# 				}
-# 			);
 		};
 	}
 }
