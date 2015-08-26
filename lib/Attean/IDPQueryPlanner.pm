@@ -388,11 +388,14 @@ the supplied C<< $active_graph >>.
 			push(@paths, $self->simplify_path($s, $lhs, $jvar));
 			push(@paths, $self->simplify_path($jvar, $rhs, $o));
 			return @paths;
+		} elsif ($path->isa('Attean::Algebra::InversePath')) {
+			my ($ipath)	= @{ $path->children };
+			return $self->simplify_path($o, $ipath, $s);
 		} elsif ($path->isa('Attean::Algebra::PredicatePath')) {
 			my $pred	= $path->predicate;
 			return Attean::TriplePattern->new($s, $pred, $o);
 		} else {
-			die "Cannot convert property path: " . $path->as_string;
+			die "Cannot convert " . ref($path) . " property path: " . $path->as_string;
 		}
 	}
 	
