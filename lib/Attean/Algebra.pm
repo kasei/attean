@@ -582,6 +582,12 @@ package Attean::Algebra::Path 0.008 {
 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	sub tree_attributes { return qw(subject path object) };
+
+	sub algebra_as_string {
+		my $self	= shift;
+		return 'Path { ' . join(', ', map { $_->as_string } map { $self->$_() } qw(subject path object)) . ' }';
+	}
+
 	sub as_sparql {
 		my $self	= shift;
 		my %args	= @_;

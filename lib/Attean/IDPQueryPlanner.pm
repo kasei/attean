@@ -345,11 +345,55 @@ the supplied C<< $active_graph >>.
 				return Attean::Plan::Exists->new(children => [$plan], distinct => 1, ordered => []);
 			}
 			return @plans;
-		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Path')) {
+			my $s		= $algebra->subject;
+			my $path	= $algebra->path;
+			my $o		= $algebra->object;
+			my @algebra	= $self->simplify_path($s, $path, $o);
+			my @triples;
+			my @join;
+			while (my $pa = shift(@algebra)) {
+				if ($pa->isa('Attean::TriplePattern')) {
+					push(@triples, $pa);
+				} else {
+					if (scalar(@triples)) {
+						push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
+						@triples	= ();
+					}
+					push(@join, $pa);
+				}
+			}
+			if (scalar(@triples)) {
+				push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
+			}
+			
+			return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
+				[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
+			} @join);
+		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		}
-		die "Unimplemented algebra evaluation for: $algebra";
+		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
+	}
+	
+	sub simplify_path {
+		my $self	= shift;
+		my $s		= shift;
+		my $path	= shift;
+		my $o		= shift;
+		if ($path->isa('Attean::Algebra::SequencePath')) {
+			my $jvar		= variable($self->new_temporary('pp'));
+			my ($lhs, $rhs)	= @{ $path->children };
+			my @paths;
+			push(@paths, $self->simplify_path($s, $lhs, $jvar));
+			push(@paths, $self->simplify_path($jvar, $rhs, $o));
+			return @paths;
+		} elsif ($path->isa('Attean::Algebra::PredicatePath')) {
+			my $pred	= $path->predicate;
+			return Attean::TriplePattern->new($s, $pred, $o);
+		} else {
+			die "Cannot convert property path: " . $path->as_string;
+		}
 	}
 	
 	sub new_projection {
