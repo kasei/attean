@@ -626,7 +626,9 @@ package Attean::Plan::Extend 0.008 {
 				return Attean::Literal->new(value => $value, $term->construct_args);
 			} elsif ($func eq 'STRLANG') {
 				my ($term, $lang)	= @terms;
-# 				my ($term, $lang)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				die unless ($term->does('Attean::API::Literal'));
+				die unless ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+				die if ($term->language);
 				return Attean::Literal->new(value => $term->value, language => $lang->value);
 			} elsif ($func eq 'STRDT') {
 				my ($term, $dt)	= @terms;
@@ -795,7 +797,20 @@ package Attean::Plan::Extend 0.008 {
 			} elsif ($func eq 'STRUUID') {
 				my $u		= Data::UUID->new();
 				return Attean::Literal->new(value => $u->to_string( $u->create() ));
+			} elsif ($func eq 'BNODE') {
+				if (scalar(@{ $expr->children })) {
+					my $string	= $self->evaluate_expression($model, $expr->children->[0], $r);
+					my $value	= $string->value;
+					my $b		= (exists $r->eval_stash->{'sparql:bnode'}{$value})
+								? $r->eval_stash->{'sparql:bnode'}{$value}
+								: Attean::Blank->new();
+					$r->eval_stash->{'sparql:bnode'}{$value}	= $b;
+					return $b;
+				} else {
+					return Attean::Blank->new();
+				}
 			} else {
+				warn "Expression evaluation unimplemented: " . $expr->as_string;
 				die "Expression evaluation unimplemented: " . $expr->as_string;
 			}
 		} else {
@@ -830,7 +845,7 @@ package Attean::Plan::Extend 0.008 {
 								$row{ $var }	= $term;
 							}
 						}
-						return Attean::Result->new( bindings => \%row );
+						return Attean::Result->new( bindings => \%row, eval_stash => $r->eval_stash );
 					}
 					return;
 				}

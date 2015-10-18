@@ -366,8 +366,18 @@ package Attean::API::Quad 0.008 {
 package Attean::API::Result 0.008 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
+	use Types::Standard qw(HashRef);
 	use namespace::clean;
 	
+	has 'eval_stash' => (is => 'rw', isa => HashRef);
+
+	sub BUILD {
+		my $self	= shift;
+		if (not $self->eval_stash) {
+			$self->eval_stash({});
+		}
+	}
+
 	sub join {
 		my $self	= shift;
 		my $class	= ref($self);

@@ -52,7 +52,8 @@ package Attean::Blank 0.008 {
 			my $uuid	= Data::UUID->new->create_hex;
 			return $class->$orig(value => $uuid);
 		} elsif (scalar(@_) == 1) {
-			return $class->$orig(value => shift);
+			my $value	= shift // '';
+			return $class->$orig(value => $value);
 		}
 		return $class->$orig(@_);
 	};
