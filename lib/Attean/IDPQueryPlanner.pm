@@ -295,8 +295,6 @@ the supplied C<< $active_graph >>.
 				}
 			}
 			
-			
-			
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
 				my $vars	= $plan->in_scope_variables;
@@ -349,31 +347,83 @@ the supplied C<< $active_graph >>.
 			my $s		= $algebra->subject;
 			my $path	= $algebra->path;
 			my $o		= $algebra->object;
-			my @algebra	= $self->simplify_path($s, $path, $o);
-			my @triples;
-			my @join;
-			while (my $pa = shift(@algebra)) {
-				if ($pa->isa('Attean::TriplePattern')) {
-					push(@triples, $pa);
-				} else {
+			my $can_simplify	= 1;
+			$path->walk(prefix => sub {
+				my $node	= shift;
+				if ($node->isa('Attean::Algebra::ZeroOrMorePath') or $node->isa('Attean::Algebra::OneOrMorePath')) {
+					$can_simplify	= 0;
+				}
+			});
+			
+			if ($can_simplify) {
+				my @algebra	= $self->simplify_path($s, $path, $o);
+				my @join;
+				if (scalar(@algebra)) {
+					my @triples;
+					while (my $pa = shift(@algebra)) {
+						if ($pa->isa('Attean::TriplePattern')) {
+							push(@triples, $pa);
+						} else {
+							if (scalar(@triples)) {
+								push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
+								@triples	= ();
+							}
+							push(@join, $pa);
+						}
+					}
 					if (scalar(@triples)) {
 						push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
-						@triples	= ();
 					}
-					push(@join, $pa);
-				}
-			}
-			if (scalar(@triples)) {
-				push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
-			}
 			
-			return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
-				[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
-			} @join);
+					return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
+						[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
+					} @join);
+				} else {
+					die "Cannot simplify property path $path: " . $algebra->as_string;
+				}
+			} else {
+				die "Cannot simplify complex property path $path: " . $algebra->as_string;
+# 				my ($child)	= @{ $path->children };
+# 				my $sb			= variable($self->new_temporary('psb'));
+# 				my $se			= variable($self->new_temporary('pse'));
+# 				my $child_path	= Attean::Algebra::Path->new(subject => $sb, path => $child, object => $se);
+# 				my @plans;
+# 				foreach my $plan ($self->plans_for_algebra($child_path, $model, $active_graphs, $default_graphs, @_)) {
+# 					my $pplan	= Attean::Plan::Path->new(
+# 						children => [$plan],
+# 						step_begin => $sb,
+# 						step_end => $se,
+# 						subject => $s,
+# 						object => $o,
+# 						distinct => 0,
+# 						ordered => []
+# 					);
+# 					push(@plans, $pplan);
+# 				}
+# 				return @plans;
+			}
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
+	}
+	
+	sub _package {
+		my $self	= shift;
+		my @args	= @_;
+		
+		my @bgptriples	= map { @{ $_->triples } } grep { $_->isa('Attean::Algebra::BGP') } @args;
+		my @triples		= grep { $_->isa('Attean::TriplePattern') } @args;
+		my @rest		= grep { not $_->isa('Attean::Algebra::BGP') and not $_->isa('Attean::TriplePattern') } @args;
+		if (scalar(@rest) == 0) {
+			return Attean::Algebra::BGP->new( triples => [@bgptriples, @triples] );
+		} else {
+			my $p	= Attean::Algebra::BGP->new( triples => [@bgptriples, @triples] );
+			while (scalar(@rest) > 0) {
+				$p	= Attean::Algebra::Join->new( children => [$p, shift(@rest)] );
+			}
+			return $p;
+		}
 	}
 	
 	sub simplify_path {
@@ -387,15 +437,30 @@ the supplied C<< $active_graph >>.
 			my @paths;
 			push(@paths, $self->simplify_path($s, $lhs, $jvar));
 			push(@paths, $self->simplify_path($jvar, $rhs, $o));
-			return @paths;
+			return $self->_package(@paths);
 		} elsif ($path->isa('Attean::Algebra::InversePath')) {
 			my ($ipath)	= @{ $path->children };
 			return $self->simplify_path($o, $ipath, $s);
 		} elsif ($path->isa('Attean::Algebra::PredicatePath')) {
 			my $pred	= $path->predicate;
 			return Attean::TriplePattern->new($s, $pred, $o);
+		} elsif ($path->isa('Attean::Algebra::AlternativePath')) {
+			my ($l, $r)	= @{ $path->children };
+			my $la	= $self->_package($self->simplify_path($s, $l, $o));
+			my $ra	= $self->_package($self->simplify_path($s, $r, $o));
+			return Attean::Algebra::Union->new( children => [$la, $ra] );
+		} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
+			my @preds	= @{ $path->predicates };
+			my $pvar	= variable($self->new_temporary('nps'));
+			my $pvar_e	= Attean::ValueExpression->new( value => $pvar );
+			my $t		= Attean::TriplePattern->new($s, $pvar, $o);
+			my @vals	= map { Attean::ValueExpression->new( value => $_ ) } @preds;
+			my $expr	= Attean::FunctionExpression->new( children => [$pvar_e, @vals], operator => 'notin' );
+			my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
+			my $f		= Attean::Algebra::Filter->new( children => [$bgp], expression => $expr );
+			return $f;
 		} else {
-			die "Cannot convert " . ref($path) . " property path: " . $path->as_string;
+			return;
 		}
 	}
 	
