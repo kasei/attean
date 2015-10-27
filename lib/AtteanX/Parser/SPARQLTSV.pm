@@ -27,6 +27,7 @@ package AtteanX::Parser::SPARQLTSV 0.008 {
 	use utf8;
 	use Moo;
 	use Attean;
+	use Encode;
 	use Encode qw(decode);
 	use List::MoreUtils qw(zip);
 	use namespace::clean;
@@ -75,6 +76,10 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		my $parser	= Attean->get_parser('Turtle')->new();
 
 		my $line	= <$fh>;
+		unless (defined($line)) {
+			die "undefined header line in SPARQL/TSV parser";
+		}
+		
 		chomp($line);
 		my @vars;
 		foreach my $v (split("\t", $line)) {
@@ -94,7 +99,8 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				my $string	= $strings[$i];
 				if (length($string)) {
 					my $var	= $vars[$i];
-					my $term	= $parser->parse_term_from_string($string);
+					my $bytes	= encode('UTF-8', $string, Encode::FB_CROAK);
+					my $term	= $parser->parse_term_from_string($bytes);
 					if ($term) {
 						$binding{ $var }	= $term;
 					}
