@@ -1117,13 +1117,13 @@ package Attean::Plan::Project 0.008 {
 		return $class->SUPER::BUILDARGS(%args);
 	}
 	
-	sub BUILD {
-		my $self	= shift;
-		my @vars	= map { $_->value } @{ $self->variables };
-		unless (scalar(@vars)) {
-			Carp::confess "No vars in project?";
-		}
-	}
+# 	sub BUILD {
+# 		my $self	= shift;
+# 		my @vars	= map { $_->value } @{ $self->variables };
+# 		unless (scalar(@vars)) {
+# 			Carp::confess "No vars in project?";
+# 		}
+# 	}
 	
 	sub plan_as_string {
 		my $self	= shift;
