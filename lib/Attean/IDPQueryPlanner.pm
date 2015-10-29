@@ -40,7 +40,8 @@ package Attean::IDPQueryPlanner 0.008 {
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Scalar::Util qw(blessed reftype);
-	use List::Util qw(all any reduce);
+	use List::Util qw(reduce);
+	use List::MoreUtils qw(all any);
 	use Types::Standard qw(Int ConsumerOf InstanceOf);
 	use URI::Escape;
 	use Algorithm::Combinatorics qw(subsets);
@@ -347,66 +348,92 @@ the supplied C<< $active_graph >>.
 			my $s		= $algebra->subject;
 			my $path	= $algebra->path;
 			my $o		= $algebra->object;
-			my $can_simplify	= 1;
-			$path->walk(prefix => sub {
-				my $node	= shift;
-				if ($node->isa('Attean::Algebra::ZeroOrMorePath') or $node->isa('Attean::Algebra::OneOrMorePath')) {
-					$can_simplify	= 0;
-				}
-			});
-			
-			if ($can_simplify) {
-				my @algebra	= $self->simplify_path($s, $path, $o);
-				my @join;
-				if (scalar(@algebra)) {
-					my @triples;
-					while (my $pa = shift(@algebra)) {
-						if ($pa->isa('Attean::TriplePattern')) {
-							push(@triples, $pa);
-						} else {
-							if (scalar(@triples)) {
-								push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
-								@triples	= ();
-							}
-							push(@join, $pa);
-						}
-					}
-					if (scalar(@triples)) {
-						push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
-					}
-			
-					return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
-						[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
-					} @join);
-				} else {
-					die "Cannot simplify property path $path: " . $algebra->as_string;
-				}
-			} else {
-				die "Cannot simplify complex property path $path: " . $algebra->as_string;
-# 				my ($child)	= @{ $path->children };
-# 				my $sb			= variable($self->new_temporary('psb'));
-# 				my $se			= variable($self->new_temporary('pse'));
-# 				my $child_path	= Attean::Algebra::Path->new(subject => $sb, path => $child, object => $se);
-# 				my @plans;
-# 				foreach my $plan ($self->plans_for_algebra($child_path, $model, $active_graphs, $default_graphs, @_)) {
-# 					my $pplan	= Attean::Plan::Path->new(
-# 						children => [$plan],
-# 						step_begin => $sb,
-# 						step_end => $se,
-# 						subject => $s,
-# 						object => $o,
-# 						distinct => 0,
-# 						ordered => []
-# 					);
-# 					push(@plans, $pplan);
+# 			my $can_simplify	= 1;
+# 			$path->walk(prefix => sub {
+# 				my $node	= shift;
+# 				if ($node->isa('Attean::Algebra::ZeroOrMorePath') or $node->isa('Attean::Algebra::OneOrMorePath')) {
+# 					$can_simplify	= 0;
 # 				}
-# 				return @plans;
+# 			});
+			
+			my @algebra	= $self->simplify_path($s, $path, $o);
+			
+			my @join;
+			if (scalar(@algebra)) {
+				my @triples;
+				while (my $pa = shift(@algebra)) {
+					if ($pa->isa('Attean::TriplePattern')) {
+						push(@triples, $pa);
+					} else {
+						if (scalar(@triples)) {
+							push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
+							@triples	= ();
+						}
+						push(@join, $pa);
+					}
+				}
+				if (scalar(@triples)) {
+					push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
+				}
+				
+				return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
+					[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
+				} @join);
+			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
+				my $begin	= variable($self->new_temporary('pp'));
+				my $end		= variable($self->new_temporary('pp'));
+				my $s_var	= $s->does('Attean::API::Variable');
+				my $o_var	= $o->does('Attean::API::Variable');
+				
+				my $child	= $path->children->[0];
+				my $a;
+				if ($s_var and not($o_var)) {
+					my $inv	= Attean::Algebra::InversePath->new( children => [$child] );
+					$a		= Attean::Algebra::Path->new( subject => $end, path => $inv, object => $begin );
+				} else {
+					$a		= Attean::Algebra::Path->new( subject => $begin, path => $child, object => $end );
+				}
+				my @cplans	= $self->plans_for_algebra($a, $model, $active_graphs, $default_graphs, @_);
+				my @plans;
+				foreach my $cplan (@cplans) {
+					my $plan	= Attean::Plan::ALPPath->new(
+						subject => $s,
+						children => [$cplan],
+						object => $o,
+						graph => $active_graphs,
+						step_begin => $begin,
+						step_end => $end,
+						distinct => 0,
+						ordered => []
+					);
+					push(@plans, $plan);
+				}
+				return @plans;
+			} elsif ($path->isa('Attean::Algebra::OneOrMorePath')) {
+				die "*** OneOrMorePath";
+			} else {
+				die "Cannot simplify property path $path: " . $algebra->as_string;
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
 	}
+	
+# 	sub plans_for_unbounded_path {
+# 		my $self			= shift;
+# 		my $algebra			= shift;
+# 		my $model			= shift;
+# 		my $active_graphs	= shift;
+# 		my $default_graphs	= shift;
+# 		my %args			= @_;
+# 		
+# 		my $s		= $algebra->subject;
+# 		my $path	= $algebra->path;
+# 		my $o		= $algebra->object;
+# 		
+# 		return Attean::Plan::ALPPath->new(distinct => 0, ordered => []);
+# 	}
 	
 	sub _package {
 		my $self	= shift;

@@ -83,6 +83,19 @@ package Attean::API::Plan 0.008 {
 	}
 }
 
+package Attean::API::BindingSubstitutionPlan 0.008 {
+	use Moo::Role;
+	with 'Attean::API::Plan';
+	requires 'substitute_impl'; # $code = $plan->impl($model, $binding);
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= Attean::Result->new();
+		return $self->substitute_impl($model, $b);
+	}
+}
+
 package Attean::API::Plan::Join 0.008 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);

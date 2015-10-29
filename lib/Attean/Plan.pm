@@ -33,14 +33,16 @@ Evaluates a quad pattern against the model.
 
 package Attean::Plan::Quad 0.008 {
 	use Moo;
+	use Scalar::Util qw(reftype);
 	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
 
 	has 'subject'	=> (is => 'ro', required => 1);
 	has 'predicate'	=> (is => 'ro', required => 1);
 	has 'object'	=> (is => 'ro', required => 1);
 	has 'graph'		=> (is => 'ro', required => 1);
 	
-	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
 	with 'Attean::API::QuadPattern';
 
 	sub plan_as_string {
@@ -65,6 +67,37 @@ package Attean::Plan::Quad 0.008 {
 		return sprintf('Quad { %s }', join(', ', @strings));
 	}
 	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= shift;
+		my @values	= $self->values;
+		foreach my $i (0 .. $#values) {
+			my $value	= $values[$i];
+			if (reftype($value) eq 'ARRAY') {
+				my @values;
+				foreach my $value (@{ $value }) {
+					my $name	= $value->value;
+					if (my $node = $b->value($name)) {
+						push(@values, $node);
+					} else {
+						push(@values, $value);
+					}
+					$values[$i]	= \@values;
+				}
+			} elsif ($value->does('Attean::API::Variable')) {
+				my $name	= $value->value;
+				if (my $node = $b->value($name)) {
+					$values[$i]	= $node;
+				}
+			}
+		}
+		
+		return sub {
+			return $model->get_bindings( @values );
+		}
+	}
+
 	sub impl {
 		my $self	= shift;
 		my $model	= shift;
@@ -83,6 +116,10 @@ Evaluates a join (natural-, anti-, or left-) using a nested loop.
 
 package Attean::Plan::NestedLoopJoin 0.008 {
 	use Moo;
+	use List::MoreUtils qw(all);
+	use namespace::clean;
+
+	with 'Attean::API::BindingSubstitutionPlan';
 	with 'Attean::API::Plan::Join';
 	sub plan_as_string {
 		my $self	= shift;
@@ -98,9 +135,29 @@ package Attean::Plan::NestedLoopJoin 0.008 {
 	sub impl {
 		my $self	= shift;
 		my $model	= shift;
-		my $left	= $self->left;
-		my $anti	= $self->anti;
 		my @children	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= shift;
+		unless (all { $_->does('Attean::API::BindingSubstitutionPlan') } @{ $self->children }) {
+			die "Plan children do not all consume BindingSubstitutionPlan role:\n" . $self->as_string;
+		}
+		
+		my @children	= map { $_->substitute_impl($model, $b) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub _impl {
+		my $self		= shift;
+		my $model		= shift;
+		my @children	= @_;
+		my $left		= $self->left;
+		my $anti		= $self->anti;
+		
 		return sub {
 			my ($lhs, $rhs)	= map { $_->() } @children;
 			my @right	= $rhs->elements;
@@ -141,6 +198,10 @@ Evaluates a join (natural-, anti-, or left-) using a hash join.
 
 package Attean::Plan::HashJoin 0.008 {
 	use Moo;
+	use List::MoreUtils qw(all);
+	use namespace::clean;
+	
+	with 'Attean::API::BindingSubstitutionPlan';
 	with 'Attean::API::Plan::Join';
 	sub plan_as_string {
 		my $self	= shift;
@@ -159,6 +220,26 @@ package Attean::Plan::HashJoin 0.008 {
 		my $self	= shift;
 		my $model	= shift;
 		my @children	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= shift;
+		
+		unless (all { $_->does('Attean::API::BindingSubstitutionPlan') } @{ $self->children }) {
+			die "Plan children do not all consume BindingSubstitutionPlan role:\n" . $self->as_string;
+		}
+		
+		my @children	= map { $_->substitute_impl($model, $b) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub _impl {
+		my $self		= shift;
+		my $model		= shift;
+		my @children	= @_;
 		my $left	= $self->left;
 		my $anti	= $self->anti;
 		return sub {
@@ -304,7 +385,7 @@ Evaluates a set of sub-plans, returning the union of results.
 package Attean::Plan::Union 0.008 {
 	use Moo;
 	use Scalar::Util qw(blessed);
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::BinaryQueryTree';
 	sub plan_as_string { return 'Union' }
 	
 	sub BUILDARGS {
@@ -326,6 +407,25 @@ package Attean::Plan::Union 0.008 {
 		my $self	= shift;
 		my $model	= shift;
 		my @children	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= shift;
+		unless (all { $_->does('Attean::API::BindingSubstitutionPlan') } @{ $self->children }) {
+			die "Plan children do not all consume BindingSubstitutionPlan role:\n" . $self->as_string;
+		}
+		
+		my @children	= map { $_->substitute_impl($model, $b) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub _impl {
+		my $self		= shift;
+		my $model		= shift;
+		my @children	= @_;
 		return sub {
 			my $current	= shift(@children);
 			my $iter	= $current->();
@@ -1017,6 +1117,14 @@ package Attean::Plan::Project 0.008 {
 		return $class->SUPER::BUILDARGS(%args);
 	}
 	
+	sub BUILD {
+		my $self	= shift;
+		my @vars	= map { $_->value } @{ $self->variables };
+		unless (scalar(@vars)) {
+			Carp::confess "No vars in project?";
+		}
+	}
+	
 	sub plan_as_string {
 		my $self	= shift;
 		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
@@ -1028,6 +1136,7 @@ package Attean::Plan::Project 0.008 {
 		my $model	= shift;
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		my @vars	= map { $_->value } @{ $self->variables };
+
 		return sub {
 			my $iter	= $impl->();
 			return $iter->map(sub {
@@ -1248,6 +1357,128 @@ package Attean::Plan::Table 0.008 {
 				values => $rows
 			);
 		};
+	}
+}
+
+=item * L<Attean::Plan::ALPPath>
+
+=cut
+
+package Attean::Plan::ALPPath 0.008 {
+	use Moo;
+	use Attean::TreeRewriter;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+
+	has 'subject'		=> (is => 'ro', required => 1);
+	has 'object'		=> (is => 'ro', required => 1);
+	has 'graph'			=> (is => 'ro', required => 1);
+	has 'step_begin'	=> (is => 'ro', required => 1);
+	has 'step_end'		=> (is => 'ro', required => 1);
+# 	has 'children'		=> (is => 'ro', isa => ConsumerOf['Attean::API::BindingSubstitutionPlan'], required => 1);
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+
+	sub tree_attributes { return qw(subject object) };
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	
+	sub plan_as_string {
+		my $self	= shift;
+		my @strings;
+		push(@strings, sprintf('%s ← %s', map { $_->ntriples_string } ($self->subject, $self->step_begin)));
+		push(@strings, sprintf('%s ← %s', map { $_->ntriples_string } ($self->object, $self->step_end)));
+		return sprintf('ALPPath %s', join(', ', @strings));
+	}
+	
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		my @vars		= map { $_->value } grep { $_->does('Attean::API::Variable') } (@args{qw(subject object)});
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= \@vars;
+
+		return $class->SUPER::BUILDARGS(%args);
+	}
+	
+	sub alp {
+		my $model	= shift;
+		my $graph	= shift;
+		my $x		= shift;
+		my $path	= shift;
+		my $v		= shift;
+		my $start	= shift;
+		my $end		= shift;
+		if (exists $v->{$x->as_string}) {
+			return;
+		}
+		$v->{$x->as_string}	= $x;
+		my $binding	= Attean::Result->new( bindings => { $start => $x } );
+		my $impl	= $path->substitute_impl($model, $binding);
+		my $iter	= $impl->();
+		while (my $row = $iter->next()) {
+			my $n	= $row->value($end);
+			alp($model, $graph, $n, $path, $v, $start, $end);
+		}
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $path	= $self->children->[0];
+		my $subject	= $self->subject;
+		my $object	= $self->object;
+		my $graph	= $self->graph;
+		my $start	= $self->step_begin->value;
+		my $end		= $self->step_end->value;
+		
+		my $s_var	= $subject->does('Attean::API::Variable');
+		my $o_var	= $object->does('Attean::API::Variable');
+		if ($s_var and $o_var) {
+			return sub {
+				my $nodes	= $model->graph_nodes($graph);
+				my @rows;
+				while (my $n = $nodes->next) {
+					my %seen;
+					alp($model, $graph, $n, $path, \%seen, $start, $end);
+					foreach my $term (values %seen) {
+						my $b	= Attean::Result->new( bindings => {
+							$subject->value => $n,
+							$object->value => $term,
+						} );
+						push(@rows, $b);
+					}
+				}
+				return Attean::ListIterator->new(
+					item_type => 'Attean::API::Result',
+					values => \@rows,
+				);
+			};
+		} elsif ($o_var) {
+			return sub {
+				my %seen;
+				alp($model, $graph, $subject, $path, \%seen, $start, $end);
+				my @rows	= map { Attean::Result->new( bindings => { $object->value => $_ } ) } (values %seen);
+				return Attean::ListIterator->new(
+					item_type => 'Attean::API::Result',
+					values => \@rows,
+				);
+			};
+		} elsif ($s_var) {
+			die "ALP for FB should never occur in a plan (should be inversed during planning)";
+		} else {
+			return sub {
+				my %seen;
+				alp($model, $graph, $subject, $path, \%seen, $start, $end);
+				if (exists $seen{ $object->as_string }) {
+					return Attean::ListIterator->new( item_type => 'Attean::API::Result', values => [Attean::Result->new()] );
+				} else {
+					return Attean::ListIterator->new( item_type => 'Attean::API::Result', values => [] );
+				}
+			};
+		}
 	}
 }
 
