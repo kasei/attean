@@ -1375,9 +1375,10 @@ package Attean::Plan::ALPPath 0.008 {
 	has 'graph'			=> (is => 'ro', required => 1);
 	has 'step_begin'	=> (is => 'ro', required => 1);
 	has 'step_end'		=> (is => 'ro', required => 1);
+	has 'skip'			=> (is => 'ro', required => 1, default => 0);
 # 	has 'children'		=> (is => 'ro', isa => ConsumerOf['Attean::API::BindingSubstitutionPlan'], required => 1);
 	
-	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
 
 	sub tree_attributes { return qw(subject object) };
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -1406,33 +1407,55 @@ package Attean::Plan::ALPPath 0.008 {
 	sub alp {
 		my $model	= shift;
 		my $graph	= shift;
+		my $skip	= shift;
 		my $x		= shift;
 		my $path	= shift;
 		my $v		= shift;
 		my $start	= shift;
 		my $end		= shift;
+		my $bind	= shift;
 		if (exists $v->{$x->as_string}) {
 			return;
 		}
-		$v->{$x->as_string}	= $x;
-		my $binding	= Attean::Result->new( bindings => { $start => $x } );
+		my $binding	= Attean::Result->new( bindings => { $start => $x } )->join($bind);
+		unless ($binding) {
+			return;
+		}
+		
+		if ($skip) {
+			$skip--;
+		} else {
+			$v->{$x->as_string}	= $x;
+		}
+		
 		my $impl	= $path->substitute_impl($model, $binding);
 		my $iter	= $impl->();
 		while (my $row = $iter->next()) {
 			my $n	= $row->value($end);
-			alp($model, $graph, $n, $path, $v, $start, $end);
+			alp($model, $graph, $skip, $n, $path, $v, $start, $end, $bind);
 		}
 	}
 	
-	sub impl {
+	sub substitute_impl {
 		my $self	= shift;
 		my $model	= shift;
+		my $bind	= shift;
 		my $path	= $self->children->[0];
 		my $subject	= $self->subject;
 		my $object	= $self->object;
 		my $graph	= $self->graph;
 		my $start	= $self->step_begin->value;
 		my $end		= $self->step_end->value;
+		my $skip	= $self->skip;
+		
+		for ($subject, $object) {
+			if ($_->does('Attean::API::Variable')) {
+				my $name	= $_->value;
+				if (my $node = $bind->value($name)) {
+					$_	= $node;
+				}
+			}
+		}
 		
 		my $s_var	= $subject->does('Attean::API::Variable');
 		my $o_var	= $object->does('Attean::API::Variable');
@@ -1442,7 +1465,7 @@ package Attean::Plan::ALPPath 0.008 {
 				my @rows;
 				while (my $n = $nodes->next) {
 					my %seen;
-					alp($model, $graph, $n, $path, \%seen, $start, $end);
+					alp($model, $graph, $skip, $n, $path, \%seen, $start, $end, $bind);
 					foreach my $term (values %seen) {
 						my $b	= Attean::Result->new( bindings => {
 							$subject->value => $n,
@@ -1459,7 +1482,7 @@ package Attean::Plan::ALPPath 0.008 {
 		} elsif ($o_var) {
 			return sub {
 				my %seen;
-				alp($model, $graph, $subject, $path, \%seen, $start, $end);
+				alp($model, $graph, $skip, $subject, $path, \%seen, $start, $end, $bind);
 				my @rows	= map { Attean::Result->new( bindings => { $object->value => $_ } ) } (values %seen);
 				return Attean::ListIterator->new(
 					item_type => 'Attean::API::Result',
@@ -1471,7 +1494,7 @@ package Attean::Plan::ALPPath 0.008 {
 		} else {
 			return sub {
 				my %seen;
-				alp($model, $graph, $subject, $path, \%seen, $start, $end);
+				alp($model, $graph, $skip, $subject, $path, \%seen, $start, $end, $bind);
 				if (exists $seen{ $object->as_string }) {
 					return Attean::ListIterator->new( item_type => 'Attean::API::Result', values => [Attean::Result->new()] );
 				} else {

@@ -379,7 +379,8 @@ the supplied C<< $active_graph >>.
 				return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
 					[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
 				} @join);
-			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
+			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath') or $path->isa('Attean::Algebra::OneOrMorePath')) {
+				my $skip	= $path->isa('Attean::Algebra::OneOrMorePath') ? 1 : 0;
 				my $begin	= variable($self->new_temporary('pp'));
 				my $end		= variable($self->new_temporary('pp'));
 				my $s_var	= $s->does('Attean::API::Variable');
@@ -401,6 +402,7 @@ the supplied C<< $active_graph >>.
 						children => [$cplan],
 						object => $o,
 						graph => $active_graphs,
+						skip => $skip,
 						step_begin => $begin,
 						step_end => $end,
 						distinct => 0,
@@ -409,8 +411,6 @@ the supplied C<< $active_graph >>.
 					push(@plans, $plan);
 				}
 				return @plans;
-			} elsif ($path->isa('Attean::Algebra::OneOrMorePath')) {
-				die "*** OneOrMorePath";
 			} else {
 				die "Cannot simplify property path $path: " . $algebra->as_string;
 			}
