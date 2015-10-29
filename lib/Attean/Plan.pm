@@ -284,6 +284,96 @@ package Attean::Plan::HashJoin 0.008 {
 	}
 }
 
+=item * L<Attean::Plan::Construct>
+
+=cut
+
+package Attean::Plan::Construct 0.008 {
+	use Moo;
+	use List::MoreUtils qw(all);
+	use Types::Standard qw(Str ArrayRef ConsumerOf InstanceOf);
+	use namespace::clean;
+	has 'triples' => (is => 'ro', 'isa' => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], required => 1);
+
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $triples	= $self->triples;
+		return sprintf('Construct { %s }', join(' . ', map { $_->as_string } @$triples));
+	}
+
+	sub BUILDARGS {
+		# TODO: this code is repeated in several plan classes; figure out a way to share it.
+		my $class		= shift;
+		my %args		= @_;
+		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
+		my @vars		= keys %vars;
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= \@vars;
+
+		return $class->SUPER::BUILDARGS(%args);
+	}
+
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= shift;
+		unless (all { $_->does('Attean::API::BindingSubstitutionPlan') } @{ $self->children }) {
+			die "Plan children do not all consume BindingSubstitutionPlan role:\n" . $self->as_string;
+		}
+		
+		my @children	= map { $_->substitute_impl($model, $b) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub _impl {
+		my $self		= shift;
+		my $model		= shift;
+		my $child		= shift;
+		
+		my @triples		= @{ $self->triples };
+		return sub {
+			my $iter	= $child->();
+			my @buffer;
+			my %seen;
+			return Attean::CodeIterator->new(
+				item_type => 'Attean::API::Triple',
+				generator => sub {
+					if (scalar(@buffer)) {
+						return shift(@buffer);
+					}
+					while (my $row = $iter->next) {
+						foreach my $tp (@triples) {
+							my $tp	= $tp->apply_bindings($row);
+							my $t	= eval { $tp->as_triple };
+							if ($t) {
+								push(@buffer, $t);
+							}
+						}
+						if (scalar(@buffer)) {
+							my $t	= shift(@buffer);
+							return $t;
+						}
+					}
+				}
+			)->grep(sub {
+				return not $seen{$_->as_string}++;
+			});
+		}
+	}
+}
+
 =item * L<Attean::Plan::EBVFilter>
 
 Filters results from a sub-plan based on the effective boolean value of a
@@ -467,8 +557,8 @@ package Attean::Plan::Extend 0.008 {
 	use POSIX qw(ceil floor);
 	use Digest::SHA;
 	use Digest::MD5 qw(md5_hex);
-	use Scalar::Util qw(blessed);
-	use List::MoreUtils qw(uniq);
+	use Scalar::Util qw(blessed looks_like_number);
+	use List::MoreUtils qw(uniq all);
 	use Types::Standard qw(ConsumerOf InstanceOf HashRef);
 	use namespace::clean;
 
@@ -510,7 +600,65 @@ package Attean::Plan::Extend 0.008 {
 		state $type_classes	= { qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal) };
 		
 		if ($expr->isa('Attean::CastExpression')) {
-			warn Dumper($expr);
+			my $datatype	= $expr->datatype->value;
+			my ($child)	= @{ $expr->children };
+			my $term	= $self->evaluate_expression($model, $child, $r);
+			die "TypeError $op" unless (blessed($term) and $term->does('Attean::API::Literal'));
+			if ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(integer|float|double)>) {
+				my $value	= $term->value;
+				my $num;
+				if ($datatype eq 'http://www.w3.org/2001/XMLSchema#integer') {
+					if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+						$value	= ($value eq 'true') ? '1' : '0';
+					} elsif ($term->does('Attean::API::NumericLiteral')) {
+						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#double' or (int($value) != $value)) {
+							die "cannot cast to xsd:integer as precision would be lost";
+						} else {
+							$value	= int($value);
+						}
+					} elsif (looks_like_number($value)) {
+						if ($value =~ /[eE]/) {	# double
+							die "cannot to xsd:integer as precision would be lost";
+						} elsif (int($value) != $value) {
+							die "cannot to xsd:integer as precision would be lost";
+						}
+					}
+					$num	= $value;
+				} elsif ($datatype eq 'http://www.w3.org/2001/XMLSchema#decimal') {
+					if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+						$value	= ($value eq 'true') ? '1' : '0';
+					} elsif ($term->does('Attean::API::NumericLiteral')) {
+						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#double' or (int($value) != $value)) {
+							die "cannot cast to xsd:decimal as precision would be lost";
+						} else {
+							$value	= $term->numeric_value;
+						}
+					} elsif (looks_like_number($value)) {
+						if ($value =~ /[eE]/) {	# double
+							die "cannot cast to xsd:decimal as precision would be lost";
+						} elsif (int($value) != $value) {
+							die "cannot cast to xsd:decimal as precision would be lost";
+						}
+					}
+					$num	= $value;
+				} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(float|double)$>) {
+					my $typename	= $1;
+					if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+						$value	= ($value eq 'true') ? '1.0' : '0.0';
+					} elsif ($term->does('Attean::API::NumericLiteral')) {
+						# no-op
+					} elsif (looks_like_number($value)) {
+						$value	= +$value;
+					} else {
+						die "cannot cast unrecognized value '$value' to xsd:$typename";
+					}
+					$num	= sprintf("%e", $value);
+				}
+				return Attean::Literal->new(value => $num, datatype => $expr->datatype);
+			}
+			use Data::Dumper;
+			warn "Cast as $datatype: " . $term->as_string;
+			warn 'Cast expression unimplemented: ' . Dumper($expr);
 		} elsif ($expr->isa('Attean::ValueExpression')) {
 			my $node	= $expr->value;
 			if ($node->does('Attean::API::Variable')) {
@@ -565,6 +713,7 @@ package Attean::Plan::Extend 0.008 {
 				}
 			} elsif ($op =~ m<^[-+*/]$>) {
 				my ($lhs, $rhs)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				die "TypeError $op" unless all { blessed($_) and $_->does('Attean::API::NumericLiteral') } ($lhs, $rhs);
 				my ($lv, $rv)	= map { $_->numeric_value } ($lhs, $rhs);
 				my $type	= $lhs->binary_promotion_type($rhs, $op);
 				if ($op eq '+') {
@@ -577,9 +726,9 @@ package Attean::Plan::Extend 0.008 {
 					return Attean::Literal->new(value => ($lv / $rv), datatype => $type);
 				}
 			}
-			warn "Binary operator: " . $expr->operator;
+			
 			use Data::Dumper;
-			warn Dumper($expr);
+			warn "Binary operator $op expression evaluation unimplemented: " . Dumper($expr);
 			die "Expression evaluation unimplemented: " . $expr->as_string;
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
 			my $func	= $expr->operator;
@@ -596,7 +745,7 @@ package Attean::Plan::Extend 0.008 {
 				foreach my $child (@{ $expr->children }) {
 # 					warn '- ' . $child->as_string . "\n";
 					my $term	= eval { $self->evaluate_expression($model, $child, $r) };
-					warn $@ if $@;
+# 					warn $@ if $@;
 					if (blessed($term)) {
 # 						warn '    returning ' . $term->as_string . "\n";
 						return $term;
@@ -1380,7 +1529,7 @@ package Attean::Plan::ALPPath 0.008 {
 	
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
 
-	sub tree_attributes { return qw(subject object) };
+	sub tree_attributes { return qw(subject object graph) };
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	
 	sub plan_as_string {
@@ -1503,6 +1652,26 @@ package Attean::Plan::ALPPath 0.008 {
 			};
 		}
 	}
+}
+
+package Attean::Plan::ZeroOrOnePath 0.008 {
+	use Moo;
+	use Attean::TreeRewriter;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+
+	has 'subject'		=> (is => 'ro', required => 1);
+	has 'object'		=> (is => 'ro', required => 1);
+	has 'graph'			=> (is => 'ro', required => 1);
+	
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
+
+	sub tree_attributes { return qw(subject object) };
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	
+	sub plan_as_string { return 'ZeroOrOnePath' }
+	
+	sub substitute_impl { die "TODO"; }
 }
 
 =item * L<Attean::Plan::Exists>
@@ -1675,7 +1844,6 @@ package Attean::Plan::Aggregate 0.008 {
 	sub impl {
 		my $self	= shift;
 		my $model	= shift;
-		
 		my %aggs	= %{ $self->aggregates };
 		my @groups	= @{ $self->groups };
 		my $group_template_generator	= sub {
@@ -1721,6 +1889,14 @@ package Attean::Plan::Aggregate 0.008 {
 				}
 			}
 			my @group_keys	= keys %row_groups;
+			
+			# SPARQL evaluation of aggregates over an empty input sequence should
+			# result in an empty result <http://answers.semanticweb.com/questions/17410/semantics-of-sparql-aggregates>
+			unless (scalar(@group_keys)) {
+				push(@group_keys, '');
+				$row_groups{''}			= [];
+				$group_templates{''}	= {};
+			}
 			my @results;
 			foreach my $group (@group_keys) {
 				my %row	= %{ $group_templates{ $group } };
