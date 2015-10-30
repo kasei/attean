@@ -377,8 +377,8 @@ package Attean::API::Result 0.008 {
 			$self->eval_stash({});
 		}
 	}
-
-	sub join {
+	
+	sub shared_domain {
 		my $self	= shift;
 		my $class	= ref($self);
 		my $rowb	= shift;
@@ -387,6 +387,14 @@ package Attean::API::Result 0.008 {
 		my @keysa	= $self->variables;
 		@keysa{ @keysa }	= (1) x scalar(@keysa);
 		my @shared	= grep { exists $keysa{ $_ } } ($rowb->variables);
+		return @shared;
+	}
+	
+	sub join {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $rowb	= shift;
+		my @shared	= $self->shared_domain($rowb);
 		foreach my $key (@shared) {
 			my $val_a	= $self->value($key);
 			my $val_b	= $rowb->value($key);
