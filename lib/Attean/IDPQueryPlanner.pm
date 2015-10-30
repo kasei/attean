@@ -159,7 +159,6 @@ the supplied C<< $active_graph >>.
 				if ($t->isa('Attean::ExistsExpression')) {
 					my $pattern	= $t->pattern;
 					my $plan	= $self->plan_for_algebra($pattern, $model, $active_graphs, $default_graphs, @_);
-					warn "Exists plan: " . $plan->as_string;
 					unless ($plan->does('Attean::API::BindingSubstitutionPlan')) {
 						die 'Exists plan does not consume Attean::API::BindingSubstitutionPlan: ' . $plan->as_string;
 					}

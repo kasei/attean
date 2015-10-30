@@ -1132,7 +1132,7 @@ package Attean::Plan::Extend 0.008 {
 							my $expr	= $exprs{$var};
 # 							warn "-> $var => "  . $expr->as_string;
 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-							warn $@ if ($@);
+# 							warn $@ if ($@);
 							if (blessed($term)) {
 # 								warn "===> " . $term->as_string;
 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
