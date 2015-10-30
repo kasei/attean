@@ -368,13 +368,6 @@ the supplied C<< $active_graph >>.
 			my $s		= $algebra->subject;
 			my $path	= $algebra->path;
 			my $o		= $algebra->object;
-# 			my $can_simplify	= 1;
-# 			$path->walk(prefix => sub {
-# 				my $node	= shift;
-# 				if ($node->isa('Attean::Algebra::ZeroOrMorePath') or $node->isa('Attean::Algebra::OneOrMorePath')) {
-# 					$can_simplify	= 0;
-# 				}
-# 			});
 			
 			my @algebra	= $self->simplify_path($s, $path, $o);
 			
@@ -396,9 +389,18 @@ the supplied C<< $active_graph >>.
 					push(@join, Attean::Algebra::BGP->new( triples => [@triples] ));
 				}
 				
-				return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
+				my @vars	= $algebra->in_scope_variables;
+				
+				my @joins	= $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
 					[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
 				} @join);
+				
+				my @plans;
+				foreach my $j (@joins) {
+					push(@plans, Attean::Plan::Project->new(children => [$j], variables => [map { Attean::Variable->new($_) } @vars], distinct => 0, ordered => []));
+				}
+				return @plans;
+				
 			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath') or $path->isa('Attean::Algebra::OneOrMorePath')) {
 				my $skip	= $path->isa('Attean::Algebra::OneOrMorePath') ? 1 : 0;
 				my $begin	= variable($self->new_temporary('pp'));
@@ -429,6 +431,21 @@ the supplied C<< $active_graph >>.
 						ordered => []
 					);
 					push(@plans, $plan);
+				}
+				return @plans;
+			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
+				my $a		= Attean::Algebra::Path->new( subject => $s, path => $path->children->[0], object => $o );
+				my @children	= $self->plans_for_algebra($a, $model, $active_graphs, $default_graphs, @_);
+				my @plans;
+				foreach my $plan (@children) {
+					push(@plans, Attean::Plan::ZeroOrOnePath->new(
+						subject => $s,
+						children => [$plan],
+						object => $o,
+						graph => $active_graphs,
+						distinct => 0,
+						ordered => []
+					));
 				}
 				return @plans;
 			} else {
@@ -796,10 +813,8 @@ sub-plan participating in the join.
 						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], left => 1, expression => $expr, join_variables => \@join_vars, distinct => 0, ordered => []));
 					}
 				} elsif ($minus) {
+					# we can't use a hash join for MINUS queries, because of the definition of MINUS having a special case for compatible results that have disjoint domains
 					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], anti => 1, join_variables => \@join_vars, distinct => 0, ordered => $lhs->ordered));
-					if (scalar(@join_vars) > 0) {
-						push(@plans, Attean::Plan::HashJoin->new(children => [$lhs, $rhs], anti => 1, join_variables => \@join_vars, join_variables => \@join_vars, distinct => 0, ordered => []));
-					}
 				} else {
 					# nested loop joins work in all cases
 					push(@plans, Attean::Plan::NestedLoopJoin->new(children => [$lhs, $rhs], join_variables => \@join_vars, distinct => 0, ordered => $lhs->ordered));

@@ -165,6 +165,11 @@ package Attean::Plan::NestedLoopJoin 0.008 {
 			while (my $l = $lhs->next) {
 				my $seen	= 0;
 				foreach my $r (@right) {
+					my @shared	= $l->shared_domain($r);
+					if ($anti and scalar(@shared) == 0) {
+						# in a MINUS, two results that have disjoint domains are considered not to be joinable
+						next;
+					}
 					if (my $j = $l->join($r)) {
 						$seen++;
 						if ($left) {
@@ -201,6 +206,13 @@ package Attean::Plan::HashJoin 0.008 {
 	use List::MoreUtils qw(all);
 	use namespace::clean;
 	
+	sub BUILD {
+		my $self	= shift;
+		if ($self->anti) {
+			die "Cannot use a HashJoin for anti-joins";
+		}
+	}
+	
 	with 'Attean::API::BindingSubstitutionPlan';
 	with 'Attean::API::Plan::Join';
 	sub plan_as_string {
@@ -208,8 +220,6 @@ package Attean::Plan::HashJoin 0.008 {
 		my $name;
 		if ($self->left) {
 			$name	= "Hash Left Join";
-		} elsif ($self->anti) {
-			$name	= "Hash Left Anti Join";
 		} else {
 			$name	= "Hash Join";
 		}
@@ -241,7 +251,6 @@ package Attean::Plan::HashJoin 0.008 {
 		my $model		= shift;
 		my @children	= @_;
 		my $left	= $self->left;
-		my $anti	= $self->anti;
 		return sub {
 			my %hash;
 			my @vars	= @{ $self->join_variables };
@@ -263,7 +272,6 @@ package Attean::Plan::HashJoin 0.008 {
 							if ($left) {
 								# TODO: filter with expression
 								push(@results, $j);
-							} elsif ($anti) {
 							} else {
 								push(@results, $j);
 							}
@@ -271,8 +279,6 @@ package Attean::Plan::HashJoin 0.008 {
 					}
 				}
 				if ($left and not($seen)) {
-					push(@results, $l);
-				} elsif ($anti and not($seen)) {
 					push(@results, $l);
 				}
 			}
@@ -1732,12 +1738,79 @@ package Attean::Plan::ZeroOrOnePath 0.008 {
 	
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
 
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		my @vars		= map { $_->value } grep { $_->does('Attean::API::Variable') } (@args{qw(subject object)});
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= \@vars;
+
+		return $class->SUPER::BUILDARGS(%args);
+	}
+	
 	sub tree_attributes { return qw(subject object) };
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	
 	sub plan_as_string { return 'ZeroOrOnePath' }
 	
-	sub substitute_impl { die "TODO"; }
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $bind	= shift;
+		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
+
+		my $subject	= $self->subject;
+		my $object	= $self->object;
+		my $graph	= $self->graph;
+		for ($subject, $object) {
+			if ($_->does('Attean::API::Variable')) {
+				my $name	= $_->value;
+				if (my $node = $bind->value($name)) {
+					$_	= $node;
+				}
+			}
+		}
+
+		my $s_var	= $subject->does('Attean::API::Variable');
+		my $o_var	= $object->does('Attean::API::Variable');
+		return sub {
+			my @extra;
+			if ($s_var and $o_var) {
+				my $nodes	= $model->graph_nodes($graph);
+				while (my $n = $nodes->next) {
+					push(@extra, Attean::Result->new( bindings => { map { $_->value => $n } ($subject, $object) } ));
+				}
+			} elsif ($s_var) {
+				push(@extra, Attean::Result->new( bindings => { $subject->value => $object } ));
+			} elsif ($o_var) {
+				push(@extra, Attean::Result->new( bindings => { $object->value => $subject } ));
+			} else {
+				if (0 == $subject->compare($object)) {
+					push(@extra, Attean::Result->new( bindings => {} ));
+				}
+			}
+			my $iter	= $impl->();
+			my %seen;
+			return Attean::CodeIterator->new(
+				item_type => 'Attean::API::Result',
+				generator => sub {
+					while (scalar(@extra)) {
+						my $r	= shift(@extra);
+						unless ($seen{$r->as_string}++) {
+							return $r;
+						}
+					}
+					my $r	= $iter->next();
+					return unless ($r);
+					return if ($seen{$r->as_string}++);
+					return $r;
+				}
+			);
+		};
+	}
 }
 
 =item * L<Attean::Plan::Exists>
