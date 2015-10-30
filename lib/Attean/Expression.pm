@@ -53,6 +53,8 @@ package Attean::ValueExpression 0.008 {
 	}
 	has 'value' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable']);
 	
+	sub tree_attributes { return qw(operator) }
+
 	sub is_stable {
 		return 1;
 	}
@@ -106,6 +108,8 @@ package Attean::UnaryExpression 0.008 {
 		$type->assert_valid($self->operator);
 	}
 	
+	sub tree_attributes { return qw(operator) }
+
 	sub is_stable {
 		my $self	= shift;
 		foreach my $c (@{ $self->children }) {
@@ -132,6 +136,8 @@ package Attean::BinaryExpression 0.008 {
 		$type->assert_valid($self->operator);
 	}
 	
+	sub tree_attributes { return qw(operator) }
+
 	sub is_stable {
 		my $self	= shift;
 		foreach my $c (@{ $self->children }) {
@@ -182,6 +188,8 @@ package Attean::FunctionExpression 0.008 {
 		}
 	}
 
+	sub tree_attributes { return qw(operator) }
+
 	sub is_stable {
 		my $self	= shift;
 		return 0 if ($self->operator =~ m/^(?:RAND|BNODE|UUID|STRUUID|NOW)$/);
@@ -215,6 +223,8 @@ package Attean::AggregateExpression 0.008 {
 	has 'variable'		=> (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	with 'Attean::API::AggregateExpression';
 
+	sub tree_attributes { return qw(operator scalar_vars variable) }
+
 	sub is_stable {
 		my $self	= shift;
 		foreach my $expr (@{ $self->groups }, values %{ $self->aggregates }) {
@@ -240,6 +250,8 @@ package Attean::CastExpression 0.008 {
 		$type->assert_valid($self->datatype->value);
 	}
 	
+	sub tree_attributes { return qw(operator datatype) }
+
 	sub is_stable {
 		my $self	= shift;
 		foreach my $c (@{ $self->children }) {
@@ -280,6 +292,46 @@ package Attean::ExistsExpression 0.008 {
 		warn "TODO: Attean::ExistsExpression->as_string";
 		return "EXISTS " . $self->pattern->as_sparql( level => $level+1, indent => $sp );
 	}
+
+	sub tree_attributes { return qw(operator pattern) }
+
+	sub is_stable {
+		my $self	= shift;
+		# TODO: need deep analysis of exists pattern to tell if this is stable
+		# (there might be an unstable filter expression deep inside the pattern)
+		return 0;
+	}
+}
+
+package Attean::ExistsPlanExpression 0.008 {
+	use Moo;
+	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
+	with 'Attean::API::Expression';
+	sub arity { return 0 }
+	sub BUILDARGS {
+		my $class	= shift;
+		return $class->SUPER::BUILDARGS(@_, operator => '_existsplan');
+	}
+	has 'plan' => (is => 'ro', isa => ConsumerOf['Attean::API::BindingSubstitutionPlan']);
+	sub as_string {
+		my $self	= shift;
+		# TODO: implement as_string for EXISTS patterns
+		return "Attean::ExistsPlanExpression { ... }";
+	}
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+
+		# TODO: implement as_string for EXISTS patterns
+		return "EXISTS { " . $self->pattern->as_sparql( level => $level+1, indent => $sp ) . " }";
+	}
+
+	sub tree_attributes { return qw(operator plan) }
 
 	sub is_stable {
 		my $self	= shift;

@@ -385,7 +385,7 @@ package Attean::Plan::EBVFilter 0.008 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ConsumerOf);
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	has 'variable' => (is => 'ro', isa => Str, required => 1);
 
 	sub BUILDARGS {
@@ -408,6 +408,24 @@ package Attean::Plan::EBVFilter 0.008 {
 		return sprintf('EBVFilter { ?%s }', $self->variable);
 	}
 	sub tree_attributes { return qw(expression) };
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $bind	= shift;
+		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
+		my $var		= $self->variable;
+
+		return sub {
+			my $iter	= $impl->();
+			return $iter->grep(sub {
+				my $r		= shift;
+				my $term	= $r->value($var);
+				return 0 unless (blessed($term) and $term->does('Attean::API::Term'));
+				return $term->ebv;
+			});
+		};
+	}
 	
 	sub impl {
 		my $self	= shift;
@@ -562,7 +580,7 @@ package Attean::Plan::Extend 0.008 {
 	use Types::Standard qw(ConsumerOf InstanceOf HashRef);
 	use namespace::clean;
 
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
 	
 	sub plan_as_string {
@@ -1062,9 +1080,31 @@ package Attean::Plan::Extend 0.008 {
 				warn "Expression evaluation unimplemented: " . $expr->as_string;
 				die "Expression evaluation unimplemented: " . $expr->as_string;
 			}
+		} elsif ($expr->isa('Attean::ExistsPlanExpression')) {
+			my $plan	= $expr->plan;
+			my $impl	= $plan->substitute_impl($model, $r);
+			my $iter	= $impl->();
+			my $found	= 0;
+			if (my $row = $iter->next) {
+# 				warn "EXISTS found row: " . $row->as_string;
+				$found++;
+			}
+			
+			return $found ? Attean::Literal->true : Attean::Literal->false;
 		} else {
+			warn "Expression evaluation unimplemented: " . $expr->as_string;
 			die "Expression evaluation unimplemented: " . $expr->as_string;
 		}
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $bind	= shift;
+		my %exprs	= %{ $self->expressions };
+		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
+		# TODO: substitute variables in the expression
+		return $self->_impl($model, $impl, %exprs);
 	}
 	
 	sub impl {
@@ -1072,6 +1112,14 @@ package Attean::Plan::Extend 0.008 {
 		my $model	= shift;
 		my %exprs	= %{ $self->expressions };
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, $impl, %exprs);
+	}
+	
+	sub _impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $impl	= shift;
+		my %exprs	= @_;
 		return sub {
 			my $iter	= $impl->();
 			return Attean::CodeIterator->new(
@@ -1084,7 +1132,7 @@ package Attean::Plan::Extend 0.008 {
 							my $expr	= $exprs{$var};
 # 							warn "-> $var => "  . $expr->as_string;
 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-# 							warn $@ if ($@);
+							warn $@ if ($@);
 							if (blessed($term)) {
 # 								warn "===> " . $term->as_string;
 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
@@ -1249,7 +1297,7 @@ of variable bindings in each result.
 
 package Attean::Plan::Project 0.008 {
 	use Moo;
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
 
@@ -1279,6 +1327,24 @@ package Attean::Plan::Project 0.008 {
 		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
 	}
 	sub tree_attributes { return qw(variables) };
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $bind	= shift;
+		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
+		my @vars	= map { $_->value } @{ $self->variables };
+
+		# TODO: substitute variables in the projection where appropriate
+		return sub {
+			my $iter	= $impl->();
+			return $iter->map(sub {
+				my $r	= shift;
+				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
+				return Attean::Result->new( bindings => $b );
+			});
+		};
+	}
 	
 	sub impl {
 		my $self	= shift;

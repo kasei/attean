@@ -153,6 +153,27 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			# TODO: simple range relation filters can be handled differently if that filter operates on a variable that is part of the ordering
 			my $expr	= $algebra->expression;
+			my $w	= Attean::TreeRewriter->new(types => ['Attean::API::DirectedAcyclicGraph']);
+			$w->register_pre_handler(sub {
+				my ($t, $parent, $thunk)	= @_;
+				if ($t->isa('Attean::ExistsExpression')) {
+					my $pattern	= $t->pattern;
+					my $plan	= $self->plan_for_algebra($pattern, $model, $active_graphs, $default_graphs, @_);
+					warn "Exists plan: " . $plan->as_string;
+					unless ($plan->does('Attean::API::BindingSubstitutionPlan')) {
+						die 'Exists plan does not consume Attean::API::BindingSubstitutionPlan: ' . $plan->as_string;
+					}
+					my $new	= Attean::ExistsPlanExpression->new(
+						plan => $plan,
+					);
+					return (1, 0, $new);
+				}
+				return (0, 1, $t);
+			});
+			my ($changed, $rewritten)	= $w->rewrite($expr, {});
+			if ($changed) {
+				$expr	= $rewritten;
+			}
 			
 			my $var		= $self->new_temporary('filter');
 			my %exprs	= ($var => $expr);
