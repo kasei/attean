@@ -1727,10 +1727,13 @@ package Attean::Plan::ZeroOrOnePath 0.008 {
 							return $r;
 						}
 					}
-					my $r	= $iter->next();
-					return unless ($r);
-					return if ($seen{$r->as_string}++);
-					return $r;
+					while (my $r = $iter->next()) {
+						return unless ($r);
+						if ($seen{$r->as_string}++) {
+							next;
+						}
+						return $r;
+					}
 				}
 			);
 		};
