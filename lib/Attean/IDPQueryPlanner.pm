@@ -289,33 +289,6 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
 			my $limit	= $algebra->limit;
 			my $offset	= $algebra->offset;
-			if (my $child = $algebra->unary) {
-				my $vars;
-				if ($child->isa('Attean::Algebra::Project')) {
-					$vars		= $child->variables;
-					$child		= $child->unary;
-				}
-				
-				if ($child->isa('Attean::Algebra::OrderBy')) {
-					my $count	= $limit + $offset;
-					my @cmps	= @{ $child->comparators };
-					my ($exprs, $ascending, $svars)	= $self->_order_by($child);
-					my @plans;
-					foreach my $plan ($self->plans_for_algebra($child->children->[0], $model, $active_graphs, $default_graphs, @_)) {
-						my @vars	= @{ $plan->in_scope_variables };
-						my @evars	= (@vars, keys %$exprs);
-						my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, ordered => $plan->ordered);
-						my $ordered	= Attean::Plan::HeapSort->new(children => [$extend], limit => $count, variables => $svars, ascending => $ascending, distinct => $plan->distinct, ordered => \@cmps);
-						my $proj	= $self->new_projection($ordered, $plan->distinct, @{ $plan->in_scope_variables });
-						if ($offset) {
-							$proj	= Attean::Plan::Slice->new(children => [$proj], offset => $offset, distinct => $proj->distinct, ordered => $proj->ordered);
-						}
-						push(@plans, $proj);
-					}
-					return @plans;
-				}
-			}
-			
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
 				my $vars	= $plan->in_scope_variables;
