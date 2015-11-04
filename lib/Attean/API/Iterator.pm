@@ -7,7 +7,7 @@ Attean::API::Iterator - Typed iterator
 
 =head1 VERSION
 
-This document describes Attean::API::Iterator version 0.008
+This document describes Attean::API::Iterator version 0.009
 
 =head1 DESCRIPTION
 
@@ -96,7 +96,7 @@ elements from the referent.
 
 =cut
 
-package Attean::API::Iterator 0.008 {
+package Attean::API::Iterator 0.009 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str Object InstanceOf);
@@ -250,7 +250,7 @@ package Attean::API::Iterator 0.008 {
 	}
 }
 
-package Attean::API::RepeatableIterator 0.008 {
+package Attean::API::RepeatableIterator 0.009 {
 	use Moo::Role;
 	requires 'reset';
 	
@@ -286,7 +286,7 @@ package Attean::API::CanonicalizingBindingIterator {
 	}
 }
 
-package Attean::API::ResultOrTermIterator 0.008 {
+package Attean::API::ResultOrTermIterator 0.009 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef Str);
 	has 'variables' => (is => 'rw', isa => ArrayRef[Str], default => sub { [] });
@@ -305,7 +305,7 @@ package Attean::API::ResultOrTermIterator 0.008 {
 	}
 }
 
-package Attean::API::TripleIterator 0.008 {
+package Attean::API::TripleIterator 0.009 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
 	sub as_quads {
@@ -315,12 +315,12 @@ package Attean::API::TripleIterator 0.008 {
 	}
 }
 
-package Attean::API::QuadIterator 0.008 {
+package Attean::API::QuadIterator 0.009 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
 }
 
-package Attean::API::MixedStatementIterator 0.008 {
+package Attean::API::MixedStatementIterator 0.009 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
 	sub as_quads {
@@ -333,7 +333,7 @@ package Attean::API::MixedStatementIterator 0.008 {
 	}
 }
 
-package Attean::API::ResultIterator 0.008 {
+package Attean::API::ResultIterator 0.009 {
 	use Moo::Role;
 	use Types::Standard qw(Str ArrayRef);
 	with 'Attean::API::CanonicalizingBindingIterator';
@@ -354,7 +354,7 @@ package Attean::API::ResultIterator 0.008 {
 	}
 }
 
-package Attean::API::TermIterator 0.008 {
+package Attean::API::TermIterator 0.009 {
 	use Moo::Role;
 	sub canonicalize {
 		my $self	= shift;

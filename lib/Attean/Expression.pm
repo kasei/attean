@@ -7,7 +7,7 @@ Attean::Expression - SPARQL Expressions
 
 =head1 VERSION
 
-This document describes Attean::Expression version 0.008
+This document describes Attean::Expression version 0.009
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ use Attean::API::Expression;
 
 =cut
 
-package Attean::ValueExpression 0.008 {
+package Attean::ValueExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -88,7 +88,7 @@ package Attean::ValueExpression 0.008 {
 
 =cut
 
-package Attean::UnaryExpression 0.008 {
+package Attean::UnaryExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -125,7 +125,7 @@ package Attean::UnaryExpression 0.008 {
 
 =cut
 
-package Attean::BinaryExpression 0.008 {
+package Attean::BinaryExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -153,7 +153,7 @@ package Attean::BinaryExpression 0.008 {
 
 =cut
 
-package Attean::FunctionExpression 0.008 {
+package Attean::FunctionExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf HashRef);
 	use Types::Common::String qw(UpperCaseStr);
@@ -200,7 +200,7 @@ package Attean::FunctionExpression 0.008 {
 	}
 }
 
-package Attean::AggregateExpression 0.008 {
+package Attean::AggregateExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf);
 	use Types::Common::String qw(UpperCaseStr);
@@ -234,7 +234,7 @@ package Attean::AggregateExpression 0.008 {
 	}
 }
 
-package Attean::CastExpression 0.008 {
+package Attean::CastExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf);
 	use namespace::clean;
@@ -263,7 +263,7 @@ package Attean::CastExpression 0.008 {
 	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 }
 
-package Attean::ExistsExpression 0.008 {
+package Attean::ExistsExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -303,7 +303,7 @@ package Attean::ExistsExpression 0.008 {
 	}
 }
 
-package Attean::ExistsPlanExpression 0.008 {
+package Attean::ExistsPlanExpression 0.009 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;

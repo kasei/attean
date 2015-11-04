@@ -7,7 +7,7 @@ Attean::API::Plan - Query plan
 
 =head1 VERSION
 
-This document describes Attean::API::Plan version 0.008
+This document describes Attean::API::Plan version 0.009
 
 =head1 DESCRIPTION
 
@@ -23,7 +23,7 @@ The following methods are required by the L<Attean::API::Plan> role:
 
 use Type::Tiny::Role;
 
-package Attean::API::Plan 0.008 {
+package Attean::API::Plan 0.009 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ArrayRef CodeRef Str Object InstanceOf Bool Num);
@@ -83,7 +83,7 @@ package Attean::API::Plan 0.008 {
 	}
 }
 
-package Attean::API::BindingSubstitutionPlan 0.008 {
+package Attean::API::BindingSubstitutionPlan 0.009 {
 	use Moo::Role;
 	with 'Attean::API::Plan';
 	requires 'substitute_impl'; # $code = $plan->impl($model, $binding);
@@ -96,7 +96,7 @@ package Attean::API::BindingSubstitutionPlan 0.008 {
 	}
 }
 
-package Attean::API::Plan::Join 0.008 {
+package Attean::API::Plan::Join 0.009 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -125,7 +125,7 @@ package Attean::API::Plan::Join 0.008 {
 	
 }
 
-package Attean::API::Planner 0.008 {
+package Attean::API::Planner 0.009 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -133,7 +133,7 @@ package Attean::API::Planner 0.008 {
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
-package Attean::API::CostPlanner 0.008 {
+package Attean::API::CostPlanner 0.009 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;

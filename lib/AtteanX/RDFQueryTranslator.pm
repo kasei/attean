@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package AtteanX::RDFQueryTranslator 0.008 {
+package AtteanX::RDFQueryTranslator 0.009 {
 	use v5.14;
 	use warnings;
 	use Moo;

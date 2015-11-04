@@ -10,7 +10,7 @@ AtteanX::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle version 0.008
+This document describes AtteanX::Parser::Turtle version 0.009
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ This module implements a parser for the Turtle RDF format.
 
 =cut
 
-package AtteanX::Parser::Turtle 0.008 {
+package AtteanX::Parser::Turtle 0.009 {
 	use Moo;
 	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 	use utf8;
@@ -130,6 +130,7 @@ serialization is found at the beginning of C<< $string >>.
 
 =cut
 
+	# TODO: this method is badly named. it actually accepts bytes, not strings.
 	sub parse_term_from_string {
 		my $self	= shift;
 		return $self->parse_node(@_);

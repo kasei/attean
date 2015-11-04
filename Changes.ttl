@@ -16,7 +16,7 @@
 
         doap:Version    [
                         doap:revision     "0.009" ;
-                        doap:created      "2015-XX-XX" ;
+                        doap:created      "2015-11-04" ;
                         ];
         asc:changes     [
                         asc:addition    "Added Attean::API::Result->shared_domain method." ;
