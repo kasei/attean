@@ -31,7 +31,7 @@ use Attean::API::Query;
 
 package Attean::Algebra::Join 0.009 {
 	use Moo;
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
 	sub algebra_as_string { return 'Join' }
 	sub as_sparql {
 		my $self	= shift;
