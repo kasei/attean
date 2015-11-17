@@ -111,14 +111,14 @@ the supplied C<< $active_graph >>.
 						$changed++;
 						my $id	= $_->value;
 						unless (exists $blanks{$id}) {
-							$blanks{$id}	= variable($self->new_temporary('blank'));
+							$blanks{$id}	= Attean::Variable->new(value => $self->new_temporary('blank'));
 						}
 						$_	= $blanks{$id};
 					}
 				}
 				
 				if ($changed) {
-					my $new	= triple(@nodes);
+					my $new	= Attean::TriplePattern->new(@nodes);
 					$triples[$i]	= $new;
 				}
 			}
@@ -376,8 +376,8 @@ the supplied C<< $active_graph >>.
 				
 			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath') or $path->isa('Attean::Algebra::OneOrMorePath')) {
 				my $skip	= $path->isa('Attean::Algebra::OneOrMorePath') ? 1 : 0;
-				my $begin	= variable($self->new_temporary('pp'));
-				my $end		= variable($self->new_temporary('pp'));
+				my $begin	= Attean::Variable->new(value => $self->new_temporary('pp'));
+				my $end		= Attean::Variable->new(value => $self->new_temporary('pp'));
 				my $s_var	= $s->does('Attean::API::Variable');
 				my $o_var	= $o->does('Attean::API::Variable');
 				
@@ -475,7 +475,7 @@ the supplied C<< $active_graph >>.
 		my $path	= shift;
 		my $o		= shift;
 		if ($path->isa('Attean::Algebra::SequencePath')) {
-			my $jvar		= variable($self->new_temporary('pp'));
+			my $jvar		= Attean::Variable->new(value => $self->new_temporary('pp'));
 			my ($lhs, $rhs)	= @{ $path->children };
 			my @paths;
 			push(@paths, $self->simplify_path($s, $lhs, $jvar));
@@ -494,7 +494,7 @@ the supplied C<< $active_graph >>.
 			return Attean::Algebra::Union->new( children => [$la, $ra] );
 		} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
 			my @preds	= @{ $path->predicates };
-			my $pvar	= variable($self->new_temporary('nps'));
+			my $pvar	= Attean::Variable->new(value => $self->new_temporary('nps'));
 			my $pvar_e	= Attean::ValueExpression->new( value => $pvar );
 			my $t		= Attean::TriplePattern->new($s, $pvar, $o);
 			my @vals	= map { Attean::ValueExpression->new( value => $_ ) } @preds;
