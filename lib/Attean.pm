@@ -172,7 +172,7 @@ returns undef.
 			$value	=~ s/;.*$// if ($type eq 'media_type');
 			foreach my $p ($self->parsers()) {
 				if (can_load( modules => { $p => 0 })) {
-					next unless ($p->does($role));
+					next unless ($p->can('does') and $p->does($role));
 					my @exts	= @{ $p->$method() };
 					return $p if (any { $value eq $_ } @exts);
 				}
