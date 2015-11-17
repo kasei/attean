@@ -13,6 +13,7 @@ use v5.14;
 use warnings;
 no warnings 'once';
 use autodie;
+use AtteanX::Parser::SPARQL;
 use Algorithm::Combinatorics qw(permutations);
 use Benchmark qw(timethese);
 use Data::Dumper;
@@ -359,13 +360,10 @@ sub get_actual_results {
 	my $model		= shift;
 	my $sparql		= shift;
 	my $base		= shift;
-	my $query		= RDF::Query->new( $sparql, { base => $base, lang => 'sparql11', load_data => 1 } );
-	unless ($query) {
-		warn RDF::Query->error if ($debug or $PATTERN);
-		return;
-	}
 
-	my $algebra		= AtteanX::RDFQueryTranslator->translate_query($query);
+	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
+	my ($algebra)	= $s->parse_list_from_bytes($sparql);
+	
 	if ($debug) {
 		warn "Walking algebra:\n";
 		warn $algebra->as_string;
