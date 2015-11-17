@@ -130,9 +130,6 @@ sub parse_list_from_bytes {
 	my $self	= shift;
 	my $string	= shift;
 	my $q		= $self->parse($string, $self->{args}{base});
-	unless ($q) {
-		warn $self->error;
-	}
 	return unless (ref($q));
 	my $p	= $q->{triples}[0];
 	return unless (ref($p));
@@ -154,9 +151,7 @@ sub parse {
 	my $input	= shift;
 
 	unless (defined($input)) {
-		$self->{build}	= undef;
-		$self->{error}	= "No query string found to parse";
-		return;
+		die "No query string found to parse";
 	}
 
 	my $baseuri	= shift;
@@ -165,7 +160,6 @@ sub parse {
 	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
 	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 
-	delete $self->{error};
 	local($self->{namespaces})				= {};
 	local($self->{blank_ids})				= 1;
 	local($self->{baseURI})					= $baseuri;
@@ -188,12 +182,10 @@ sub parse {
 # 		my $e	= shift;
 # 		$self->{build}	= undef;
 # 		$build			= undef;
-# 		$self->{error}	= $e->stacktrace
 # 	} otherwise {
 # 		my $e	= shift;
 # 		$self->{build}	= undef;
 # 		$build			= undef;
-# 		$self->{error}	= $e->stacktrace
 # 	};
 	
 	delete $self->{build}{star};
@@ -219,7 +211,6 @@ sub parse_pattern {
 	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
 	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 
-	delete $self->{error};
 	local($self->{namespaces})				= $ns;
 	local($self->{blank_ids})				= 1;
 	local($self->{baseURI})					= $baseuri;
@@ -238,7 +229,6 @@ sub parse_pattern {
 # 	} catch RDF::Query::Error with {
 # 		my $e	= shift;
 # 		$self->{build}	= undef;
-# 		$self->{error}	= $e->text;
 # 	};
 	my $data								= delete $self->{build};
 
@@ -261,7 +251,6 @@ sub parse_expr {
 	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
 	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 
-	delete $self->{error};
 	local($self->{namespaces})				= $ns;
 	local($self->{blank_ids})				= 1;
 	local($self->{baseURI})					= $baseuri;
@@ -280,7 +269,6 @@ sub parse_expr {
 # 	} catch RDF::Query::Error with {
 # 		my $e	= shift;
 # 		$self->{build}	= undef;
-# 		$self->{error}	= $e->text;
 # 	};
 
 	my $data	= splice(@{ $self->{stack} });
@@ -913,17 +901,6 @@ sub _SelectQuery {
 	
 	$self->__consume_ws_opt;
 	$self->_WhereClause;
-
-# 	if ($star) {
-# 		my $triples	= $self->{build}{triples} || [];
-# 		my @vars;
-# 		foreach my $t (@$triples) {
-# 			my @v	= $t->potentially_bound;
-# 			push(@vars, @v);
-# 		}
-# 		@vars	= keys %{ { map { $_ => 1 } @vars } };
-# 		push( @{ $self->{build}{variables} }, map { $self->new_variable($_) } @vars );
-# 	}
 
 	$self->__consume_ws_opt;
 	$self->_SolutionModifier();
@@ -1731,7 +1708,6 @@ sub _SubSelect {
 	my $self	= shift;
 	my $pattern;
 	{
-		local($self->{error});
 		local($self->{namespaces})				= $self->{namespaces};
 		local($self->{blank_ids})				= $self->{blank_ids};
 		local($self->{stack})					= [];
@@ -1756,17 +1732,6 @@ sub _SubSelect {
 		
 		$self->__consume_ws_opt;
 		$self->_WhereClause;
-		
-# 		if ($star) {
-# 			my $triples	= $self->{build}{triples} || [];
-# 			my @vars;
-# 			foreach my $t (@$triples) {
-# 				my @v	= $t->potentially_bound;
-# 				push(@vars, @v);
-# 			}
-# 			@vars	= keys %{ { map { $_ => 1 } @vars } };
-# 			push( @{ $self->{build}{variables} }, map { $self->new_variable($_) } @vars );
-# 		}
 		
 		$self->__consume_ws_opt;
 		$self->_SolutionModifier();
@@ -3102,7 +3067,7 @@ sub _Aggregate {
 	my $name	= sprintf('%s(%s)', $op, $arg);
 	$self->_eat(')');
 	
-	my $var		= $self->new_variable(".$name");
+	my $var		= Attean::Variable->new( value => ".$name");
 	my $agg		= Attean::AggregateExpression->new(
 					distinct	=> $distinct,
 					operator	=> $op,
@@ -3576,11 +3541,6 @@ Returns the error encountered during the last parse.
 
 =cut
 
-sub error {
-	my $self	= shift;
-	return $self->{error};
-}
-
 sub _add_patterns {
 	my $self	= shift;
 	my @triples	= @_;
@@ -3789,7 +3749,6 @@ sub __new_path_pred {
 	my $self	= shift;
 	my $op		= shift;
 	my @nodes	= @_;
-	@nodes	= map { $self->__strip_path( $_ ) } @nodes;
 
 	if ($op eq '!') {
 		return Attean::Algebra::NegatedPropertySet->new( predicates => \@nodes );
@@ -3797,7 +3756,7 @@ sub __new_path_pred {
 	
 	foreach my $i (0 .. $#nodes) {
 		if (ref($nodes[$i]) eq 'ARRAY') {
-			my @data = @{ $nodes[$i] };
+			(undef, my @data) = @{ $nodes[$i] };
 			$nodes[$i]	= $self->__new_path_pred(@data);
 		} elsif ($nodes[$i]->does('Attean::API::IRI')) {
 			$nodes[$i]	= Attean::Algebra::PredicatePath->new( predicate => $nodes[$i] );
@@ -3818,19 +3777,6 @@ sub __new_path_pred {
 		return Attean::Algebra::AlternativePath->new( children => [@nodes] );
 	} else {
 		Carp::confess "Path $op: " . Dumper(\@nodes);
-	}
-}
-
-sub __strip_path {
-	my $self	= shift;
-	my $path	= shift;
-	if (blessed($path)) {
-		return $path;
-	} elsif (reftype($path) eq 'ARRAY' and $path->[0] eq 'PATH') {
-		(undef, my $op, my @nodes)	= @$path;
-		return [$op, map { $self->__strip_path($_) } @nodes];
-	} else {
-		return $path;
 	}
 }
 
@@ -3905,30 +3851,11 @@ sub new_function_expression {
 	return Attean::FunctionExpression->new( operator => $function, children => \@operands, $base ? (base => $base) : () );
 }
 
-sub new_variable_inc {
-	my $self	= shift;
-	my $name	= shift;
-	my $id		= $self->{__PRIVATE_VARIABLE_COUNT}++;
-	return Attean::Variable->new( value => ".${name}-$id" );
-}
-
-sub new_variable {
-	my $self	= shift;
-	my $name;
-	if (@_) {
-		$name	= shift;
-	} else {
-		my $count	= $self->{__PRIVATE_VARIABLE_COUNT}++;
-		$name	= '_____rdfquery_private_' . $count;
-	}
-	return Attean::Variable->new( value => $name );
-}
-
 sub new_join {
 	my $self	= shift;
 	my @parts	= @_;
 	unless (scalar(@parts)) {
-		return $self->identity;
+		return Attean::Algebra::BGP->new();
 	}
 	
 	if (scalar(@parts) == 1) {
@@ -3936,11 +3863,6 @@ sub new_join {
 	}
 	
 	return Attean::Algebra::Join->new( children => \@parts );
-}
-
-sub identity {
-	my $self	= shift;
-	return Attean::Algebra::BGP->new();
 }
 
 1;
