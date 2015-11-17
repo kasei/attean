@@ -25,6 +25,21 @@ in the Attean::Algebra namespace:
 
 use Attean::API::Query;
 
+package Attean::Algebra::Sequence 0.009 {
+	use Moo;
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	sub algebra_as_string { return 'Sequence' }
+	sub as_sparql {
+		my $self	= shift;
+		my %args	= @_;
+		my $level	= $args{level} // 0;
+		my $sp		= $args{indent} // '    ';
+		my $indent	= $sp x $level;
+		
+		return join(";\n", map { $_->as_sparql( %args ) } @{ $self->children });
+	}
+}
+
 =item * L<Attean::Algebra::Join>
 
 =cut
