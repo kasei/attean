@@ -25,25 +25,6 @@ This document describes AtteanX::Parser::SPARQL version 2.916.
 
 =cut
 
-use AtteanX::RDFQueryTranslator;
-package AtteanX::Parser::SPARQL::Translator {
-	use Moo;
-	extends 'AtteanX::RDFQueryTranslator';
-	
-	around 'translate' => sub {
-		my $orig	= shift;
-		my $self	= shift;
-		my $a		= shift;
-		if (ref($a) =~ /^Attean::/) {
-			return $a;
-		}
-		warn ref($a);
-		die;
-		return $orig->($self, $a);
-	};
-}
-
-
 package AtteanX::Parser::SPARQL;
 
 use strict;
@@ -53,10 +34,12 @@ no warnings 'redefine';
 use Attean;
 use RDF::Query;
 use URI;
+use URI::NamespaceMap;
 use Data::Dumper;
 use RDF::Query::Parser;
 use RDF::Query::Algebra;
 use RDF::Trine::Namespace qw(rdf);
+use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 use Scalar::Util qw(blessed looks_like_number reftype);
 
 ######################################################################
@@ -105,16 +88,37 @@ Returns a new SPARQL 1.1 parser object.
 
 =cut
 
-sub new {
+use Moo;
+has 'args'			=> (is => 'ro', isa => HashRef);
+has 'build'			=> (is => 'rw', isa => HashRef);
+has 'update'		=> (is => 'rw', isa => Bool);
+has 'namespaces'	=> (is => 'rw', isa => InstanceOf['URI::NamespaceMap'], default => sub { URI::NamespaceMap->new() });
+has 'baseURI'		=> (is => 'rw');
+has 'tokens'		=> (is => 'rw', isa => Str);
+has 'stack'			=> (is => 'rw', isa => ArrayRef);
+has 'filters'		=> (is => 'rw', isa => ArrayRef);
+has 'pattern_container_stack'	=> (is => 'rw', isa => ArrayRef);
+
+sub file_extensions { return [qw(rq ru)] }
+
+sub canonical_media_type { return "application/sparql-query" }
+
+sub media_types {
+	return [qw(application/sparql-query application/sparql-update)];
+}
+
+sub handled_type {
+	state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::Algebra');
+	return $ITEM_TYPE;
+}
+
+with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser';
+
+sub BUILDARGS {
 	my $class	= shift;
 	my %args	= @_;
-	my $self	= bless({
-					translator	=> AtteanX::Parser::SPARQL::Translator->new(),
-					args		=> \%args,
-					bindings	=> {},
-					bnode_id	=> 0,
-				}, $class);
-	return $self;
+	my $ns		= delete $args{namespaces} // 	URI::NamespaceMap->new();
+	return { args => \%args, namespaces => $ns };
 }
 
 ################################################################################
@@ -134,8 +138,7 @@ sub parse_list_from_bytes {
 	my $p	= $q->{triples}[0];
 	return unless (ref($p));
 	
-	my $a	= $self->{translator}->translate($p);
-	return $a;
+	return $p;
 }
 
 =item C<< parse ( $query, $base_uri, $update_flag ) >>
@@ -160,20 +163,17 @@ sub parse {
 	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
 	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 
-	local($self->{namespaces})				= {};
-	local($self->{blank_ids})				= 1;
-	local($self->{baseURI})					= $baseuri;
-	local($self->{tokens})					= $input;
-	local($self->{stack})					= [];
-	local($self->{filters})					= [];
-	local($self->{pattern_container_stack})	= [];
-	local($self->{update})					= $update;
+	$self->baseURI($baseuri);
+	$self->tokens($input);
+	$self->stack([]);
+	$self->filters([]);
+	$self->pattern_container_stack([]);
+	$self->update($update);
 	my $triples								= $self->_push_pattern_container();
-	local($self->{build});
 	my $build								= { sources => [], triples => $triples };
-	$self->{build}							= $build;
+	$self->build($build);
 	if ($baseuri) {
-		$self->{build}{base}	= $baseuri;
+		$build->{base}	= $baseuri;
 	}
 
 # 	try {
@@ -188,8 +188,7 @@ sub parse {
 # 		$build			= undef;
 # 	};
 	
-	delete $self->{build}{star};
-	
+	delete $build->{star};
 	my $data								= $build;
 #	$data->{triples}						= $self->_pop_pattern_container();
 	return $data;
@@ -212,7 +211,6 @@ sub parse_pattern {
 	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 
 	local($self->{namespaces})				= $ns;
-	local($self->{blank_ids})				= 1;
 	local($self->{baseURI})					= $baseuri;
 	local($self->{tokens})					= $input;
 	local($self->{stack})					= [];
@@ -252,7 +250,6 @@ sub parse_expr {
 	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 
 	local($self->{namespaces})				= $ns;
-	local($self->{blank_ids})				= 1;
 	local($self->{baseURI})					= $baseuri;
 	local($self->{tokens})					= $input;
 	local($self->{stack})					= [];
@@ -1709,7 +1706,6 @@ sub _SubSelect {
 	my $pattern;
 	{
 		local($self->{namespaces})				= $self->{namespaces};
-		local($self->{blank_ids})				= $self->{blank_ids};
 		local($self->{stack})					= [];
 		local($self->{filters})					= [];
 		local($self->{pattern_container_stack})	= [];
