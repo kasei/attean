@@ -113,7 +113,6 @@ does_ok($p, 'Attean::API::CostPlanner');
 	};
 	
 	# TODO: A 1-triple BGP with ASC(-1 * ?s) sorting should result in a Project(Order(Extend(Quad(....)))) pattern
-	# TODO: A 1-triple BGP with ASC(?s) sorting and LIMIT 5 should result in a HeapSort(Quad(....))
 	
 	subtest 'Sorted 1-triple BGP' => sub {
 		note("A 1-triple BGP with ASC(?s) sorting should result in a Order(Quad(....)) pattern");
