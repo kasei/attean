@@ -2396,20 +2396,7 @@ sub _VerbPath {
 # [74]  	Path	  ::=  	PathAlternative
 sub _Path {
 	my $self	= shift;
-# 	my $distinct	= 1;
-# 	if ($self->_test(qr/DISTINCT[(]/i)) {
-# 		$self->_eat(qr/DISTINCT[(]/i);
-# 		$self->__consume_ws_opt;
-# 		$distinct	= 1;
-# 	}
 	$self->_PathAlternative;
-# 	if ($distinct) {
-# 		$self->__consume_ws_opt;
-# 		$self->_eat(qr/[)]/);
-# 		$self->__consume_ws_opt;
-# 		my ($path)	= splice(@{ $self->{stack} });
-# 		$self->_add_stack( ['PATH', 'DISTINCT', $path] );
-# 	}
 }
 
 ################################################################################
@@ -2922,7 +2909,7 @@ sub _UnaryExpression {
 		$self->_eat_with_ws('!');
 		$self->_PrimaryExpression;
 		my ($expr)	= splice(@{ $self->{stack} });
-		my $not		= $self->new_unary_expression( '!', $expr );
+		my $not		= Attean::UnaryExpression->new( operator => '!', children => [$expr] );
 		$self->_add_stack( $not );
 	} elsif ($self->_test('+')) {
 		$self->_eat_with_ws('+');
@@ -3099,7 +3086,7 @@ sub _BuiltInCall {
 		my $cont	= $self->_remove_pattern;
 		my $p		= Attean::ExistsExpression->new( pattern => $cont );
 		if ($op =~ /^NOT/i) {
-			$p	= $self->new_unary_expression('!', $p);
+			$p	= Attean::UnaryExpression->new( operator => '!', children => [$p] )
 		}
 		$self->_add_stack($p);
 	} elsif ($self->_test(qr/COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW/i)) {
@@ -3805,19 +3792,6 @@ sub __new_bgp {
 	} else {
 		return $bgp;
 	}
-}
-
-=item C<new_unary_expression ( $operator, $operand )>
-
-Returns a new unary expression structure.
-
-=cut
-
-sub new_unary_expression {
-	my $self	= shift;
-	my $op		= shift;
-	my $operand	= shift;
-	return Attean::UnaryExpression->new( operator => $op, children => [$operand] );
 }
 
 =item C<new_binary_expression ( $operator, @operands )>
