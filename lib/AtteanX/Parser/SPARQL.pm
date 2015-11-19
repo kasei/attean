@@ -25,7 +25,7 @@ This document describes AtteanX::Parser::SPARQL version 2.916.
 
 =cut
 
-package AtteanX::Parser::SPARQL;
+package AtteanX::Parser::SPARQL 0.009;
 
 use strict;
 use warnings;
@@ -45,50 +45,6 @@ use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 use Scalar::Util qw(blessed looks_like_number reftype);
 
 ######################################################################
-
-our ($VERSION);
-BEGIN {
-	$VERSION	= '2.916';
-}
-
-######################################################################
-
-my $rdf			= RDF::Trine::Namespace->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
-my $xsd			= RDF::Trine::Namespace->new('http://www.w3.org/2001/XMLSchema#');
-
-our $r_ECHAR				= qr/\\([tbnrf\\"'])/o;
-our $r_STRING_LITERAL1		= qr/'(([^\x{27}\x{5C}\x{0A}\x{0D}])|${r_ECHAR})*'/o;
-our $r_STRING_LITERAL2		= qr/"(([^\x{22}\x{5C}\x{0A}\x{0D}])|${r_ECHAR})*"/o;
-our $r_STRING_LITERAL_LONG1	= qr/'''(('|'')?([^'\\]|${r_ECHAR}))*'''/o;
-our $r_STRING_LITERAL_LONG2	= qr/"""(("|"")?([^"\\]|${r_ECHAR}))*"""/o;
-our $r_LANGTAG				= qr/@[a-zA-Z]+(-[a-zA-Z0-9]+)*/o;
-our $r_IRI_REF				= qr/<([^<>"{}|^`\\\x{00}-\x{20}])*>/o;
-our $r_PN_CHARS_BASE		= qr/([A-Z]|[a-z]|[\x{00C0}-\x{00D6}]|[\x{00D8}-\x{00F6}]|[\x{00F8}-\x{02FF}]|[\x{0370}-\x{037D}]|[\x{037F}-\x{1FFF}]|[\x{200C}-\x{200D}]|[\x{2070}-\x{218F}]|[\x{2C00}-\x{2FEF}]|[\x{3001}-\x{D7FF}]|[\x{F900}-\x{FDCF}]|[\x{FDF0}-\x{FFFD}]|[\x{10000}-\x{EFFFF}])/o;
-our $r_PN_CHARS_U			= qr/([_]|${r_PN_CHARS_BASE})/o;
-our $r_VARNAME				= qr/((${r_PN_CHARS_U}|[0-9])(${r_PN_CHARS_U}|[0-9]|\x{00B7}|[\x{0300}-\x{036F}]|[\x{203F}-\x{2040}])*)/o;
-our $r_VAR1					= qr/[?]${r_VARNAME}/o;
-our $r_VAR2					= qr/[\$]${r_VARNAME}/o;
-our $r_PN_CHARS				= qr/${r_PN_CHARS_U}|-|[0-9]|\x{00B7}|[\x{0300}-\x{036F}]|[\x{203F}-\x{2040}]/o;
-our $r_PN_PREFIX			= qr/(${r_PN_CHARS_BASE}((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
-our $r_PN_LOCAL_ESCAPED		= qr{(\\([-~.!&'()*+,;=/?#@%_\$]))|%[0-9A-Fa-f]{2}}o;
-our $r_PN_LOCAL				= qr/((${r_PN_CHARS_U}|[:0-9]|${r_PN_LOCAL_ESCAPED})((${r_PN_CHARS}|${r_PN_LOCAL_ESCAPED}|[:.])*(${r_PN_CHARS}|[:]|${r_PN_LOCAL_ESCAPED}))?)/o;
-our $r_PN_LOCAL_BNODE		= qr/((${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
-our $r_PNAME_NS				= qr/((${r_PN_PREFIX})?:)/o;
-our $r_PNAME_LN				= qr/(${r_PNAME_NS}${r_PN_LOCAL})/o;
-our $r_EXPONENT				= qr/[eE][-+]?\d+/o;
-our $r_DOUBLE				= qr/\d+[.]\d*${r_EXPONENT}|[.]\d+${r_EXPONENT}|\d+${r_EXPONENT}/o;
-our $r_DECIMAL				= qr/(\d+[.]\d*)|([.]\d+)/o;
-our $r_INTEGER				= qr/\d+/o;
-our $r_BLANK_NODE_LABEL		= qr/_:${r_PN_LOCAL_BNODE}/o;
-our $r_ANON					= qr/\[[\t\r\n ]*\]/o;
-our $r_NIL					= qr/\([\n\r\t ]*\)/o;
-our $r_AGGREGATE_CALL		= qr/(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)\b/io;
-
-=item C<< new >>
-
-Returns a new SPARQL 1.1 parser object.
-
-=cut
 
 use Moo;
 
@@ -131,7 +87,8 @@ sub parse_list_from_io {
 	my $p 		= AtteanX::Parser::SPARQLLex->new();
 	my $l		= $p->parse_iter_from_io(@_);
 	$self->lexer($l);
-	my $q		= $self->parse($self->{args}{base});
+	$self->baseURI($self->{args}{base});
+	my $q		= $self->parse();
 	return unless (ref($q));
 	my $a	= $q->{triples}[0];
 	return unless (ref($a));
@@ -143,16 +100,16 @@ sub parse_list_from_bytes {
 	my $p 		= AtteanX::Parser::SPARQLLex->new();
 	my $l		= $p->parse_iter_from_bytes(@_);
 	$self->lexer($l);
-	my $q		= $self->parse($self->{args}{base});
+	$self->baseURI($self->{args}{base});
+	my $q		= $self->parse();
 	return unless (ref($q));
 	my $a	= $q->{triples}[0];
 	return unless (ref($a));
 	return $a;
 }
 
-=item C<< parse ( $query, $base_uri, $update_flag ) >>
+=item C<< parse ( $update_flag ) >>
 
-Parses the C<< $query >>, using the given C<< $base_uri >>.
 If C<< $update_flag >> is true, the query will be parsed allowing
 SPARQL 1.1 Update statements.
 
@@ -166,10 +123,8 @@ sub parse {
 		die "No query string found to parse";
 	}
 
-	my $baseuri	= shift;
 	my $update	= shift || 0;
 
-	$self->baseURI($baseuri);
 	$self->stack([]);
 	$self->filters([]);
 	$self->pattern_container_stack([]);
@@ -177,8 +132,8 @@ sub parse {
 	my $triples								= $self->_push_pattern_container();
 	my $build								= { sources => [], triples => $triples };
 	$self->build($build);
-	if ($baseuri) {
-		$build->{base}	= $baseuri;
+	if ($self->baseURI) {
+		$build->{base}	= $self->baseURI;
 	}
 
 # 	try {
@@ -209,16 +164,16 @@ sub _RW_Query {
 
 	my $read_query	= 0;
 	while (1) {
-		if ($self->test_token(KEYWORD, 'SELECT')) {
+		if ($self->optional_token(KEYWORD, 'SELECT')) {
 			$self->_SelectQuery();
 			$read_query++;
-		} elsif ($self->test_token(KEYWORD, 'CONSTRUCT')) {
+		} elsif ($self->optional_token(KEYWORD, 'CONSTRUCT')) {
 			$self->_ConstructQuery();
 			$read_query++;
-		} elsif ($self->test_token(KEYWORD, 'DESCRIBE')) {
+		} elsif ($self->optional_token(KEYWORD, 'DESCRIBE')) {
 			$self->_DescribeQuery();
 			$read_query++;
-		} elsif ($self->test_token(KEYWORD, 'ASK')) {
+		} elsif ($self->optional_token(KEYWORD, 'ASK')) {
 			$self->_AskQuery();
 			$read_query++;
 		} elsif ($self->test_token(KEYWORD, 'CREATE')) {
@@ -241,7 +196,7 @@ sub _RW_Query {
 				die "CLEAR GRAPH update forbidden in read-only queries";
 			}
 			$self->_ClearGraphUpdate();
-		} elsif ($self->test_token(KEYWORD, 'WITH') or $self->test_token(KEYWORD, 'INSERT') or $self->test_token(KEYWORD, 'DELETE')) {
+		} elsif ($self->test_token(KEYWORD, qr/^(WITH|INSERT|DELETE)/)) {
 			unless ($self->{update}) {
 				die "INSERT/DELETE update forbidden in read-only queries";
 			}
@@ -324,8 +279,7 @@ sub _RW_Query {
 
 sub _Query_test {
 	my $self	= shift;
-	return 1 if ($self->_test(qr/SELECT|CONSTRUCT|DESCRIBE|ASK|LOAD|CLEAR|DROP|ADD|MOVE|COPY|CREATE|INSERT|DELETE|WITH/i));
-	return 0;
+	return ($self->test_token(KEYWORD, qr/^(SELECT|CONSTRUCT|DESCRIBE|ASK|LOAD|CLEAR|DROP|ADD|MOVE|COPY|CREATE|INSERT|DELETE|WITH)/i));
 }
 
 # [2] Prologue ::= BaseDecl? PrefixDecl*
@@ -783,8 +737,7 @@ sub __UpdateShortcuts {
 # [5] SelectQuery ::= 'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( Var+ | '*' ) DatasetClause* WhereClause SolutionModifier
 sub _SelectQuery {
 	my $self	= shift;
-	$self->expected_token(KEYWORD, 'SELECT');
-	if ($self->optional_token(KEYWORD, 'DISTINCT') or $self->optional_token(KEYWORD, 'REDUCED')) {
+	if ($self->optional_token(KEYWORD, qr/^(DISTINCT|REDUCED)/)) {
 		$self->{build}{options}{distinct}	= 1;
 	}
 	
@@ -821,8 +774,8 @@ sub _SelectQuery {
 		
 		my $short	= (not($parens) and $count == 1);
 		$self->expected_token(LBRACE);
-		if (not($short) or ($short and $self->_Binding_test)) {
-			while ($self->_Binding_test) {
+		if (not($short) or ($short and $self->test_token(LPAREN))) {
+			while ($self->test_token(LPAREN)) {
 				my $terms	= $self->_Binding($count);
 				push( @{ $self->{build}{bindings}{terms} }, $terms );
 			}
@@ -961,7 +914,6 @@ sub __SelectVar {
 # [6] ConstructQuery ::= 'CONSTRUCT' ConstructTemplate DatasetClause* WhereClause SolutionModifier
 sub _ConstructQuery {
 	my $self	= shift;
-	$self->expected_token(KEYWORD, 'CONSTRUCT');
 	my $shortcut	= 1;
 	if ($self->test_token(LBRACE)) {
 		$shortcut	= 0;
@@ -998,7 +950,6 @@ sub _ConstructQuery {
 # [7] DescribeQuery ::= 'DESCRIBE' ( VarOrIRIref+ | '*' ) DatasetClause* WhereClause? SolutionModifier
 sub _DescribeQuery {
 	my $self	= shift;
-	$self->expected_token(KEYWORD, 'DESCRIBE');
 	
 	if ($self->optional_token(STAR)) {
 		$self->{build}{variables}	= ['*'];
@@ -1026,7 +977,6 @@ sub _DescribeQuery {
 # [8] AskQuery ::= 'ASK' DatasetClause* WhereClause
 sub _AskQuery {
 	my $self	= shift;
-	$self->expected_token(KEYWORD, 'ASK');
 	
 	$self->_DatasetClause();
 	
@@ -1040,10 +990,10 @@ sub _AskQuery {
 	$self->{build}{triples}[0]	= Attean::Algebra::Ask->new( children => [$pattern] );
 }
 
-sub _DatasetClause_test {
-	my $self	= shift;
-	return $self->test_token(KEYWORD, 'FROM');
-}
+# sub _DatasetClause_test {
+# 	my $self	= shift;
+# 	return $self->test_token(KEYWORD, 'FROM');
+# }
 
 # [9] DatasetClause ::= 'FROM' ( DefaultGraphClause | NamedGraphClause )
 sub _DatasetClause {
@@ -1086,7 +1036,9 @@ sub _SourceSelector {
 # [13] WhereClause ::= 'WHERE'? GroupGraphPattern
 sub _WhereClause_test {
 	my $self	= shift;
-	return $self->_test( qr/WHERE|{/i );
+	return 1 if ($self->test_token(KEYWORD, 'WHERE'));
+	return 1 if ($self->test_token(LBRACE));
+	return 0;
 }
 sub _WhereClause {
 	my $self	= shift;
@@ -1115,10 +1067,10 @@ sub _TriplesWhereClause {
 	$self->_add_patterns( $pattern );
 }
 
-sub _Binding_test {
-	my $self	= shift;
-	return $self->test_token(LPAREN);
-}
+# sub _Binding_test {
+# 	my $self	= shift;
+# 	return $self->test_token(LPAREN);
+# }
 
 sub _Binding {
 	my $self	= shift;
@@ -1143,16 +1095,8 @@ sub _BindingValue_test {
 	my $self	= shift;
 	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->test_token(KEYWORD, 'UNDEF'));
-	return 1 if ($self->test_token(BOOLEAN));
-	return 1 if ($self->test_token(INTEGER));
-	return 1 if ($self->test_token(DECIMAL));
-	return 1 if ($self->test_token(DOUBLE));
-	return 1 if ($self->test_token(IRI));
-	return 1 if ($self->test_token(STRING1S));
-	return 1 if ($self->test_token(STRING1D));
-	return 1 if ($self->test_token(STRING3S));
-	return 1 if ($self->test_token(STRING3D));
-	return 1 if ($self->test_token(PREFIXNAME));
+	return 1 if ($self->_test_literal_token);
+	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->test_token(BNODE));
 	return 1 if ($self->test_token(NIL));
 	return 0;
@@ -1362,14 +1306,8 @@ sub _OrderCondition_test {
 sub _OrderCondition {
 	my $self	= shift;
 	my $dir	= 'ASC';
-	if ($self->test_token(KEYWORD, 'ASC') or $self->test_token(KEYWORD, 'DESC')) {
-		my $dir;
-		if ($self->optional_token(KEYWORD, 'ASC')) {
-			$dir	= 'ASC';
-		} else {
-			$self->next_token;
-			$dir	= 'DESC';
-		}
+	if (my $t = $self->optional_token(KEYWORD, qr/^(ASC|DESC)/)) {
+		my $dir	= $t->value;
 		$self->_BrackettedExpression;
 	} elsif ($self->test_token(VAR)) {
 		$self->_Var;
@@ -1578,8 +1516,7 @@ sub _SubSelect {
 		}
 		
 		$self->expected_token(KEYWORD, 'SELECT');
-		if ($self->test_token(KEYWORD, 'DISTINCT') or $self->test_token(KEYWORD, 'REDUCED')) {
-			my $t	= $self->next_token;
+		if (my $t = $self->optional_token(KEYWORD, qr/^(DISTINCT|REDUCED)/)) {
 			my $mod	= $t->value;
 			$self->{build}{options}{lc($mod)}	= 1;
 		}
@@ -1587,7 +1524,6 @@ sub _SubSelect {
 		my ($star, @exprs)	= $self->__SelectVars;
 		
 		$self->_WhereClause;
-		
 		$self->_SolutionModifier();
 		
 		if ($self->{build}{options}{orderby}) {
@@ -1627,8 +1563,8 @@ sub _SubSelect {
 			
 			my $short	= (not($parens) and $count == 1);
 			$self->expected_token(LBRACE);
-			if (not($short) or ($short and $self->_Binding_test)) {
-				while ($self->_Binding_test) {
+			if (not($short) or ($short and $self->test_token(LPAREN))) {
+				while ($self->test_token(LPAREN)) {
 					my $terms	= $self->_Binding($count);
 					push( @{ $self->{build}{bindings}{terms} }, $terms );
 				}
@@ -1678,21 +1614,30 @@ sub _TriplesBlock_test {
 	# but since a triple can't start with a literal, this is reduced to:
 	# Var | IRIref | BlankNode | NIL
 	return 1 if ($self->test_token(VAR));
-	return 1 if ($self->test_token(IRI));
 	return 1 if ($self->test_token(NIL));
 	return 1 if ($self->test_token(ANON));
 	return 1 if ($self->test_token(BNODE));
+	return 1 if ($self->test_token(LPAREN));
+	return 1 if ($self->test_token(LBRACKET));
+	return 1 if ($self->_IRIref_test);
+	return 1 if ($self->_test_literal_token);
+	return 0;
+# 	return $self->_test(qr/[\$?]|<|_:|\[[\n\r\t ]*\]|\([\n\r\t ]*\)|\[|[[(]|${r_PNAME_NS}/);
+}
+
+sub _test_literal_token {
+	my $self	= shift;
 	return 1 if ($self->test_token(STRING1D));
 	return 1 if ($self->test_token(STRING3D));
 	return 1 if ($self->test_token(STRING1S));
 	return 1 if ($self->test_token(STRING3S));
-	return 1 if ($self->test_token(PREFIXNAME));
-	return 1 if ($self->test_token(LPAREN));
-	return 1 if ($self->test_token(LBRACKET));
-	
+	return 1 if ($self->test_token(DECIMAL));
+	return 1 if ($self->test_token(DOUBLE));
+	return 1 if ($self->test_token(INTEGER));
+	return 1 if ($self->test_token(BOOLEAN));
 	return 0;
-# 	return $self->_test(qr/[\$?]|<|_:|\[[\n\r\t ]*\]|\([\n\r\t ]*\)|\[|[[(]|${r_PNAME_NS}/);
 }
+
 
 sub _TriplesBlock {
 	my $self	= shift;
@@ -1731,7 +1676,7 @@ sub _GraphPatternNotTriples_test {
 	my $t	= $self->peek_token;
 	return unless ($t);
 	return 0 unless ($t->type == KEYWORD);
-	return ($t->value =~ qr/VALUES|BIND|SERVICE|MINUS|OPTIONAL|{|GRAPH/i);
+	return ($t->value =~ qr/^(VALUES|BIND|SERVICE|MINUS|OPTIONAL|GRAPH)$/i);
 }
 
 sub _GraphPatternNotTriples {
@@ -1744,9 +1689,9 @@ sub _GraphPatternNotTriples {
 		$self->_MinusGraphPattern;
 	} elsif ($self->test_token(KEYWORD, 'BIND')) {
 		$self->_Bind;
-	} elsif ($self->_OptionalGraphPattern_test) {
+	} elsif ($self->test_token(KEYWORD, 'OPTIONAL')) {
 		$self->_OptionalGraphPattern;
-	} elsif ($self->_GroupOrUnionGraphPattern_test) {
+	} elsif ($self->test_token(LBRACE)) {
 		$self->_GroupOrUnionGraphPattern;
 	} else {
 		$self->_GraphGraphPattern;
@@ -1780,9 +1725,9 @@ sub _InlineDataClause {
 	my $short	= (not($parens) and $count == 1);
 	$self->expected_token(LBRACE);
 	my @rows;
-	if (not($short) or ($short and $self->_Binding_test)) {
+	if (not($short) or ($short and $self->test_token(LPAREN))) {
 		# { (term) (term) }
-		while ($self->_Binding_test) {
+		while ($self->test_token(LPAREN)) {
 			my $terms	= $self->_Binding($count);
 			push( @rows, $terms );
 		}
@@ -1829,10 +1774,10 @@ sub _ServiceGraphPattern {
 }
 
 # [23] OptionalGraphPattern ::= 'OPTIONAL' GroupGraphPattern
-sub _OptionalGraphPattern_test {
-	my $self	= shift;
-	return $self->test_token(KEYWORD, 'OPTIONAL');
-}
+# sub _OptionalGraphPattern_test {
+# 	my $self	= shift;
+# 	return $self->test_token(KEYWORD, 'OPTIONAL');
+# }
 
 sub __close_bgp_with_filters {
 	my $self	= shift;
@@ -1904,10 +1849,10 @@ sub _GraphGraphPattern {
 }
 
 # [25] GroupOrUnionGraphPattern ::= GroupGraphPattern ( 'UNION' GroupGraphPattern )*
-sub _GroupOrUnionGraphPattern_test {
-	my $self	= shift;
-	return $self->test_token(LBRACE);
-}
+# sub _GroupOrUnionGraphPattern_test {
+# 	my $self	= shift;
+# 	return $self->test_token(LBRACE);
+# }
 
 sub _GroupOrUnionGraphPattern {
 	my $self	= shift;
@@ -1941,7 +1886,7 @@ sub _Constraint_test {
 	my $self	= shift;
 	return 1 if ($self->test_token(LPAREN));
 	return 1 if $self->_BuiltInCall_test;
-	return 1 if $self->_FunctionCall_test;
+	return 1 if $self->_IRIref_test;
 	return 0;
 }
 
@@ -1957,10 +1902,10 @@ sub _Constraint {
 }
 
 # [28] FunctionCall ::= IRIref ArgList
-sub _FunctionCall_test {
-	my $self	= shift;
-	return $self->_IRIref_test;
-}
+# sub _FunctionCall_test {
+# 	my $self	= shift;
+# 	return $self->_IRIref_test;
+# }
 
 sub _FunctionCall {
 	my $self	= shift;
@@ -2131,7 +2076,7 @@ sub _PropertyListNotEmptyPath {
 	my @l	= splice(@{ $self->{stack} });
 	my @props		= map { [$v, $_] } @l;
 	while ($self->optional_token(SEMICOLON)) {
-		if ($self->_VerbPath_test or $self->_VerbSimple_test) {
+		if ($self->_VerbPath_test or $self->test_token(VAR)) {
 			if ($self->_VerbPath_test) {
 				$self->_VerbPath;
 			} else {
@@ -2180,8 +2125,7 @@ sub _Verb_test {
 	my $self	= shift;
 	return 1 if ($self->test_token(A));
 	return 1 if ($self->test_token(VAR));
-	return 1 if ($self->test_token(IRI));
-	return 1 if ($self->test_token(PREFIXNAME));
+	return 1 if ($self->_IRIref_test);
 	return 0;
 # 	return $self->_test( qr/a[\n\t\r <]|[?\$]|<|${r_PNAME_LN}|${r_PNAME_NS}/ );
 }
@@ -2189,7 +2133,7 @@ sub _Verb_test {
 sub _Verb {
 	my $self	= shift;
 	if ($self->optional_token(A)) {
-		my $type	= Attean::IRI->new(value =>  $rdf->type->uri_value);
+		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 		$self->_add_stack( $type );
 	} else {
 		$self->_VarOrIRIref;
@@ -2197,10 +2141,10 @@ sub _Verb {
 }
 
 # VerbSimple ::= Var
-sub _VerbSimple_test {
-	my $self	= shift;
-	return ($self->test_token(VAR));
-}
+# sub _VerbSimple_test {
+# 	my $self	= shift;
+# 	return ($self->test_token(VAR));
+# }
 
 sub _VerbSimple {
 	my $self	= shift;
@@ -2210,8 +2154,7 @@ sub _VerbSimple {
 # VerbPath ::= Path
 sub _VerbPath_test {
 	my $self	= shift;
-	return 1 if ($self->test_token(IRI));
-	return 1 if ($self->test_token(PREFIXNAME));
+	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->test_token(HAT));
 	return 1 if ($self->test_token(OR));
 	return 1 if ($self->test_token(BANG));
@@ -2359,7 +2302,7 @@ sub _PathPrimary {
 	if ($self->_IRIref_test) {
 		$self->_IRIref;
 	} elsif ($self->optional_token(A)) {
-		my $type	= Attean::IRI->new(value =>  $rdf->type->uri_value);
+		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 		$self->_add_stack( $type );
 	} elsif ($self->optional_token(BANG)) {
 		$self->_PathNegatedPropertyClass;
@@ -2410,7 +2353,7 @@ sub _PathOneInPropertyClass {
 		$rev	= 1;
 	}
 	if ($self->optional_token(A)) {
-		my $type	= Attean::IRI->new(value =>  $rdf->type->uri_value);
+		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 		if ($rev) {
 			$self->_add_stack( [ 'PATH', '^', $type ] );
 		} else {
@@ -2432,8 +2375,6 @@ sub _TriplesNode_test {
 	my $self	= shift;
 	return 1 if $self->test_token(LPAREN);
 	return 1 if $self->test_token(LBRACKET);
-# 	return 1 if $self->test_token(ANON);
-# 	return 1 if $self->test_token(NIL);
 	return 0;
 # 	return $self->_test(qr/[[(](?![\n\r\t ]*\])(?![\n\r\t ]*\))/);
 }
@@ -2484,9 +2425,9 @@ sub _Collection {
 	my $cur		= $subj;
 	my $last;
 
-	my $first	= Attean::IRI->new(value =>  $rdf->first->uri_value);
-	my $rest	= Attean::IRI->new(value =>  $rdf->rest->uri_value);
-	my $nil		= Attean::IRI->new(value =>  $rdf->nil->uri_value);
+	my $first	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+	my $rest	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+	my $nil		= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 
 	
 	my @triples;
@@ -2510,7 +2451,13 @@ sub _GraphNode_test {
 	# VarOrTerm | TriplesNode -> (Var | GraphTerm) | (Collection | BlankNodePropertyList) -> Var | IRIref | RDFLiteral | NumericLiteral | BooleanLiteral | BlankNode | NIL | Collection | BlankNodePropertyList
 	# but since a triple can't start with a literal, this is reduced to:
 	# Var | IRIref | BlankNode | NIL
-	return $self->_test(qr/[\$?]|<|['"]|(true\b|false\b)|([+-]?\d)|_:|${r_ANON}|${r_NIL}|\[|[[(]/);
+	return 1 if ($self->test_token(VAR));
+	return 1 if ($self->_IRIref_test);
+	return 1 if ($self->BNODE);
+	return 1 if ($self->ANON);
+	return 1 if ($self->NIL);
+	return 0;
+# 	return $self->_test(qr/[\$?]|<|['"]|(true\b|false\b)|([+-]?\d)|_:|${r_ANON}|${r_NIL}|\[|[[(]/);
 }
 
 sub _GraphNode {
@@ -2528,13 +2475,7 @@ sub _VarOrTerm_test {
 	return 1 if ($self->peek_token(VAR));
 	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->peek_token(BOOLEAN));
-	return 1 if ($self->peek_token(STRING1D));
-	return 1 if ($self->peek_token(STRING1S));
-	return 1 if ($self->peek_token(STRING3D));
-	return 1 if ($self->peek_token(STRING3S));
-	return 1 if ($self->peek_token(INTEGER));
-	return 1 if ($self->peek_token(DECIMAL));
-	return 1 if ($self->peek_token(DOUBLE));
+	return 1 if ($self->_test_literal_token);
 	return 1 if ($self->peek_token(BNODE));
 	return 1 if ($self->peek_token(NIL));
 	return 0;
@@ -2553,9 +2494,8 @@ sub _VarOrTerm {
 # [43] VarOrIRIref ::= Var | IRIref
 sub _VarOrIRIref_test {
 	my $self	= shift;
-	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->test_token(VAR));
-	return 1 if ($self->test_token(PREFIXNAME));
 	return 0;
 # 	return $self->_test(qr/[\$?]|<|${r_PNAME_LN}|${r_PNAME_NS}/);
 }
@@ -2584,15 +2524,20 @@ sub _Var {
 sub _GraphTerm {
 	my $self	= shift;
 	if ($self->test_token(BOOLEAN)) {
-		$self->_BooleanLiteral;
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
 	} elsif ($self->test_token(LPAREN)) {
-		$self->_NIL;
+		my $n	= $self->_NIL;
+		$self->_add_stack( $n );
 	} elsif ($self->test_token(ANON) or $self->test_token(BNODE)) {
-		$self->_BlankNode;
+		my $b	= $self->_BlankNode;
+		$self->_add_stack( $b );
 	} elsif ($self->test_token(INTEGER) or $self->test_token(DECIMAL) or $self->test_token(DOUBLE) or $self->test_token(MINUS) or $self->test_token(PLUS)) {
-		$self->_NumericLiteral;
-	} elsif ($self->test_token(STRING1S) or $self->test_token(STRING1D) or $self->test_token(STRING1D) or $self->test_token(STRING3D)) {
-		$self->_RDFLiteral;
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
 	} else {
 		$self->_IRIref;
 	}
@@ -2673,7 +2618,7 @@ sub _RelationalExpression {
 		$self->_NumericExpression;
 		push(@list, splice(@{ $self->{stack} }));
 		$self->_add_stack( $self->new_binary_expression( $op, @list ) );
-	} elsif ($self->test_token(KEYWORD, 'NOT') or $self->test_token(KEYWORD, 'IN')) {
+	} elsif ($self->test_token(KEYWORD, qr/^(NOT|IN)/)) {
 		my @list	= splice(@{ $self->{stack} });
 		my $not		= $self->optional_token(KEYWORD, 'NOT');
 		$self->expected_token(KEYWORD, 'IN');
@@ -2776,7 +2721,7 @@ sub _UnaryExpression {
 			my $lexpr	= Attean::ValueExpression->new( value => $l );
 			$self->_add_stack( $lexpr );
 		} else {
-			my $int		= $xsd->integer->uri_value;
+			my $int		= 'http://www.w3.org/2001/XMLSchema#integer';
 			my $l		= Attean::Literal->new( value => '-1', datatype => $int );
 			my $neg		= $self->new_binary_expression( '*', Attean::ValueExpression->new( value => $l ), $expr );
 			my $lexpr	= Attean::ValueExpression->new( value => $neg );
@@ -2809,18 +2754,15 @@ sub _PrimaryExpression {
 		my $expr	= Attean::ValueExpression->new(value => $var);
 		$self->_add_stack($expr);
 	} elsif ($self->test_token(BOOLEAN)) {
-		$self->_BooleanLiteral;
-		my $b		= pop(@{ $self->{stack} });
+		my $b		= $self->_BooleanLiteral;
 		my $expr	= Attean::ValueExpression->new(value => $b);
 		$self->_add_stack($expr);
 	} elsif ($self->test_token(INTEGER) or $self->test_token(DECIMAL) or $self->test_token(DOUBLE) or $self->test_token(PLUS) or $self->test_token(MINUS)) {
-		$self->_NumericLiteral;
-		my $l		= pop(@{ $self->{stack} });
+		my $l		= $self->_NumericLiteral;
 		my $expr	= Attean::ValueExpression->new(value => $l);
 		$self->_add_stack($expr);
 	} else {	# if ($self->_test(qr/['"]/)) {
-		$self->_RDFLiteral;
-		my $value	= pop(@{ $self->{stack} });
+		my $value	= $self->_RDFLiteral;
 		my $expr	= Attean::ValueExpression->new(value => $value);
 		$self->_add_stack($expr);
 	}
@@ -2864,8 +2806,7 @@ sub _Aggregate {
 			if ($self->optional_token(SEMICOLON)) {
 				$self->expected_token(KEYWORD, 'SEPARATOR');
 				$self->expected_token(EQUALS);
-				$self->_String;
-				my ($sep)	= splice(@{ $self->{stack} });
+				my $sep		= $self->_String;
 				$options{ seperator }	= $sep;
 			}
 		}
@@ -2896,18 +2837,18 @@ sub _BuiltInCall_test {
 	my $t		= $self->peek_token;
 	return unless ($t);
 	if ($self->{__aggregate_call_ok}) {
-		return 1 if ($t->type == KEYWORD and $t->value =~ qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)$/io);
+		return 1 if ($self->test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)$/io));
 	}
 	return 1 if ($self->test_token(KEYWORD, 'NOT'));
 	return 1 if ($self->test_token(KEYWORD, 'EXISTS'));
-	return 1 if ($t->type == KEYWORD and $t->value =~ qr/^(ABS|CEIL|FLOOR|ROUND|CONCAT|SUBSTR|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|RAND|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|NOW)$/i);
-	return ($t->type == KEYWORD and $t->value =~ qr/^(COALESCE|UUID|STRUUID|STR|STRDT|STRLANG|STRBEFORE|STRAFTER|REPLACE|BNODE|IRI|URI|LANG|LANGMATCHES|DATATYPE|BOUND|sameTerm|isIRI|isURI|isBLANK|isLITERAL|REGEX|IF|isNumeric)$/i);
+	return 1 if ($self->test_token(KEYWORD, qr/^(ABS|CEIL|FLOOR|ROUND|CONCAT|SUBSTR|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|RAND|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|NOW)$/i));
+	return ($self->test_token(KEYWORD, qr/^(COALESCE|UUID|STRUUID|STR|STRDT|STRLANG|STRBEFORE|STRAFTER|REPLACE|BNODE|IRI|URI|LANG|LANGMATCHES|DATATYPE|BOUND|sameTerm|isIRI|isURI|isBLANK|isLITERAL|REGEX|IF|isNumeric)$/i));
 }
 
 sub _BuiltInCall {
 	my $self	= shift;
 	my $t		= $self->peek_token;
-	if ($self->{__aggregate_call_ok} and $t->type == KEYWORD and $t->value =~ qr/(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)\b/io) {
+	if ($self->{__aggregate_call_ok} and $self->test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)\b/io)) {
 		$self->_Aggregate;
 	} elsif ($self->optional_token(KEYWORD, 'NOT')) {
 		$self->expected_token(KEYWORD, 'EXISTS');
@@ -2923,7 +2864,7 @@ sub _BuiltInCall {
 		my $cont	= $self->_remove_pattern;
 		my $p		= Attean::ExistsExpression->new( pattern => $cont );
 		$self->_add_stack($p);
-	} elsif ($t->type == KEYWORD and $t->value =~ qr/(COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW)/i) {
+	} elsif ($self->test_token(KEYWORD, qr/(COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW)/i)) {
 		# n-arg functions that take expressions
 		my $t	= $self->next_token;
 		my $op	= $t->value;
@@ -3037,8 +2978,7 @@ sub _IRIrefOrFunction {
 # [60] RDFLiteral ::= String ( LANGTAG | ( '^^' IRIref ) )?
 sub _RDFLiteral {
 	my $self	= shift;
-	$self->_String;
-	my ($value)	= splice(@{ $self->{stack} });
+	my $value	= $self->_String;
 	
 	my $obj;
 	if ($self->test_token(LANG)) {
@@ -3054,7 +2994,7 @@ sub _RDFLiteral {
 		$obj	= Attean::Literal->new( value => $value );
 	}
 	
-	$self->_add_stack( $obj );
+	return $obj;
 }
 
 # [61] NumericLiteral ::= NumericLiteralUnsigned | NumericLiteralPositive | NumericLiteralNegative
@@ -3074,14 +3014,14 @@ sub _NumericLiteral {
 	my $type;
 	if (my $db = $self->optional_token(DOUBLE)) {
 		$value	= $db->value;
-		$type	= Attean::IRI->new(value =>  $xsd->double->uri_value );
+		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#double' );
 	} elsif (my $dc = $self->optional_token(DECIMAL)) {
 		$value	= $dc->value;
-		$type	= Attean::IRI->new(value =>  $xsd->decimal->uri_value );
+		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#decimal' );
 	} else {
 		my $i	= $self->expected_token(INTEGER);
 		$value	= $i->value;
-		$type	= Attean::IRI->new(value =>  $xsd->integer->uri_value );
+		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#integer' );
 	}
 	
 	if ($sign) {
@@ -3092,7 +3032,8 @@ sub _NumericLiteral {
 # 	if ($self->{args}{canonicalize} and blessed($obj) and $obj->isa('RDF::Trine::Node::Literal')) {
 # 		$obj	= $obj->canonicalize;
 # 	}
-	$self->_add_stack( $obj );
+
+	return $obj;
 }
 
 # [65] BooleanLiteral ::= 'true' | 'false'
@@ -3101,11 +3042,11 @@ sub _BooleanLiteral {
 	my $t		= $self->expected_token(BOOLEAN);
 	my $bool	= $t->value;
 
-	my $obj	= Attean::Literal->new( value => $bool, datatype => $xsd->boolean->uri_value );
+	my $obj	= Attean::Literal->new( value => $bool, datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
 # 	if ($self->{args}{canonicalize} and blessed($obj) and $obj->isa('RDF::Trine::Node::Literal')) {
 # 		$obj	= $obj->canonicalize;
 # 	}
-	$self->_add_stack( $obj );
+	return $obj;
 }
 
 # [66] String ::= STRING_LITERAL1 | STRING_LITERAL2 | STRING_LITERAL_LONG1 | STRING_LITERAL_LONG2
@@ -3128,7 +3069,6 @@ sub _String {
 		die "Expecting string literal but found $got '$value'";
 	}
 
-#	$value	=~ s/(${r_ECHAR})/"$1"/ge;
 	$value	=~ s/\\t/\t/g;
 	$value	=~ s/\\b/\n/g;
 	$value	=~ s/\\n/\n/g;
@@ -3136,7 +3076,7 @@ sub _String {
 	$value	=~ s/\\"/"/g;
 	$value	=~ s/\\'/'/g;
 	$value	=~ s/\\\\/\\/g;	# backslash must come last, so it doesn't accidentally create a new escape
-	$self->_add_stack( $value );
+	return $value;
 }
 
 # [67] IRIref ::= IRI_REF | PrefixedName
@@ -3147,6 +3087,7 @@ sub _IRIref_test {
 	return 0;
 }
 
+
 sub _IRIref {
 	my $self	= shift;
 	if (my $t = $self->optional_token(IRI)) {
@@ -3155,7 +3096,8 @@ sub _IRIref {
 		my $node	= Attean::IRI->new( value => $iri, $base ? (base => $base) : () );
 		$self->_add_stack( $node );
 	} else {
-		$self->_PrefixedName;
+		my $p	= $self->_PrefixedName;
+		$self->_add_stack( $p );
 	}
 }
 
@@ -3173,7 +3115,8 @@ sub _PrefixedName {
 	
 	my $iri		= $self->{namespaces}{$ns} . $local;
 	my $base	= $self->__base;
-	$self->_add_stack( Attean::IRI->new( value => $iri, $base ? (base => $base) : () ) );
+	my $p		= Attean::IRI->new( value => $iri, $base ? (base => $base) : () );
+	return $p;
 }
 
 # [69] BlankNode ::= BLANK_NODE_LABEL | ANON
@@ -3184,18 +3127,17 @@ sub _BlankNode {
 	}
 	if (my $b = $self->optional_token(BNODE)) {
 		my $label	= $b->value;
-		$self->_add_stack( Attean::Blank->new($label) );
+		return Attean::Blank->new($label);
 	} else {
 		$self->expected_token(ANON);
-		$self->_add_stack( Attean::Blank->new() );
+		return Attean::Blank->new();
 	}
 }
 
 sub _NIL {
 	my $self	= shift;
 	$self->expected_token(NIL);
-	my $nil	= Attean::IRI->new(value =>  $rdf->nil->uri_value );
-	$self->_add_stack( $nil );
+	return Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil' );
 }
 
 sub __solution_modifiers {
@@ -3670,7 +3612,11 @@ sub test_token {
 	return if ($t->type != $type);
 	if (@_) {
 		my $value	= shift;
-		return unless ($t->value eq $value);
+		if (ref($value) eq 'Regexp') {
+			return unless ($t->value =~ $value);
+		} else {
+			return unless ($t->value eq $value);
+		}
 	}
 	return 1;
 }
