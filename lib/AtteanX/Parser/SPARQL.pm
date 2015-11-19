@@ -38,6 +38,8 @@ use URI::NamespaceMap;
 use Data::Dumper;
 use RDF::Query::Parser;
 use RDF::Query::Algebra;
+use AtteanX::Parser::SPARQLLex;
+use AtteanX::Parser::SPARQL::Constants;
 use RDF::Trine::Namespace qw(rdf);
 use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 use Scalar::Util qw(blessed looks_like_number reftype);
@@ -89,12 +91,13 @@ Returns a new SPARQL 1.1 parser object.
 =cut
 
 use Moo;
+
+has 'lexer' 		=> (is => 'rw', isa => InstanceOf['AtteanX::Parser::SPARQLLex::Iterator']);
 has 'args'			=> (is => 'ro', isa => HashRef);
 has 'build'			=> (is => 'rw', isa => HashRef);
 has 'update'		=> (is => 'rw', isa => Bool);
 has 'namespaces'	=> (is => 'rw', isa => InstanceOf['URI::NamespaceMap'], default => sub { URI::NamespaceMap->new() });
 has 'baseURI'		=> (is => 'rw');
-has 'tokens'		=> (is => 'rw', isa => Str);
 has 'stack'			=> (is => 'rw', isa => ArrayRef);
 has 'filters'		=> (is => 'rw', isa => ArrayRef);
 has 'pattern_container_stack'	=> (is => 'rw', isa => ArrayRef);
@@ -125,20 +128,26 @@ sub BUILDARGS {
 
 sub parse_list_from_io {
 	my $self	= shift;
-	my $io		= shift;
-	my $string	= do { local($/); <$io> };
-	return $self->parse_list_from_bytes($string);
+	my $p 		= AtteanX::Parser::SPARQLLex->new();
+	my $l		= $p->parse_iter_from_io(@_);
+	$self->lexer($l);
+	my $q		= $self->parse($self->{args}{base});
+	return unless (ref($q));
+	my $a	= $q->{triples}[0];
+	return unless (ref($a));
+	return $a;
 }
 
 sub parse_list_from_bytes {
 	my $self	= shift;
-	my $string	= shift;
-	my $q		= $self->parse($string, $self->{args}{base});
+	my $p 		= AtteanX::Parser::SPARQLLex->new();
+	my $l		= $p->parse_iter_from_bytes(@_);
+	$self->lexer($l);
+	my $q		= $self->parse($self->{args}{base});
 	return unless (ref($q));
-	my $p	= $q->{triples}[0];
-	return unless (ref($p));
-	
-	return $p;
+	my $a	= $q->{triples}[0];
+	return unless (ref($a));
+	return $a;
 }
 
 =item C<< parse ( $query, $base_uri, $update_flag ) >>
@@ -151,20 +160,16 @@ SPARQL 1.1 Update statements.
 
 sub parse {
 	my $self	= shift;
-	my $input	= shift;
-
-	unless (defined($input)) {
+	
+	my $t		= $self->lexer->peek;
+	unless (defined($t)) {
 		die "No query string found to parse";
 	}
 
 	my $baseuri	= shift;
 	my $update	= shift || 0;
 
-	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
-	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
-
 	$self->baseURI($baseuri);
-	$self->tokens($input);
 	$self->stack([]);
 	$self->filters([]);
 	$self->pattern_container_stack([]);
@@ -194,129 +199,49 @@ sub parse {
 	return $data;
 }
 
-=item C<< parse_pattern ( $pattern, $base_uri, \%namespaces ) >>
-
-Parses the C<< $pattern >>, using the given C<< $base_uri >> and returns a
-Attean::Algebra pattern.
-
-=cut
-
-sub parse_pattern {
-	my $self	= shift;
-	my $input	= shift;
-	my $baseuri	= shift;
-	my $ns		= shift;
-
-	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
-	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
-
-	local($self->{namespaces})				= $ns;
-	local($self->{baseURI})					= $baseuri;
-	local($self->{tokens})					= $input;
-	local($self->{stack})					= [];
-	local($self->{filters})					= [];
-	local($self->{pattern_container_stack})	= [];
-	my $triples								= $self->_push_pattern_container();
-	$self->{build}							= { sources => [], triples => $triples };
-	if ($baseuri) {
-		$self->{build}{base}	= $baseuri;
-	}
-
-# 	try {
-		$self->_GroupGraphPattern();
-# 	} catch RDF::Query::Error with {
-# 		my $e	= shift;
-# 		$self->{build}	= undef;
-# 	};
-	my $data								= delete $self->{build};
-
-	return $data->{triples}[0];
-}
-
-=item C<< parse_expr ( $pattern, $base_uri, \%namespaces ) >>
-
-Parses the C<< $pattern >>, using the given C<< $base_uri >> and returns a
-Attean::Expression pattern.
-
-=cut
-
-sub parse_expr {
-	my $self	= shift;
-	my $input	= shift;
-	my $baseuri	= shift;
-	my $ns		= shift;
-
-	$input		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
-	$input		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
-
-	local($self->{namespaces})				= $ns;
-	local($self->{baseURI})					= $baseuri;
-	local($self->{tokens})					= $input;
-	local($self->{stack})					= [];
-	local($self->{filters})					= [];
-	local($self->{pattern_container_stack})	= [];
-	my $triples								= $self->_push_pattern_container();
-	$self->{build}							= { sources => [], triples => $triples };
-	if ($baseuri) {
-		$self->{build}{base}	= $baseuri;
-	}
-
-# 	try {
-		$self->_Expression();
-# 	} catch RDF::Query::Error with {
-# 		my $e	= shift;
-# 		$self->{build}	= undef;
-# 	};
-
-	my $data	= splice(@{ $self->{stack} });
-	return $data;
-}
-
 ################################################################################
 
 
 # [1] Query ::= Prologue ( SelectQuery | ConstructQuery | DescribeQuery | AskQuery | LoadUpdate )
 sub _RW_Query {
 	my $self	= shift;
-	$self->__consume_ws_opt;
 	$self->_Prologue;
-	$self->__consume_ws_opt;
 
 	my $read_query	= 0;
 	while (1) {
-		if ($self->_test(qr/SELECT/i)) {
+		if ($self->test_token(KEYWORD, 'SELECT')) {
 			$self->_SelectQuery();
 			$read_query++;
-		} elsif ($self->_test(qr/CONSTRUCT/i)) {
+		} elsif ($self->test_token(KEYWORD, 'CONSTRUCT')) {
 			$self->_ConstructQuery();
 			$read_query++;
-		} elsif ($self->_test(qr/DESCRIBE/i)) {
+		} elsif ($self->test_token(KEYWORD, 'DESCRIBE')) {
 			$self->_DescribeQuery();
 			$read_query++;
-		} elsif ($self->_test(qr/ASK/i)) {
+		} elsif ($self->test_token(KEYWORD, 'ASK')) {
 			$self->_AskQuery();
 			$read_query++;
-		} elsif ($self->_test(qr/CREATE\s+(SILENT\s+)?GRAPH/i)) {
+		} elsif ($self->test_token(KEYWORD, 'CREATE')) {
 			unless ($self->{update}) {
 				die "CREATE GRAPH update forbidden in read-only queries";
 			}
 			$self->_CreateGraph();
-		} elsif ($self->_test(qr/DROP\s+(SILENT\s+)?/i)) {
+		} elsif ($self->test_token(KEYWORD, 'DROP')) {
 			unless ($self->{update}) {
 				die "DROP GRAPH update forbidden in read-only queries";
 			}
 			$self->_DropGraph();
-		} elsif ($self->_test(qr/LOAD\s+(SILENT\s+)?/i)) {
+		} elsif ($self->test_token(KEYWORD, 'LOAD')) {
 			unless ($self->{update}) {
 				die "LOAD update forbidden in read-only queries"
 			}
 			$self->_LoadUpdate();
-		} elsif ($self->_test(qr/CLEAR\s+(SILENT\s+)?/i)) {
+		} elsif ($self->test_token(KEYWORD, 'CLEAR')) {
 			unless ($self->{update}) {
 				die "CLEAR GRAPH update forbidden in read-only queries";
 			}
 			$self->_ClearGraphUpdate();
-		} elsif ($self->_test(qr/(WITH|INSERT|DELETE)/i)) {
+		} elsif ($self->test_token(KEYWORD, 'WITH') or $self->test_token(KEYWORD, 'INSERT') or $self->test_token(KEYWORD, 'DELETE')) {
 			unless ($self->{update}) {
 				die "INSERT/DELETE update forbidden in read-only queries";
 			}
@@ -326,7 +251,6 @@ sub _RW_Query {
 				$self->_eat_with_ws(qr/WITH/i);
 				$self->_IRIref;
 				($graph)	= splice( @{ $self->{stack} } );
-				$self->__consume_ws_opt;
 			}
 			if ($self->_test(qr/INSERT/ims)) {
 				$self->_eat_with_ws(qr/INSERT/i);
@@ -351,18 +275,15 @@ sub _RW_Query {
 					$self->_DeleteUpdate($graph);
 				}
 			}
-		} elsif ($self->_test(qr/COPY/i)) {
+		} elsif ($self->test_token(KEYWORD, 'COPY')) {
 			$self->_CopyUpdate();
-		} elsif ($self->_test(qr/MOVE/i)) {
+		} elsif ($self->test_token(KEYWORD, 'MOVE')) {
 			$self->_MoveUpdate();
-		} elsif ($self->_test(qr/ADD/i)) {
+		} elsif ($self->test_token(KEYWORD, 'ADD')) {
 			$self->_AddUpdate();
-		} elsif ($self->_test(qr/;/)) {
-			$self->_eat(qr/;/) ;
-			$self->__consume_ws_opt;
+		} elsif ($self->test_token(SEMICOLON)) {
+			$self->expected_token(SEMICOLON);
 			next if ($self->_Query_test);
-			last;
-		} elsif ($self->{tokens} eq '') {
 			last;
 		} else {
 			my $l		= Log::Log4perl->get_logger("rdf.query");
@@ -373,10 +294,7 @@ sub _RW_Query {
 		}
 
 		last if ($read_query);
-		$self->__consume_ws_opt;
-		if ($self->_test(qr/;/)) {
-			$self->_eat(qr/;/) ;
-			$self->__consume_ws_opt;
+		if ($self->optional_token(SEMICOLON)) {
 			if ($self->_Query_test) {
 				next;
 			}
@@ -384,12 +302,13 @@ sub _RW_Query {
 		last;
 	}
 #	$self->_eat(qr/;/) if ($self->_test(qr/;/));
-	$self->__consume_ws_opt;
 
 	my $count	= scalar(@{ $self->{build}{triples} });
-	my $remaining	= $self->{tokens};
-	if ($remaining =~ m/\S/) {
-		die "Syntax error: Remaining input after query: $remaining";
+	
+	my $t	= $self->peek_token;
+	if ($t) {
+		my $type	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
+		die "Syntax error: Remaining input after query: $type";
 	}
 
 	if ($count == 0 or $count > 1) {
@@ -417,32 +336,24 @@ sub _Prologue {
 
 	my $base;
 	my @base;
-	if ($self->_test( qr/BASE/i )) {
-		$self->_eat_with_ws( qr/BASE/i );
-		my $iriref	= $self->_eat( $r_IRI_REF );
-		my $iri		= substr($iriref,1,length($iriref)-2);
+	if ($self->optional_token(KEYWORD, 'BASE')) {
+		my $iriref	= $self->expected_token(IRI);
+		my $iri		= $iriref->value;
 		$base		= Attean::IRI->new( value => $iri );
 		@base		= $base;
-		$self->__consume_ws_opt;
 		$self->{base}	= $base;
 	}
 
 	my %namespaces;
-	while ($self->_test( qr/PREFIX/i )) {
-		$self->_eat_with_ws( qr/PREFIX/i );
-		my $prefix	= $self->_eat( $r_PNAME_NS );
-		my $ns		= substr($prefix, 0, length($prefix) - 1);
-		if ($ns eq '') {
-			$ns	= '__DEFAULT__';
-		}
-		$self->__consume_ws_opt;
-		my $iriref	= $self->_eat( $r_IRI_REF );
-		my $iri		= substr($iriref,1,length($iriref)-2);
+	while ($self->optional_token(KEYWORD, 'PREFIX')) {
+		my $prefix	= $self->expected_token(PREFIXNAME);
+		my $ns		= substr($prefix->value, 0, length($prefix->value) - 1);
+		my $iriref	= $self->expected_token(IRI);
+		my $iri		= $iriref->value;
 		if (@base) {
 			my $r	= Attean::IRI->new( value => $iri, base => shift(@base) );
 			$iri	= $r->value;
 		}
-		$self->__consume_ws_opt;
 		$namespaces{ $ns }	= $iri;
 		$self->{namespaces}{$ns}	= $iri;
 	}
@@ -456,12 +367,11 @@ sub _Prologue {
 
 sub _InsertDataUpdate {
 	my $self	= shift;
-	$self->_eat_with_ws('{');
+	$self->expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
 	$self->_ModifyTemplate();
-	$self->__consume_ws_opt;
 	my $data	= $self->_remove_pattern;
-	$self->_eat_with_ws('}');
+	$self->expected_token(RBRACE);
 	
 	my $empty	= Attean::Algebra::BGP->new();
 	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $empty, undef, 1);
@@ -471,13 +381,12 @@ sub _InsertDataUpdate {
 
 sub _DeleteDataUpdate {
 	my $self	= shift;
-	$self->_eat_with_ws('{');
+	$self->expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
 	local($self->{__no_bnodes})		= "DELETE DATA block";
 	$self->_ModifyTemplate();
-	$self->__consume_ws_opt;
 	my $data	= $self->_remove_pattern;
-	$self->_eat_with_ws('}');
+	$self->expected_token(RBRACE);
 	
 	my $empty	= Attean::Algebra::BGP->new();
 	my $delete	= RDF::Query::Algebra::Update->new($data, undef, $empty, undef, 1);
@@ -488,11 +397,10 @@ sub _DeleteDataUpdate {
 sub _InsertUpdate {
 	my $self	= shift;
 	my $graph	= shift;
-	$self->_eat_with_ws('{');
+	$self->expected_token(LBRACE);
 	$self->_ModifyTemplate();
-	$self->__consume_ws_opt;
 	my $data	= $self->_remove_pattern;
-	$self->_eat_with_ws('}');
+	$self->expected_token(RBRACE);
 	if ($graph) {
 		$data	= Attean::Algebra::Graph->new( children => [$data], graph => $graph );
 	}
@@ -514,7 +422,6 @@ sub _InsertUpdate {
 		} else {
 			push(@{ $dataset{default} }, $iri );
 		}
-		$self->__consume_ws_opt;
 	}
 
 	$self->_eat_with_ws(qr/WHERE/i);
@@ -556,17 +463,14 @@ sub _DeleteUpdate {
 			local($self->{__no_bnodes})		= "DELETE block";
 			$self->_eat_with_ws('{');
 			$self->_ModifyTemplate( $graph );
-			$self->__consume_ws_opt;
 			$self->_eat('}');
 		}
 		$delete_data	= $self->_remove_pattern;
 		
-		$self->__consume_ws_opt;
 		if ($self->_test(qr/INSERT/i)) {
 			$self->_eat_with_ws(qr/INSERT/i);
 			$self->_eat_with_ws('{');
 			$self->_ModifyTemplate( $graph );
-			$self->__consume_ws_opt;
 			$self->_eat_with_ws('}');
 			$insert_data	= $self->_remove_pattern;
 		}
@@ -586,7 +490,6 @@ sub _DeleteUpdate {
 			} else {
 				push(@{ $dataset{default} }, $iri );
 			}
-			$self->__consume_ws_opt;
 		}
 	}
 	
@@ -639,7 +542,6 @@ sub _ModifyTemplate {
 	my $data;
 	while ($self->_ModifyTemplate_test) {
 		$self->__ModifyTemplate( $graph );
-		$self->__consume_ws_opt;
 		my $d			= $self->_remove_pattern;
 		my @patterns	= blessed($data) ? $data->patterns : ();
 		$data			= $self->new_join(@patterns, $d);
@@ -675,10 +577,8 @@ sub _LoadUpdate {
 	my $self	= shift;
 	my $op		= $self->_eat(qr/LOAD\s+(SILENT\s+)?/i);
 	my $silent	= ($op =~ /SILENT/);
-	$self->__consume_ws_opt;
 	$self->_IRIref;
 	my ($iri)	= splice( @{ $self->{stack} } );
-	$self->__consume_ws_opt;
 	if ($self->_test(qr/INTO GRAPH/i)) {
 		$self->_eat(qr/INTO GRAPH/i);
 		$self->_ws;
@@ -883,46 +783,34 @@ sub __UpdateShortcuts {
 # [5] SelectQuery ::= 'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( Var+ | '*' ) DatasetClause* WhereClause SolutionModifier
 sub _SelectQuery {
 	my $self	= shift;
-	$self->_eat(qr/SELECT/i);
-	$self->__consume_ws;
-	
-	if ($self->{tokens} =~ m/^(DISTINCT|REDUCED)/i) {
-		my $mod	= $self->_eat( qr/DISTINCT|REDUCED/i );
-		$self->__consume_ws;
-		$self->{build}{options}{lc($mod)}	= 1;
+	$self->expected_token(KEYWORD, 'SELECT');
+	if ($self->optional_token(KEYWORD, 'DISTINCT') or $self->optional_token(KEYWORD, 'REDUCED')) {
+		$self->{build}{options}{distinct}	= 1;
 	}
 	
 	my ($star, @exprs)	= $self->__SelectVars;
 	
 	$self->_DatasetClause();
 	
-	$self->__consume_ws_opt;
 	$self->_WhereClause;
 
-	$self->__consume_ws_opt;
 	$self->_SolutionModifier();
 	
-	$self->__consume_ws_opt;
-	if ($self->_test( qr/VALUES/i )) {
-		$self->_eat_with_ws( qr/VALUES/i );
+	if ($self->optional_token(KEYWORD, 'VALUES')) {
 		my @vars;
 # 		$self->_Var;
 # 		push( @vars, splice(@{ $self->{stack} }));
-# 		$self->__consume_ws_opt;
 		my $parens	= 0;
-		if ($self->_test(qr/[(]/)) {
-			$self->_eat( qr/[(]/ );
+		if ($self->optional_token(LPAREN)) {
 			$parens	= 1;
 		}
-		while ($self->_test(qr/[\$?]/)) {
+		while ($self->test_token(VAR)) {
 			$self->_Var;
 			push( @vars, splice(@{ $self->{stack} }));
-			$self->__consume_ws_opt;
 		}
 		if ($parens) {
-			$self->_eat( qr/[)]/ );
+			$self->expected_token(RPAREN);
 		}
-		$self->__consume_ws_opt;
 		
 		my $count	= scalar(@vars);
 		if (not($parens) and $count == 0) {
@@ -932,24 +820,21 @@ sub _SelectQuery {
 		}
 		
 		my $short	= (not($parens) and $count == 1);
-		$self->_eat_with_ws('{');
+		$self->expected_token(LBRACE);
 		if (not($short) or ($short and $self->_Binding_test)) {
 			while ($self->_Binding_test) {
 				my $terms	= $self->_Binding($count);
 				push( @{ $self->{build}{bindings}{terms} }, $terms );
-				$self->__consume_ws_opt;
 			}
 		} else {
 			while ($self->_BindingValue_test) {
 				$self->_BindingValue;
-				$self->__consume_ws_opt;
 				my ($term)	= splice(@{ $self->{stack} });
 				push( @{ $self->{build}{bindings}{terms} }, [$term] );
-				$self->__consume_ws_opt;
 			}
 		}
 		
-		$self->_eat_with_ws('}');
+		$self->expected_token(RBRACE);
 
 		my $bindings	= delete $self->{build}{bindings};
 		my @rows	= @{ $bindings->{terms} };
@@ -997,10 +882,10 @@ sub __SelectVars {
 	my @vars;
 	my $count	= 0;
 	my @exprs;
-	while ($self->_test('*') or $self->__SelectVar_test) {
-		if ($self->_test('*')) {
+	while ($self->test_token(STAR) or $self->__SelectVar_test) {
+		if ($self->test_token(STAR)) {
 			$self->{build}{star}++;
-			$self->_eat_with_ws('*');
+			$self->expected_token(STAR);
 			$star	= 1;
 			$count++;
 		} else {
@@ -1013,7 +898,6 @@ sub __SelectVars {
 				push(@exprs, $var->value, $var);
 			}
 			push(@vars, shift(@s));
-			$self->__consume_ws_opt;
 			$count++;
 		}
 	}
@@ -1042,15 +926,13 @@ sub __SelectVars {
 
 sub _BrackettedAliasExpression {
 	my $self	= shift;
-	$self->_eat_with_ws('(');
+	$self->expected_token(LPAREN);
 	$self->_Expression;
 	my ($expr)	= splice(@{ $self->{stack} });
-	$self->__consume_ws_opt;
-	$self->_eat_with_ws(qr/AS/i);
+	$self->expected_token(KEYWORD, 'AS');
 	$self->_Var;
 	my ($var)	= splice(@{ $self->{stack} });
-	$self->__consume_ws_opt;
-	$self->_eat(')');
+	$self->expected_token(RPAREN);
 	
 	return ($var, $expr);
 }
@@ -1059,14 +941,14 @@ sub __SelectVar_test {
 	my $self	= shift;
 	local($self->{__aggregate_call_ok})	= 1;
 #	return 1 if $self->_BuiltInCall_test;
-	return 1 if $self->_test( qr/[(]/i);
-	return $self->{tokens} =~ m'^[?$]';
+	return 1 if $self->test_token(LPAREN);
+	return $self->test_token(VAR);
 }
 
 sub __SelectVar {
 	my $self	= shift;
 	local($self->{__aggregate_call_ok})	= 1;
-	if ($self->_test('(')) {
+	if ($self->test_token(LPAREN)) {
 		my ($var, $expr)	= $self->_BrackettedAliasExpression;
 		return ($var, $expr);
 	} else {
@@ -1079,22 +961,19 @@ sub __SelectVar {
 # [6] ConstructQuery ::= 'CONSTRUCT' ConstructTemplate DatasetClause* WhereClause SolutionModifier
 sub _ConstructQuery {
 	my $self	= shift;
-	$self->_eat_with_ws(qr/CONSTRUCT/i);
+	$self->expected_token(KEYWORD, 'CONSTRUCT');
 	my $shortcut	= 1;
-	if ($self->_test( qr/[{]/ )) {
+	if ($self->test_token(LBRACE)) {
 		$shortcut	= 0;
 		$self->_ConstructTemplate;
-		$self->__consume_ws_opt;
 	}
 	$self->_DatasetClause();
-	$self->__consume_ws_opt;
 	if ($shortcut) {
 		$self->_TriplesWhereClause;
 	} else {
 		$self->_WhereClause;
 	}
 	
-	$self->__consume_ws_opt;
 	$self->_SolutionModifier();
 	
 	my $pattern		= $self->{build}{triples}[0];
@@ -1119,26 +998,20 @@ sub _ConstructQuery {
 # [7] DescribeQuery ::= 'DESCRIBE' ( VarOrIRIref+ | '*' ) DatasetClause* WhereClause? SolutionModifier
 sub _DescribeQuery {
 	my $self	= shift;
-	$self->_eat(qr/DESCRIBE/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD, 'DESCRIBE');
 	
-	if ($self->_test('*')) {
-		$self->_eat('*');
+	if ($self->optional_token(STAR)) {
 		$self->{build}{variables}	= ['*'];
-		$self->__consume_ws_opt;
 	} else {
 		$self->_VarOrIRIref;
-		$self->__consume_ws_opt;
 		while ($self->_VarOrIRIref_test) {
 			$self->_VarOrIRIref;
-			$self->__consume_ws_opt;
 		}
 		$self->{build}{variables}	= [ splice(@{ $self->{stack} }) ];
 	}
 	
 	$self->_DatasetClause();
 	
-	$self->__consume_ws_opt;
 	if ($self->_WhereClause_test) {
 		$self->_WhereClause;
 	} else {
@@ -1146,7 +1019,6 @@ sub _DescribeQuery {
 		$self->_add_patterns( $pattern );
 	}
 	
-	$self->__consume_ws_opt;
 	$self->_SolutionModifier();
 	$self->{build}{method}		= 'DESCRIBE';
 }
@@ -1154,11 +1026,10 @@ sub _DescribeQuery {
 # [8] AskQuery ::= 'ASK' DatasetClause* WhereClause
 sub _AskQuery {
 	my $self	= shift;
-	$self->_eat_with_ws(qr/ASK/i);
+	$self->expected_token(KEYWORD, 'ASK');
 	
 	$self->_DatasetClause();
 	
-	$self->__consume_ws_opt;
 	$self->_WhereClause;
 	
 	$self->{build}{variables}	= [];
@@ -1171,7 +1042,7 @@ sub _AskQuery {
 
 sub _DatasetClause_test {
 	my $self	= shift;
-	return $self->_test( qr/FROM/i );
+	return $self->test_token(KEYWORD, 'FROM');
 }
 
 # [9] DatasetClause ::= 'FROM' ( DefaultGraphClause | NamedGraphClause )
@@ -1180,15 +1051,12 @@ sub _DatasetClause {
 	
 # 	my @dataset;
  	$self->{build}{sources}	= [];
-	while ($self->_test( qr/FROM/i )) {
-		$self->_eat( qr/FROM/i );
-		$self->__consume_ws;
-		if ($self->_test( qr/NAMED/i )) {
+ 	while ($self->optional_token(KEYWORD, 'FROM')) {
+ 		if ($self->test_token(KEYWORD, 'NAMED')) {
 			$self->_NamedGraphClause;
 		} else {
 			$self->_DefaultGraphClause;
 		}
-		$self->__consume_ws_opt;
 	}
 }
 
@@ -1203,7 +1071,7 @@ sub _DefaultGraphClause {
 # [11] NamedGraphClause ::= 'NAMED' SourceSelector
 sub _NamedGraphClause {
 	my $self	= shift;
-	$self->_eat_with_ws( qr/NAMED/i );
+	$self->expected_token(KEYWORD, 'NAMED');
 	$self->_SourceSelector;
 	my ($source)	= splice(@{ $self->{stack} });
 	push( @{ $self->{build}{sources} }, [$source, 'NAMED'] );
@@ -1222,10 +1090,7 @@ sub _WhereClause_test {
 }
 sub _WhereClause {
 	my $self	= shift;
-	if ($self->_test( qr/WHERE/i )) {
-		$self->_eat( qr/WHERE/i );
-	}
-	$self->__consume_ws_opt;
+	$self->optional_token(KEYWORD, 'WHERE');
 	$self->_GroupGraphPattern;
 	
 	my $ggp	= $self->_peek_pattern;
@@ -1236,12 +1101,12 @@ sub _TriplesWhereClause {
 	my $self	= shift;
 	$self->_push_pattern_container;
 	
-	$self->_eat_with_ws( qr/WHERE/i );
-	$self->_eat_with_ws(qr/{/);
+	$self->expected_token(KEYWORD, 'WHERE');
+	$self->expected_token(LBRACE);
 	if ($self->_TriplesBlock_test) {
 		$self->_TriplesBlock;
 	}
-	$self->_eat(qr/}/);
+	$self->expected_token(RBRACE);
 	
 	my $cont		= $self->_pop_pattern_container;
 	$self->{build}{construct_triples}	= $cont->[0];
@@ -1252,14 +1117,14 @@ sub _TriplesWhereClause {
 
 sub _Binding_test {
 	my $self	= shift;
-	return $self->_test( '(' );
+	return $self->test_token(LPAREN);
 }
 
 sub _Binding {
 	my $self	= shift;
 	my $count	= shift;
 	
-	$self->_eat_with_ws( '(' );
+	$self->expected_token(LPAREN);
 	
 	my @terms;
 	foreach my $i (1..$count) {
@@ -1269,24 +1134,35 @@ sub _Binding {
 		}
 		$self->_BindingValue;
 		push( @terms, splice(@{ $self->{stack} }));
-		$self->__consume_ws_opt;
 	}
-	$self->__consume_ws_opt;
-	$self->_eat( ')' );
+	$self->expected_token(RPAREN);
 	return \@terms;
 }
 
 sub _BindingValue_test {
 	my $self	= shift;
 	return 1 if ($self->_IRIref_test);
-	return 1 if ($self->_test(qr/UNDEF|[<'".0-9]|(true|false)\b|_:|\([\n\r\t ]*\)/));
+	return 1 if ($self->test_token(KEYWORD, 'UNDEF'));
+	return 1 if ($self->test_token(BOOLEAN));
+	return 1 if ($self->test_token(INTEGER));
+	return 1 if ($self->test_token(DECIMAL));
+	return 1 if ($self->test_token(DOUBLE));
+	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->test_token(STRING1S));
+	return 1 if ($self->test_token(STRING1D));
+	return 1 if ($self->test_token(STRING3S));
+	return 1 if ($self->test_token(STRING3D));
+	return 1 if ($self->test_token(PREFIXNAME));
+	return 1 if ($self->test_token(BNODE));
+	return 1 if ($self->test_token(NIL));
 	return 0;
+# 	return 1 if ($self->_test(qr/UNDEF|[<'".0-9]|(true|false)\b|_:|\([\n\r\t ]*\)/));
+# 	return 0;
 }
 
 sub _BindingValue {
 	my $self	= shift;
-	if ($self->_test(qr/UNDEF/i)) {
-		$self->_eat(qr/UNDEF/i);
+	if ($self->optional_token(KEYWORD, 'UNDEF')) {
 		push(@{ $self->{stack} }, undef);
 	} else {
 		$self->_GraphTerm;
@@ -1298,30 +1174,26 @@ sub __GroupByVar_test {
 	my $self	= shift;
 	return 1 if ($self->_BuiltInCall_test);
 	return 1 if ($self->_IRIref_test);
-	return 1 if ($self->_test( qr/[(]/i ));
-	return 1 if ($self->_test(qr/[\$?]/));
+	return 1 if ($self->test_token(LPAREN));
+	return 1 if ($self->test_token(VAR));
+	return 0;
 }
 
 sub __GroupByVar {
 	my $self	= shift;
-	if ($self->_test('(')) {
-		$self->_eat_with_ws('(');
+	if ($self->optional_token(LPAREN)) {
 		$self->_Expression;
 		my ($expr)	= splice(@{ $self->{stack} });
-		$self->__consume_ws_opt;
-		
-		if ($self->_test(qr/AS/i)) {
-			$self->_eat_with_ws('AS');
+		if ($self->optional_token(KEYWORD, 'AS')) {
 			$self->_Var;
 			my ($var)	= splice(@{ $self->{stack} });
-			$self->__consume_ws_opt;
 			push(@{ $self->{build}{__group_vars} }, [$var, $expr]);
 			my $vexpr	= Attean::ValueExpression->new( value => $var );
 			$self->_add_stack( $vexpr );
 		} else {
 			$self->_add_stack( $expr );
 		}
-		$self->_eat(')');
+		$self->expected_token(RPAREN);
 		
 	} elsif ($self->_IRIref_test) {
 		$$self->_FunctionCall;
@@ -1339,19 +1211,16 @@ sub __GroupByVar {
 sub _SolutionModifier {
 	my $self	= shift;
 	
-	if ($self->_test( qr/GROUP\s+BY/i )) {
+	if ($self->test_token(KEYWORD, 'GROUP')) {
 		$self->_GroupClause;
-		$self->__consume_ws_opt;
 	}
 	
-	if ($self->_test( qr/HAVING/i )) {
+	if ($self->test_token(KEYWORD, 'HAVING')) {
 		$self->_HavingClause;
-		$self->__consume_ws_opt;
 	}
 	
 	if ($self->_OrderClause_test) {
 		$self->_OrderClause;
-		$self->__consume_ws_opt;
 	}
 	
 	if ($self->_LimitOffsetClauses_test) {
@@ -1361,7 +1230,8 @@ sub _SolutionModifier {
 
 sub _GroupClause {
 	my $self	= shift;
-	$self->_eat( qr/GROUP\s+BY/i );
+	$self->expected_token(KEYWORD, 'GROUP');
+	$self->expected_token(KEYWORD, 'BY');
 	
 	if ($self->{build}{star}) {
 		die "Syntax error: SELECT * cannot be used with aggregate grouping";
@@ -1369,16 +1239,13 @@ sub _GroupClause {
 	
 	$self->{build}{__aggregate}	||= {};
 	my @vars;
-	$self->__consume_ws_opt;
 	$self->__GroupByVar;
 	my ($v)	= splice(@{ $self->{stack} });
 	push( @vars, $v );
-	$self->__consume_ws_opt;
 	while ($self->__GroupByVar_test) {
 		$self->__GroupByVar;
 		my ($v)	= splice(@{ $self->{stack} });
 		push( @vars, $v );
-		$self->__consume_ws_opt;
 	}
 
 	my %seen;
@@ -1424,12 +1291,11 @@ sub _GroupClause {
 # 	}
 	
 	$self->{build}{__group_by}	= \@vars;
-	$self->__consume_ws_opt;
 }
 
 sub _HavingClause {
 	my $self	= shift;
-	$self->_eat_with_ws(qr/HAVING/i);
+	$self->expected_token(KEYWORD, 'HAVING');
 	$self->{build}{__aggregate}	||= {};
 	local($self->{__aggregate_call_ok})	= 1;
 	$self->_Constraint;
@@ -1440,20 +1306,20 @@ sub _HavingClause {
 # [15] LimitOffsetClauses ::= ( LimitClause OffsetClause? | OffsetClause LimitClause? )
 sub _LimitOffsetClauses_test {
 	my $self	= shift;
-	return $self->_test( qr/LIMIT|OFFSET/i );
+	return 1 if ($self->test_token(KEYWORD, 'LIMIT'));
+	return 1 if ($self->test_token(KEYWORD, 'OFFSET'));
+	return 0;
 }
 
 sub _LimitOffsetClauses {
 	my $self	= shift;
 	if ($self->_LimitClause_test) {
 		$self->_LimitClause;
-		$self->__consume_ws_opt;
 		if ($self->_OffsetClause_test) {
 			$self->_OffsetClause;
 		}
 	} else {
 		$self->_OffsetClause;
-		$self->__consume_ws_opt;
 		if ($self->_LimitClause_test) {
 			$self->_LimitClause;
 		}
@@ -1463,23 +1329,21 @@ sub _LimitOffsetClauses {
 # [16] OrderClause ::= 'ORDER' 'BY' OrderCondition+
 sub _OrderClause_test {
 	my $self	= shift;
-	return $self->_test( qr/ORDER[\n\r\t ]+BY/i );
+	return 1 if ($self->test_token(KEYWORD, 'ORDER'));
+	return 0;
 }
 
 sub _OrderClause {
 	my $self	= shift;
-	$self->_eat( qr/ORDER/i );
-	$self->__consume_ws;
-	$self->_eat_with_ws( qr/BY/i );
+	$self->expected_token(KEYWORD, 'ORDER');
+	$self->expected_token(KEYWORD, 'BY');
 	my @order;
 	$self->{build}{__aggregate}	||= {};
 	local($self->{__aggregate_call_ok})	= 1;
 	$self->_OrderCondition;
-	$self->__consume_ws_opt;
 	push(@order, splice(@{ $self->{stack} }));
 	while ($self->_OrderCondition_test) {
 		$self->_OrderCondition;
-		$self->__consume_ws_opt;
 		push(@order, splice(@{ $self->{stack} }));
 	}
 	$self->{build}{options}{orderby}	= \@order;
@@ -1488,7 +1352,9 @@ sub _OrderClause {
 # [17] OrderCondition ::= ( ( 'ASC' | 'DESC' ) BrackettedExpression ) | ( Constraint | Var )
 sub _OrderCondition_test {
 	my $self	= shift;
-	return 1 if $self->_test( qr/ASC|DESC|[?\$]/i );
+	return 1 if ($self->test_token(KEYWORD, 'ASC'));
+	return 1 if ($self->test_token(KEYWORD, 'DESC'));
+	return 1 if ($self->test_token(VAR));
 	return 1 if $self->_Constraint_test;
 	return 0;
 }
@@ -1496,11 +1362,16 @@ sub _OrderCondition_test {
 sub _OrderCondition {
 	my $self	= shift;
 	my $dir	= 'ASC';
-	if ($self->_test( qr/ASC|DESC/i )) {
-		$dir	= uc( $self->_eat( qr/ASC|DESC/i ) );
-		$self->__consume_ws_opt;
+	if ($self->test_token(KEYWORD, 'ASC') or $self->test_token(KEYWORD, 'DESC')) {
+		my $dir;
+		if ($self->optional_token(KEYWORD, 'ASC')) {
+			$dir	= 'ASC';
+		} else {
+			$self->next_token;
+			$dir	= 'DESC';
+		}
 		$self->_BrackettedExpression;
-	} elsif ($self->_test( qr/[?\$]/ )) {
+	} elsif ($self->test_token(VAR)) {
 		$self->_Var;
 		my $var		= pop(@{ $self->{stack} });
 		my $expr	= Attean::ValueExpression->new(value => $var);
@@ -1515,36 +1386,34 @@ sub _OrderCondition {
 # [18] LimitClause ::= 'LIMIT' INTEGER
 sub _LimitClause_test {
 	my $self	= shift;
-	return $self->_test( qr/LIMIT/i );
+	return ($self->test_token(KEYWORD, 'LIMIT'));
 }
 
 sub _LimitClause {
 	my $self	= shift;
-	$self->_eat( qr/LIMIT/i );
-	$self->__consume_ws;
-	my $limit	= $self->_eat( $r_INTEGER );
-	$self->{build}{options}{limit}	= $limit;
+	$self->expected_token(KEYWORD, 'LIMIT');
+	my $t		= $self->expected_token(INTEGER);
+	$self->{build}{options}{limit}	= $t->value;
 }
 
 # [19] OffsetClause ::= 'OFFSET' INTEGER
 sub _OffsetClause_test {
 	my $self	= shift;
-	return $self->_test( qr/OFFSET/i );
+	return ($self->test_token(KEYWORD, 'OFFSET'));
 }
 
 sub _OffsetClause {
 	my $self	= shift;
-	$self->_eat( qr/OFFSET/i );
-	$self->__consume_ws;
-	my $off	= $self->_eat( $r_INTEGER );
-	$self->{build}{options}{offset}	= $off;
+	$self->expected_token(KEYWORD, 'OFFSET');
+	my $t		= $self->expected_token(INTEGER);
+	$self->{build}{options}{offset}	= $t->value;
 }
 
 # [20] GroupGraphPattern ::= '{' TriplesBlock? ( ( GraphPatternNotTriples | Filter ) '.'? TriplesBlock? )* '}'
 sub _GroupGraphPattern {
 	my $self	= shift;
 	
-	$self->_eat_with_ws('{');
+	$self->expected_token(LBRACE);
 	
 	if ($self->_SubSelect_test) {
 		$self->_SubSelect;
@@ -1552,8 +1421,7 @@ sub _GroupGraphPattern {
 		$self->_GroupGraphPatternSub;
 	}
 
-	$self->__consume_ws_opt;
-	$self->_eat('}');
+	$self->expected_token(RBRACE);
 }
 
 sub _GroupGraphPatternSub {
@@ -1566,35 +1434,30 @@ sub _GroupGraphPatternSub {
 		$need_dot	= 1;
 		$got_pattern++;
 		$self->_TriplesBlock;
-		$self->__consume_ws_opt;
 	}
 	
-	my $pos	= length($self->{tokens});
-	while (not $self->_test('}')) {
+# 	my $pos	= length($self->{tokens});
+	while (not $self->test_token(RBRACE)) {
 		if ($self->_GraphPatternNotTriples_test) {
 			$need_dot	= 0;
 			$got_pattern++;
 			$self->_GraphPatternNotTriples;
-			$self->__consume_ws_opt;
 			my (@data)	= splice(@{ $self->{stack} });
 			$self->__handle_GraphPatternNotTriples( @data );
-			$self->__consume_ws_opt;
-		} elsif ($self->_test( qr/FILTER/i )) {
+		} elsif ($self->test_token(KEYWORD, 'FILTER')) {
 			$got_pattern++;
 			$need_dot	= 0;
 			$self->_Filter;
-			$self->__consume_ws_opt;
 		}
 		
-		if ($need_dot or $self->_test('.')) {
-			$self->_eat('.');
+		if ($need_dot or $self->test_token(DOT)) {
+			$self->expected_token(DOT);
 			if ($got_pattern) {
 				$need_dot		= 0;
 				$got_pattern	= 0;
 			} else {
 				die "Syntax error: Extra dot found without preceding pattern";
 			}
-			$self->__consume_ws_opt;
 		}
 		
 		if ($self->_TriplesBlock_test) {
@@ -1613,19 +1476,19 @@ sub _GroupGraphPatternSub {
 			} else {
 				$self->_TriplesBlock;
 			}
-			$self->__consume_ws_opt;
 		}
-		
-		$self->__consume_ws_opt;
-		last unless ($self->_test( qr/\S/ ));
-		
-		my $new	= length($self->{tokens});
-		if ($pos == $new) {
-			# we haven't progressed, and so would infinite loop if we don't break out and throw an error.
-			$self->_syntax_error('');
-		} else {
-			$pos	= $new;
-		}
+
+		my $t	= $self->peek_token;
+# 		
+# 		last unless ($self->_test( qr/\S/ ));
+# 		
+# 		my $new	= length($self->{tokens});
+# 		if ($pos == $new) {
+# 			# we haven't progressed, and so would infinite loop if we don't break out and throw an error.
+# 			$self->_syntax_error('');
+# 		} else {
+# 			$pos	= $new;
+# 		}
 	}
 	
 	my $cont		= $self->_pop_pattern_container;
@@ -1635,7 +1498,6 @@ sub _GroupGraphPatternSub {
 	my $pattern		= $self->new_join(@$cont);
 	if (@filters) {
 		while (my $f = shift @filters) {
-			warn "Filter: $f";
 			$pattern	= Attean::Algebra::Filter->new( children => [$pattern], expression => $f );
 		}
 	}
@@ -1698,7 +1560,7 @@ sub __handle_GraphPatternNotTriples {
 
 sub _SubSelect_test {
 	my $self	= shift;
-	return $self->_test(qr/SELECT/i);
+	return $self->test_token(KEYWORD, 'SELECT');
 }
 
 sub _SubSelect {
@@ -1715,21 +1577,17 @@ sub _SubSelect {
 			$self->{build}{base}	= $self->{baseURI};
 		}
 		
-		$self->_eat(qr/SELECT/i);
-		$self->__consume_ws;
-		
-		if ($self->{tokens} =~ m/^(DISTINCT|REDUCED)/i) {
-			my $mod	= $self->_eat( qr/DISTINCT|REDUCED/i );
-			$self->__consume_ws;
+		$self->expected_token(KEYWORD, 'SELECT');
+		if ($self->test_token(KEYWORD, 'DISTINCT') or $self->test_token(KEYWORD, 'REDUCED')) {
+			my $t	= $self->next_token;
+			my $mod	= $t->value;
 			$self->{build}{options}{lc($mod)}	= 1;
 		}
 		
 		my ($star, @exprs)	= $self->__SelectVars;
 		
-		$self->__consume_ws_opt;
 		$self->_WhereClause;
 		
-		$self->__consume_ws_opt;
 		$self->_SolutionModifier();
 		
 		if ($self->{build}{options}{orderby}) {
@@ -1747,25 +1605,19 @@ sub _SubSelect {
 			push(@{ $self->{build}{triples} }, $sort);
 		}
 		
-		$self->__consume_ws_opt;
-		if ($self->_test( qr/VALUES/i )) {
-			$self->_eat_with_ws( qr/VALUES/i );
+		if ($self->optional_token(KEYWORD, 'VALUES')) {
 			my @vars;
 			my $parens	= 0;
-			if ($self->_test(qr/[(]/)) {
-				$self->_eat( qr/[(]/ );
+			if ($self->optional_token(LPAREN)) {
 				$parens	= 1;
 			}
-			while ($self->_test(qr/[\$?]/)) {
+			while ($self->test_token(VAR)) {
 				$self->_Var;
 				push( @vars, splice(@{ $self->{stack} }));
-				$self->__consume_ws_opt;
 			}
 			if ($parens) {
-				$self->_eat( qr/[)]/ );
+				$self->expected_token(RPAREN);
 			}
-			$self->__consume_ws_opt;
-			
 			my $count	= scalar(@vars);
 			if (not($parens) and $count == 0) {
 				die "Syntax error: Expected VAR in inline data declaration";
@@ -1774,24 +1626,21 @@ sub _SubSelect {
 			}
 			
 			my $short	= (not($parens) and $count == 1);
-			$self->_eat_with_ws('{');
+			$self->expected_token(LBRACE);
 			if (not($short) or ($short and $self->_Binding_test)) {
 				while ($self->_Binding_test) {
 					my $terms	= $self->_Binding($count);
 					push( @{ $self->{build}{bindings}{terms} }, $terms );
-					$self->__consume_ws_opt;
 				}
 			} else {
 				while ($self->_BindingValue_test) {
 					$self->_BindingValue;
-					$self->__consume_ws_opt;
 					my ($term)	= splice(@{ $self->{stack} });
 					push( @{ $self->{build}{bindings}{terms} }, [$term] );
-					$self->__consume_ws_opt;
 				}
 			}
 			
-			$self->_eat_with_ws('}');
+			$self->expected_token(RBRACE);
 			$self->{build}{bindings}{vars}	= \@vars;
 			
 			my $bindings	= delete $self->{build}{bindings};
@@ -1828,7 +1677,21 @@ sub _TriplesBlock_test {
 	# VarOrTerm | TriplesNode -> (Var | GraphTerm) | (Collection | BlankNodePropertyList) -> Var | IRIref | RDFLiteral | NumericLiteral | BooleanLiteral | BlankNode | NIL | Collection | BlankNodePropertyList
 	# but since a triple can't start with a literal, this is reduced to:
 	# Var | IRIref | BlankNode | NIL
-	return $self->_test(qr/[\$?]|<|_:|\[[\n\r\t ]*\]|\([\n\r\t ]*\)|\[|[[(]|${r_PNAME_NS}/);
+	return 1 if ($self->test_token(VAR));
+	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->test_token(NIL));
+	return 1 if ($self->test_token(ANON));
+	return 1 if ($self->test_token(BNODE));
+	return 1 if ($self->test_token(STRING1D));
+	return 1 if ($self->test_token(STRING3D));
+	return 1 if ($self->test_token(STRING1S));
+	return 1 if ($self->test_token(STRING3S));
+	return 1 if ($self->test_token(PREFIXNAME));
+	return 1 if ($self->test_token(LPAREN));
+	return 1 if ($self->test_token(LBRACKET));
+	
+	return 0;
+# 	return $self->_test(qr/[\$?]|<|_:|\[[\n\r\t ]*\]|\([\n\r\t ]*\)|\[|[[(]|${r_PNAME_NS}/);
 }
 
 sub _TriplesBlock {
@@ -1846,41 +1709,40 @@ sub _TriplesBlock {
 sub __TriplesBlock {
 	my $self	= shift;
 	my $got_dot	= 0;
-TRIPLESBLOCKLOOP:	
+TRIPLESBLOCKLOOP:
 	$self->_TriplesSameSubjectPath;
-	$self->__consume_ws_opt;
-	while ($self->_test('.')) {
+	while ($self->test_token(DOT)) {
 		if ($got_dot) {
 			die "Syntax error: found extra DOT after TriplesBlock";
 		}
-		$self->_eat('.');
+		$self->expected_token(DOT);
 		$got_dot++;
-		$self->__consume_ws_opt;
 		if ($self->_TriplesBlock_test) {
 			$got_dot	= 0;
 			goto TRIPLESBLOCKLOOP;
 		}
-		$self->__consume_ws_opt;
 	}
-	$self->__consume_ws_opt;
 }
 
 # [22] GraphPatternNotTriples ::= OptionalGraphPattern | GroupOrUnionGraphPattern | GraphGraphPattern
 sub _GraphPatternNotTriples_test {
 	my $self	= shift;
-	return 1 if $self->_test(qr/VALUES/i); # InlineDataClause
-	return $self->_test(qr/BIND|SERVICE|MINUS|OPTIONAL|{|GRAPH/i);
+	return 1 if ($self->test_token(LBRACE));
+	my $t	= $self->peek_token;
+	return unless ($t);
+	return 0 unless ($t->type == KEYWORD);
+	return ($t->value =~ qr/VALUES|BIND|SERVICE|MINUS|OPTIONAL|{|GRAPH/i);
 }
 
 sub _GraphPatternNotTriples {
 	my $self	= shift;
-	if ($self->_test(qr/VALUES/i)) {
+	if ($self->test_token(KEYWORD, 'VALUES')) {
 		$self->_InlineDataClause;
-	} elsif ($self->_test(qr/SERVICE/i)) {
+	} elsif ($self->test_token(KEYWORD, 'SERVICE')) {
 		$self->_ServiceGraphPattern;
-	} elsif ($self->_test(qr/MINUS/i)) {
+	} elsif ($self->test_token(KEYWORD, 'MINUS')) {
 		$self->_MinusGraphPattern;
-	} elsif ($self->_test(qr/BIND/i)) {
+	} elsif ($self->test_token(KEYWORD, 'BIND')) {
 		$self->_Bind;
 	} elsif ($self->_OptionalGraphPattern_test) {
 		$self->_OptionalGraphPattern;
@@ -1893,22 +1755,19 @@ sub _GraphPatternNotTriples {
 
 sub _InlineDataClause {
 	my $self	= shift;
-	$self->_eat_with_ws( qr/VALUES/i );
+	$self->expected_token(KEYWORD, 'VALUES');
 	my @vars;
 	
 	my $parens	= 0;
-	if ($self->_test(qr/[(]/)) {
-		$self->_eat_with_ws( qr/[(]/ );
+	if ($self->optional_token(LPAREN)) {
 		$parens	= 1;
 	}
-	while ($self->_test(qr/[\$?]/)) {
+	while ($self->test_token(VAR)) {
 		$self->_Var;
 		push( @vars, splice(@{ $self->{stack} }));
-		$self->__consume_ws_opt;
 	}
 	if ($parens) {
-		$self->_eat( qr/[)]/ );
-		$self->__consume_ws_opt;
+		$self->expected_token(RPAREN);
 	}
 	
 	my $count	= scalar(@vars);
@@ -1919,26 +1778,24 @@ sub _InlineDataClause {
 	}
 	
 	my $short	= (not($parens) and $count == 1);
-	$self->_eat_with_ws('{');
+	$self->expected_token(LBRACE);
 	my @rows;
 	if (not($short) or ($short and $self->_Binding_test)) {
 		# { (term) (term) }
 		while ($self->_Binding_test) {
 			my $terms	= $self->_Binding($count);
 			push( @rows, $terms );
-			$self->__consume_ws_opt;
 		}
 	} else {
 		# { term term }
 		while ($self->_BindingValue_test) {
 			$self->_BindingValue;
-			$self->__consume_ws_opt;
 			my ($term)	= splice(@{ $self->{stack} });
 			push( @rows, [$term] );
 		}
 	}
 	
-	$self->_eat_with_ws('}');
+	$self->expected_token(RBRACE);
 	
 	my @vbs		= map { my %d; @d{ map { $_->value } @vars } = @$_; Attean::Result->new(bindings => \%d) } @rows;
 	my $table	= Attean::Algebra::Table->new( variables => \@vars, rows => \@vbs );
@@ -1948,24 +1805,22 @@ sub _InlineDataClause {
 
 sub _Bind {
 	my $self	= shift;
-	$self->_eat_with_ws(qr/BIND/i);
+	$self->expected_token(KEYWORD, 'BIND');
 	my ($var, $expr)	= $self->_BrackettedAliasExpression;
 	$self->_add_stack( ['Attean::Algebra::Extend', $var, $expr] );
 }
 
 sub _ServiceGraphPattern {
 	my $self	= shift;
-	my $op		= $self->_eat( qr/SERVICE(\s+SILENT)?/i );
-	my $silent	= ($op =~ /SILENT/i);
-	$self->__consume_ws_opt;
+	$self->expected_token(KEYWORD, 'SERVICE');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
 	$self->__close_bgp_with_filters;
-	if ($self->_test(qr/[\$?]/)) {
+	if ($self->test_token(VAR)) {
 		$self->_Var;
 	} else {
 		$self->_IRIref;
 	}
 	my ($endpoint)	= splice( @{ $self->{stack} } );
-	$self->__consume_ws_opt;
 	$self->_GroupGraphPattern;
 	my $ggp	= $self->_remove_pattern;
 	
@@ -1976,7 +1831,7 @@ sub _ServiceGraphPattern {
 # [23] OptionalGraphPattern ::= 'OPTIONAL' GroupGraphPattern
 sub _OptionalGraphPattern_test {
 	my $self	= shift;
-	return $self->_test( qr/OPTIONAL/i );
+	return $self->test_token(KEYWORD, 'OPTIONAL');
 }
 
 sub __close_bgp_with_filters {
@@ -1991,7 +1846,6 @@ sub __close_bgp_with_filters {
 			$ggp	= Attean::Algebra::BGP->new();
 		}
 		while (my $f = shift @filters) {
-			warn "Filter: $f";
 			$ggp	= Attean::Algebra::Filter->new( children => [$ggp], expression => $f );
 		}
 		$self->_add_patterns($ggp);
@@ -2000,10 +1854,9 @@ sub __close_bgp_with_filters {
 
 sub _OptionalGraphPattern {
 	my $self	= shift;
-	$self->_eat( qr/OPTIONAL/i );
+	$self->expected_token(KEYWORD, 'OPTIONAL');
 	$self->__close_bgp_with_filters;
 	
-	$self->__consume_ws_opt;
 	$self->_GroupGraphPattern;
 	my $ggp	= $self->_remove_pattern;
 	my $opt		= ['Attean::Algebra::LeftJoin', $ggp];
@@ -2012,10 +1865,9 @@ sub _OptionalGraphPattern {
 
 sub _MinusGraphPattern {
 	my $self	= shift;
-	$self->_eat( qr/MINUS/i );
+	$self->expected_token(KEYWORD, 'MINUS');
 	$self->__close_bgp_with_filters;
 	
-	$self->__consume_ws_opt;
 	$self->_GroupGraphPattern;
 	my $ggp	= $self->_remove_pattern;
 	my $opt		= ['Attean::Algebra::Minus', $ggp];
@@ -2031,11 +1883,9 @@ sub _GraphGraphPattern {
 		}
 	}
 	
-	$self->_eat_with_ws( qr/GRAPH\b/i );
+	$self->expected_token(KEYWORD, 'GRAPH');
 	$self->_VarOrIRIref;
 	my ($graph)	= splice(@{ $self->{stack} });
-	$self->__consume_ws_opt;
-	
 	if ($graph->does('Attean::API::IRI')) {
 		local($self->{named_graph})	= $graph;
 		$self->_GroupGraphPattern;
@@ -2056,20 +1906,16 @@ sub _GraphGraphPattern {
 # [25] GroupOrUnionGraphPattern ::= GroupGraphPattern ( 'UNION' GroupGraphPattern )*
 sub _GroupOrUnionGraphPattern_test {
 	my $self	= shift;
-	return $self->_test('{');
+	return $self->test_token(LBRACE);
 }
 
 sub _GroupOrUnionGraphPattern {
 	my $self	= shift;
 	$self->_GroupGraphPattern;
 	my $ggp	= $self->_remove_pattern;
-	$self->__consume_ws_opt;
-	
-	if ($self->_test( qr/UNION/i )) {
-		while ($self->_test( qr/UNION/i )) {
-			$self->_eat_with_ws( qr/UNION/i );
+	if ($self->test_token(KEYWORD, 'UNION')) {
+		while ($self->optional_token(KEYWORD, 'UNION')) {
 			$self->_GroupGraphPattern;
-			$self->__consume_ws_opt;
 			my $rhs	= $self->_remove_pattern;
 			$ggp	= Attean::Algebra::Union->new( children => [$ggp, $rhs] );
 		}
@@ -2084,7 +1930,7 @@ sub _GroupOrUnionGraphPattern {
 # [26] Filter ::= 'FILTER' Constraint
 sub _Filter {
 	my $self	= shift;
-	$self->_eat_with_ws( qr/FILTER/i );
+	$self->expected_token(KEYWORD, 'FILTER');
 	$self->_Constraint;
 	my ($expr) = splice(@{ $self->{stack} });
 	$self->_add_filter( $expr );
@@ -2093,7 +1939,7 @@ sub _Filter {
 # [27] Constraint ::= BrackettedExpression | BuiltInCall | FunctionCall
 sub _Constraint_test {
 	my $self	= shift;
-	return 1 if $self->_test( qr/[(]/ );
+	return 1 if ($self->test_token(LPAREN));
 	return 1 if $self->_BuiltInCall_test;
 	return 1 if $self->_FunctionCall_test;
 	return 0;
@@ -2121,8 +1967,6 @@ sub _FunctionCall {
 	$self->_IRIref;
 	my ($iri)	= splice(@{ $self->{stack} });
 	
-	$self->__consume_ws_opt;
-	
 	$self->_ArgList;
 	my @args	= splice(@{ $self->{stack} });
 
@@ -2139,38 +1983,41 @@ sub _FunctionCall {
 # [29] ArgList ::= ( NIL | '(' Expression ( ',' Expression )* ')' )
 sub _ArgList_test {
 	my $self	= shift;
-	return $self->_test('(');
+	return 1 if $self->test_token(NIL);
+	return $self->test_token(LPAREN);
 }
 
 sub _ArgList {
 	my $self	= shift;
-	$self->_eat_with_ws('(');
-	my @args;
-	unless ($self->_test(')')) {
-		$self->_Expression;
-		push( @args, splice(@{ $self->{stack} }) );
-		while ($self->_test(',')) {
-			$self->_eat_with_ws(',');
+	if ($self->optional_token(NIL)) {
+		return;
+	} else {
+		$self->expected_token(LPAREN);
+		my @args;
+		unless ($self->test_token(RPAREN)) {
 			$self->_Expression;
 			push( @args, splice(@{ $self->{stack} }) );
+			while ($self->optional_token(COMMA)) {
+				$self->_Expression;
+				push( @args, splice(@{ $self->{stack} }) );
+			}
 		}
+		$self->expected_token(RPAREN);
+		$self->_add_stack( @args );
 	}
-	$self->_eat(')');
-	$self->_add_stack( @args );
 }
 
 # [30] ConstructTemplate ::= '{' ConstructTriples? '}'
 sub _ConstructTemplate {
 	my $self	= shift;
 	$self->_push_pattern_container;
-	$self->_eat_with_ws( '{' );
+	$self->expected_token(LBRACE);
 	
 	if ($self->_ConstructTriples_test) {
 		$self->_ConstructTriples;
 	}
 
-	$self->__consume_ws_opt;
-	$self->_eat( '}' );
+	$self->expected_token(RBRACE);
 	my $cont	= $self->_pop_pattern_container;
 	$self->{build}{construct_triples}	= $cont;
 }
@@ -2184,9 +2031,7 @@ sub _ConstructTriples_test {
 sub _ConstructTriples {
 	my $self	= shift;
 	$self->_TriplesSameSubject;
-	$self->__consume_ws_opt;
-	while ($self->_test(qr/[.]/)) {
-		$self->_eat_with_ws( qr/[.]/ );
+	while ($self->optional_token(DOT)) {
 		if ($self->_ConstructTriples_test) {
 			$self->_TriplesSameSubject;
 		}
@@ -2200,10 +2045,7 @@ sub _TriplesSameSubject {
 	if ($self->_TriplesNode_test) {
 		$self->_TriplesNode;
 		my ($s)	= splice(@{ $self->{stack} });
-		$self->__consume_ws_opt;
 		$self->_PropertyList;
-		$self->__consume_ws_opt;
-		
 		my @list	= splice(@{ $self->{stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2212,9 +2054,7 @@ sub _TriplesSameSubject {
 		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{stack} });
 
-		$self->__consume_ws_opt;
 		$self->_PropertyListNotEmpty;
-		$self->__consume_ws_opt;
 		my (@list)	= splice(@{ $self->{stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2232,10 +2072,7 @@ sub _TriplesSameSubjectPath {
 	if ($self->_TriplesNode_test) {
 		$self->_TriplesNode;
 		my ($s)	= splice(@{ $self->{stack} });
-		$self->__consume_ws_opt;
 		$self->_PropertyListPath;
-		$self->__consume_ws_opt;
-		
 		my @list	= splice(@{ $self->{stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2243,16 +2080,12 @@ sub _TriplesSameSubjectPath {
 	} else {
 		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{stack} });
-
-		$self->__consume_ws_opt;
 		$self->_PropertyListNotEmptyPath;
-		$self->__consume_ws_opt;
 		my (@list)	= splice(@{ $self->{stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
 		}
 	}
-	
 	$self->_add_patterns( @triples );
 #	return @triples;
 }
@@ -2262,16 +2095,13 @@ sub _PropertyListNotEmpty {
 	my $self	= shift;
 	$self->_Verb;
 	my ($v)	= splice(@{ $self->{stack} });
-	$self->__consume_ws_opt;
 	$self->_ObjectList;
 	my @l	= splice(@{ $self->{stack} });
 	my @props		= map { [$v, $_] } @l;
-	while ($self->_test(qr'\s*;')) {
-		$self->_eat_with_ws(';');
+	while ($self->optional_token(SEMICOLON)) {
 		if ($self->_Verb_test) {
 			$self->_Verb;
 			my ($v)	= splice(@{ $self->{stack} });
-			$self->__consume_ws_opt;
 			$self->_ObjectList;
 			my @l	= splice(@{ $self->{stack} });
 			push(@props, map { [$v, $_] } @l);
@@ -2297,12 +2127,10 @@ sub _PropertyListNotEmptyPath {
 		$self->_VerbSimple;
 	}
 	my ($v)	= splice(@{ $self->{stack} });
-	$self->__consume_ws_opt;
 	$self->_ObjectList;
 	my @l	= splice(@{ $self->{stack} });
 	my @props		= map { [$v, $_] } @l;
-	while ($self->_test(qr'\s*;')) {
-		$self->_eat_with_ws(';');
+	while ($self->optional_token(SEMICOLON)) {
 		if ($self->_VerbPath_test or $self->_VerbSimple_test) {
 			if ($self->_VerbPath_test) {
 				$self->_VerbPath;
@@ -2310,7 +2138,6 @@ sub _PropertyListNotEmptyPath {
 				$self->_VerbSimple;
 			}
 			my ($v)	= splice(@{ $self->{stack} });
-			$self->__consume_ws_opt;
 			$self->_ObjectList;
 			my @l	= splice(@{ $self->{stack} });
 			push(@props, map { [$v, $_] } @l);
@@ -2335,12 +2162,9 @@ sub _ObjectList {
 	$self->_Object;
 	push(@list, splice(@{ $self->{stack} }));
 	
-	$self->__consume_ws_opt;
-	while ($self->_test(',')) {
-		$self->_eat_with_ws(',');
+	while ($self->optional_token(COMMA)) {
 		$self->_Object;
 		push(@list, splice(@{ $self->{stack} }));
-		$self->__consume_ws_opt;
 	}
 	$self->_add_stack( @list );
 }
@@ -2354,14 +2178,17 @@ sub _Object {
 # [37] Verb ::= VarOrIRIref | 'a'
 sub _Verb_test {
 	my $self	= shift;
-	return $self->_test( qr/a[\n\t\r <]|[?\$]|<|${r_PNAME_LN}|${r_PNAME_NS}/ );
+	return 1 if ($self->test_token(A));
+	return 1 if ($self->test_token(VAR));
+	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->test_token(PREFIXNAME));
+	return 0;
+# 	return $self->_test( qr/a[\n\t\r <]|[?\$]|<|${r_PNAME_LN}|${r_PNAME_NS}/ );
 }
 
 sub _Verb {
 	my $self	= shift;
-	if ($self->_test(qr/a[\n\t\r <]/)) {
-		$self->_eat('a');
-		$self->__consume_ws;
+	if ($self->optional_token(A)) {
 		my $type	= Attean::IRI->new(value =>  $rdf->type->uri_value);
 		$self->_add_stack( $type );
 	} else {
@@ -2372,7 +2199,7 @@ sub _Verb {
 # VerbSimple ::= Var
 sub _VerbSimple_test {
 	my $self	= shift;
-	return 1 if ($self->_test(qr/[\$?]/));
+	return ($self->test_token(VAR));
 }
 
 sub _VerbSimple {
@@ -2383,8 +2210,13 @@ sub _VerbSimple {
 # VerbPath ::= Path
 sub _VerbPath_test {
 	my $self	= shift;
-	return 1 if ($self->_IRIref_test);
-	return 1 if ($self->_test(qr/\^|[|(a!]/));
+	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->test_token(PREFIXNAME));
+	return 1 if ($self->test_token(HAT));
+	return 1 if ($self->test_token(OR));
+	return 1 if ($self->test_token(BANG));
+	return 1 if ($self->test_token(LPAREN));
+	return 1 if ($self->test_token(A));
 	return 0;
 }
 
@@ -2405,13 +2237,10 @@ sub _Path {
 sub _PathAlternative {
 	my $self	= shift;
 	$self->_PathSequence;
-	$self->__consume_ws_opt;
-	while ($self->_test(qr/[|]/)) {
+	while ($self->optional_token(OR)) {
 		my ($lhs)	= splice(@{ $self->{stack} });
-		$self->_eat_with_ws(qr/[|]/);
 #		$self->_PathOneInPropertyClass;
 		$self->_PathSequence;
-		$self->__consume_ws_opt;
 		my ($rhs)	= splice(@{ $self->{stack} });
 		$self->_add_stack( ['PATH', '|', $lhs, $rhs] );
 	}
@@ -2421,15 +2250,15 @@ sub _PathAlternative {
 sub _PathSequence {
 	my $self	= shift;
 	$self->_PathEltOrInverse;
-	$self->__consume_ws_opt;
-	while ($self->_test(qr<[/^]>)) {
+	while ($self->test_token(SLASH) or $self->test_token(HAT)) {
 		my $op;
 		my ($lhs)	= splice(@{ $self->{stack} });
-		if ($self->_test(qr</>)) {
-			$op	= $self->_eat_with_ws(qr</>);
+		if ($self->optional_token(SLASH)) {
+			$op	= '/';
 			$self->_PathEltOrInverse;
 		} else {
-			$op	= $self->_eat_with_ws(qr<\^>);
+			$op	= '^';
+			$self->expected_token(HAT);
 			$self->_PathElt;
 		}
 		my ($rhs)	= splice(@{ $self->{stack} });
@@ -2460,8 +2289,7 @@ sub _PathElt {
 # [78]  	PathEltOrInverse	  ::=  	PathElt | '^' PathElt
 sub _PathEltOrInverse {
 	my $self	= shift;
-	if ($self->_test(qr/\^/)) {
-		$self->_eat_with_ws(qr<\^>);
+	if ($self->optional_token(HAT)) {
 		$self->_PathElt;
 		my @props	= splice(@{ $self->{stack} });
 		$self->_add_stack( [ 'PATH', '^', @props ] );
@@ -2473,18 +2301,27 @@ sub _PathEltOrInverse {
 # [79]  	PathMod	  ::=  	( '*' | '?' | '+' | '{' ( Integer ( ',' ( '}' | Integer '}' ) | '}' ) ) )
 sub _PathMod_test {
 	my $self	= shift;
-	return 1 if ($self->_test(qr/[*?+{]/));
+	return 1 if ($self->test_token(STAR));
+	return 1 if ($self->test_token(QUESTION));
+	return 1 if ($self->test_token(PLUS));
+	return 1 if ($self->test_token(LBRACE));
+	return 0;
+# 	return 1 if ($self->_test(qr/[*?+{]/));
 }
 
 sub _PathMod {
 	my $self	= shift;
-	if ($self->_test(qr/[*?+]/)) {
-		if ($self->_test(qr/[+][.0-9]/)) {
-			return;
+	if ($self->test_token(STAR) or $self->test_token(QUESTION) or $self->test_token(PLUS)) {
+		my $t	= $self->next_token;
+		my $op;
+		if ($t->type == STAR) {
+			$op	= '*';
+		} elsif ($t->type == QUESTION) {
+			$op	= '?';
 		} else {
-			$self->_add_stack( $self->_eat(qr/[*?+]/) );
-			$self->__consume_ws_opt;
+			$op	= '+';
 		}
+		$self->_add_stack($op);
 ### path repetition range syntax :path{n,m}; removed from 1.1 Query 2LC
 # 	} else {
 # 		$self->_eat(qr/{/);
@@ -2521,43 +2358,36 @@ sub _PathPrimary {
 	my $self	= shift;
 	if ($self->_IRIref_test) {
 		$self->_IRIref;
-	} elsif ($self->_test(qr/a[\n\t\r <]/)) {
-		$self->_eat(qr/a/);
+	} elsif ($self->optional_token(A)) {
 		my $type	= Attean::IRI->new(value =>  $rdf->type->uri_value);
 		$self->_add_stack( $type );
-	} elsif ($self->_test(qr/[!]/)) {
-		$self->_eat_with_ws(qr/[!]/);
+	} elsif ($self->optional_token(BANG)) {
 		$self->_PathNegatedPropertyClass;
 		my (@path)	= splice(@{ $self->{stack} });
 		$self->_add_stack( ['PATH', '!', @path] );
 	} else {
-		$self->_eat_with_ws(qr/[(]/);
+		$self->expected_token(LPAREN);
 		$self->_Path;
-		$self->__consume_ws_opt;
-		$self->_eat(qr/[)]/);
+		$self->expected_token(RPAREN);
 	}
 }
 
 # [81]  	PathNegatedPropertyClass	  ::=  	( PathOneInPropertyClass | '(' ( PathOneInPropertyClass ( '|' PathOneInPropertyClass )* )? ')' )
 sub _PathNegatedPropertyClass {
 	my $self	= shift;
-	if ($self->_test(qr/[(]/)) {
-		$self->_eat_with_ws(qr/[(]/);
+	if ($self->optional_token(LPAREN)) {
 		
 		my @nodes;
 		if ($self->_PathOneInPropertyClass_test) {
 			$self->_PathOneInPropertyClass;
 			push(@nodes, splice(@{ $self->{stack} }));
-			$self->__consume_ws_opt;
-			while ($self->_test(qr/[|]/)) {
-				$self->_eat_with_ws(qr/[|]/);
+			while ($self->optional_token(OR)) {
 				$self->_PathOneInPropertyClass;
-				$self->__consume_ws_opt;
 				push(@nodes, splice(@{ $self->{stack} }));
 #				$self->_add_stack( ['PATH', '|', $lhs, $rhs] );
 			}
 		}
-		$self->_eat(qr/[)]/);
+		$self->expected_token(RPAREN);
 		$self->_add_stack( @nodes );
 	} else {
 		$self->_PathOneInPropertyClass;
@@ -2568,20 +2398,18 @@ sub _PathNegatedPropertyClass {
 sub _PathOneInPropertyClass_test {
 	my $self	= shift;
 	return 1 if $self->_IRIref_test;
-	return 1 if ($self->_test(qr/a[|)\n\t\r <]/));
-	return 1 if ($self->_test(qr/\^/));
+	return 1 if ($self->test_token(A));
+	return 1 if ($self->test_token(HAT));
 	return 0;
 }
 
 sub _PathOneInPropertyClass {
 	my $self	= shift;
 	my $rev		= 0;
-	if ($self->_test(qr/\^/)) {
-		$self->_eat(qr/\^/);
+	if ($self->optional_token(HAT)) {
 		$rev	= 1;
 	}
-	if ($self->_test(qr/a[|)\n\t\r <]/)) {
-		$self->_eat(qr/a/);
+	if ($self->optional_token(A)) {
 		my $type	= Attean::IRI->new(value =>  $rdf->type->uri_value);
 		if ($rev) {
 			$self->_add_stack( [ 'PATH', '^', $type ] );
@@ -2602,12 +2430,17 @@ sub _PathOneInPropertyClass {
 # [38] TriplesNode ::= Collection | BlankNodePropertyList
 sub _TriplesNode_test {
 	my $self	= shift;
-	return $self->_test(qr/[[(](?![\n\r\t ]*\])(?![\n\r\t ]*\))/);
+	return 1 if $self->test_token(LPAREN);
+	return 1 if $self->test_token(LBRACKET);
+# 	return 1 if $self->test_token(ANON);
+# 	return 1 if $self->test_token(NIL);
+	return 0;
+# 	return $self->_test(qr/[[(](?![\n\r\t ]*\])(?![\n\r\t ]*\))/);
 }
 
 sub _TriplesNode {
 	my $self	= shift;
-	if ($self->_test(qr/\(/)) {
+	if ($self->test_token(LPAREN)) {
 		$self->_Collection;
 	} else {
 		$self->_BlankNodePropertyList;
@@ -2620,11 +2453,10 @@ sub _BlankNodePropertyList {
 	if (my $where = $self->{__no_bnodes}) {
 		die "Syntax error: Blank nodes not allowed in $where";
 	}
-	$self->_eat_with_ws('[');
+	$self->expected_token(LBRACKET);
 #	$self->_PropertyListNotEmpty;
 	$self->_PropertyListNotEmptyPath;
-	$self->__consume_ws_opt;
-	$self->_eat(']');
+	$self->expected_token(RBRACKET);
 	
 	my @props	= splice(@{ $self->{stack} });
 	my $subj	= Attean::Blank->new();
@@ -2636,20 +2468,17 @@ sub _BlankNodePropertyList {
 # [40] Collection ::= '(' GraphNode+ ')'
 sub _Collection {
 	my $self	= shift;
-	$self->_eat_with_ws('(');
+	$self->expected_token(LPAREN);
 	$self->_GraphNode;
-	$self->__consume_ws_opt;
-	
 	my @nodes;
 	push(@nodes, splice(@{ $self->{stack} }));
 	
 	while ($self->_GraphNode_test) {
 		$self->_GraphNode;
-		$self->__consume_ws_opt;
 		push(@nodes, splice(@{ $self->{stack} }));
 	}
 	
-	$self->_eat(')');
+	$self->expected_token(RPAREN);
 	
 	my $subj	= Attean::Blank->new();
 	my $cur		= $subj;
@@ -2696,15 +2525,25 @@ sub _GraphNode {
 # [42] VarOrTerm ::= Var | GraphTerm
 sub _VarOrTerm_test {
 	my $self	= shift;
-	return 1 if ($self->_test(qr/[\$?]/));
+	return 1 if ($self->peek_token(VAR));
 	return 1 if ($self->_IRIref_test);
-	return 1 if ($self->_test(qr/[<'".0-9]|(true|false)\b|_:|\([\n\r\t ]*\)/));
+	return 1 if ($self->peek_token(BOOLEAN));
+	return 1 if ($self->peek_token(STRING1D));
+	return 1 if ($self->peek_token(STRING1S));
+	return 1 if ($self->peek_token(STRING3D));
+	return 1 if ($self->peek_token(STRING3S));
+	return 1 if ($self->peek_token(INTEGER));
+	return 1 if ($self->peek_token(DECIMAL));
+	return 1 if ($self->peek_token(DOUBLE));
+	return 1 if ($self->peek_token(BNODE));
+	return 1 if ($self->peek_token(NIL));
 	return 0;
+# 	return 1 if ($self->_test(qr/[<'".0-9]|(true|false)\b|_:|\([\n\r\t ]*\)/));
 }
 
 sub _VarOrTerm {
 	my $self	= shift;
-	if ($self->{tokens} =~ m'^[?$]') {
+	if ($self->test_token(VAR)) {
 		$self->_Var;
 	} else {
 		$self->_GraphTerm;
@@ -2714,12 +2553,16 @@ sub _VarOrTerm {
 # [43] VarOrIRIref ::= Var | IRIref
 sub _VarOrIRIref_test {
 	my $self	= shift;
-	return $self->_test(qr/[\$?]|<|${r_PNAME_LN}|${r_PNAME_NS}/);
+	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->test_token(VAR));
+	return 1 if ($self->test_token(PREFIXNAME));
+	return 0;
+# 	return $self->_test(qr/[\$?]|<|${r_PNAME_LN}|${r_PNAME_NS}/);
 }
 
 sub _VarOrIRIref {
 	my $self	= shift;
-	if ($self->{tokens} =~ m'^[?$]') {
+	if ($self->test_token(VAR)) {
 		$self->_Var;
 	} else {
 		$self->_IRIref;
@@ -2733,22 +2576,22 @@ sub _Var {
 		die "Syntax error: Variable found where Term expected";
 	}
 
-	my $var		= ($self->_test( $r_VAR1 )) ? $self->_eat( $r_VAR1 ) : $self->_eat( $r_VAR2 );
-	$self->_add_stack( Attean::Variable->new( substr($var,1) ) );
+	my $var		= $self->expected_token(VAR);
+	$self->_add_stack( Attean::Variable->new( $var->value ) );
 }
 
 # [45] GraphTerm ::= IRIref | RDFLiteral | NumericLiteral | BooleanLiteral | BlankNode | NIL
 sub _GraphTerm {
 	my $self	= shift;
-	if ($self->_test(qr/(true|false)\b/)) {
+	if ($self->test_token(BOOLEAN)) {
 		$self->_BooleanLiteral;
-	} elsif ($self->_test('(')) {
+	} elsif ($self->test_token(LPAREN)) {
 		$self->_NIL;
-	} elsif ($self->_test( $r_ANON ) or $self->_test('_:')) {
+	} elsif ($self->test_token(ANON) or $self->test_token(BNODE)) {
 		$self->_BlankNode;
-	} elsif ($self->_test(qr/[-+]?\d/)) {
+	} elsif ($self->test_token(INTEGER) or $self->test_token(DECIMAL) or $self->test_token(DOUBLE) or $self->test_token(MINUS) or $self->test_token(PLUS)) {
 		$self->_NumericLiteral;
-	} elsif ($self->_test(qr/['"]/)) {
+	} elsif ($self->test_token(STRING1S) or $self->test_token(STRING1D) or $self->test_token(STRING1D) or $self->test_token(STRING3D)) {
 		$self->_RDFLiteral;
 	} else {
 		$self->_IRIref;
@@ -2769,9 +2612,8 @@ sub _ConditionalOrExpression {
 	$self->_ConditionalAndExpression;
 	push(@list, splice(@{ $self->{stack} }));
 	
-	$self->__consume_ws_opt;
-	while ($self->_test('||')) {
-		$self->_eat_with_ws('||');
+	while ($self->test_token(OROR)) {
+		$self->expected_token(OROR);
 		$self->_ConditionalAndExpression;
 		push(@list, splice(@{ $self->{stack} }));
 	}
@@ -2794,9 +2636,8 @@ sub _ConditionalAndExpression {
 	$self->_ValueLogical;
 	my @list	= splice(@{ $self->{stack} });
 	
-	$self->__consume_ws_opt;
-	while ($self->_test('&&')) {
-		$self->_eat_with_ws('&&');
+	while ($self->test_token(ANDAND)) {
+		$self->expected_token(ANDAND);
 		$self->_ValueLogical;
 		push(@list, splice(@{ $self->{stack} }));
 	}
@@ -2823,45 +2664,45 @@ sub _RelationalExpression {
 	my $self	= shift;
 	$self->_NumericExpression;
 	
-	$self->__consume_ws_opt;
-	if ($self->_test(qr/[!<>]?=|[<>]/)) {
-		if ($self->_test( $r_IRI_REF )) {
-			die "Syntax error: IRI found where expression expected";
-		}
+	my $t		= $self->peek_token;
+	my $type	= $t->type;
+	if ($type == EQUALS or $type == NOTEQUALS or $type == LE or $type == GE or $type == LT or $type == GT) {
+		$self->next_token;
 		my @list	= splice(@{ $self->{stack} });
-		my $op	= $self->_eat(qr/[!<>]?=|[<>]/);
-# 		$op		= '==' if ($op eq '=');
-		$self->__consume_ws_opt;
+		my $op	= $t->value;
 		$self->_NumericExpression;
 		push(@list, splice(@{ $self->{stack} }));
 		$self->_add_stack( $self->new_binary_expression( $op, @list ) );
-	} elsif ($self->_test(qr/(NOT )?IN/)) {
+	} elsif ($self->test_token(KEYWORD, 'NOT') or $self->test_token(KEYWORD, 'IN')) {
 		my @list	= splice(@{ $self->{stack} });
-		my $op		= lc($self->_eat(qr/(NOT )?IN/));
-		$op			=~ s/\s+//g;
-		$self->__consume_ws_opt;
+		my $not		= $self->optional_token(KEYWORD, 'NOT');
+		$self->expected_token(KEYWORD, 'IN');
+		my $op		= $not ? 'NOTIN' : 'IN';
 		$self->_ExpressionList();
 		push(@list, splice(@{ $self->{stack} }));
-		my $p	= $self->new_function_expression( uc($op), @list );
+		my $p	= $self->new_function_expression( $op, @list );
 		$self->_add_stack($p);
 	}
 }
 
 sub _ExpressionList {
 	my $self	= shift;
-	$self->_eat_with_ws('(');
-	my @args;
-	unless ($self->_test(')')) {
-		$self->_Expression;
-		push( @args, splice(@{ $self->{stack} }) );
-		while ($self->_test(',')) {
-			$self->_eat_with_ws(',');
+	if ($self->optional_token(NIL)) {
+		return;
+	} else {
+		$self->expected_token(LPAREN);
+		my @args;
+		unless ($self->test_token(RPAREN)) {
 			$self->_Expression;
 			push( @args, splice(@{ $self->{stack} }) );
+			while ($self->optional_token(COMMA)) {
+				$self->_Expression;
+				push( @args, splice(@{ $self->{stack} }) );
+			}
 		}
+		$self->expected_token(RPAREN);
+		$self->_add_stack( @args );
 	}
-	$self->_eat(')');
-	$self->_add_stack( @args );
 }
 
 # [51] NumericExpression ::= AdditiveExpression
@@ -2876,9 +2717,9 @@ sub _AdditiveExpression {
 	$self->_MultiplicativeExpression;
 	my ($expr)	= splice(@{ $self->{stack} });
 	
-	$self->__consume_ws_opt;
-	while ($self->_test(qr/[-+]/)) {
-		my $op	= $self->_eat_with_ws(qr/[-+]/);
+	while ($self->test_token(MINUS) or $self->test_token(PLUS)) {
+		my $t	= $self->next_token;
+		my $op	= ($t->type == MINUS) ? '-' : '+';
 		$self->_MultiplicativeExpression;
 		my ($rhs)	= splice(@{ $self->{stack} });
 		$expr	= $self->new_binary_expression( $op, $expr, $rhs );
@@ -2892,9 +2733,9 @@ sub _MultiplicativeExpression {
 	$self->_UnaryExpression;
 	my ($expr)	= splice(@{ $self->{stack} });
 	
-	$self->__consume_ws_opt;
-	while ($self->_test(qr#[*/]#)) {
-		my $op	= $self->_eat_with_ws(qr#[*/]#);
+	while ($self->test_token(STAR) or $self->test_token(SLASH)) {
+		my $t	= $self->next_token;
+		my $op	= ($t->type == STAR) ? '*' : '/';
 		$self->_UnaryExpression;
 		my ($rhs)	= splice(@{ $self->{stack} });
 		$expr	= $self->new_binary_expression( $op, $expr, $rhs );
@@ -2905,14 +2746,12 @@ sub _MultiplicativeExpression {
 # [54] UnaryExpression ::= '!' PrimaryExpression  | '+' PrimaryExpression  | '-' PrimaryExpression  | PrimaryExpression
 sub _UnaryExpression {
 	my $self	= shift;
-	if ($self->_test('!')) {
-		$self->_eat_with_ws('!');
+	if ($self->optional_token(BANG)) {
 		$self->_PrimaryExpression;
 		my ($expr)	= splice(@{ $self->{stack} });
 		my $not		= Attean::UnaryExpression->new( operator => '!', children => [$expr] );
 		$self->_add_stack( $not );
-	} elsif ($self->_test('+')) {
-		$self->_eat_with_ws('+');
+	} elsif ($self->optional_token(PLUS)) {
 		$self->_PrimaryExpression;
 		my ($expr)	= splice(@{ $self->{stack} });
 		
@@ -2926,8 +2765,7 @@ sub _UnaryExpression {
 			my $lexpr	= Attean::ValueExpression->new( value => $expr );
 			$self->_add_stack( $lexpr );
 		}
-	} elsif ($self->_test('-')) {
-		$self->_eat_with_ws('-');
+	} elsif ($self->optional_token(MINUS)) {
 		$self->_PrimaryExpression;
 		my ($expr)	= splice(@{ $self->{stack} });
 		
@@ -2952,6 +2790,8 @@ sub _UnaryExpression {
 # [55] PrimaryExpression ::= BrackettedExpression | BuiltInCall | IRIrefOrFunction | RDFLiteral | NumericLiteral | BooleanLiteral | Var
 sub _PrimaryExpression {
 	my $self	= shift;
+	my $t	= $self->peek_token;
+	warn 'primary expression: ' . $t->value;
 	if ($self->_BrackettedExpression_test) {
 		$self->_BrackettedExpression;
 	} elsif ($self->_BuiltInCall_test) {
@@ -2963,17 +2803,17 @@ sub _PrimaryExpression {
 			$v	= Attean::ValueExpression->new(value => $v);
 		}
 		$self->_add_stack($v);
-	} elsif ($self->_test(qr/[\$?]/)) {
+	} elsif ($self->test_token(VAR)) {
 		$self->_Var;
 		my $var		= pop(@{ $self->{stack} });
 		my $expr	= Attean::ValueExpression->new(value => $var);
 		$self->_add_stack($expr);
-	} elsif ($self->_test(qr/(true|false)\b/)) {
+	} elsif ($self->test_token(BOOLEAN)) {
 		$self->_BooleanLiteral;
 		my $b		= pop(@{ $self->{stack} });
 		my $expr	= Attean::ValueExpression->new(value => $b);
 		$self->_add_stack($expr);
-	} elsif ($self->_test(qr/[-+]?\d/)) {
+	} elsif ($self->test_token(INTEGER) or $self->test_token(DECIMAL) or $self->test_token(DOUBLE) or $self->test_token(PLUS) or $self->test_token(MINUS)) {
 		$self->_NumericLiteral;
 		my $l		= pop(@{ $self->{stack} });
 		my $expr	= Attean::ValueExpression->new(value => $l);
@@ -2989,66 +2829,53 @@ sub _PrimaryExpression {
 # [56] BrackettedExpression ::= '(' Expression ')'
 sub _BrackettedExpression_test {
 	my $self	= shift;
-	return $self->_test('(');
+	return $self->test_token(LPAREN);
 }
 
 sub _BrackettedExpression {
 	my $self	= shift;
-	$self->_eat_with_ws('(');
+	$self->expected_token(LPAREN);
 	$self->_Expression;
-	$self->__consume_ws_opt;
-	$self->_eat(')');
+	$self->expected_token(RPAREN);
 }
 
 sub _Aggregate {
 	my $self	= shift;
-	my $op	= uc( $self->_eat( $r_AGGREGATE_CALL ) );
-	$self->__consume_ws_opt;
-	$self->_eat_with_ws('(');
+	my $t		= $self->expected_token(KEYWORD);
+	my $op		= $t->value;
+	$self->expected_token(LPAREN);
 	my $distinct	= 0;
-	if ($self->_test( qr/DISTINCT/i )) {
-		$self->_eat_with_ws( qr/DISTINCT\s*/i );
+	if ($self->optional_token(KEYWORD, 'DISTINCT')) {
 		$distinct	= 1;
 	}
 	
 	my $star	= 0;
 	my (@expr, %options);
-	if ($self->_test('*')) {
-		$star	= $self->_eat('*');
+	if ($self->optional_token(STAR)) {
+		$star	= 1;
 	} else {
 		$self->_Expression;
 		push(@expr, splice(@{ $self->{stack} }));
 		if ($op eq 'GROUP_CONCAT') {
-			$self->__consume_ws_opt;
-			while ($self->_test(qr/,/)) {
-				$self->_eat_with_ws(qr/,/);
+			while ($self->optional_token(COMMA)) {
 				$self->_Expression;
 				push(@expr, splice(@{ $self->{stack} }));
 			}
-			$self->__consume_ws_opt;
-			if ($self->_test(qr/;/)) {
-				$self->_eat_with_ws(qr/;/);
-				if ($self->{args}{allow_typos}) {
-					$self->_eat(qr/SEP[AE]RATOR/i);	# accept common typo
-				} else {
-					$self->_eat(qr/SEPARATOR/i);
-				}
-				$self->__consume_ws_opt;
-				$self->_eat_with_ws(qr/=/);
+			if ($self->optional_token(SEMICOLON)) {
+				$self->expected_token(KEYWORD, 'SEPARATOR');
+				$self->expected_token(EQUALS);
 				$self->_String;
 				my ($sep)	= splice(@{ $self->{stack} });
 				$options{ seperator }	= $sep;
 			}
 		}
 	}
-	$self->__consume_ws_opt;
-	
 	my $arg	= join(',', map { blessed($_) ? $_->as_sparql : $_ } @expr);
 	if ($distinct) {
 		$arg	= 'DISTINCT ' . $arg;
 	}
 	my $name	= sprintf('%s(%s)', $op, $arg);
-	$self->_eat(')');
+	$self->expected_token(RPAREN);
 	
 	my $var		= Attean::Variable->new( value => ".$name");
 	my $agg		= Attean::AggregateExpression->new(
@@ -3066,32 +2893,40 @@ sub _Aggregate {
 # [57] BuiltInCall ::= 'STR' '(' Expression ')'  | 'LANG' '(' Expression ')'  | 'LANGMATCHES' '(' Expression ',' Expression ')'  | 'DATATYPE' '(' Expression ')'  | 'BOUND' '(' Var ')'  | 'sameTerm' '(' Expression ',' Expression ')'  | 'isIRI' '(' Expression ')'  | 'isURI' '(' Expression ')'  | 'isBLANK' '(' Expression ')'  | 'isLITERAL' '(' Expression ')'  | RegexExpression
 sub _BuiltInCall_test {
 	my $self	= shift;
+	my $t		= $self->peek_token;
+	return unless ($t);
 	if ($self->{__aggregate_call_ok}) {
-		return 1 if ($self->_test( $r_AGGREGATE_CALL ));
+		return 1 if ($t->type == KEYWORD and $t->value =~ qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)$/io);
 	}
-	return 1 if $self->_test(qr/((NOT\s+)?EXISTS)|COALESCE/i);
-	return 1 if $self->_test(qr/ABS|CEIL|FLOOR|ROUND|CONCAT|SUBSTR|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|RAND|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|NOW/i);
-	return $self->_test(qr/UUID|STRUUID|STR|STRDT|STRLANG|STRBEFORE|STRAFTER|REPLACE|BNODE|IRI|URI|LANG|LANGMATCHES|DATATYPE|BOUND|sameTerm|isIRI|isURI|isBLANK|isLITERAL|REGEX|IF|isNumeric/i);
+	return 1 if ($self->test_token(KEYWORD, 'NOT'));
+	return 1 if ($self->test_token(KEYWORD, 'EXISTS'));
+	return 1 if ($t->type == KEYWORD and $t->value =~ qr/^(ABS|CEIL|FLOOR|ROUND|CONCAT|SUBSTR|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|RAND|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|NOW)$/i);
+	return ($t->type == KEYWORD and $t->value =~ qr/^(COALESCE|UUID|STRUUID|STR|STRDT|STRLANG|STRBEFORE|STRAFTER|REPLACE|BNODE|IRI|URI|LANG|LANGMATCHES|DATATYPE|BOUND|sameTerm|isIRI|isURI|isBLANK|isLITERAL|REGEX|IF|isNumeric)$/i);
 }
 
 sub _BuiltInCall {
 	my $self	= shift;
-	if ($self->{__aggregate_call_ok} and $self->_test( $r_AGGREGATE_CALL )) {
+	my $t		= $self->peek_token;
+	if ($self->{__aggregate_call_ok} and $t->type == KEYWORD and $t->value =~ qr/(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)\b/io) {
 		$self->_Aggregate;
-	} elsif ($self->_test(qr/(NOT\s+)?EXISTS/i)) {
-		my $op	= $self->_eat(qr/(NOT\s+)?EXISTS/i);
-		$self->__consume_ws_opt;
+	} elsif ($self->optional_token(KEYWORD, 'NOT')) {
+		$self->expected_token(KEYWORD, 'EXISTS');
 		local($self->{filters})					= [];
 		$self->_GroupGraphPattern;
 		my $cont	= $self->_remove_pattern;
 		my $p		= Attean::ExistsExpression->new( pattern => $cont );
-		if ($op =~ /^NOT/i) {
-			$p	= Attean::UnaryExpression->new( operator => '!', children => [$p] )
-		}
+		$p	= Attean::UnaryExpression->new( operator => '!', children => [$p] );
 		$self->_add_stack($p);
-	} elsif ($self->_test(qr/COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW/i)) {
+	} elsif ($self->optional_token(KEYWORD, 'EXISTS')) {
+		local($self->{filters})					= [];
+		$self->_GroupGraphPattern;
+		my $cont	= $self->_remove_pattern;
+		my $p		= Attean::ExistsExpression->new( pattern => $cont );
+		$self->_add_stack($p);
+	} elsif ($t->type == KEYWORD and $t->value =~ qr/(COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW)/i) {
 		# n-arg functions that take expressions
-		my $op	= $self->_eat(qr/COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW/i);
+		my $t	= $self->next_token;
+		my $op	= $t->value;
 		$self->_ArgList;
 		my @args	= splice(@{ $self->{stack} });
 		my $func	= $self->new_function_expression( $op, @args );
@@ -3099,78 +2934,78 @@ sub _BuiltInCall {
 	} elsif ($self->_RegexExpression_test) {
 		$self->_RegexExpression;
 	} else {
-		my $op		= $self->_eat( qr/\w+/ );
-		$self->__consume_ws_opt;
-		$self->_eat_with_ws('(');
+		my $t		= $self->next_token;
+		my $op		= $t->value;
 		if ($op =~ /^(STR)?UUID$/i) {
 			# no-arg functions
+			$self->expected_token(NIL);
 			$self->_add_stack( $self->new_function_expression($op) );
 		} elsif ($op =~ /^(STR|URI|IRI|LANG|DATATYPE|isIRI|isURI|isBLANK|isLITERAL|isNumeric|ABS|CEIL|FLOOR|ROUND|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ)$/i) {
 			### one-arg functions that take an expression
+			$self->expected_token(LPAREN);
 			$self->_Expression;
 			my ($expr)	= splice(@{ $self->{stack} });
 			$self->_add_stack( $self->new_function_expression($op, $expr) );
+			$self->expected_token(RPAREN);
 		} elsif ($op =~ /^(STRDT|STRLANG|LANGMATCHES|sameTerm|CONTAINS|STRSTARTS|STRENDS|STRBEFORE|STRAFTER)$/i) {
 			### two-arg functions that take expressions
+			$self->expected_token(LPAREN);
 			$self->_Expression;
 			my ($arg1)	= splice(@{ $self->{stack} });
-			$self->__consume_ws_opt;
-			$self->_eat_with_ws(',');
+			$self->expected_token(COMMA);
 			$self->_Expression;
 			my ($arg2)	= splice(@{ $self->{stack} });
 			$self->_add_stack( $self->new_function_expression($op, $arg1, $arg2) );
+			$self->expected_token(RPAREN);
 		} elsif ($op =~ /^(IF|REPLACE)$/i) {
 			### three-arg functions that take expressions
+			$self->expected_token(LPAREN);
 			$self->_Expression;
 			my ($arg1)	= splice(@{ $self->{stack} });
-			$self->__consume_ws_opt;
-			$self->_eat_with_ws(',');
+			$self->expected_token(COMMA);
 			$self->_Expression;
 			my ($arg2)	= splice(@{ $self->{stack} });
-			$self->__consume_ws_opt;
-			$self->_eat_with_ws(',');
+			$self->expected_token(COMMA);
 			$self->_Expression;
 			my ($arg3)	= splice(@{ $self->{stack} });
 			$self->_add_stack( $self->new_function_expression($op, $arg1, $arg2, $arg3) );
+			$self->expected_token(RPAREN);
 		} else {
 			### BOUND(Var)
+			$self->expected_token(LPAREN);
 			$self->_Var;
 			my $var		= pop(@{ $self->{stack} });
 			my $expr	= Attean::ValueExpression->new(value => $var);
 			$self->_add_stack( $self->new_function_expression($op, $expr) );
+			$self->expected_token(RPAREN);
 		}
-		$self->__consume_ws_opt;
-		$self->_eat(')');
 	}
 }
 
 # [58] RegexExpression ::= 'REGEX' '(' Expression ',' Expression ( ',' Expression )? ')'
 sub _RegexExpression_test {
 	my $self	= shift;
-	return $self->_test( qr/REGEX/i );
+	return $self->test_token(KEYWORD, 'REGEX');
 }
 
 sub _RegexExpression {
 	my $self	= shift;
-	$self->_eat_with_ws( qr/REGEX/i );
-	$self->_eat_with_ws('(');
+	$self->expected_token(KEYWORD, 'REGEX');
+	$self->expected_token(LPAREN);
 	$self->_Expression;
 	my $string	= splice(@{ $self->{stack} });
 	
-	$self->__consume_ws_opt;
-	$self->_eat_with_ws(',');
+	$self->expected_token(COMMA);
 	$self->_Expression;
 	my $pattern	= splice(@{ $self->{stack} });
 	
 	my @args	= ($string, $pattern);
-	if ($self->_test(',')) {
-		$self->_eat_with_ws(',');
+	if ($self->optional_token(COMMA)) {
 		$self->_Expression;
 		push(@args, splice(@{ $self->{stack} }));
 	}
 	
-	$self->__consume_ws_opt;
-	$self->_eat(')');
+	$self->expected_token(RPAREN);
 	
 	$self->_add_stack( $self->new_function_expression( 'REGEX', @args ) );
 }
@@ -3206,12 +3041,12 @@ sub _RDFLiteral {
 	my ($value)	= splice(@{ $self->{stack} });
 	
 	my $obj;
-	if ($self->_test('@')) {
-		my $lang	= $self->_eat( $r_LANGTAG );
-		substr($lang,0,1)	= '';	# remove '@'
+	if ($self->test_token(LANG)) {
+		my $t	= $self->expected_token(LANG);
+		my $lang	= $t->value;
 		$obj	= Attean::Literal->new( value => $value, language => $lang );
-	} elsif ($self->_test('^^')) {
-		$self->_eat('^^');
+	} elsif ($self->test_token(HATHAT)) {
+		$self->expected_token(HATHAT);
 		$self->_IRIref;
 		my ($iri)	= splice(@{ $self->{stack} });
 		$obj	= Attean::Literal->new( value => $value, datatype => $iri );
@@ -3229,28 +3064,24 @@ sub _RDFLiteral {
 sub _NumericLiteral {
 	my $self	= shift;
 	my $sign	= 0;
-	if ($self->_test('+')) {
-		$self->_eat('+');
+	if ($self->optional_token(PLUS)) {
 		$sign	= '+';
-	} elsif ($self->_test('-')) {
-		$self->_eat('-');
+	} elsif ($self->optional_token(MINUS)) {
 		$sign	= '-';
 	}
 	
 	my $value;
 	my $type;
-	if ($self->_test( $r_DOUBLE )) {
-		$value	= $self->_eat( $r_DOUBLE );
-		my $double	= Attean::IRI->new(value =>  $xsd->double->uri_value );
-		$type	= $double
-	} elsif ($self->_test( $r_DECIMAL )) {
-		$value	= $self->_eat( $r_DECIMAL );
-		my $decimal	= Attean::IRI->new(value =>  $xsd->decimal->uri_value );
-		$type	= $decimal;
+	if (my $db = $self->optional_token(DOUBLE)) {
+		$value	= $db->value;
+		$type	= Attean::IRI->new(value =>  $xsd->double->uri_value );
+	} elsif (my $dc = $self->optional_token(DECIMAL)) {
+		$value	= $dc->value;
+		$type	= Attean::IRI->new(value =>  $xsd->decimal->uri_value );
 	} else {
-		$value	= $self->_eat( $r_INTEGER );
-		my $integer	= Attean::IRI->new(value =>  $xsd->integer->uri_value );
-		$type	= $integer;
+		my $i	= $self->expected_token(INTEGER);
+		$value	= $i->value;
+		$type	= Attean::IRI->new(value =>  $xsd->integer->uri_value );
 	}
 	
 	if ($sign) {
@@ -3267,7 +3098,8 @@ sub _NumericLiteral {
 # [65] BooleanLiteral ::= 'true' | 'false'
 sub _BooleanLiteral {
 	my $self	= shift;
-	my $bool	= $self->_eat(qr/(true|false)\b/);
+	my $t		= $self->expected_token(BOOLEAN);
+	my $bool	= $t->value;
 
 	my $obj	= Attean::Literal->new( value => $bool, datatype => $xsd->boolean->uri_value );
 # 	if ($self->{args}{canonicalize} and blessed($obj) and $obj->isa('RDF::Trine::Node::Literal')) {
@@ -3280,19 +3112,22 @@ sub _BooleanLiteral {
 sub _String {
 	my $self	= shift;
 	my $value;
-	if ($self->_test( $r_STRING_LITERAL_LONG1 )) {
-		my $string	= $self->_eat( $r_STRING_LITERAL_LONG1 );
-		$value		= substr($string, 3, length($string) - 6);
-	} elsif ($self->_test( $r_STRING_LITERAL_LONG2 )) {
-		my $string	= $self->_eat( $r_STRING_LITERAL_LONG2 );
-		$value		= substr($string, 3, length($string) - 6);
-	} elsif ($self->_test( $r_STRING_LITERAL1 )) {
-		my $string	= $self->_eat( $r_STRING_LITERAL1 );
-		$value		= substr($string, 1, length($string) - 2);
-	} else { # ($self->_test( $r_STRING_LITERAL2 )) {
-		my $string	= $self->_eat( $r_STRING_LITERAL2 );
-		$value		= substr($string, 1, length($string) - 2);
+	my $string;
+	my $t	= $self->peek_token;
+	if ($string = $self->optional_token(STRING1D)) {
+		$value	= $string->value;
+	} elsif ($string = $self->optional_token(STRING1S)) {
+		$value	= $string->value;
+	} elsif ($string = $self->optional_token(STRING3S)) {
+		$value	= $string->value;
+	} elsif ($string = $self->optional_token(STRING3D)) {
+		$value	= $string->value;
+	} else {
+		my $got	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
+		my $value	= $t->value;
+		die "Expecting string literal but found $got '$value'";
 	}
+
 #	$value	=~ s/(${r_ECHAR})/"$1"/ge;
 	$value	=~ s/\\t/\t/g;
 	$value	=~ s/\\b/\n/g;
@@ -3307,15 +3142,17 @@ sub _String {
 # [67] IRIref ::= IRI_REF | PrefixedName
 sub _IRIref_test {
 	my $self	= shift;
-	return $self->_test(qr/<|${r_PNAME_LN}|${r_PNAME_NS}/);
+	return 1 if ($self->test_token(IRI));
+	return 1 if ($self->test_token(PREFIXNAME));
+	return 0;
 }
 
 sub _IRIref {
 	my $self	= shift;
-	if ($self->_test( $r_IRI_REF )) {
-		my $iri	= $self->_eat( $r_IRI_REF );
+	if (my $t = $self->optional_token(IRI)) {
+		my $iri	= $t->value;
 		my $base	= $self->__base;
-		my $node	= Attean::IRI->new( value => substr($iri,1,length($iri)-2), $base ? (base => $base) : () );
+		my $node	= Attean::IRI->new( value => $iri, $base ? (base => $base) : () );
 		$self->_add_stack( $node );
 	} else {
 		$self->_PrefixedName;
@@ -3325,38 +3162,18 @@ sub _IRIref {
 # [68] PrefixedName ::= PNAME_LN | PNAME_NS
 sub _PrefixedName {
 	my $self	= shift;
-	if ($self->_test( $r_PNAME_LN )) {
-		my $ln	= $self->_eat( $r_PNAME_LN );
-		my ($ns,$local)	= split(/:/, $ln, 2);
-		if ($ns eq '') {
-			$ns	= '__DEFAULT__';
-		}
-		
-		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
-		
-		unless (exists $self->{namespaces}{$ns}) {
-			die "Syntax error: Use of undefined namespace '$ns'";
-		}
-		
-		my $iri		= $self->{namespaces}{$ns} . $local;
-		my $base	= $self->__base;
-		$self->_add_stack( Attean::IRI->new( value => $iri, $base ? (base => $base) : () ) );
-	} else {
-		my $ns	= $self->_eat( $r_PNAME_NS );
-		if ($ns eq ':') {
-			$ns	= '__DEFAULT__';
-		} else {
-			chop($ns);
-		}
-		
-		unless (exists $self->{namespaces}{$ns}) {
-			die "Syntax error: Use of undefined namespace '$ns'";
-		}
-		
-		my $iri		= $self->{namespaces}{$ns};
-		my $base	= $self->__base;
-		$self->_add_stack( Attean::IRI->new( value => $iri, $base ? (base => $base) : () ) );
+	my $t		= $self->expected_token(PREFIXNAME);
+	my ($ns, $local)	= @{ $t->args };
+	chop($ns);
+# 		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
+	
+	unless (exists $self->{namespaces}{$ns}) {
+		die "Syntax error: Use of undefined namespace '$ns'";
 	}
+	
+	my $iri		= $self->{namespaces}{$ns} . $local;
+	my $base	= $self->__base;
+	$self->_add_stack( Attean::IRI->new( value => $iri, $base ? (base => $base) : () ) );
 }
 
 # [69] BlankNode ::= BLANK_NODE_LABEL | ANON
@@ -3365,19 +3182,18 @@ sub _BlankNode {
 	if (my $where = $self->{__no_bnodes}) {
 		die "Syntax error: Blank nodes not allowed in $where";
 	}
-	if ($self->_test( $r_BLANK_NODE_LABEL )) {
-		my $label	= $self->_eat( $r_BLANK_NODE_LABEL );
-		my $id		= substr($label,2);
-		$self->_add_stack( Attean::Blank->new($id) );
+	if (my $b = $self->optional_token(BNODE)) {
+		my $label	= $b->value;
+		$self->_add_stack( Attean::Blank->new($label) );
 	} else {
-		$self->_eat( $r_ANON );
+		$self->expected_token(ANON);
 		$self->_add_stack( Attean::Blank->new() );
 	}
 }
 
 sub _NIL {
 	my $self	= shift;
-	$self->_eat( $r_NIL );
+	$self->expected_token(NIL);
 	my $nil	= Attean::IRI->new(value =>  $rdf->nil->uri_value );
 	$self->_add_stack( $nil );
 }
@@ -3462,7 +3278,6 @@ sub __solution_modifiers {
 	
 	if ($having_expr) {
 		my $pattern	= pop(@{ $self->{build}{triples} });
-		warn "Filter: $having_expr";
 		my $filter	= Attean::Algebra::Filter->new( children => [$pattern], expression => $having_expr );
 		push(@{ $self->{build}{triples} }, $filter);
 	}
@@ -3570,47 +3385,47 @@ sub _add_filter {
 	push( @{ $self->{filters} }, @filters );
 }
 
-sub _eat_with_ws {
-	my $self	= shift;
-	my $r		= $self->_eat(@_);
-	$self->__consume_ws_opt;
-	return $r;
-}
-
-sub _eat {
-	my $self	= shift;
-	my $thing	= shift;
-	if (not(length($self->{tokens}))) {
-		$self->_syntax_error("No tokens left");
-	}
-
-# 	if (substr($self->{tokens}, 0, 1) eq '^') {
-# 		Carp::cluck( "eating $thing with input $self->{tokens}" );
+# sub _eat_with_ws {
+# 	my $self	= shift;
+# 	my $r		= $self->_eat(@_);
+# 	$self->__consume_ws_opt;
+# 	return $r;
+# }
+# 
+# sub _eat {
+# 	my $self	= shift;
+# 	my $thing	= shift;
+# 	if (not(length($self->{tokens}))) {
+# 		$self->_syntax_error("No tokens left");
 # 	}
-
-	if (ref($thing) and $thing->isa('Regexp')) {
-		if ($self->{tokens} =~ /^($thing)/) {
-			my $match	= $1;
-			substr($self->{tokens}, 0, length($match))	= '';
-			return $match;
-		}
-
-		$self->_syntax_error( "Expected $thing" );
-	} elsif (looks_like_number( $thing )) {
-		my ($token)	= substr( $self->{tokens}, 0, $thing, '' );
-		return $token
-	} else {
-		### thing is a string
-		if (substr($self->{tokens}, 0, length($thing)) eq $thing) {
-			substr($self->{tokens}, 0, length($thing))	= '';
-			return $thing;
-		} else {
-			$self->_syntax_error( "Expected $thing" );
-		}
-	}
-	print $thing;
-	die;
-}
+# 
+# # 	if (substr($self->{tokens}, 0, 1) eq '^') {
+# # 		Carp::cluck( "eating $thing with input $self->{tokens}" );
+# # 	}
+# 
+# 	if (ref($thing) and $thing->isa('Regexp')) {
+# 		if ($self->{tokens} =~ /^($thing)/) {
+# 			my $match	= $1;
+# 			substr($self->{tokens}, 0, length($match))	= '';
+# 			return $match;
+# 		}
+# 
+# 		$self->_syntax_error( "Expected $thing" );
+# 	} elsif (looks_like_number( $thing )) {
+# 		my ($token)	= substr( $self->{tokens}, 0, $thing, '' );
+# 		return $token
+# 	} else {
+# 		### thing is a string
+# 		if (substr($self->{tokens}, 0, length($thing)) eq $thing) {
+# 			substr($self->{tokens}, 0, length($thing))	= '';
+# 			return $thing;
+# 		} else {
+# 			$self->_syntax_error( "Expected $thing" );
+# 		}
+# 	}
+# 	print $thing;
+# 	die;
+# }
 
 sub _syntax_error {
 	my $self	= shift;
@@ -3640,61 +3455,61 @@ sub _syntax_error {
 	}
 }
 
-sub _test {
-	my $self	= shift;
-	my $thing	= shift;
-	if (blessed($thing) and $thing->isa('Regexp')) {
-		if ($self->{tokens} =~ m/^$thing/) {
-			return 1;
-		} else {
-			return 0;
-		}
-	} else {
-		if (substr($self->{tokens}, 0, length($thing)) eq $thing) {
-			return 1;
-		} else {
-			return 0;
-		}
-	}
-}
-
-sub _ws_test {
-	my $self	= shift;
-	unless (length($self->{tokens})) {
-		return 0;
-	}
-
-	if ($self->{tokens} =~ m/^[\t\r\n #]/) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-sub _ws {
-	my $self	= shift;
-	### #x9 | #xA | #xD | #x20 | comment
-	if ($self->_test('#')) {
-		$self->_eat(qr/#[^\x0d\x0a]*.?/);
-	} else {
-		$self->_eat(qr/[\n\r\t ]/);
-	}
-}
-
-sub __consume_ws_opt {
-	my $self	= shift;
-	if ($self->_ws_test) {
-		$self->__consume_ws;
-	}
-}
-
-sub __consume_ws {
-	my $self	= shift;
-	$self->_ws;
-	while ($self->_ws_test()) {
-		$self->_ws()
-	}
-}
+# sub _test {
+# 	my $self	= shift;
+# 	my $thing	= shift;
+# 	if (blessed($thing) and $thing->isa('Regexp')) {
+# 		if ($self->{tokens} =~ m/^$thing/) {
+# 			return 1;
+# 		} else {
+# 			return 0;
+# 		}
+# 	} else {
+# 		if (substr($self->{tokens}, 0, length($thing)) eq $thing) {
+# 			return 1;
+# 		} else {
+# 			return 0;
+# 		}
+# 	}
+# }
+# 
+# sub _ws_test {
+# 	my $self	= shift;
+# 	unless (length($self->{tokens})) {
+# 		return 0;
+# 	}
+# 
+# 	if ($self->{tokens} =~ m/^[\t\r\n #]/) {
+# 		return 1;
+# 	} else {
+# 		return 0;
+# 	}
+# }
+# 
+# sub _ws {
+# 	my $self	= shift;
+# 	### #x9 | #xA | #xD | #x20 | comment
+# 	if ($self->_test('#')) {
+# 		$self->_eat(qr/#[^\x0d\x0a]*.?/);
+# 	} else {
+# 		$self->_eat(qr/[\n\r\t ]/);
+# 	}
+# }
+# 
+# sub __consume_ws_opt {
+# 	my $self	= shift;
+# 	if ($self->_ws_test) {
+# 		$self->__consume_ws;
+# 	}
+# }
+# 
+# sub __consume_ws {
+# 	my $self	= shift;
+# 	$self->_ws;
+# 	while ($self->_ws_test()) {
+# 		$self->_ws()
+# 	}
+# }
 
 sub __base {
 	my $self	= shift;
@@ -3833,6 +3648,69 @@ sub new_join {
 	}
 	
 	return Attean::Algebra::Join->new( children => \@parts );
+}
+
+sub peek_token {
+	my $self	= shift;
+	my $l		= $self->lexer;
+	my $t		= $l->peek;
+	return unless ($t);
+	while ($t == COMMENT) {
+		$t		= $l->peek;
+		return unless ($t);
+	}
+	return $t;
+}
+
+sub test_token {
+	my $self	= shift;
+	my $type	= shift;
+	my $t		= $self->peek_token;
+	return unless ($t);
+	return if ($t->type != $type);
+	if (@_) {
+		my $value	= shift;
+		return unless ($t->value eq $value);
+	}
+	return 1;
+}
+
+sub optional_token {
+	my $self	= shift;
+	if ($self->test_token(@_)) {
+		return $self->next_token;
+	}
+	return;
+}
+
+sub next_token {
+	my $self	= shift;
+	my $l		= $self->lexer;
+	my $t		= $l->next;
+	while ($t->type == COMMENT) {
+		$t		= $l->peek;
+		return unless ($t);
+	}
+	return $t;
+}
+
+sub expected_token {
+	my $self	= shift;
+	my $type	= shift;
+	if ($self->test_token($type, @_)) {
+		return $self->next_token;
+	} else {
+		my $t			= $self->peek_token;
+		my $expecting	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($type);
+		my $got			= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
+		if (@_) {
+			my $value	= shift;
+			my $value2	= $t->value;
+			Carp::confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
+		} else {
+			Carp::confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
+		}
+	}
 }
 
 1;
