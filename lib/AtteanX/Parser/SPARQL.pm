@@ -201,30 +201,25 @@ sub _RW_Query {
 				die "INSERT/DELETE update forbidden in read-only queries";
 			}
 			my ($graph);
-			if ($self->_test(qr/WITH/)) {
+			if ($self->optional_token(KEYWORD, 'WITH')) {
 				$self->{build}{custom_update_dataset}	= 1;
-				$self->_eat_with_ws(qr/WITH/i);
 				$self->_IRIref;
 				($graph)	= splice( @{ $self->{stack} } );
 			}
-			if ($self->_test(qr/INSERT/ims)) {
-				$self->_eat_with_ws(qr/INSERT/i);
-				if ($self->_test(qr/DATA/i)) {
+			if ($self->optional_token(KEYWORD, 'INSERT')) {
+				if ($self->optional_token(KEYWORD, 'DATA')) {
 					unless ($self->{update}) {
 						die "INSERT DATA update forbidden in read-only queries";
 					}
-					$self->_eat_with_ws(qr/DATA/i);
 					$self->_InsertDataUpdate();
 				} else {
 					$self->_InsertUpdate($graph);
 				}
-			} elsif ($self->_test(qr/DELETE/ims)) {
-				$self->_eat_with_ws(qr/DELETE/i);
-				if ($self->_test(qr/DATA/i)) {
+			} elsif ($self->optional_token(KEYWORD, 'DELETE')) {
+				if ($self->optional_token(KEYWORD, 'DATA')) {
 					unless ($self->{update}) {
 						die "DELETE DATA update forbidden in read-only queries";
 					}
-					$self->_eat_with_ws(qr/DATA/i);
 					$self->_DeleteDataUpdate();
 				} else {
 					$self->_DeleteUpdate($graph);
@@ -256,8 +251,6 @@ sub _RW_Query {
 		}
 		last;
 	}
-#	$self->_eat(qr/;/) if ($self->_test(qr/;/));
-
 	my $count	= scalar(@{ $self->{build}{triples} });
 	
 	my $t	= $self->peek_token;
@@ -269,7 +262,7 @@ sub _RW_Query {
 	if ($count == 0 or $count > 1) {
 		my @patterns	= splice(@{ $self->{build}{triples} });
 		my $pattern		= Attean::Algebra::Sequence->new( children => \@patterns );
-		warn 'TODO: $pattern->check_duplicate_blanks';
+		$self->check_duplicate_blanks($pattern);
 		$self->{build}{triples}	= [ $pattern ];
 	}
 
@@ -361,12 +354,10 @@ sub _InsertUpdate {
 
 
 	my %dataset;
-	while ($self->_test(qr/USING/i)) {
+	while ($self->optional_token(KEYWORD, 'USING')) {
 		$self->{build}{custom_update_dataset}	= 1;
-		$self->_eat_with_ws(qr/USING/i);
 		my $named	= 0;
-		if ($self->_test(qr/NAMED/i)) {
-			$self->_eat_with_ws(qr/NAMED/i);
+		if ($self->optional_token(KEYWORD, 'NAMED')) {
 			$named	= 1;
 		}
 		$self->_IRIref;
@@ -378,7 +369,7 @@ sub _InsertUpdate {
 		}
 	}
 
-	$self->_eat_with_ws(qr/WHERE/i);
+	$self->expected_token(KEYWORD, 'WHERE');
 	if ($graph) {
 		$self->_GroupGraphPattern;
 		my $ggp	= $self->_remove_pattern;
@@ -407,7 +398,7 @@ sub _DeleteUpdate {
 	
 	my %dataset;
 	my $delete_where	= 0;
-	if ($self->_test(qr/WHERE/i)) {
+	if ($self->optional_token(KEYWORD, 'WHERE')) {
 		if ($graph) {
 			die "Syntax error: WITH clause cannot be used with DELETE WHERE operations";
 		}
@@ -415,26 +406,23 @@ sub _DeleteUpdate {
 	} else {
 		{
 			local($self->{__no_bnodes})		= "DELETE block";
-			$self->_eat_with_ws('{');
+			$self->expected_token(LBRACE);
 			$self->_ModifyTemplate( $graph );
-			$self->_eat('}');
+			$self->expected_token(RBRACE);
 		}
 		$delete_data	= $self->_remove_pattern;
 		
-		if ($self->_test(qr/INSERT/i)) {
-			$self->_eat_with_ws(qr/INSERT/i);
-			$self->_eat_with_ws('{');
+		if ($self->optional_token(KEYWORD, 'INSERT')) {
+			$self->expected_token(LBRACE);
 			$self->_ModifyTemplate( $graph );
-			$self->_eat_with_ws('}');
+			$self->expected_token(RBRACE);
 			$insert_data	= $self->_remove_pattern;
 		}
 		
-		while ($self->_test(qr/USING/i)) {
+		while ($self->optional_token(KEYWORD, 'USING')) {
 			$self->{build}{custom_update_dataset}	= 1;
-			$self->_eat_with_ws(qr/USING/i);
 			my $named	= 0;
-			if ($self->_test(qr/NAMED/i)) {
-				$self->_eat_with_ws(qr/NAMED/i);
+			if ($self->optional_token(KEYWORD, 'NAMED')) {
 				$named	= 1;
 			}
 			$self->_IRIref;
@@ -447,7 +435,7 @@ sub _DeleteUpdate {
 		}
 	}
 	
-	$self->_eat_with_ws(qr/WHERE/i);
+	$self->expected_token(KEYWORD, 'WHERE');
 	if ($graph) {
 		$self->{__no_bnodes}	= "DELETE WHERE block" if ($delete_where);
 		$self->_GroupGraphPattern;
@@ -480,7 +468,7 @@ sub _DeleteUpdate {
 sub _ModifyTemplate_test {
 	my $self	= shift;
 	return 1 if ($self->_TriplesBlock_test);
-	return 1 if ($self->_test(qr/GRAPH/i));
+	return 1 if ($self->test_token(KEYWORD, 'GRAPH'));
 	return 0;
 }
 
@@ -529,13 +517,12 @@ sub __ModifyTemplate {
 
 sub _LoadUpdate {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/LOAD\s+(SILENT\s+)?/i);
-	my $silent	= ($op =~ /SILENT/);
+	$self->expected_token(KEYWORD< 'LOAD');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
 	$self->_IRIref;
 	my ($iri)	= splice( @{ $self->{stack} } );
-	if ($self->_test(qr/INTO GRAPH/i)) {
-		$self->_eat(qr/INTO GRAPH/i);
-		$self->_ws;
+	if ($self->optional_token(KEYWORD, 'INTO')) {
+		$self->expected_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{stack} } );
 		my $pat	= RDF::Query::Algebra::Load->new( $iri, $graph, $silent );
@@ -549,9 +536,9 @@ sub _LoadUpdate {
 
 sub _CreateGraph {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/CREATE\s+(SILENT\s+)?GRAPH/i);
-	my $silent	= ($op =~ /SILENT/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD< 'CREATE');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
+	$self->expected_token(KEYWORD< 'GRAPH');
 	$self->_IRIref;
 	my ($graph)	= splice( @{ $self->{stack} } );
 	my $pat	= RDF::Query::Algebra::Create->new( $graph );
@@ -561,26 +548,20 @@ sub _CreateGraph {
 
 sub _ClearGraphUpdate {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/CLEAR(\s+SILENT)?/i);
-	my $silent	= ($op =~ /SILENT/i);
-	$self->_ws;
-	if ($self->_test(qr/GRAPH/i)) {
-		$self->_eat(qr/GRAPH/i);
-		$self->_ws;
+	$self->expected_token(KEYWORD< 'CLEAR');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
+	if ($self->optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{stack} } );
 		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
 		$self->_add_patterns( $pat );
-	} elsif ($self->_test(qr/DEFAULT/i)) {
-		$self->_eat(qr/DEFAULT/i);
+	} elsif ($self->optional_token(KEYWORD, 'DEFAULT')) {
 		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
 		$self->_add_patterns( $pat );
-	} elsif ($self->_test(qr/NAMED/i)) {
-		$self->_eat(qr/NAMED/i);
+	} elsif ($self->optional_token(KEYWORD, 'NAMED')) {
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
 		$self->_add_patterns( $pat );
-	} elsif ($self->_test(qr/ALL/i)) {
-		$self->_eat(qr/ALL/i);
+	} elsif ($self->optional_token(KEYWORD, 'ALL')) {
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
 		$self->_add_patterns( $pat );
 	}
@@ -589,26 +570,20 @@ sub _ClearGraphUpdate {
 
 sub _DropGraph {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/DROP(\s+SILENT)?/i);
-	my $silent	= ($op =~ /SILENT/i);
-	$self->_ws;
-	if ($self->_test(qr/GRAPH/i)) {
-		$self->_eat(qr/GRAPH/i);
-		$self->_ws;
+	$self->expected_token(KEYWORD, 'DROP');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
+	if ($self->optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{stack} } );
 		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
 		$self->_add_patterns( $pat );
-	} elsif ($self->_test(qr/DEFAULT/i)) {
-		$self->_eat(qr/DEFAULT/i);
+	} elsif ($self->optional_token(KEYWORD, 'DEFAULT')) {
 		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
 		$self->_add_patterns( $pat );
-	} elsif ($self->_test(qr/NAMED/i)) {
-		$self->_eat(qr/NAMED/i);
+	} elsif ($self->optional_token(KEYWORD, 'NAMED')) {
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
 		$self->_add_patterns( $pat );
-	} elsif ($self->_test(qr/ALL/i)) {
-		$self->_eat(qr/ALL/i);
+	} elsif ($self->optional_token(KEYWORD, 'ALL')) {
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
 		$self->_add_patterns( $pat );
 	}
@@ -617,13 +592,10 @@ sub _DropGraph {
 
 sub __graph {
 	my $self	= shift;
-	if ($self->_test(qr/DEFAULT/i)) {
-		$self->_eat(qr/DEFAULT/i);
+	if ($self->optional_token(KEYWORD, 'DEFAULT')) {
 		return RDF::Trine::Node::Nil->new();
 	} else {
-		if ($self->_test(qr/GRAPH/)) {
-			$self->_eat_with_ws(qr/GRAPH/i);
-		}
+		$self->optional_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		my ($g)	= splice( @{ $self->{stack} } );
 		return $g;
@@ -632,13 +604,10 @@ sub __graph {
 
 sub _CopyUpdate {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/COPY(\s+SILENT)?/i);
-	my $silent	= ($op =~ /SILENT/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD, 'COPY');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
 	my $from	= $self->__graph();
-	$self->_ws;
-	$self->_eat(qr/TO/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD, 'TO');
 	my $to	= $self->__graph();
 	my $pattern	= RDF::Query::Algebra::Copy->new( $from, $to, $silent );
 	$self->_add_patterns( $pattern );
@@ -647,13 +616,10 @@ sub _CopyUpdate {
 
 sub _MoveUpdate {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/MOVE(\s+SILENT)?/i);
-	my $silent	= ($op =~ /SILENT/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD, 'MOVE');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
 	my $from	= $self->__graph();
-	$self->_ws;
-	$self->_eat(qr/TO/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD, 'TO');
 	my $to	= $self->__graph();
 	my $pattern	= RDF::Query::Algebra::Move->new( $from, $to, $silent );
 	$self->_add_patterns( $pattern );
@@ -662,9 +628,8 @@ sub _MoveUpdate {
 
 sub _AddUpdate {
 	my $self	= shift;
-	my $op		= $self->_eat(qr/ADD(\s+SILENT)?/i);
-	my $silent	= ($op =~ /SILENT/i);
-	$self->_ws;
+	$self->expected_token(KEYWORD, 'ADD');
+	my $silent	= $self->optional_token(KEYWORD, 'SILENT');
 	return $self->__UpdateShortcuts( 'ADD', $silent );
 }
 
@@ -673,24 +638,16 @@ sub __UpdateShortcuts {
 	my $op		= shift;
 	my $silent	= shift;
 	my ($from, $to);
-	if ($self->_test(qr/DEFAULT/i)) {
-		$self->_eat(qr/DEFAULT/i);
+	if ($self->optional_token(KEYWORD, 'DEFAULT')) {
 	} else {
-		if ($self->_test(qr/GRAPH/)) {
-			$self->_eat_with_ws(qr/GRAPH/i);
-		}
+		$self->optional_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		($from)	= splice( @{ $self->{stack} } );
 	}
-	$self->_ws;
-	$self->_eat(qr/TO/i);
-	$self->_ws;
-	if ($self->_test(qr/DEFAULT/i)) {
-		$self->_eat(qr/DEFAULT/i);
+	$self->expected_token(KEYWORD, 'TO');
+	if ($self->optional_token(KEYWORD, 'DEFAULT')) {
 	} else {
-		if ($self->_test(qr/GRAPH/)) {
-			$self->_eat_with_ws(qr/GRAPH/i);
-		}
+		$self->optional_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		($to)	= splice( @{ $self->{stack} } );
 	}
@@ -741,13 +698,13 @@ sub _SelectQuery {
 		$self->{build}{options}{distinct}	= 1;
 	}
 	
-	my ($star, @exprs)	= $self->__SelectVars;
+	my ($star, $exprs, $vars)	= $self->__SelectVars;
+	my @exprs	= @$exprs;
 	
 	$self->_DatasetClause();
 	
 	$self->_WhereClause;
-
-	$self->_SolutionModifier();
+	$self->_SolutionModifier($vars);
 	
 	if ($self->optional_token(KEYWORD, 'VALUES')) {
 		my @vars;
@@ -808,22 +765,22 @@ sub _SelectQuery {
 	}
 	
 	$self->__solution_modifiers( $star, @exprs );
+
 	my $pattern	= $self->{build}{triples}[0];
-	warn 'TODO: check for aggregates';
-# 	my @agg		= $pattern->subpatterns_of_type( 'RDF::Query::Algebra::Aggregate', 'RDF::Query::Algebra::SubSelect' );
-# 	if (@agg) {
-# 		my ($agg)	= @agg;
-# 		my @gvars	= $agg->groupby;
-# 		if (scalar(@gvars) == 0) {
-# 			# aggregate query with no explicit group keys
+	my @agg		= $pattern->subpatterns_of_type('Attean::Algebra::Group');
+	if (my $agg = shift @agg) {
+		my @gvars	= @{ $agg->groupby };
+		if (scalar(@gvars) == 0) {
+			# aggregate query with no explicit group keys
+			warn 'TODO: check for projected variables in aggregate query with no grouping';
 # 			foreach my $v (@{ $self->{build}{variables} }) {
 # 				if ($v->isa('RDF::Query::Node::Variable')) {
 # 					my $name	= $v->name;
 # 					throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
 # 				}
 # 			}
-# 		}
-# 	}
+		}
+	}
 	
 	delete $self->{build}{options};
 	$self->{build}{method}		= 'SELECT';
@@ -856,25 +813,20 @@ sub __SelectVars {
 	}
 	
 	my %seen;
-	warn 'TODO: verify projection does not contain repeated variables';
-# 	foreach my $v (@vars) {
-# 		if ($v->isa('RDF::Query::Node::Variable') or $v->isa('RDF::Query::Expression::Alias')) {
-# 			my $name	= $v->name;
-# 			if ($v->isa('RDF::Query::Expression::Alias')) {
-# 				if ($seen{ $name }) {
-# 					die "Syntax error: Repeated variable ($name) used in projection list";
-# #					throw RDF::Query::Error::ParseError -text => "Syntax error: Repeated variable ($name) used in projection list";
-# 				}
-# 			}
-# 			$seen{ $name }++;
-# 		}
-# 	}
+	foreach my $v (@vars) {
+		if ($v->does('Attean::API::Variable')) {
+			my $name	= $v->value;
+			if ($seen{ $name }++) {
+				die "Syntax error: Repeated variable ($name) used in projection list";
+			}
+		}
+	}
 	
 	$self->{build}{variables}	= \@vars;
 	if ($count == 0) {
 		die "Syntax error: No select variable or expression specified";
 	}
-	return $star, @exprs;
+	return $star, \@exprs, \@vars;
 }
 
 sub _BrackettedAliasExpression {
@@ -1046,7 +998,26 @@ sub _WhereClause {
 	$self->_GroupGraphPattern;
 	
 	my $ggp	= $self->_peek_pattern;
+	$self->check_duplicate_blanks($ggp);
+}
+
+sub check_duplicate_blanks {
+	my $self	= shift;
+	my $p		= shift;
 	warn 'TODO: $ggp->check_duplicate_blanks';
+# 	my @children	= @{ $ggp->children };
+# 	my %seen;
+# 	foreach my $c (@{ $ggp->children }) {
+# 		my @blanks		= $c->blank_nodes;
+# 		foreach my $b (@blanks) {
+# 			my $id	= $b->value;
+# 			if ($seen{ $id }++) {
+# 				warn $ggp->as_string;
+# 				die "Same blank node identifier ($id) used in more than one BasicGraphPattern.";
+# 			}
+# 		}
+# 	}
+	return 1;
 }
 
 sub _TriplesWhereClause {
@@ -1100,8 +1071,6 @@ sub _BindingValue_test {
 	return 1 if ($self->test_token(BNODE));
 	return 1 if ($self->test_token(NIL));
 	return 0;
-# 	return 1 if ($self->_test(qr/UNDEF|[<'".0-9]|(true|false)\b|_:|\([\n\r\t ]*\)/));
-# 	return 0;
 }
 
 sub _BindingValue {
@@ -1154,9 +1123,10 @@ sub __GroupByVar {
 # [14] SolutionModifier ::= OrderClause? LimitOffsetClauses?
 sub _SolutionModifier {
 	my $self	= shift;
+	my $vars	= shift // [];
 	
 	if ($self->test_token(KEYWORD, 'GROUP')) {
-		$self->_GroupClause;
+		$self->_GroupClause($vars);
 	}
 	
 	if ($self->test_token(KEYWORD, 'HAVING')) {
@@ -1174,6 +1144,7 @@ sub _SolutionModifier {
 
 sub _GroupClause {
 	my $self	= shift;
+	my $vars	= shift;
 	$self->expected_token(KEYWORD, 'GROUP');
 	$self->expected_token(KEYWORD, 'BY');
 	
@@ -1194,42 +1165,20 @@ sub _GroupClause {
 
 	my %seen;
 	foreach my $v (@vars) {
-		if ($v->isa('RDF::Query::Node::Variable') or $v->isa('RDF::Query::Expression::Alias')) {
-			die;
-		} elsif ($v->does('Attean::API::Variable')) {
-			my $name	= $v->value;
+		my $var	= $v->value;
+		if ($var->does('Attean::API::Variable')) {
+			my $name	= $var->value;
 			$seen{ $name }++;
 		}
 	}
 	
 	warn 'TODO: verify that projection only includes aggregates and grouping variables';
-# 	foreach my $v (@{ $self->{build}{variables} }) {
+# 	foreach my $v (@$vars) {
 # 		if ($v->does('Attean::API::Variable')) {
 # 			my $name	= $v->value;
 # 			unless ($seen{ $name }) {
 # 				die "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
 # #				throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# 			}
-# 		} elsif ($v->isa('RDF::Query::Node::Variable')) {
-# 			my $name	= $v->name;
-# 			unless ($seen{ $name }) {
-# 				die "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# #				throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# 			}
-# 		} elsif ($v->isa('RDF::Query::Expression::Alias')) {
-# 			my $expr	= $v->expression;
-# # 			warn 'expression: ' . Dumper($expr);
-# 			if ($expr->isa('RDF::Query::Node::Variable::ExpressionProxy')) {
-# 				# RDF::Query::Node::Variable::ExpressionProxy is used for aggregate operations.
-# 				# we can ignore these because any variable used in an aggreate is valid, even if it's not mentioned in the grouping keys
-# 			} elsif ($expr->isa('RDF::Query::Expression')) {
-# 				my @vars	= $expr->nonaggregated_referenced_variables;
-# 				foreach my $name (@vars) {
-# 					unless ($seen{ $name }) {
-# 						die "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# #						throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# 					}
-# 				}
 # 			}
 # 		}
 # 	}
@@ -1417,16 +1366,6 @@ sub _GroupGraphPatternSub {
 		}
 
 		my $t	= $self->peek_token;
-# 		
-# 		last unless ($self->_test( qr/\S/ ));
-# 		
-# 		my $new	= length($self->{tokens});
-# 		if ($pos == $new) {
-# 			# we haven't progressed, and so would infinite loop if we don't break out and throw an error.
-# 			$self->_syntax_error('');
-# 		} else {
-# 			$pos	= $new;
-# 		}
 	}
 	
 	my $cont		= $self->_pop_pattern_container;
@@ -1521,10 +1460,11 @@ sub _SubSelect {
 			$self->{build}{options}{lc($mod)}	= 1;
 		}
 		
-		my ($star, @exprs)	= $self->__SelectVars;
+		my ($star, $exprs, $vars)	= $self->__SelectVars;
+		my @exprs	= @$exprs;
 		
 		$self->_WhereClause;
-		$self->_SolutionModifier();
+		$self->_SolutionModifier($vars);
 		
 		if ($self->{build}{options}{orderby}) {
 			my $order	= delete $self->{build}{options}{orderby};
@@ -1622,7 +1562,6 @@ sub _TriplesBlock_test {
 	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->_test_literal_token);
 	return 0;
-# 	return $self->_test(qr/[\$?]|<|_:|\[[\n\r\t ]*\]|\([\n\r\t ]*\)|\[|[[(]|${r_PNAME_NS}/);
 }
 
 sub _test_literal_token {
@@ -1892,7 +1831,7 @@ sub _Constraint_test {
 
 sub _Constraint {
 	my $self	= shift;
-	if ($self->_BrackettedExpression_test) {
+	if ($self->test_token(LPAREN)) {
 		$self->_BrackettedExpression();
 	} elsif ($self->_BuiltInCall_test) {
 		$self->_BuiltInCall();
@@ -1912,8 +1851,7 @@ sub _FunctionCall {
 	$self->_IRIref;
 	my ($iri)	= splice(@{ $self->{stack} });
 	
-	$self->_ArgList;
-	my @args	= splice(@{ $self->{stack} });
+	my @args	= $self->_ArgList;
 
 	if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double)$>) {
 		my $expr	= Attean::CastExpression->new( children => \@args, datatype => $iri );
@@ -1948,7 +1886,7 @@ sub _ArgList {
 			}
 		}
 		$self->expected_token(RPAREN);
-		$self->_add_stack( @args );
+		return @args;
 	}
 }
 
@@ -2127,7 +2065,6 @@ sub _Verb_test {
 	return 1 if ($self->test_token(VAR));
 	return 1 if ($self->_IRIref_test);
 	return 0;
-# 	return $self->_test( qr/a[\n\t\r <]|[?\$]|<|${r_PNAME_LN}|${r_PNAME_NS}/ );
 }
 
 sub _Verb {
@@ -2249,7 +2186,6 @@ sub _PathMod_test {
 	return 1 if ($self->test_token(PLUS));
 	return 1 if ($self->test_token(LBRACE));
 	return 0;
-# 	return 1 if ($self->_test(qr/[*?+{]/));
 }
 
 sub _PathMod {
@@ -2376,7 +2312,6 @@ sub _TriplesNode_test {
 	return 1 if $self->test_token(LPAREN);
 	return 1 if $self->test_token(LBRACKET);
 	return 0;
-# 	return $self->_test(qr/[[(](?![\n\r\t ]*\])(?![\n\r\t ]*\))/);
 }
 
 sub _TriplesNode {
@@ -2457,7 +2392,6 @@ sub _GraphNode_test {
 	return 1 if ($self->ANON);
 	return 1 if ($self->NIL);
 	return 0;
-# 	return $self->_test(qr/[\$?]|<|['"]|(true\b|false\b)|([+-]?\d)|_:|${r_ANON}|${r_NIL}|\[|[[(]/);
 }
 
 sub _GraphNode {
@@ -2479,7 +2413,6 @@ sub _VarOrTerm_test {
 	return 1 if ($self->peek_token(BNODE));
 	return 1 if ($self->peek_token(NIL));
 	return 0;
-# 	return 1 if ($self->_test(qr/[<'".0-9]|(true|false)\b|_:|\([\n\r\t ]*\)/));
 }
 
 sub _VarOrTerm {
@@ -2497,7 +2430,6 @@ sub _VarOrIRIref_test {
 	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->test_token(VAR));
 	return 0;
-# 	return $self->_test(qr/[\$?]|<|${r_PNAME_LN}|${r_PNAME_NS}/);
 }
 
 sub _VarOrIRIref {
@@ -2736,8 +2668,7 @@ sub _UnaryExpression {
 sub _PrimaryExpression {
 	my $self	= shift;
 	my $t	= $self->peek_token;
-	warn 'primary expression: ' . $t->value;
-	if ($self->_BrackettedExpression_test) {
+	if ($self->test_token(LPAREN)) {
 		$self->_BrackettedExpression;
 	} elsif ($self->_BuiltInCall_test) {
 		$self->_BuiltInCall;
@@ -2761,7 +2692,7 @@ sub _PrimaryExpression {
 		my $l		= $self->_NumericLiteral;
 		my $expr	= Attean::ValueExpression->new(value => $l);
 		$self->_add_stack($expr);
-	} else {	# if ($self->_test(qr/['"]/)) {
+	} else {
 		my $value	= $self->_RDFLiteral;
 		my $expr	= Attean::ValueExpression->new(value => $value);
 		$self->_add_stack($expr);
@@ -2769,10 +2700,10 @@ sub _PrimaryExpression {
 }
 
 # [56] BrackettedExpression ::= '(' Expression ')'
-sub _BrackettedExpression_test {
-	my $self	= shift;
-	return $self->test_token(LPAREN);
-}
+# sub _BrackettedExpression_test {
+# 	my $self	= shift;
+# 	return $self->test_token(LPAREN);
+# }
 
 sub _BrackettedExpression {
 	my $self	= shift;
@@ -2850,29 +2781,25 @@ sub _BuiltInCall {
 	my $t		= $self->peek_token;
 	if ($self->{__aggregate_call_ok} and $self->test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)\b/io)) {
 		$self->_Aggregate;
-	} elsif ($self->optional_token(KEYWORD, 'NOT')) {
+	} elsif ($self->test_token(KEYWORD, qr/^(NOT|EXISTS)/)) {
+		my $not	= $self->optional_token(KEYWORD, 'NOT');
 		$self->expected_token(KEYWORD, 'EXISTS');
 		local($self->{filters})					= [];
 		$self->_GroupGraphPattern;
 		my $cont	= $self->_remove_pattern;
 		my $p		= Attean::ExistsExpression->new( pattern => $cont );
-		$p	= Attean::UnaryExpression->new( operator => '!', children => [$p] );
+		if ($not) {
+			$p	= Attean::UnaryExpression->new( operator => '!', children => [$p] );
+		}
 		$self->_add_stack($p);
-	} elsif ($self->optional_token(KEYWORD, 'EXISTS')) {
-		local($self->{filters})					= [];
-		$self->_GroupGraphPattern;
-		my $cont	= $self->_remove_pattern;
-		my $p		= Attean::ExistsExpression->new( pattern => $cont );
-		$self->_add_stack($p);
-	} elsif ($self->test_token(KEYWORD, qr/(COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW)/i)) {
+	} elsif ($self->test_token(KEYWORD, qr/^(COALESCE|BNODE|CONCAT|SUBSTR|RAND|NOW)/i)) {
 		# n-arg functions that take expressions
-		my $t	= $self->next_token;
-		my $op	= $t->value;
-		$self->_ArgList;
-		my @args	= splice(@{ $self->{stack} });
+		my $t		= $self->next_token;
+		my $op		= $t->value;
+		my @args	= $self->_ArgList;
 		my $func	= $self->new_function_expression( $op, @args );
 		$self->_add_stack( $func );
-	} elsif ($self->_RegexExpression_test) {
+	} elsif ($self->test_token(KEYWORD, 'REGEX')) {
 		$self->_RegexExpression;
 	} else {
 		my $t		= $self->next_token;
@@ -2924,10 +2851,10 @@ sub _BuiltInCall {
 }
 
 # [58] RegexExpression ::= 'REGEX' '(' Expression ',' Expression ( ',' Expression )? ')'
-sub _RegexExpression_test {
-	my $self	= shift;
-	return $self->test_token(KEYWORD, 'REGEX');
-}
+# sub _RegexExpression_test {
+# 	my $self	= shift;
+# 	return $self->test_token(KEYWORD, 'REGEX');
+# }
 
 sub _RegexExpression {
 	my $self	= shift;
@@ -2947,23 +2874,21 @@ sub _RegexExpression {
 	}
 	
 	$self->expected_token(RPAREN);
-	
 	$self->_add_stack( $self->new_function_expression( 'REGEX', @args ) );
 }
 
 # [59] IRIrefOrFunction ::= IRIref ArgList?
-sub _IRIrefOrFunction_test {
-	my $self	= shift;
-	$self->_IRIref_test;
-}
+# sub _IRIrefOrFunction_test {
+# 	my $self	= shift;
+# 	$self->_IRIref_test;
+# }
 
 sub _IRIrefOrFunction {
 	my $self	= shift;
 	$self->_IRIref;
 	if ($self->_ArgList_test) {
 		my ($iri)	= splice(@{ $self->{stack} });
-		$self->_ArgList;
-		my @args	= splice(@{ $self->{stack} });
+		my @args	= $self->_ArgList;
 		if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double)$>) {
 			my $expr	= Attean::CastExpression->new( children => \@args, datatype => $iri );
 			$self->_add_stack( $expr );
@@ -3327,48 +3252,6 @@ sub _add_filter {
 	push( @{ $self->{filters} }, @filters );
 }
 
-# sub _eat_with_ws {
-# 	my $self	= shift;
-# 	my $r		= $self->_eat(@_);
-# 	$self->__consume_ws_opt;
-# 	return $r;
-# }
-# 
-# sub _eat {
-# 	my $self	= shift;
-# 	my $thing	= shift;
-# 	if (not(length($self->{tokens}))) {
-# 		$self->_syntax_error("No tokens left");
-# 	}
-# 
-# # 	if (substr($self->{tokens}, 0, 1) eq '^') {
-# # 		Carp::cluck( "eating $thing with input $self->{tokens}" );
-# # 	}
-# 
-# 	if (ref($thing) and $thing->isa('Regexp')) {
-# 		if ($self->{tokens} =~ /^($thing)/) {
-# 			my $match	= $1;
-# 			substr($self->{tokens}, 0, length($match))	= '';
-# 			return $match;
-# 		}
-# 
-# 		$self->_syntax_error( "Expected $thing" );
-# 	} elsif (looks_like_number( $thing )) {
-# 		my ($token)	= substr( $self->{tokens}, 0, $thing, '' );
-# 		return $token
-# 	} else {
-# 		### thing is a string
-# 		if (substr($self->{tokens}, 0, length($thing)) eq $thing) {
-# 			substr($self->{tokens}, 0, length($thing))	= '';
-# 			return $thing;
-# 		} else {
-# 			$self->_syntax_error( "Expected $thing" );
-# 		}
-# 	}
-# 	print $thing;
-# 	die;
-# }
-
 sub _syntax_error {
 	my $self	= shift;
 	my $thing	= shift;
@@ -3396,62 +3279,6 @@ sub _syntax_error {
 		die "Syntax error: Expected $expect near $near";
 	}
 }
-
-# sub _test {
-# 	my $self	= shift;
-# 	my $thing	= shift;
-# 	if (blessed($thing) and $thing->isa('Regexp')) {
-# 		if ($self->{tokens} =~ m/^$thing/) {
-# 			return 1;
-# 		} else {
-# 			return 0;
-# 		}
-# 	} else {
-# 		if (substr($self->{tokens}, 0, length($thing)) eq $thing) {
-# 			return 1;
-# 		} else {
-# 			return 0;
-# 		}
-# 	}
-# }
-# 
-# sub _ws_test {
-# 	my $self	= shift;
-# 	unless (length($self->{tokens})) {
-# 		return 0;
-# 	}
-# 
-# 	if ($self->{tokens} =~ m/^[\t\r\n #]/) {
-# 		return 1;
-# 	} else {
-# 		return 0;
-# 	}
-# }
-# 
-# sub _ws {
-# 	my $self	= shift;
-# 	### #x9 | #xA | #xD | #x20 | comment
-# 	if ($self->_test('#')) {
-# 		$self->_eat(qr/#[^\x0d\x0a]*.?/);
-# 	} else {
-# 		$self->_eat(qr/[\n\r\t ]/);
-# 	}
-# }
-# 
-# sub __consume_ws_opt {
-# 	my $self	= shift;
-# 	if ($self->_ws_test) {
-# 		$self->__consume_ws;
-# 	}
-# }
-# 
-# sub __consume_ws {
-# 	my $self	= shift;
-# 	$self->_ws;
-# 	while ($self->_ws_test()) {
-# 		$self->_ws()
-# 	}
-# }
 
 sub __base {
 	my $self	= shift;
@@ -3542,7 +3369,7 @@ sub __new_bgp {
 			push(@p, $self->__new_path( $start, $pdata, $end ));
 		}
 		if (scalar(@triples)) {
-			return Attean::Algebra::Join->new( children => [$bgp, @p] );
+			return $self->new_join($bgp, @p);
 		} else {
 			return $self->new_join(@p);
 		}
@@ -3583,10 +3410,6 @@ sub new_join {
 	my @parts	= @_;
 	unless (scalar(@parts)) {
 		return Attean::Algebra::BGP->new();
-	}
-	
-	if (scalar(@parts) == 1) {
-		return shift(@parts);
 	}
 	
 	return Attean::Algebra::Join->new( children => \@parts );
