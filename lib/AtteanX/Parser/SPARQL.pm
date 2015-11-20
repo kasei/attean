@@ -33,14 +33,9 @@ no warnings 'redefine';
 
 use Attean;
 use RDF::Query;
-use URI;
 use URI::NamespaceMap;
-use Data::Dumper;
-use RDF::Query::Parser;
-use RDF::Query::Algebra;
 use AtteanX::Parser::SPARQLLex;
 use AtteanX::Parser::SPARQL::Constants;
-use RDF::Trine::Namespace qw(rdf);
 use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 use Scalar::Util qw(blessed looks_like_number reftype);
 
