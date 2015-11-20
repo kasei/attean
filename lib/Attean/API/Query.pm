@@ -170,6 +170,40 @@ package Attean::API::Algebra 0.009 {
 		return $string;
 	}
 	
+	sub subpatterns_of_type {
+		my $self	= shift;
+		my @types	= @_;
+		my @p;
+		$self->walk( prefix => sub {
+			my $a	= shift;
+			foreach my $t (@types) {
+				push(@p, $a) if ($a->isa($t) or $a->does($t));
+			}
+		});
+		return @p;
+	}
+	
+	sub blank_nodes {
+		my $self	= shift;
+		my %blanks;
+		$self->walk( prefix => sub {
+			my $a	= shift;
+			if ($a->isa('Attean::Algebra::BGP')) {
+				my @triples	= @{ $a->triples };
+				my @nodes	= grep { $_->does('Attean::API::Blank') } map { $_->values } @triples;
+				foreach my $b (@nodes) {
+					$blanks{ $b->value }	= $b;
+				}
+			} elsif ($a->isa('Attean::Algebra::Path')) {
+				my @nodes	= grep { $_->does('Attean::API::Blank') } ($a->subject, $a->object);
+				foreach my $b (@nodes) {
+					$blanks{ $b->value }	= $b;
+				}
+			}
+		});
+		return values %blanks;
+	}
+	
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		around 'BUILD' => sub {
