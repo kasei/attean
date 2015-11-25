@@ -1,0 +1,217 @@
+# -*-n3-*-
+
+@prefix :			<http://usefulinc.com/ns/doap#> .
+@prefix dc:			<http://purl.org/dc/terms/> .
+@prefix dcs:		<http://ontologi.es/doap-changeset#> .
+@prefix foaf:		<http://xmlns.com/foaf/0.1/> .
+@prefix rdfs:		<http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:		<http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms:	<http://purl.org/dc/terms/> .
+@prefix doap:		<http://usefulinc.com/ns/doap#> .
+@prefix my:			<http://purl.org/NET/cpan-uri/dist/Attean/> .
+
+<>
+	dc:title			"Chagnes for Attean" ;
+	dc:subject			my:project ;
+	dc:creator			my:developer ;
+	dc:description		"Changes for Attean" ;
+	.
+
+my:project
+	a 						:Project ;
+	:name					"Attean" ;
+	:shortdesc				"A Semantic Web Framework" ;
+	:programming-language	"Perl" ;
+	:created				"2014-09-27"^^xsd:date ;
+	:maintainer				my:developer ;
+	:homepage				<http://search.cpan.org/dist/Attean/> ;
+	:bug-database			<https://github.com/kasei/attean/issues> ;
+	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
+	doap:download-mirror	<http://kasei.us/code/files/> ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 ;
+	.
+
+my:v_0-009
+	a					:Version ;
+	dc:issued			"2015-11-04"^^xsd:date ;
+	:revision			"0.009" ;
+	dcterms:replaces	my:v_0-008 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Result->shared_domain method." ],
+			[ a dcs:Update ; rdfs:label "Improve query planner and plan implementations to support SPARQL 1.1 test suite." ],
+			[ a dcs:Update ; rdfs:label "Removed HeapSort plan implementation and use of Array::Heap due to packaging concerns (issue #32)." ],
+			[ a dcs:Update ; rdfs:label "Improve handling on unicode data in SPARQL TSV parser." ]
+	]
+	.
+
+
+my:v_0-008
+	a					:Version ;
+	dc:issued			"2015-08-18"^^xsd:date ;
+	:revision			"0.008" ;
+	dcterms:replaces	my:v_0-007 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added heap sort plan implementation." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Plan::Join role." ],
+			[ a dcs:Addition ; rdfs:label "Added apply_triple and apply_quad methods to triple and quad pattern classes to produce Result objects." ],
+			[ a dcs:Update ; rdfs:label "Moved computation of in_scope_variables from calling code to to Plan class BUILDARGS." ],
+			[ a dcs:Update ; rdfs:label "Consolidated BUILDARGS handling in Attean::API::TripleOrQuadPattern." ],
+			[ a dcs:Update ; rdfs:label "Attean::API::TripleOrQuadPattern constructors accept non-existent parameters (#13)." ]
+	]
+	.
+
+
+my:v_0-007
+	a					:Version ;
+	dc:issued			"2015-07-16"^^xsd:date ;
+	:revision			"0.007" ;
+	dcterms:replaces	my:v_0-006 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Binding->apply_bindings to bind additional variables." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Binding->is_ground." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::TriplePattern->as_triple, Attean::API::QuadPattern->as_quad." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean plugin loading to allow non-plugins nested below the plugin namespace." ],
+			[ a dcs:Update ; rdfs:label "Added evaluation support for REGEX functions." ],
+			[ a dcs:Update ; rdfs:label "Improve SPARQL serialization for IRIs and triple patterns." ],
+			[ a dcs:Update ; rdfs:label "Improve SPARQL serialization of OPTIONAL and boolean literals." ],
+			[ a dcs:Update ; rdfs:label "POD improvements (PR #15 from Kjetil Kjernsmo)." ]
+	]
+	.
+
+
+my:v_0-006
+	a					:Version ;
+	dc:issued			"2015-06-30"^^xsd:date ;
+	:revision			"0.006" ;
+	dcterms:replaces	my:v_0-005 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added Attean->acceptable_parsers method (GH issue #11)." ],
+			[ a dcs:Addition ; rdfs:label "Added methods to test terms and variables for common term role consumption." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::DirectedAcyclicGraph->has_only_subtree_types method." ],
+			[ a dcs:Update ; rdfs:label "Added documentation (patches from Kjetil Kjernsmo)." ],
+			[ a dcs:Update ; rdfs:label "Fixed handling of blank nodes in BGPs in Attean::IDPQueryPlanner." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::IDPQueryPlanner->join_plans API to allow easier extensibility." ],
+			[ a dcs:Update ; rdfs:label "Updated attean_query to use the IDPQueryPlanner." ],
+			[ a dcs:Update ; rdfs:label "Added HSP heuristics to Attean::IDPQueryPlanner (patch from Kjetil Kjernsmo)." ],
+			[ a dcs:Update ; rdfs:label "Disable stable sortint in Attean::IDPQueryPlanner where it is unnecessary (patch from Kjetil Kjernsmo)." ]
+	]
+	.
+
+
+my:v_0-005
+	a					:Version ;
+	dc:issued			"2015-05-27"^^xsd:date ;
+	:revision			"0.005" ;
+	dcterms:replaces	my:v_0-004 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Improved query planning." ],
+			[ a dcs:Update ; rdfs:label "Split handling of BGP and GGP join planning in Attean::IDPQueryPlanner for easier subclass overriding." ],
+			[ a dcs:Update ; rdfs:label "Improve propagation of distinct and ordered attributes during query planning." ],
+			[ a dcs:Update ; rdfs:label "Added query planning tests." ],
+			[ a dcs:Update ; rdfs:label "Updated IDP query planner to produce correct plans for empty BGPs." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in IDPQueryPlanner->cost_for_plan to reflect recently changed Attean::Plan::Quad API." ],
+			[ a dcs:Update ; rdfs:label "Add initial code to support interesting orders in Attean::IDPQueryPlanner." ],
+			[ a dcs:Update ; rdfs:label "Simplified implementation of Attean::Plan::Unique." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::Plan::Quad to consume Attean::API::QuadPattern." ],
+			[ a dcs:Update ; rdfs:label "Added POD description of each Attean::Plan class." ],
+			[ a dcs:Update ; rdfs:label "Added planning support for Unique plans for DISTINCT queries which are already ordered." ],
+			[ a dcs:Update ; rdfs:label "Added planning support for Extend and Ask algebra operations." ],
+			[ a dcs:Update ; rdfs:label "Allow store-planning of more than just BGPs in Attean::TripleModel." ],
+			[ a dcs:Update ; rdfs:label "Added Attean::Plan::Unique class." ],
+			[ a dcs:Update ; rdfs:label "Change use of ListIterator to CodeIterator in plan classes that can be pipelined." ],
+			[ a dcs:Update ; rdfs:label "Renamed Attean::Plan::Filter to Attean::Plan::EBVFilter." ],
+			[ a dcs:Update ; rdfs:label "Added evaluation support for type checking functions (ISIRI, ISLITERAL, etc.)." ],
+			[ a dcs:Update ; rdfs:label "Changed Attean::Plan::Filter to check the EBV of a single, named variable binding." ],
+			[ a dcs:Update ; rdfs:label "Rename Attean::Plan::Distinct to Attean::Plan::HashDistinct (making room for different implementation strategies)." ],
+			[ a dcs:Update ; rdfs:label "Added use Set::Scalar in lib/Attean/Algebra.pm." ],
+			[ a dcs:Update ; rdfs:label "Removed unused/unnecessary code and comments." ],
+			[ a dcs:Update ; rdfs:label "Removed references to Attean::QueryEvaluator (obviated by $plan->evaluate)." ]
+	]
+	.
+
+
+my:v_0-004
+	a					:Version ;
+	dc:issued			"2015-05-18"^^xsd:date ;
+	:revision			"0.004" ;
+	dcterms:replaces	my:v_0-003 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added SPARQL CSV and XML serializers." ],
+			[ a dcs:Addition ; rdfs:label "Add initial implementation of Attean::TripleModel." ],
+			[ a dcs:Addition ; rdfs:label "Added an IDP-based query planner and associated classes and roles." ],
+			[ a dcs:Addition ; rdfs:label "Added Test::Attean roles for caching quadstores." ],
+			[ a dcs:Addition ; rdfs:label "Added Test::Attean::MutableTripleStore." ],
+			[ a dcs:Addition ; rdfs:label "Added initial support for representing, translating, and evaluating SERVICE patterns." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Binding->values_consuming_role method." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::TriplePattern->as_quadpattern method." ],
+			[ a dcs:Addition ; rdfs:label "Add Attean::ValueExpression->in_scope_variables method." ],
+			[ a dcs:Update ; rdfs:label "Fixed serialization bug in Attean::FunctionExpression->as_sparql." ],
+			[ a dcs:Update ; rdfs:label "Updated Memory store matching methods to accept node arrays for any quad pattern position." ],
+			[ a dcs:Update ; rdfs:label "Updated AtteanX::Store::Memory to conform to both etag and time caching roles." ],
+			[ a dcs:Update ; rdfs:label "Add variables to result iterators." ],
+			[ a dcs:Update ; rdfs:label "Improve SPARQL serialization for projection, slicing, ordering, and distinct/reduced modifiers." ],
+			[ a dcs:Update ; rdfs:label "Update Attean::API::Expression to consume Attean::API::UnionScopeVariables." ],
+			[ a dcs:Update ; rdfs:label "Add SPARQL serialization support for Expression classes." ],
+			[ a dcs:Update ; rdfs:label "Improve SPARQL serialization of algebra trees." ],
+			[ a dcs:Update ; rdfs:label "Fixed Attean->get_parser to accept media types with parameters." ],
+			[ a dcs:Update ; rdfs:label "Add algebra_as_string methods for some algebra classes missing an implementation." ],
+			[ a dcs:Update ; rdfs:label "Added missing use statements." ],
+			[ a dcs:Update ; rdfs:label "Fixed required version of perl in store test roles to be v5.14." ],
+			[ a dcs:Update ; rdfs:label "Added Math::Cartesian::Product to prerequisite list." ],
+			[ a dcs:Update ; rdfs:label "Added Test::Roo-based store tests." ],
+			[ a dcs:Update ; rdfs:label "Fix documentation of serialize_iter_to_io method." ],
+			[ a dcs:Update ; rdfs:label "Added comments about handling of graphs in Test::Attean::MutableQuadStore." ]
+	]
+	.
+
+
+my:v_0-003
+	a					:Version ;
+	dc:issued			"2015-02-19"^^xsd:date ;
+	:revision			"0.003" ;
+	dcterms:replaces	my:v_0-002 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added count estimate methods to TripleStore QuadStore roles (in lieu of github pull request #6)." ],
+			[ a dcs:Addition ; rdfs:label "Added missing algebra_as_string impelementations in Attean::API::Query and Attean::Algebra." ],
+			[ a dcs:Addition ; rdfs:label "Added tree_attributes methods to tree classes." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::TreeRewriter class." ],
+			[ a dcs:Update ; rdfs:label "Split Cacheable roles into ETagCacheable and TimeCacheable variants." ],
+			[ a dcs:Update ; rdfs:label "Fixed method name typo in Attean::API::TimeCacheableTripleStore." ]
+	]
+	.
+
+
+my:v_0-002
+	a					:Version ;
+	dc:issued			"2014-10-15"^^xsd:date ;
+	:revision			"0.002" ;
+	dcterms:replaces	my:v_0-001 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added POD for many classes and roles." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean->negotiate_serializer method." ],
+			[ a dcs:Update ; rdfs:label "Wrap mutating methods in a single bulk-update." ],
+			[ a dcs:Update ; rdfs:label "Moved RDF::Query algebra translator to AtteanX::RDFQueryTranslator." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean->get_serializer to support media_type argument." ],
+			[ a dcs:Update ; rdfs:label "Changed media_type attributes to class methods in Serializer classes." ],
+			[ a dcs:Update ; rdfs:label "Switched from Sub::Name to Sub::Util (github issue #5)." ]
+	]
+	.
+
+
+my:v_0-001
+	a					:Version ;
+	dc:issued			"2014-09-27"^^xsd:date ;
+	:revision			"0.001" ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Initial release." ]
+	]
+	.

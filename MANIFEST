@@ -1,7 +1,7 @@
 bin/attean_parse
 bin/attean_query
 bin/canonicalize_bgp.pl
-Changes.ttl
+meta/changes.ttl
 inc/Module/Install.pm
 inc/Module/Install/AuthorTests.pm
 inc/Module/Install/Base.pm
@@ -110,6 +110,7 @@ lib/Test/Attean/QuadStore.pm
 lib/Test/Attean/TimeCacheableQuadStore.pm
 lib/Test/Attean/TripleStore.pm
 LICENSE
+Changes
 Makefile.PL
 MANIFEST			This list of files
 META.yml

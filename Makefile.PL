@@ -50,6 +50,6 @@ author_tests('xt');
 install_script glob('bin/attean_parse');
 install_script glob('bin/attean_query');
 
+write_doap_changes "meta/changes.ttl", "Changes", "turtle";
 sign;
-
 WriteAll;
