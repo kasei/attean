@@ -121,8 +121,9 @@ try {
 		}
 		my $iter	= $plan->evaluate($model);
 		my $count	= 1;
-		my $s		= Attean->get_serializer($out_format);
-		if ($out_format and $s) {
+		my $class	= Attean->get_serializer($out_format);
+		if ($out_format and $class) {
+			my $s	= $class->new();
 			$s->serialize_iter_to_io(\*STDOUT, $iter);
 		} else {
 			while (my $r = $iter->next) {
