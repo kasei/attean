@@ -1405,6 +1405,30 @@ package Attean::Plan::OrderBy 0.009 {
 		return $class->SUPER::BUILDARGS(%args);
 	}
 	
+	sub sort_rows {
+		my $self		= shift;
+		my $vars		= shift;
+		my $ascending	= shift;
+		my $rows		= shift;
+		my @sorted		= map { $_->[0] } sort {
+			my ($ar, $avalues)	= @$a;
+			my ($br, $bvalues)	= @$b;
+			my $c	= 0;
+			foreach my $i (0 .. $#{ $vars }) {
+				my $ascending	= $ascending->{ $vars->[$i] };
+				my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
+				$c		= $av ? $av->compare($bv) : 1;
+				$c		*= -1 unless ($ascending);
+				last unless ($c == 0);
+			}
+			$c
+		} map {
+			my $r = $_;
+			[$r, [map { $r->value($_) } @$vars]]
+		} @$rows;
+		return @sorted;
+	}
+	
 	sub impl {
 		my $self	= shift;
 		my $model	= shift;
@@ -1414,22 +1438,7 @@ package Attean::Plan::OrderBy 0.009 {
 		return sub {
 			my $iter	= $impl->();
 			my @rows	= $iter->elements;
-			my @sorted	= map { $_->[0] } sort {
-				my ($ar, $avalues)	= @$a;
-				my ($br, $bvalues)	= @$b;
-				my $c	= 0;
-				foreach my $i (0 .. $#{ $vars }) {
-					my $ascending	= $ascending->{ $vars->[$i] };
-					my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
-					$c		= $av ? $av->compare($bv) : 1;
-					$c		*= -1 unless ($ascending);
-					last unless ($c == 0);
-				}
-				$c
-			} map {
-				my $r = $_;
-				[$r, [map { $r->value($_) } @$vars]]
-			} @rows;
+			my @sorted	= $self->sort_rows($vars, $ascending, \@rows);
 			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type);
 		}
 	}
@@ -1941,6 +1950,12 @@ package Attean::Plan::Aggregate 0.009 {
 			return $group;
 		};
 		
+		my $rank;
+		while (my($var, $agg) = each(%aggs)) {
+			if ($agg->operator eq 'RANK') {
+				$rank	= $var;
+			}
+		}
 		
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		my %row_groups;
@@ -1958,26 +1973,42 @@ package Attean::Plan::Aggregate 0.009 {
 			
 			# SPARQL evaluation of aggregates over an empty input sequence should
 			# result in an empty result <http://answers.semanticweb.com/questions/17410/semantics-of-sparql-aggregates>
+			
+			my @results;
 			unless (scalar(@group_keys)) {
 				push(@group_keys, '');
 				$row_groups{''}			= [];
 				$group_templates{''}	= {};
 			}
-			my @results;
 			foreach my $group (@group_keys) {
 				my %row	= %{ $group_templates{ $group } };
 				my $rows	= $row_groups{$group};
-				foreach my $var (keys %aggs) {
-					my $expr	= $aggs{$var};
-					my $value	= eval { $self->evaluate_aggregate($model, $expr, $rows) };
-					if ($value) {
-						$row{$var}	= $value;
+				if (defined $rank) {
+					my $agg		= $aggs{$rank};
+					my $vars	= [map { $_->value->value } @{ $agg->children }];
+					# TODO: support descending ordering
+					# TODO: support ordering by complex expressions in $vars, not just ValueExpressions with variables
+					my $ascending	= { $vars->[0] => 1 };
+					my @sorted	= Attean::Plan::OrderBy->sort_rows($vars, $ascending, $rows);
+					my $ord		= 0;
+					foreach my $row (@sorted) {
+						my %b	= %{ $row->bindings };
+						$b{ $rank }	= Attean::Literal->integer($ord++);
+						my $r	= Attean::Result->new( bindings => \%b );
+						push(@results, $r);
 					}
+				} else {
+					foreach my $var (keys %aggs) {
+						my $expr	= $aggs{$var};
+						my $value	= eval { $self->evaluate_aggregate($model, $expr, $rows) };
+						if ($value) {
+							$row{$var}	= $value;
+						}
+					}
+					my $result	= Attean::Result->new( bindings => \%row );
+					push(@results, $result);
 				}
-				my $result	= Attean::Result->new( bindings => \%row );
-				push(@results, $result);
 			}
-			
 			return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
 		};
 	}

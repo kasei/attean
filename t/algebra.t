@@ -135,4 +135,80 @@ if ($ENV{ATTEAN_TYPECHECK}) {
 	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
 }
 
+{
+	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my @groups	= Attean::ValueExpression->new( value => variable('s') );
+	my @aggs	= Attean::AggregateExpression->new(
+		distinct	=> 0,
+		operator	=> 'SUM',
+		children	=> [Attean::ValueExpression->new( value => variable('s') )],
+		scalar_vars	=> {},
+		variable	=> variable("sum"),
+	);
+	my $agg		= Attean::Algebra::Group->new(
+		children => [$bgp],
+		groupby => \@groups,
+		aggregates => \@aggs,
+	);
+	my $s	= $agg->as_string;
+	like($s, qr/Group { [?]s } aggregate { [?]sum ← SUM\([?]s\) }/, 'aggregate serialization');
+}
+
+{
+	note('Aggregation');
+	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my @groups	= Attean::ValueExpression->new( value => variable('s') );
+	my @aggs	= Attean::AggregateExpression->new(
+		distinct	=> 0,
+		operator	=> 'SUM',
+		children	=> [Attean::ValueExpression->new( value => variable('s') )],
+		scalar_vars	=> {},
+		variable	=> variable("sum"),
+	);
+	my $agg		= Attean::Algebra::Group->new(
+		children => [$bgp],
+		groupby => \@groups,
+		aggregates => \@aggs,
+	);
+	my $s	= $agg->as_string;
+	like($s, qr/Group { [?]s } aggregate { [?]sum ← SUM\([?]s\) }/, 'aggregate serialization');
+}
+
+{
+	note('Ranking');
+	# RANKing example for 2 youngest students per school
+	my $bgp		= Attean::Algebra::BGP->new(triples => [
+		triple(variable('p'), iri('ex:name'), variable('name')),
+		triple(variable('p'), iri('ex:school'), variable('school')),
+		triple(variable('p'), iri('ex:age'), variable('age')),
+	]);
+	my @groups	= Attean::ValueExpression->new( value => variable('school') );
+	my $r_agg	= Attean::AggregateExpression->new(
+		distinct	=> 0,
+		operator	=> 'RANK',
+		children	=> [Attean::ValueExpression->new( value => variable('age') )],
+		scalar_vars	=> {},
+		variable	=> variable("rank"),
+	);
+	my $agg		= Attean::Algebra::Group->new(
+		children => [$bgp],
+		groupby => \@groups,
+		aggregates => [$r_agg],
+	);
+	my $rank	= Attean::Algebra::Filter->new(
+		children	=> [$agg],
+		expression	=> Attean::BinaryExpression->new(
+			children => [
+				Attean::ValueExpression->new( value => variable('rank') ),
+				Attean::ValueExpression->new( value => Attean::Literal->integer('2') ),
+			],
+			operator => '<='
+		),
+	);
+	my $s	= $rank->as_string;
+	like($s, qr/Group { [?]school } aggregate { [?]rank ← RANK\([?]age\) }/, 'ranking serialization');
+}
+
 done_testing();

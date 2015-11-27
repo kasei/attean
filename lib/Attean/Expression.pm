@@ -214,7 +214,7 @@ package Attean::AggregateExpression 0.009 {
 		return $args;
 	};
 	sub BUILD {
-		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE)];
+		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE RANK)];
 		$type->assert_valid(shift->operator);
 	}
 	has 'operator'		=> (is => 'ro', isa => UpperCaseStr, coerce => UpperCaseStr->coercion, required => 1);

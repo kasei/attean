@@ -625,8 +625,22 @@ package Attean::Algebra::Path 0.009 {
 =cut
 
 package Attean::Algebra::Group 0.009 {
+	use utf8;
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
+	
+	sub BUILD {
+		my $self	= shift;
+		foreach my $a (@{ $self->aggregates }) {
+			my $op	= $a->operator;
+			if ($op eq 'RANK') {
+				if (scalar(@{ $self->aggregates }) > 1) {
+					die "Cannot use both aggregates and RANKing in grouping operator";
+				}
+			}
+		}
+	}
+	
 	sub in_scope_variables {
 		my $self	= shift;
 		my $aggs	= $self->aggregates // [];
@@ -645,7 +659,7 @@ package Attean::Algebra::Group 0.009 {
 			my $v	= $a->variable->as_sparql;
 			my $op	= $a->operator;
 			my $d	= $a->distinct ? "DISTINCT " : '';
-			my ($e)	= map { $_->as_sparql } @{ $a->children };
+			my ($e)	= ((map { $_->as_sparql } @{ $a->children }), '');
 			push(@aggs, "$v ← ${op}($d$e)");
 		}
 		return sprintf('Group { %s } aggregate { %s }', join(', ', map { $_->as_sparql() } @$groups), join(', ', @aggs));
