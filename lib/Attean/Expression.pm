@@ -218,7 +218,7 @@ package Attean::AggregateExpression 0.009 {
 		$type->assert_valid(shift->operator);
 	}
 	has 'operator'		=> (is => 'ro', isa => UpperCaseStr, coerce => UpperCaseStr->coercion, required => 1);
-	has 'scalar_vars'	=> (is => 'ro', isa => HashRef[Str], default => sub { +{} });
+	has 'scalar_vars'	=> (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'distinct'		=> (is => 'ro', isa => Bool, default => 0);
 	has 'variable'		=> (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	with 'Attean::API::AggregateExpression';
