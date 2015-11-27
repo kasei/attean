@@ -1984,11 +1984,10 @@ package Attean::Plan::Aggregate 0.009 {
 				my %row	= %{ $group_templates{ $group } };
 				my $rows	= $row_groups{$group};
 				if (defined $rank) {
-					my $agg		= $aggs{$rank};
+					my $agg			= $aggs{$rank};
+					my $ascending	= $agg->scalar_vars->{ascending} // {};
 					my $vars	= [map { $_->value->value } @{ $agg->children }];
-					# TODO: support descending ordering
 					# TODO: support ordering by complex expressions in $vars, not just ValueExpressions with variables
-					my $ascending	= { $vars->[0] => 1 };
 					my @sorted	= Attean::Plan::OrderBy->sort_rows($vars, $ascending, $rows);
 					my $ord		= 0;
 					foreach my $row (@sorted) {
