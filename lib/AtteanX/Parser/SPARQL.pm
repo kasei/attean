@@ -37,7 +37,7 @@ use URI::NamespaceMap;
 use AtteanX::Parser::SPARQLLex;
 use AtteanX::Parser::SPARQL::Constants;
 use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
-use Scalar::Util qw(blessed looks_like_number reftype);
+use Scalar::Util qw(blessed looks_like_number reftype refaddr);
 
 ######################################################################
 
@@ -289,6 +289,10 @@ sub _Prologue {
 	my %namespaces;
 	while ($self->optional_token(KEYWORD, 'PREFIX')) {
 		my $prefix	= $self->expected_token(PREFIXNAME);
+		my @args	= @{ $prefix->args };
+		if (scalar(@args) > 1) {
+			die "Syntax error: PREFIX namespace used a full PNAME_LN, not a PNAME_NS";
+		}
 		my $ns		= substr($prefix->value, 0, length($prefix->value) - 1);
 		my $iriref	= $self->expected_token(IRI);
 		my $iri		= $iriref->value;
@@ -706,15 +710,19 @@ sub _SelectQuery {
 # 		$self->_Var;
 # 		push( @vars, splice(@{ $self->{stack} }));
 		my $parens	= 0;
-		if ($self->optional_token(LPAREN)) {
+		if ($self->optional_token(NIL)) {
 			$parens	= 1;
-		}
-		while ($self->test_token(VAR)) {
-			$self->_Var;
-			push( @vars, splice(@{ $self->{stack} }));
-		}
-		if ($parens) {
-			$self->expected_token(RPAREN);
+		} else {
+			if ($self->optional_token(LPAREN)) {
+				$parens	= 1;
+			}
+			while ($self->test_token(VAR)) {
+				$self->_Var;
+				push( @vars, splice(@{ $self->{stack} }));
+			}
+			if ($parens) {
+				$self->expected_token(RPAREN);
+			}
 		}
 		
 		my $count	= scalar(@vars);
@@ -726,23 +734,27 @@ sub _SelectQuery {
 		
 		my $short	= (not($parens) and $count == 1);
 		$self->expected_token(LBRACE);
-		if (not($short) or ($short and $self->test_token(LPAREN))) {
-			while ($self->test_token(LPAREN)) {
-				my $terms	= $self->_Binding($count);
-				push( @{ $self->{build}{bindings}{terms} }, $terms );
-			}
+		if ($self->optional_token(NIL)) {
+		
 		} else {
-			while ($self->_BindingValue_test) {
-				$self->_BindingValue;
-				my ($term)	= splice(@{ $self->{stack} });
-				push( @{ $self->{build}{bindings}{terms} }, [$term] );
+			if (not($short) or ($short and $self->test_token(LPAREN))) {
+				while ($self->test_token(LPAREN)) {
+					my $terms	= $self->_Binding($count);
+					push( @{ $self->{build}{bindings}{terms} }, $terms );
+				}
+			} else {
+				while ($self->_BindingValue_test) {
+					$self->_BindingValue;
+					my ($term)	= splice(@{ $self->{stack} });
+					push( @{ $self->{build}{bindings}{terms} }, [$term] );
+				}
 			}
 		}
 		
 		$self->expected_token(RBRACE);
 
 		my $bindings	= delete $self->{build}{bindings};
-		my @rows	= @{ $bindings->{terms} };
+		my @rows	= @{ $bindings->{terms} || [] };
 		my @vbs;
 		foreach my $r (@rows) {
 			my %d;
@@ -759,10 +771,10 @@ sub _SelectQuery {
 		push(@{ $self->{build}{triples} }, $self->new_join($pattern, $table));
 	}
 	
-	$self->__solution_modifiers( $star, @exprs );
+	my %projected	= map { $_ => 1 } $self->__solution_modifiers( $star, @exprs );
 
 	my $pattern	= $self->{build}{triples}[0];
-	my @agg		= $pattern->subpatterns_of_type('Attean::Algebra::Group');
+	my @agg		= $pattern->subpatterns_of_type('Attean::Algebra::Group'); # TODO: this probably breaks when a sub-query uses aggregation
 	if (my $agg = shift @agg) {
 		my @gvars	= @{ $agg->groupby };
 		if (scalar(@gvars) == 0) {
@@ -793,6 +805,7 @@ sub __SelectVars {
 			$self->expected_token(STAR);
 			$star	= 1;
 			$count++;
+			last;
 		} else {
 			my @s	= $self->__SelectVar;
 			if (scalar(@s) > 1) {
@@ -999,7 +1012,7 @@ sub _WhereClause {
 sub check_duplicate_blanks {
 	my $self	= shift;
 	my $p		= shift;
-	warn 'TODO: $ggp->check_duplicate_blanks';
+# 	warn 'TODO: $ggp->check_duplicate_blanks'; # XXXXXXXX
 # 	my @children	= @{ $ggp->children };
 # 	my %seen;
 # 	foreach my $c (@{ $ggp->children }) {
@@ -1167,7 +1180,7 @@ sub _GroupClause {
 		}
 	}
 	
-	warn 'TODO: verify that projection only includes aggregates and grouping variables';
+# 	warn 'TODO: verify that projection only includes aggregates and grouping variables'; # XXXXX
 # 	foreach my $v (@$vars) {
 # 		if ($v->does('Attean::API::Variable')) {
 # 			my $name	= $v->value;
@@ -1318,8 +1331,8 @@ sub _GroupGraphPatternSub {
 		$self->_TriplesBlock;
 	}
 	
-# 	my $pos	= length($self->{tokens});
 	while (not $self->test_token(RBRACE)) {
+		my $cur	= $self->peek_token;
 		if ($self->_GraphPatternNotTriples_test) {
 			$need_dot	= 0;
 			$got_pattern++;
@@ -1361,8 +1374,8 @@ sub _GroupGraphPatternSub {
 		}
 
 		my $t	= $self->peek_token;
+		last if (refaddr($t) == refaddr($cur));
 	}
-	
 	my $cont		= $self->_pop_pattern_container;
 
 	my @filters		= splice(@{ $self->{filters} });
@@ -1402,14 +1415,11 @@ sub __handle_GraphPatternNotTriples {
 		unless ($ggp) {
 			$ggp	= Attean::Algebra::BGP->new();
 		}
-
 		my ($var, $expr)	= @args;
-		warn 'TODO: check in-scope variables before adding BIND';
-# 		my %in_scope	= map { $_ => 1 } $ggp->potentially_bound();
-# 		if (exists $in_scope{ $var }) {
-# 			die "Syntax error: BIND used with variable already in scope";
-# #			throw RDF::Query::Error::QueryPatternError -text => "Syntax error: BIND used with variable already in scope";
-# 		}
+		my %in_scope	= map { $_ => 1 } $ggp->in_scope_variables;
+		if (exists $in_scope{ $var->value }) {
+			die "Syntax error: BIND used with variable already in scope";
+		}
 		my $bind	= Attean::Algebra::Extend->new( children => [$ggp], variable => $var, expression => $expr );
 		$self->_add_patterns( $bind );
 	} elsif ($class eq 'Attean::Algebra::Service') {
@@ -2383,9 +2393,11 @@ sub _GraphNode_test {
 	# Var | IRIref | BlankNode | NIL
 	return 1 if ($self->test_token(VAR));
 	return 1 if ($self->_IRIref_test);
-	return 1 if ($self->BNODE);
-	return 1 if ($self->ANON);
-	return 1 if ($self->NIL);
+	return 1 if ($self->test_token(BNODE));
+	return 1 if ($self->test_token(LBRACKET));
+	return 1 if ($self->test_token(LPAREN));
+	return 1 if ($self->test_token(ANON));
+	return 1 if ($self->test_token(NIL));
 	return 0;
 }
 
@@ -3065,7 +3077,6 @@ sub __solution_modifiers {
 	my $star	= shift;
 	my @exprs	= @_;
 	
-	
 	if (my $computed_group_vars = delete( $self->{build}{__group_vars} )) {
 		my $pattern	= $self->{build}{triples}[0];
 		foreach my $data (@$computed_group_vars) {
@@ -3075,20 +3086,17 @@ sub __solution_modifiers {
 		$self->{build}{triples}[0]	= $pattern;
 	}
 	
-	
-	
-	
 	my $having_expr;
 	my $aggdata	= delete( $self->{build}{__aggregate} );
+	my $groupby	= delete( $self->{build}{__group_by} ) || [];
 	my @aggkeys	= keys %{ $aggdata || {} };
-	if (scalar(@aggkeys)) {
+	if (scalar(@aggkeys) or scalar(@$groupby)) {
 		my @aggs;
 		foreach my $k (@aggkeys) {
 			my ($var, $expr)	= @{ $aggdata->{$k} };
 			push(@aggs, $expr);
 		}
 		
-		my $groupby	= delete( $self->{build}{__group_by} ) || [];
 		my $pattern	= $self->{build}{triples};
 		my $ggp		= shift(@$pattern);
 		if (my $having = delete( $self->{build}{__having} )) {
@@ -3102,36 +3110,29 @@ sub __solution_modifiers {
 	my @project;
 	my @vars;
 	my @extend;
-	for (my $i = 0; $i < $#exprs; $i += 2) {
-		my $k	= $exprs[$i];
-		my $v	= $exprs[$i+1];
-		push(@project, $k);
-		if ($v->does('Attean::API::Variable')) {
-			push(@vars, $v);
-		} else {
-			push(@extend, $k, $v);
+	if ($star) {
+		my $pattern	= ${ $self->{build}{triples} }[-1];
+		push(@project, $pattern->in_scope_variables);
+	} else {
+		for (my $i = 0; $i < $#exprs; $i += 2) {
+			my $k	= $exprs[$i];
+			my $v	= $exprs[$i+1];
+			push(@project, $k);
+			if ($v->does('Attean::API::Variable')) {
+				push(@vars, $v);
+			} else {
+				push(@extend, $k, $v);
+			}
 		}
 	}
 
 	{
-# 		my @vars	= grep { $_->isa('RDF::Query::Expression::Alias') } @$vars;
-# 		if (scalar(@vars)) {
-# 			my $pattern	= pop(@{ $self->{build}{triples} });
-# 			my @bound	= $pattern->potentially_bound;
-# 			my %bound	= map { $_ => 1 } @bound;
-# 			foreach my $v (@vars) {
-# 				my $name	= $v->name;
-# 				if ($bound{ $name }) {
-# 					throw RDF::Query::Error::ParseError -text => "Syntax error: Already-bound variable ($name) used in project expression";
-# 				}
-# 			}
-# 			
-# 			my $proj	= RDF::Query::Algebra::Extend->new( $pattern, $vars );
-# 			push(@{ $self->{build}{triples} }, $proj);
-# 		}
-		
 		my $pattern	= pop(@{ $self->{build}{triples} });
+		my %in_scope	= map { $_ => 1 } $pattern->in_scope_variables;
 		while (my($name, $expr) = splice(@extend, 0, 2)) {
+			if (exists $in_scope{$name}) {
+				die "Syntax error: Already-bound variable ($name) used in project expression";
+			}
 			my $var		= Attean::Variable->new( value => $name );
 			$pattern	= Attean::Algebra::Extend->new(children => [$pattern], variable => $var, expression => $expr);
 		}
@@ -3191,6 +3192,8 @@ sub __solution_modifiers {
 		my $sliced	= Attean::Algebra::Slice->new( children => [$pattern], limit => $limit );
 		push(@{ $self->{build}{triples} }, $sliced);
 	}
+	
+	return @project;
 }
 
 ################################################################################
