@@ -118,7 +118,17 @@ if ($RUN_QUERY_TESTS) {
 		property-path
 		subquery
 	));
-#		service
+
+	push(@files, qw(
+		aggregates
+		construct
+		delete-insert
+		grouping
+		syntax-query
+		syntax-fed
+		syntax-update-1
+		syntax-update-2
+	));
 }
 if ($RUN_UPDATE_TESTS) {
 	push(@files, qw(
@@ -181,27 +191,134 @@ my $dawgt	= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tes
 			}
 			if ($RUN_TESTS) {
 				if ($RUN_QUERY_TESTS) {
-					my $et	= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->QueryEvaluationTest->uri_value));
-					my $ct	= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->CSVResultFormatTest->uri_value));
-					if ($et + $ct) {
-						my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
-						warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-						my $count	= $args{ stress } || 1;
-						query_eval_test( $model, $test, $count );
+					{
+						# Evaluation Tests
+						my $et	= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->QueryEvaluationTest->uri_value));
+						my $ct	= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->CSVResultFormatTest->uri_value));
+						if ($et + $ct) {
+							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
+							my $count	= $args{ stress } || 1;
+							query_eval_test( $model, $test, $count );
+						}
+					}
+					
+					{
+						# Syntax Tests
+						my $total	= 0;
+						foreach my $type (qw(PositiveSyntaxTest11 NegativeSyntaxTest11)) {
+							$total	+= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->$type->uri_value));
+						}
+
+						if ($total) {
+							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
+							my $count	= $args{ stress } || 1;
+							syntax_test( 'query', $model, $test, $count );
+						}
 					}
 				}
-			
+				
 				if ($RUN_UPDATE_TESTS) {
-					if ($model->count_quads($test, iri($rdf->type->uri_value), iri($ut->UpdateEvaluationTest->uri_value)) or $model->count_statements($test, iri($rdf->type->uri_value), iri($mf->UpdateEvaluationTest->uri_value))) {
-						my ($name)	= $model->objects( $test, iri($mf->name->uri_value) );
-						unless ($test->value =~ /$PATTERN/) {
-							next;
+					{
+						# Evaluation Tests
+						if ($model->count_quads($test, iri($rdf->type->uri_value), iri($ut->UpdateEvaluationTest->uri_value)) or $model->count_statements($test, iri($rdf->type->uri_value), iri($mf->UpdateEvaluationTest->uri_value))) {
+							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							unless ($test->value =~ /$PATTERN/) {
+								next;
+							}
+	# 						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
+	# 						update_eval_test( $model, $test );
 						}
-# 						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-# 						update_eval_test( $model, $test );
+					}
+					
+					{
+						# Syntax Tests
+						my $total	= 0;
+						foreach my $type (qw(PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest11)) {
+							$total	+= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->$type->uri_value));
+						}
+
+						if ($total) {
+							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
+							my $count	= $args{ stress } || 1;
+							syntax_test( 'update', $model, $test, $count );
+						}
 					}
 				}
 			}
+		}
+	}
+}
+
+sub syntax_test {
+	my $test_type	= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my $count		= shift || 1;
+	
+	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
+	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
+	my ($queryd)	= $model->objects( $test, iri($mf->action->uri_value) )->elements;
+	my ($approved)	= $model->objects( $test, iri($dawgt->approval->uri_value) )->elements;
+	my ($name)		= $model->objects( $test, $mfname )->elements;
+	my $namevalue	= $name->value;
+	
+	if ($STRICT_APPROVAL) {
+		unless ($approved) {
+			warn "- skipping test because it isn't approved\n" if ($debug);
+			return;
+		}
+		if ($approved->equal($dawgt->NotClassified)) {
+			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
+			return;
+		}
+	}
+
+	my $is_pos_query	= $model->count_quads($test, $type, iri($mf->PositiveSyntaxTest11->uri_value));
+	my $is_pos_update	= $model->count_quads($test, $type, iri($mf->PositiveUpdateSyntaxTest11->uri_value));
+	my $is_neg_query	= $model->count_quads($test, $type, iri($mf->NegativeSyntaxTest->uri_value)) + $model->count_quads($test, $type, iri($mf->NegativeSyntaxTest11->uri_value));
+	my $is_neg_update	= $model->count_quads($test, $type, iri($mf->NegativeUpdateSyntaxTest->uri_value)) + $model->count_quads($test, $type, iri($mf->NegativeUpdateSyntaxTest11->uri_value));
+	
+	my $uri					= URI->new( $queryd->value );
+	my $filename			= $uri->file;
+	warn $filename;
+	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
+	$base					= "file://${base}";
+	warn "Loading SPARQL query from file $filename" if ($debug);
+	my $sparql				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
+
+	if ($debug) {
+		my $q			= $sparql;
+		$q				=~ s/\s+/ /g;
+		warn "### test     : " . $test->as_string . "\n";
+		warn "# file       : $filename\n";
+		warn "# sparql     : $q\n";
+	}
+	
+	my $pclass	= Attean->get_parser('SPARQL');
+	my $parser	= $pclass->new();
+	if ($is_pos_query or $is_pos_update) {
+		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
+		my $ok	= blessed($query);
+		record_result($ok, $test->as_string);
+		if ($ok) {
+			pass("syntax $namevalue: $filename");
+		} else {
+			fail("syntax $namevalue; $filename: $@");
+		}
+	} elsif ($is_neg_query or $is_neg_update) {
+		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
+		my $ok	= $@ ? 1 : 0;
+		record_result($ok, $test->as_string);
+		if ($ok) {
+			pass("syntax $namevalue: $filename");
+		} else {
+			if ($debug) {
+				warn $query->as_string;
+			}
+			fail("syntax $namevalue; $filename (unexpected successful parse)");
 		}
 	}
 }
@@ -361,6 +478,15 @@ sub get_actual_results {
 	my $sparql		= shift;
 	my $base		= shift;
 
+	if (0) {
+		my $q	= RDF::Query->new($sparql);
+		die RDF::Query->error unless ($q);
+		my $t	= AtteanX::RDFQueryTranslator->new();
+		my $a	= $t->translate_query($q);
+		warn "Translated query:\n";
+		warn $a->as_string;
+		warn "------------------------------------------------------";
+	}
 	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
 	my ($algebra)	= $s->parse_list_from_bytes($sparql);
 	
@@ -523,10 +649,10 @@ sub get_expected_results {
 			my @bindings;
 			foreach my $r (@sols) {
 				my %data;
-				my @b	= $model->objects( $r, iri($rs->binding->uri_value) );
+				my @b	= $model->objects( $r, iri($rs->binding->uri_value) )->elements;
 				foreach my $b (@b) {
-					my ($value)	= $model->objects( $b, iri($rs->value->uri_value) );
-					my ($var)	= $model->objects( $b, iri($rs->variable->uri_value) );
+					my ($value)	= $model->objects( $b, iri($rs->value->uri_value) )->elements;
+					my ($var)	= $model->objects( $b, iri($rs->variable->uri_value) )->elements;
 					$data{ $var->value }	= $value;
 				}
 				push(@bindings, Attean::Result->new( bindings => \%data ));
