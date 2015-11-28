@@ -375,7 +375,7 @@ package Attean::Algebra::Project 0.009 {
 		my ($child)	= @{ $self->children };
 		my $set		= Set::Scalar->new( $child->in_scope_variables );
 		my $proj	= Set::Scalar->new( map { $_->value } @{ $self->variables } );
-		return $set->intersection($proj);
+		return $set->intersection($proj)->members;
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	use Types::Standard qw(ArrayRef ConsumerOf);
