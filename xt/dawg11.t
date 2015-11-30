@@ -283,7 +283,6 @@ sub syntax_test {
 	
 	my $uri					= URI->new( $queryd->value );
 	my $filename			= $uri->file;
-	warn $filename;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
 	warn "Loading SPARQL query from file $filename" if ($debug);
@@ -302,7 +301,7 @@ sub syntax_test {
 	if ($is_pos_query or $is_pos_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
 		my $ok	= blessed($query);
-		record_result($ok, $test->as_string);
+		record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
 			pass("syntax $namevalue: $filename");
 		} else {
@@ -311,7 +310,7 @@ sub syntax_test {
 	} elsif ($is_neg_query or $is_neg_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
 		my $ok	= $@ ? 1 : 0;
-		record_result($ok, $test->as_string);
+		record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
 			pass("syntax $namevalue: $filename");
 		} else {
@@ -371,16 +370,14 @@ STRESS:	foreach (1 .. $count) {
 		my $test_model	= memory_model();
 		try {
 			if (blessed($data)) {
-	# 			warn "*********************** " . Dumper($data->value);
 				add_to_model( $test_model, $default_graph, $data->value );
 			}
 			foreach my $g (@gdata) {
-	# 			warn "***** graph: " . $g->as_string . "\n";
 				add_to_model( $test_model, $g, $g->value );
 			}
 		} catch {
 			fail($test->as_string);
-			record_result(0, $test->as_string);
+			record_result('evaluation', 0, $test->as_string);
 			print "# died: " . $test->as_string . ": $_\n";
 			next STRESS;
 		};
@@ -403,7 +400,7 @@ STRESS:	foreach (1 .. $count) {
 				{
 					local($::DEBUG)	= 1;
 					print STDERR "getting actual results... " if ($debug);
-					($actual, $type)		= get_actual_results( $test_model, $sparql, $base );
+					($actual, $type)		= get_actual_results( $filename, $test_model, $sparql, $base );
 					print STDERR "ok\n" if ($debug);
 				}
 			
@@ -421,9 +418,8 @@ STRESS:	foreach (1 .. $count) {
 					warn $_;
 				}
 				fail($test->as_string);
-				record_result(0, $test->as_string);
+				record_result('evaluation', 0, $test->as_string);
 			};
-			warn $@ if ($@);
 			if ($ok) {
 			} else {
 				print "# failed: " . $test->as_string . "\n";
@@ -474,6 +470,7 @@ sub add_to_model {
 }
 
 sub get_actual_results {
+	my $filename	= shift;
 	my $model		= shift;
 	my $sparql		= shift;
 	my $base		= shift;
@@ -488,7 +485,14 @@ sub get_actual_results {
 		warn "------------------------------------------------------";
 	}
 	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
-	my ($algebra)	= $s->parse_list_from_bytes($sparql);
+	my $algebra;
+	eval {
+		($algebra)	= $s->parse_list_from_bytes($sparql);
+	};
+	if ($@) {
+		warn "Failed to parse query $filename: $@";
+		die $@;
+	}
 	
 	if ($debug) {
 		warn "Walking algebra:\n";
@@ -688,13 +692,13 @@ sub compare_results {
 		}
 
 		my $ok		= ok( $eqtest->equals( $actual, $expected ), $test ) or diag($eqtest->error);
-		record_result($ok, $test);
+		record_result('evaluation', $ok, $test);
 		return $ok;
 	} elsif ($actual->does('Attean::API::TermIterator')) {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
 		my $ok		= ok( $a->equals($e), sprintf("$test: %s == %s", $a->as_string, $e->as_string) );
-		record_result($ok, $test);
+		record_result('evaluation', $ok, $test);
 		return $ok;
 	} else {
 		die "Unexpected result type $actual";
@@ -702,22 +706,31 @@ sub compare_results {
 }
 
 {
-	my @failures;
+	my %failures;
 	sub record_result {
+		my $type	= shift;
 		my $ok		= shift;
 		my $name	= shift;
 		unless ($ok) {
-			push(@failures, $name);
+			push(@{ $failures{$type} }, $name);
 		}
 	}
 	END {
-		if ($RUN_QUERY_TESTS and scalar(@failures)) {
-			@failures	= sort @failures;
-			my $msg	= "Failing tests: " . Dumper([@failures]);
+		my $count	= 0;
+		while (my ($type, $failures) = each(%failures)) {
+			$count	+= scalar(@$failures);
+		}
+		if ($RUN_QUERY_TESTS and $count) {
+			my $d	= Data::Dumper->new([\%failures], [qw(failures)]);
+			$d->Sortkeys(1)->Indent(2);
+			my $msg	= "Failing tests: " . $d->Dump;
 			warn $msg;
 			unless ($PATTERN) {
 				open(my $fh, '>', sprintf('.sparql-test-suite-%d', scalar(time)));
-				say $fh join("\n", @failures);
+				while (my ($type, $failures) = each(%failures)) {
+					say $fh $type;
+					say $fh join("\n", sort @$failures);
+				}
 			}
 		}
 	}
