@@ -33,6 +33,7 @@ no warnings 'redefine';
 
 use Attean;
 use RDF::Query;
+use Data::Dumper;
 use URI::NamespaceMap;
 use AtteanX::Parser::SPARQLLex;
 use AtteanX::Parser::SPARQL::Constants;
@@ -77,10 +78,17 @@ sub BUILDARGS {
 
 ################################################################################
 
+sub configure_lexer {
+	my $self	= shift;
+	my $l		= shift;
+	$l->add_regex_rule( qr/RANK/, KEYWORD, sub { return uc(shift) } );
+	return $l;
+}
+
 sub parse_list_from_io {
 	my $self	= shift;
 	my $p 		= AtteanX::Parser::SPARQLLex->new();
-	my $l		= $p->parse_iter_from_io(@_);
+	my $l		= $self->configure_lexer( $p->parse_iter_from_io(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
 	my $q		= $self->parse();
@@ -93,7 +101,7 @@ sub parse_list_from_io {
 sub parse_list_from_bytes {
 	my $self	= shift;
 	my $p 		= AtteanX::Parser::SPARQLLex->new();
-	my $l		= $p->parse_iter_from_bytes(@_);
+	my $l		= $self->configure_lexer( $p->parse_iter_from_bytes(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
 	my $q		= $self->parse();
@@ -251,7 +259,7 @@ sub _RW_Query {
 	my $t	= $self->peek_token;
 	if ($t) {
 		my $type	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
-		die "Syntax error: Remaining input after query: $type";
+		die "Syntax error: Remaining input after query: $type " . Dumper($t->args);
 	}
 
 	if ($count == 0 or $count > 1) {
@@ -1137,6 +1145,10 @@ sub _SolutionModifier {
 		$self->_GroupClause($vars);
 	}
 	
+	if ($self->test_token(KEYWORD, 'RANK')) {
+		$self->_RankClause;
+	}
+	
 	if ($self->test_token(KEYWORD, 'HAVING')) {
 		$self->_HavingClause;
 	}
@@ -1192,6 +1204,41 @@ sub _GroupClause {
 # 	}
 	
 	$self->{build}{__group_by}	= \@vars;
+}
+
+sub _RankClause {
+	my $self	= shift;
+	$self->expected_token(KEYWORD, 'RANK');
+	$self->expected_token(LPAREN);
+	$self->_OrderCondition;
+	my @order;
+	push(@order, splice(@{ $self->{stack} }));
+	while ($self->_OrderCondition_test) {
+		$self->_OrderCondition;
+		push(@order, splice(@{ $self->{stack} }));
+	}
+	$self->expected_token(RPAREN);
+	$self->expected_token(KEYWORD, 'AS');
+	$self->_Var;
+	my ($var)	= splice(@{ $self->{stack} });
+	
+	my @exprs;
+	my %ascending;
+	foreach my $o (@order) {
+		my ($dir, $expr)	= @$o;
+		push(@exprs, $expr);
+		$ascending{ $expr->value->value }	= ($dir eq 'ASC') ? 1 : 0; # TODO: support ranking by complex expressions, not just variables
+	}
+	my $r	= Attean::AggregateExpression->new(
+		distinct	=> 0,
+		operator	=> 'RANK',
+		children	=> \@exprs,
+		scalar_vars	=> {
+			ascending	=> \%ascending,
+		},
+		variable	=> $var,
+	);
+	$self->{build}{__aggregate}{ $var->value }	= [ $var, $r ];
 }
 
 sub _HavingClause {
@@ -1264,7 +1311,7 @@ sub _OrderCondition {
 	my $self	= shift;
 	my $dir	= 'ASC';
 	if (my $t = $self->optional_token(KEYWORD, qr/^(ASC|DESC)/)) {
-		my $dir	= $t->value;
+		$dir	= $t->value;
 		$self->_BrackettedExpression;
 	} elsif ($self->test_token(VAR)) {
 		$self->_Var;
