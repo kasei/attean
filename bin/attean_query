@@ -78,28 +78,19 @@ try {
 	}
 
 	warn "Parsing query...\n" if ($verbose);
-	my $sparql;
-	if ($qfile eq '-') {
-		local($/) = undef;
-		$sparql	= <STDIN>;
-	} else {
-		$sparql	= read_file($qfile);
-	}
-	my $query	= RDF::Query->new($sparql);
-	unless ($query) {
-		if ($check_syntax) {
-			warn RDF::Query->error;
-			print "Syntax invalid: $qfile\n---\n$sparql\n---\n";
-			exit(1);
-		}
-		die RDF::Query->error;
+	my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
+	my $s 		= AtteanX::Parser::SPARQL->new(base => $base);
+	open(my $fh, '<:utf8', $qfile) or die $!;
+	my $algebra;
+	eval {
+		($algebra)	= $s->parse_list_from_io($fh);
+	};
+	if ($@) {
+		die "Failed to parse query $qfile: $@";
 	}
 
-	warn "Translating query...\n" if ($verbose);
-	my $t	= AtteanX::RDFQueryTranslator->new();
-	my $a	= $t->translate_query($query);
 	if ($print_algebra) {
-		print "# Algebra:\n" . $a->as_string;
+		print "# Algebra:\n" . $algebra->as_string;
 	}
 	
 	if ($check_syntax) {
@@ -109,13 +100,13 @@ try {
 	
 	if ($print_sparql) {
 		print "# $qfile\n";
-		print $a->as_sparql;
+		print $algebra->as_sparql;
 	}
 	
 	unless ($dryrun) {
 		my $default_graphs	= [$graph];
 		my $planner	= Attean::IDPQueryPlanner->new();
-		my $plan	= $planner->plan_for_algebra($a, $model, $default_graphs);
+		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
 		if ($print_plan) {
 			print "# Plan:\n" . $plan->as_string;
 		}
