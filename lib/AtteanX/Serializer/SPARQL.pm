@@ -66,7 +66,7 @@ L<IO::Handle> object C<< $fh >>.
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
 			
-			if ($type == LANG) {
+			if ($type == LANG or $type == HATHAT) {
 				$need_space= 0;
 			}
 			
@@ -146,6 +146,8 @@ L<IO::Handle> object C<< $fh >>.
 				$io->print('# ');
 				$io->print($t->value);
 				$io->print("\n");
+			} elsif ($type == HATHAT) {
+				$io->print($t->value);
 			} else {
 				$io->print($t->value);
 				$need_space++;
