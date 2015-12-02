@@ -310,32 +310,32 @@ Returns the next token present in the input.
 # 					return $self->new_token(KEYWORD, $start_line, $start_column, $bool);
 				} elsif ($self->buffer =~ /^BASE(?!:)\b/oi) {
 					$self->read_length(4);
-					return $self->new_token(BASE, $start_line, $start_column);
+					return $self->new_token(BASE, $start_line, $start_column, 'BASE');
 				} elsif ($self->buffer =~ /^PREFIX(?!:)\b/io) {
 					$self->read_length(6);
-					return $self->new_token(PREFIX, $start_line, $start_column);
+					return $self->new_token(PREFIX, $start_line, $start_column, 'PREFIX');
 				} else {
 					return $self->_get_pname;
 				}
 			} elsif ($c eq '^') {
 				if ($self->buffer =~ /^\^\^/) {
 					$self->read_word('^^');
-					return $self->new_token(HATHAT, $start_line, $start_column);
+					return $self->new_token(HATHAT, $start_line, $start_column, '^^');
 				} else {
 					$self->read_word('^');
-					return $self->new_token(HAT, $start_line, $start_column);
+					return $self->new_token(HAT, $start_line, $start_column, '^');
 				}
 			} elsif ($c eq '|') {
 				if ($self->buffer =~ /^\|\|/) {
 					$self->read_word('||');
-					return $self->new_token(OROR, $start_line, $start_column);
+					return $self->new_token(OROR, $start_line, $start_column, '||');
 				} else {
 					$self->read_word('|');
-					return $self->new_token(OR, $start_line, $start_column);
+					return $self->new_token(OR, $start_line, $start_column, '|');
 				}
 			} elsif ($c eq '&') {
 				$self->read_word('&&');
-				return $self->new_token(ANDAND, $start_line, $start_column);
+				return $self->new_token(ANDAND, $start_line, $start_column, '&&');
 			} else {
 	# 			Carp::cluck sprintf("Unexpected byte '$c' (0x%02x)", ord($c));
 				return $self->_throw_error(sprintf("Unexpected byte '%s' (0x%02x)", $c, ord($c)));
