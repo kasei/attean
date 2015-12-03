@@ -31,7 +31,7 @@ package AtteanX::Serializer::SPARQL 0.009 {
 	use Encode qw(encode);
 	use Attean::ListIterator;
 	use List::MoreUtils qw(any);
-	use AtteanX::Parser::SPARQL::Constants;
+	use AtteanX::SPARQL::Constants;
 	use namespace::clean;
 	with 'Attean::API::AbbreviatingSerializer';
 	

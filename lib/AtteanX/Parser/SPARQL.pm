@@ -36,7 +36,7 @@ use RDF::Query;
 use Data::Dumper;
 use URI::NamespaceMap;
 use AtteanX::Parser::SPARQLLex;
-use AtteanX::Parser::SPARQL::Constants;
+use AtteanX::SPARQL::Constants;
 use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 use Scalar::Util qw(blessed looks_like_number reftype refaddr);
 
@@ -258,7 +258,7 @@ sub _RW_Query {
 	
 	my $t	= $self->peek_token;
 	if ($t) {
-		my $type	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
+		my $type	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		die "Syntax error: Remaining input after query: $type " . Dumper($t->args);
 	}
 
@@ -3043,7 +3043,7 @@ sub _String {
 	} elsif ($string = $self->optional_token(STRING3D)) {
 		$value	= $string->value;
 	} else {
-		my $got	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
+		my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		my $value	= $t->value;
 		die "Expecting string literal but found $got '$value'";
 	}
@@ -3515,8 +3515,8 @@ sub expected_token {
 		return $self->next_token;
 	} else {
 		my $t			= $self->peek_token;
-		my $expecting	= AtteanX::Parser::SPARQL::Constants::decrypt_constant($type);
-		my $got			= AtteanX::Parser::SPARQL::Constants::decrypt_constant($t->type);
+		my $expecting	= AtteanX::SPARQL::Constants::decrypt_constant($type);
+		my $got			= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		if (@_) {
 			my $value	= shift;
 			my $value2	= $t->value;

@@ -96,7 +96,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.009 {
 	use Encode qw(decode);
 	use List::MoreUtils qw(zip);
 	use AtteanX::Parser::Turtle::Token;
-	use AtteanX::Parser::SPARQL::Constants;
+	use AtteanX::SPARQL::Constants;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 	use namespace::clean;
 	

@@ -1,17 +1,17 @@
-# AtteanX::Parser::SPARQL::Constants
+# AtteanX::SPARQL::Constants
 # -----------------------------------------------------------------------------
 
 =head1 NAME
 
-AtteanX::Parser::SPARQL::Constants - Constant definitions for use in parsing SPARQL
+AtteanX::SPARQL::Constants - Constant definitions for use in parsing and serializing SPARQL
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQL::Constants version 0.009
+This document describes AtteanX::SPARQL::Constants version 0.009
 
 =head1 SYNOPSIS
 
- use AtteanX::Parser::SPARQL::Constants;
+ use AtteanX::SPARQL::Constants;
 
 =head1 METHODS
 
@@ -19,7 +19,7 @@ This document describes AtteanX::Parser::SPARQL::Constants version 0.009
 
 =cut
 
-package AtteanX::Parser::SPARQL::Constants 0.009 {
+package AtteanX::SPARQL::Constants 0.009 {
 	use v5.14;
 	use warnings;
 
