@@ -42,7 +42,7 @@ package AtteanX::Serializer::SPARQL 0.009 {
 	}
 	
 	sub handled_type {
-		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'AtteanX::Parser::Turtle::Token');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'AtteanX::SPARQL::Token');
 		return $ITEM_TYPE;
 	}
 

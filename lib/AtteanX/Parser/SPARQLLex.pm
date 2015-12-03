@@ -43,7 +43,7 @@ package AtteanX::Parser::SPARQLLex 0.009 {
 	}
 	
 	sub handled_type {
-		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'AtteanX::Parser::Turtle::Token');
+		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'AtteanX::SPARQL::Token');
 		return $ITEM_TYPE;
 	}
 
@@ -95,7 +95,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.009 {
 	use Encode;
 	use Encode qw(decode);
 	use List::MoreUtils qw(zip);
-	use AtteanX::Parser::Turtle::Token;
+	use AtteanX::SPARQL::Token;
 	use AtteanX::SPARQL::Constants;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 	use namespace::clean;
@@ -234,7 +234,7 @@ current line and column of the input data.
 		my $start_col	= shift;
 		my $line		= $self->line;
 		my $col			= $self->column;
-		return AtteanX::Parser::Turtle::Token->fast_constructor( $type, $start_line, $start_col, $line, $col, \@_ );
+		return AtteanX::SPARQL::Token->fast_constructor( $type, $start_line, $start_col, $line, $col, \@_ );
 	}
 
 =item C<< get_token >>
