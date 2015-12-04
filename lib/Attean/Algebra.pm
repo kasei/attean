@@ -45,9 +45,30 @@ package Attean::Algebra::Sequence 0.009 {
 =cut
 
 package Attean::Algebra::Join 0.009 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Moo;
+	use namespace::clean;
+
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub algebra_as_string { return 'Join' }
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $l	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
+		my $r	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+
+		my @tokens;
+		push(@tokens, $l);
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		push(@tokens, $r);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	sub as_sparql {
 		my $self	= shift;
 		my %args	= @_;
@@ -277,7 +298,11 @@ package Attean::Algebra::Minus 0.009 {
 
 package Attean::Algebra::Distinct 0.009 {
 	use Moo;
+	use namespace::clean;
+
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub algebra_as_string { return 'Distinct' }
 	sub as_sparql {
 		my $self	= shift;
@@ -295,6 +320,11 @@ package Attean::Algebra::Distinct 0.009 {
 				. "${indent}}\n";
 		}
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		return $self->query_tokens;
+	}
 }
 
 =item * L<Attean::Algebra::Reduced>
@@ -303,7 +333,11 @@ package Attean::Algebra::Distinct 0.009 {
 
 package Attean::Algebra::Reduced 0.009 {
 	use Moo;
+	use namespace::clean;
+
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub algebra_as_string { return 'Reduced' }
 	sub as_sparql {
 		my $self	= shift;
@@ -321,6 +355,11 @@ package Attean::Algebra::Reduced 0.009 {
 				. "${indent}}\n";
 		}
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		return $self->query_tokens;
+	}
 }
 
 =item * L<Attean::Algebra::Slice>
@@ -330,7 +369,11 @@ package Attean::Algebra::Reduced 0.009 {
 package Attean::Algebra::Slice 0.009 {
 	use Moo;
 	use Types::Standard qw(Int);
+	use namespace::clean;
+
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::SPARQLSerializable';
+
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
 	sub algebra_as_string {
@@ -340,6 +383,7 @@ package Attean::Algebra::Slice 0.009 {
 		push(@str, "Offset=" . $self->offset) if ($self->offset > 0);
 		return join(' ', @str);
 	}
+
 	sub as_sparql {
 		my $self	= shift;
 		my %args	= @_;
@@ -361,6 +405,11 @@ package Attean::Algebra::Slice 0.009 {
 		$sparql	.= "${indent}LIMIT " . $self->limit . "\n" if ($self->limit >= 0);
 		$sparql	.= "${indent}OFFSET " . $self->offset . "\n" if ($self->offset > 0);
 		return $sparql;
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		return $self->query_tokens;
 	}
 }
 
@@ -488,6 +537,8 @@ package Attean::Algebra::BGP 0.009 {
 	use Moo;
 	use Attean::RDF;
 	use Set::Scalar;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 
@@ -499,6 +550,17 @@ package Attean::Algebra::BGP 0.009 {
 			$set->insert(@vars);
 		}
 		return $set->members;
+	}
+	
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		my $dot	= AtteanX::SPARQL::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] );
+		foreach my $t (@{ $self->triples }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $dot);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 	
 	sub as_sparql {
@@ -526,7 +588,8 @@ package Attean::Algebra::BGP 0.009 {
 	}
 	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree', 'Attean::API::CanonicalizingBindingSet';
-
+	with 'Attean::API::SPARQLSerializable';
+	
 	sub canonicalize {
 		my $self	= shift;
 		my ($algebra, $mapping)	= $self->canonical_bgp_with_mapping();

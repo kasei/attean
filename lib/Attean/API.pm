@@ -65,8 +65,14 @@ package Attean::Mapper 0.009 {
 }
 
 package Attean::API::Variable 0.009 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Moo::Role;
+	use namespace::clean;
+
 	with 'Attean::API::TermOrVariable';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub as_sparql {
 		my $self	= shift;
 		return '?' . $self->value;
@@ -76,6 +82,13 @@ package Attean::API::Variable 0.009 {
 		my $self	= shift;
 		return '?' . $self->value;
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $t	= AtteanX::SPARQL::Token->fast_constructor( VAR, -1, -1, -1, -1, [$self->value] );
+		return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 }
 
 package Attean::API::CanonicalizingBindingSet 0.009 {

@@ -151,9 +151,21 @@ package Attean::API::Binding 0.009 {
 package Attean::API::TripleOrQuadPattern 0.009 {
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
+	use Attean::API::Query;
 	use Moo::Role;
 	use namespace::clean;
 
+	with 'Attean::API::SPARQLSerializable';
+	
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		foreach my $t ($self->values) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;

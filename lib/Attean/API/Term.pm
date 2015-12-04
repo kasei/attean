@@ -109,9 +109,13 @@ package Attean::API::Literal 0.009 {
 	use IRI;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Maybe Str ConsumerOf);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Attean::API::Query;
 	use namespace::clean;
 	
 	with 'Attean::API::Term';
+	with 'Attean::API::SPARQLSerializable';
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
@@ -152,6 +156,14 @@ package Attean::API::Literal 0.009 {
 			}
 		}
 	};
+	
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		my $value	= $self->__ntriples_string;
+		my $t	= AtteanX::SPARQL::Token->fast_constructor( STRING1D, -1, -1, -1, -1, [$value] );
+		return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
+	}
 	
 	sub ebv {
 		my $self	= shift;
@@ -468,11 +480,20 @@ package Attean::API::NumericLiteral 0.009 {
 package Attean::API::Blank 0.009 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Attean::API::Query;
 	use namespace::clean;
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
-
+	with 'Attean::API::SPARQLSerializable';
+	
+	sub sparql_tokens {
+		my $self	= shift;
+		die;
+	}
+	
 	sub compare {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
@@ -485,10 +506,20 @@ package Attean::API::IRI 0.009 {
 	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Attean::API::Query;
 	use namespace::clean;
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
+	with 'Attean::API::SPARQLSerializable';
+	
+	sub sparql_tokens {
+		my $self	= shift;
+		my $t	= AtteanX::SPARQL::Token->fast_constructor( IRI, -1, -1, -1, -1, [$self->value] );
+		return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
+	}
 	
 	sub compare {
 		my ($a, $b)	= @_;

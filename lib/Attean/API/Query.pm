@@ -140,6 +140,63 @@ package Attean::API::DirectedAcyclicGraph 0.009 {
 
 =cut
 
+package Attean::API::SPARQLSerializable 0.009 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Moo::Role;
+	requires 'sparql_tokens';
+	
+	sub query_tokens {
+		my $self	= shift;
+		
+		my $algebra	= $self;
+		my %modifiers;
+		while ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
+			# TODO: Handle ORDER BY
+			# TODO: Handle projection
+			# TODO: Handle aggregation/having
+			# TODO: Error if Slice appears before distinct/reduced
+			if ($algebra->isa('Attean::Algebra::Distinct')) {
+				$modifiers{ distinct }	= 1;
+			} elsif ($algebra->isa('Attean::Algebra::Reduced')) {
+				$modifiers{ reduced }	= 1;
+			} elsif ($algebra->isa('Attean::Algebra::Slice')) {
+				if ($algebra->limit >= 0) {
+					$modifiers{ limit }		= $algebra->limit;
+				}
+				if ($algebra->offset > 0) {
+					$modifiers{ offset }	= $algebra->offset;
+				}
+			} else {
+				die;
+			}
+			($algebra)	= @{ $algebra->children };
+		}
+		
+		my @tokens;
+		push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SELECT'] ));
+		if ($modifiers{distinct}) {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DISTINCT'] ));
+		} elsif ($modifiers{reduced}) {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['REDUCED'] ));
+		}
+		push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
+		push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['WHERE'] ));
+		push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
+		push(@tokens, $algebra->sparql_tokens->elements);
+		push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));
+		if (exists $modifiers{limit}) {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['LIIMT'] ));
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{limit}] ));
+		}
+		if (exists $modifiers{offset}) {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['OFFSET'] ));
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{offset}] ));
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
 package Attean::API::Algebra 0.009 {
 	use Moo::Role;
 
@@ -343,7 +400,7 @@ package Attean::API::UnionScopeVariables 0.009 {
 		foreach my $c (@{ $self->children }) {
 			$set->insert( $c->in_scope_variables );
 		}
-		return $set->members;
+		return $set->elements;
 	}
 }
 
@@ -362,7 +419,7 @@ package Attean::API::IntersectionScopeVariables 0.009 {
 			my $rhs	= Set::Scalar->new($c->in_scope_variables);
 			$set	= $set->intersection($rhs);
 		}
-		return $set->members;
+		return $set->elements;
 	}
 }
 
