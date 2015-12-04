@@ -769,9 +769,16 @@ package Attean::Algebra::Group 0.009 {
 
 package Attean::Algebra::NegatedPropertySet 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::PropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
+	
 	sub as_string {
 		my $self	= shift;
 		return sprintf("!(%s)", join('|', map { $_->ntriples_string } @{ $self->predicates }));
@@ -782,6 +789,24 @@ package Attean::Algebra::NegatedPropertySet 0.009 {
 		my $self	= shift;
 		return "!(" . join('|', map { $_->as_sparql } @{$self->predicates}) . ")";
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $bang	= AtteanX::SPARQL::Token->fast_constructor( BANG, -1, -1, -1, -1, ['!'] );
+		my $or		= AtteanX::SPARQL::Token->fast_constructor( OR, -1, -1, -1, -1, ['|'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+
+		my @tokens;
+		push(@tokens, $bang, $l);
+		foreach my $t (@{ $self->predicates }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $or);
+		}
+		pop(@tokens); # remove last OR token
+		push(@tokens, $r);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
 }
 
 =item * L<Attean::Algebra::PredicatePath>
@@ -791,7 +816,11 @@ package Attean::Algebra::NegatedPropertySet 0.009 {
 package Attean::Algebra::PredicatePath 0.009 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::PropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	has 'predicate' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 	sub as_string {
 		my $self	= shift;
@@ -806,6 +835,12 @@ package Attean::Algebra::PredicatePath 0.009 {
 		my $self	= shift;
 		return $self->predicate->as_sparql;
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		return $self->predicate->sparql_tokens;
+	}
+	
 }
 
 =item * L<Attean::Algebra::InversePath>
@@ -814,13 +849,40 @@ package Attean::Algebra::PredicatePath 0.009 {
 
 package Attean::Algebra::InversePath 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::UnaryPropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub prefix_name { return "^" }
 	sub as_sparql {
 		my $self	= shift;
 		my ($path)	= @{ $self->children };
 		return '^' . $self->path->as_sparql;
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $hat		= AtteanX::SPARQL::Token->fast_constructor( HAT, -1, -1, -1, -1, ['^'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		
+		if (scalar(@tokens) > 1) {
+			unshift(@tokens, $hat, $l);
+			push(@tokens, $r);
+		} else {
+			unshift(@tokens, $hat);
+		}
+		
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
@@ -830,12 +892,31 @@ package Attean::Algebra::InversePath 0.009 {
 
 package Attean::Algebra::SequencePath 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use namespace::clean;
+
 	with 'Attean::API::NaryPropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub separator { return "/" }
 	sub as_sparql {
 		my $self	= shift;
 		my @paths	= @{ $self->children };
 		return '(' . join('/', map { $_->as_sparql } @paths) . ')';
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $slash	= AtteanX::SPARQL::Token->fast_constructor( SLASH, -1, -1, -1, -1, ['/'] );
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $slash);
+		}
+		pop(@tokens); # remove last SLASH token
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
@@ -845,12 +926,31 @@ package Attean::Algebra::SequencePath 0.009 {
 
 package Attean::Algebra::AlternativePath 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use namespace::clean;
+
 	with 'Attean::API::NaryPropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub separator { return "|" }
 	sub as_sparql {
 		my $self	= shift;
 		my @paths	= @{ $self->children };
 		return '(' . join('|', map { $_->as_sparql } @paths) . ')';
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $or		= AtteanX::SPARQL::Token->fast_constructor( OR, -1, -1, -1, -1, ['|'] );
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $or);
+		}
+		pop(@tokens); # remove last OR token
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
@@ -860,13 +960,39 @@ package Attean::Algebra::AlternativePath 0.009 {
 
 package Attean::Algebra::ZeroOrMorePath 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::UnaryPropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub postfix_name { return "*" }
 	sub as_sparql {
 		my $self	= shift;
 		my ($path)	= @{ $self->children };
 		return $self->path->as_sparql . '*';
+	}
+	
+	sub sparql_tokens {
+		my $self	= shift;
+		my $star	= AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		
+		if (scalar(@tokens) > 1) {
+			unshift(@tokens, $l);
+			push(@tokens, $r);
+		}
+		push(@tokens, $star);
+		
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
@@ -876,13 +1002,39 @@ package Attean::Algebra::ZeroOrMorePath 0.009 {
 
 package Attean::Algebra::OneOrMorePath 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::UnaryPropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub postfix_name { return "+" }
 	sub as_sparql {
 		my $self	= shift;
 		my ($path)	= @{ $self->children };
 		return $self->path->as_sparql . '+';
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $plus	= AtteanX::SPARQL::Token->fast_constructor( PLUS, -1, -1, -1, -1, ['+'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		
+		if (scalar(@tokens) > 1) {
+			unshift(@tokens, $l);
+			push(@tokens, $r);
+		}
+		push(@tokens, $plus);
+		
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
@@ -892,13 +1044,39 @@ package Attean::Algebra::OneOrMorePath 0.009 {
 
 package Attean::Algebra::ZeroOrOnePath 0.009 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::UnaryPropertyPath';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub postfix_name { return "?" }
 	sub as_sparql {
 		my $self	= shift;
 		my ($path)	= @{ $self->children };
 		return $self->path->as_sparql . '?';
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $q		= AtteanX::SPARQL::Token->fast_constructor( QUESTION, -1, -1, -1, -1, ['?'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		
+		if (scalar(@tokens) > 1) {
+			unshift(@tokens, $l);
+			push(@tokens, $r);
+		}
+		push(@tokens, $q);
+		
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
