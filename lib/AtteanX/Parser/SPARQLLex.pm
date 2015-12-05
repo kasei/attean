@@ -202,12 +202,6 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.009 {
 		}
 	}
 	
-=item C<< fill_buffer >>
-
-Fills the internal parse buffer with a new line from the input source.
-
-=cut
-
 	sub fill_buffer {
 		my $self	= shift;
 		unless (length($self->buffer)) {
@@ -220,13 +214,6 @@ Fills the internal parse buffer with a new line from the input source.
 		}
 	}
 	
-=item C<< new_token ( $type, $start_line, $start_column, @values ) >>
-
-Returns a new token with the given type and optional values, capturing the
-current line and column of the input data.
-
-=cut
-
 	sub new_token {
 		my $self		= shift;
 		my $type		= shift;
@@ -236,12 +223,6 @@ current line and column of the input data.
 		my $col			= $self->column;
 		return AtteanX::SPARQL::Token->fast_constructor( $type, $start_line, $start_col, $line, $col, \@_ );
 	}
-
-=item C<< get_token >>
-
-Returns the next token present in the input.
-
-=cut
 
 	sub add_regex_rule {
 		my $self	= shift;
@@ -343,10 +324,6 @@ Returns the next token present in the input.
 			warn sprintf('byte: 0x%x', ord($c));
 		}
 	}
-
-=begin private
-
-=cut
 
 	sub _get_pname {
 		my $self	= shift;

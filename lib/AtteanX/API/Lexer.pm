@@ -21,12 +21,6 @@ package AtteanX::API::Lexer 0.009 {
 		return $orig->( $class, @_ );
 	};
 
-=item C<< fill_buffer >>
-
-Fills the internal parse buffer with a new line from the input source.
-
-=cut
-
 	sub fill_buffer {
 		my $self	= shift;
 		unless (length($self->buffer)) {
@@ -34,12 +28,6 @@ Fills the internal parse buffer with a new line from the input source.
 			$self->{buffer}	.= $line if (defined($line));
 		}
 	}
-
-=item C<< check_for_bom >>
-
-Checks the input buffer for a Unicode BOM, and consumes it if it is present.
-
-=cut
 
 	sub check_for_bom {
 		my $self	= shift;
