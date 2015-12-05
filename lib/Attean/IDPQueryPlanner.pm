@@ -744,7 +744,6 @@ sub-plan participating in the join.
 			graph	=> $nodes[3],
 			values => \@nodes,
 			distinct => $distinct,
-			in_scope_variables => \@vars,
 			ordered => [],
 		);
 		return $plan;

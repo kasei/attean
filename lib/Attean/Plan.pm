@@ -33,7 +33,7 @@ Evaluates a quad pattern against the model.
 
 package Attean::Plan::Quad 0.009 {
 	use Moo;
-	use Scalar::Util qw(reftype);
+	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf ArrayRef);
 	use namespace::clean;
 
@@ -44,6 +44,28 @@ package Attean::Plan::Quad 0.009 {
 	
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
 	with 'Attean::API::QuadPattern';
+
+	around 'BUILDARGS' => sub {
+		my $orig		= shift;
+		my $class		= shift;
+		my $args		= $orig->( $class, @_ );
+		if (exists $args->{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		
+		my %vars;
+		foreach my $pos (qw(subject predicate object graph)) {
+			my $term	= $args->{$pos};
+			if (blessed($term) and $term->does('Attean::API::Variable')) {
+				$vars{$term->value}	= $term;
+			}
+		}
+		
+		my @vars	= keys %vars;
+		$args->{in_scope_variables}	= [@vars];
+
+		return $args;
+	};
 
 	sub plan_as_string {
 		my $self	= shift;
