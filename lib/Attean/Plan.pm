@@ -391,24 +391,13 @@ package Attean::Plan::EBVFilter 0.009 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ConsumerOf);
+	use namespace::clean;
+	
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
 	has 'variable' => (is => 'ro', isa => Str, required => 1);
 
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
-
-		return $class->SUPER::BUILDARGS(%args);
-	}
-	
 	sub plan_as_string {
 		my $self	= shift;
 		return sprintf('EBVFilter { ?%s }', $self->variable);
@@ -461,24 +450,14 @@ package Attean::Plan::Merge 0.009 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ArrayRef ConsumerOf);
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
-	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
-	sub plan_as_string { return 'Merge' }
+	use namespace::clean;
 	
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
+	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
 
-		return $class->SUPER::BUILDARGS(%args);
-	}
+	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+
+	sub plan_as_string { return 'Merge' }
 	
 	sub impl {
 		my $self	= shift;
@@ -499,23 +478,12 @@ Evaluates a set of sub-plans, returning the union of results.
 package Attean::Plan::Union 0.009 {
 	use Moo;
 	use Scalar::Util qw(blessed);
-	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::BinaryQueryTree';
-	sub plan_as_string { return 'Union' }
+	use namespace::clean;
 	
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
 
-		return $class->SUPER::BUILDARGS(%args);
-	}
+	sub plan_as_string { return 'Union' }
 	
 	sub impl {
 		my $self	= shift;
@@ -1166,23 +1134,12 @@ hash of already-seen results.
 
 package Attean::Plan::HashDistinct 0.009 {
 	use Moo;
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	sub plan_as_string { return 'HashDistinct' }
+	use namespace::clean;
 	
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
 
-		return $class->SUPER::BUILDARGS(%args);
-	}
+	sub plan_as_string { return 'HashDistinct' }
 	
 	sub impl {
 		my $self	= shift;
@@ -1205,23 +1162,12 @@ filtering out sequential duplicates.
 
 package Attean::Plan::Unique 0.009 {
 	use Moo;
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	sub plan_as_string { return 'Unique' }
+	use namespace::clean;
 	
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
 
-		return $class->SUPER::BUILDARGS(%args);
-	}
+	sub plan_as_string { return 'Unique' }
 	
 	sub impl {
 		my $self	= shift;
@@ -1252,25 +1198,14 @@ number of results ("offset") and limiting the total number of returned results
 package Attean::Plan::Slice 0.009 {
 	use Moo;
 	use Types::Standard qw(Int);
+	use namespace::clean;
+	
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
 
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
-
-		return $class->SUPER::BUILDARGS(%args);
-	}
-	
 	sub plan_as_string {
 		my $self	= shift;
 		my @str;
@@ -1379,30 +1314,20 @@ sorting is applied.
 package Attean::Plan::OrderBy 0.009 {
 	use Moo;
 	use Types::Standard qw(HashRef ArrayRef InstanceOf Bool Str);
+	use namespace::clean;
+	
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
 	has 'variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
 	has 'ascending' => (is => 'ro', isa => HashRef[Bool], required => 1);
+
 	sub plan_as_string {
 		my $self	= shift;
 		my @vars	= @{ $self->variables };
 		my $ascending	= $self->ascending;
 		my @strings	= map { sprintf('%s(?%s)', ($ascending->{$_} ? 'ASC' : 'DESC'), $_) } @vars;
 		return sprintf('Order { %s }', join(', ', @strings));
-	}
-	
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
-
-		return $class->SUPER::BUILDARGS(%args);
 	}
 	
 	sub sort_rows {
@@ -1777,26 +1702,15 @@ package Attean::Plan::Exists 0.009 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+
 	sub tree_attributes { return qw(variables rows) };
 	sub plan_as_string { return 'Exists' }
-	
-	sub BUILDARGS {
-		# TODO: this code is repeated in several plan classes; figure out a way to share it.
-		my $class		= shift;
-		my %args		= @_;
-		my %vars		= map { $_ => 1 } map { @{ $_->in_scope_variables } } @{ $args{ children } };
-		my @vars		= keys %vars;
-		
-		if (exists $args{in_scope_variables}) {
-			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
-		}
-		$args{in_scope_variables}	= \@vars;
-
-		return $class->SUPER::BUILDARGS(%args);
-	}
 	
 	sub impl {
 		my $self	= shift;

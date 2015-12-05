@@ -96,19 +96,12 @@ package Attean::API::BindingSubstitutionPlan 0.009 {
 	}
 }
 
-package Attean::API::Plan::Join 0.009 {
+package Attean::API::UnionScopeVariablesPlan 0.009 {
 	use Moo::Role;
-	use Types::Standard qw(CodeRef);
 	use namespace::clean;
-	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
-	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
-	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
-	has 'anti' => (is => 'ro', isa => Bool, default => 0);	# is this an anti-join
-	has 'left' => (is => 'ro', isa => Bool, default => 0);	# is this a left, outer-join
-	
-	# if this is a left, outer-join, this is the filter expression that acts as part of the join operation (see the SPARQL semantics for LeftJoin for more details)
-	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
 
+	with 'Attean::API::Plan';
+	
 	around 'BUILDARGS' => sub {
 		my $orig		= shift;
 		my $class		= shift;
@@ -121,8 +114,24 @@ package Attean::API::Plan::Join 0.009 {
 		$args{in_scope_variables}	= [@vars];
 
 		return $orig->( $class, %args );
-	}
+	};
+}
+
+package Attean::API::Plan::Join 0.009 {
+	use Moo::Role;
+	use Types::Standard qw(CodeRef);
+	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
+	use namespace::clean;
+
+	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
 	
+	has 'join_variables' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	has 'anti' => (is => 'ro', isa => Bool, default => 0);	# is this an anti-join
+	has 'left' => (is => 'ro', isa => Bool, default => 0);	# is this a left, outer-join
+	
+	# if this is a left, outer-join, this is the filter expression that acts as part of the join operation (see the SPARQL semantics for LeftJoin for more details)
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
 }
 
 package Attean::API::Planner 0.009 {
