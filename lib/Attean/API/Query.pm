@@ -151,7 +151,7 @@ package Attean::API::SPARQLSerializable 0.009 {
 		
 		my $algebra	= $self;
 		my %modifiers;
-		while ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
+		while ($algebra->isa('Attean::Algebra::OrderBy') or $algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
 			# TODO: Handle ORDER BY
 			# TODO: Handle projection
 			# TODO: Handle aggregation/having
@@ -167,6 +167,8 @@ package Attean::API::SPARQLSerializable 0.009 {
 				if ($algebra->offset > 0) {
 					$modifiers{ offset }	= $algebra->offset;
 				}
+			} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
+				die;
 			} else {
 				die;
 			}
