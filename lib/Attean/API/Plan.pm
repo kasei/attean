@@ -61,7 +61,7 @@ package Attean::API::Plan 0.009 {
 				}
 				push(@flags, "order: " . join('; ', @orders));
 			}
-			$string	.= "-$indent " .  $a->plan_as_string;
+			$string	.= "-$indent " .  $a->plan_as_string($level);
 			if (scalar(@flags)) {
 				$string .= ' (' . join(' ', @flags) . ")";
 			}
