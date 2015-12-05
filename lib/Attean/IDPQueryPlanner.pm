@@ -711,7 +711,7 @@ sub-plan participating in the join.
 		my $model		= shift;
 		my $interesting	= shift;
 		my @plans		= @{ shift || [] };
-	        no  sort 'stable';
+		no  sort 'stable';
 		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @plans;
 		return splice(@sorted, 0, 5);
 	}
@@ -829,7 +829,10 @@ sub-plan participating in the join.
 			if ($plan->isa('Attean::Plan::Quad')) {
 				my @vars	= map { $_->value } grep { blessed($_) and $_->does('Attean::API::Variable') } $plan->values;
 				# This gives a cost increasing at a reasonable pace
-				return $self->_hsp_heuristic_triple_sum($plan) * scalar(@vars);
+				$cost	= $self->_hsp_heuristic_triple_sum($plan) * scalar(@vars);
+			} elsif ($plan->isa('Attean::Plan::Table')) {
+				my $rows	= $plan->rows;
+				$cost		= scalar(@$rows);
 			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
