@@ -1453,16 +1453,20 @@ Evaluates a SPARQL query against a remove endpoint.
 package Attean::Plan::Service 0.009 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf Bool Str);
+	use namespace::clean;
+
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+
+	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'sparql' => (is => 'ro', isa => Str, required => 1);
+
 	sub plan_as_string {
 		my $self	= shift;
 		my $sparql	= $self->sparql;
 		$sparql		=~ s/\s+/ /g;
 		return sprintf('Service <%s> %s', $self->endpoint->as_string, $sparql);
 	}
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
-	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
-	has 'silent' => (is => 'ro', isa => Bool, default => 0);
-	has 'sparql' => (is => 'ro', isa => Str, required => 1);
 	
 	sub tree_attributes { return qw(endpoint) };
 	sub impl {
@@ -1482,11 +1486,24 @@ package Attean::Plan::Table 0.009 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
+
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
-	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+
 	sub tree_attributes { return qw(variables rows) };
-	sub plan_as_string { return 'Table' }
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x ($level + 1);
+		my $vars	= join(', ', map { "?$_" } @{ $self->in_scope_variables });
+		my $s		= "Table (" . $vars . ")";
+		foreach my $row (@{ $self->rows }) {
+			$s	.= "\n-${indent} " . $row->as_string;
+		}
+		return $s;
+	}
 	
 	sub BUILDARGS {
 		my $class		= shift;
