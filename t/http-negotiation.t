@@ -8,22 +8,22 @@ use Attean;
 
 {
 	my %negotiate_expect	= (
-		"text/plain"	=> ['NTriples', 'text/plain'],
+		"text/plain"	=> [qr'AtteanX::Serializer::NTriples', 'text/plain'],
+		"application/rdf+xml;q=0,text/plain;q=1"	=> [qr'AtteanX::Serializer::.*NTriples', 'text/plain'], # Allow both NTriples and CanonicalNTriples
 # 		"application/rdf+xml"	=> ['RDFXML', 'application/rdf+xml'],
 # 		"image/jpeg;q=1,application/rdf+xml;q=0.5"	=> ['RDFXML', 'application/rdf+xml'],
 # 		"application/rdf+xml;q=1,text/plain"	=> ['RDFXML', 'application/rdf+xml'],
-		"application/rdf+xml;q=0,text/plain;q=1"	=> ['NTriples', 'text/plain'],
 # 		"application/rdf+xml;q=0.5,text/turtle;q=0.7,text/xml"	=> ['Turtle', 'text/turtle'],
 # 		"application/x-turtle;q=1,text/turtle;q=0.7"	=> ['Turtle', 'application/x-turtle'],
 	);
 	
 	while (my ($accept,$data) = each(%negotiate_expect)) {
-		my ($sname, $etype)	= @$data;
+		my ($sregex, $etype)	= @$data;
 		my $h	= new HTTP::Headers;
 		$h->header(Accept => $accept);
 		my ($type, $s)	= Attean->negotiate_serializer( request_headers => $h );
-		is( $type, $etype, "expected media type for $sname serialization is $etype" );
-		unless (is( $s, "AtteanX::Serializer::$sname", "HTTP negotiated $sname serializer" )) {
+		is( $type, $etype, "expected media type for $sregex serialization is $etype" );
+		unless (like( $s, $sregex, "HTTP negotiated $sregex serializer" )) {
 			warn "# $accept";
 		}
 	}
@@ -92,7 +92,7 @@ while (my ($accept,$restrict) = each(%negotiate_fail)) {
 	my ($type, $s)	= Attean->negotiate_serializer( request_headers => $h );
 	use Data::Dumper;
 	like( $type, qr'^((application/n-triples)|(text/plain))$', "expected media type with empty accept header" ) or die Dumper($type, $s);
-	is( $s, "AtteanX::Serializer::NTriples", "HTTP negotiated empty accept header to proper serializer" );
+	like($s, qr/^AtteanX::Serializer::.*NTriples$/, "HTTP negotiated empty accept header to proper serializer" );
 }
 
 done_testing();
