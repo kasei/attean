@@ -438,7 +438,7 @@ sub _statement_id {
 		$i	= $i->intersection($s);
 	}
 	if ($i->size == 1) {
-		my ($id)	= $i->members;
+		my ($id)	= $i->elements;
 		return $id;
 	} else {
 		return -1;
