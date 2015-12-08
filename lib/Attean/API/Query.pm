@@ -136,14 +136,12 @@ package Attean::API::DirectedAcyclicGraph 0.009 {
 	}
 }
 
-=item * L<Attean::API::Algebra>
-
-=cut
-
 package Attean::API::SPARQLSerializable 0.009 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo::Role;
+	use namespace::clean;
+
 	requires 'sparql_tokens';
 	
 	sub query_tokens {
@@ -154,17 +152,19 @@ package Attean::API::SPARQLSerializable 0.009 {
 		my $form	= 'SELECT';
 		if ($algebra->isa('Attean::Algebra::Ask')) {
 			$form	= 'ASK';
+			($algebra)	= @{ $algebra->children };
 		} elsif ($algebra->isa('Attean::Algebra::Describe')) {
 			$form	= 'DESCRIBE';
+			($algebra)	= @{ $algebra->children };
 			die;
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 			$form	= 'CONSTRUCT';
+			($algebra)	= @{ $algebra->children };
 			die;
 		}
 		
 		my %modifiers;
-		while ($algebra->isa('Attean::Algebra::Group') or $algebra->isa('Attean::Algebra::OrderBy') or $algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
-			# TODO: Handle ORDER BY
+		while ($algebra->isa('Attean::Algebra::Extend') or $algebra->isa('Attean::Algebra::Group') or $algebra->isa('Attean::Algebra::OrderBy') or $algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
 			# TODO: Handle projection
 			# TODO: Handle aggregation/having
 			# TODO: Error if Slice appears before distinct/reduced
@@ -180,7 +180,16 @@ package Attean::API::SPARQLSerializable 0.009 {
 					$modifiers{ offset }	= $algebra->offset;
 				}
 			} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
+				$modifiers{order}	= $algebra->comparators;
+			} elsif ($algebra->isa('Attean::Algebra::Extend')) {
 				die;
+				# $modifiers{project}	= [];
+			} elsif ($algebra->isa('Attean::Algebra::Project')) {
+				die;
+				# $modifiers{project}	= [];
+			} elsif ($algebra->isa('Attean::Algebra::Group')) {
+				die;
+				# $modifiers{having}	= $expr;
 			} else {
 				die;
 			}
@@ -195,25 +204,61 @@ package Attean::API::SPARQLSerializable 0.009 {
 			} elsif ($modifiers{reduced}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['REDUCED'] ));
 			}
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
+			
+			if (my $p = $modifiers{project}) {
+				die;
+			} else {
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
+			}
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['WHERE'] ));
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));
+			if (my $expr = $modifiers{having}) {
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['HAVING'] ));
+				push(@tokens, $expr->sparql_tokens->elements);
+			}
+			if (my $comps = $modifiers{order}) {
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ORDER'] ));
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
+				foreach my $c (@$comps) {
+					push(@tokens, $c->sparql_tokens->elements);
+				}
+			}
 			if (exists $modifiers{limit}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['LIIMT'] ));
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['LIMIT'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{limit}] ));
 			}
 			if (exists $modifiers{offset}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['OFFSET'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{offset}] ));
 			}
+		} elsif ($form eq 'ASK') {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SELECT'] ));
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
+			push(@tokens, $algebra->sparql_tokens->elements);
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));
 		} else {
 			die;
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
+
+package Attean::API::SPARQLQuerySerializable 0.009 {
+	use Moo::Role;
+	use namespace::clean;
+	with 'Attean::API::SPARQLSerializable';
+
+	sub sparql_tokens {
+		my $self	= shift;
+		return $self->query_tokens;
+	}
+}
+
+=item * L<Attean::API::Algebra>
+
+=cut
 
 package Attean::API::Algebra 0.009 {
 	use Moo::Role;

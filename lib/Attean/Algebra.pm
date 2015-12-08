@@ -150,9 +150,9 @@ package Attean::Algebra::LeftJoin 0.009 {
 		
 		my @tokens;
 		push(@tokens, $l);
-		push(@tokens, $lhs->sparql_tokens->members);
+		push(@tokens, $lhs->sparql_tokens->elements);
 		push(@tokens, $r, $opt, $l);
-		push(@tokens, $rhs->sparql_tokens->members);
+		push(@tokens, $rhs->sparql_tokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -226,9 +226,9 @@ package Attean::Algebra::Union 0.009 {
 		
 		my @tokens;
 		push(@tokens, $l);
-		push(@tokens, $lhs->sparql_tokens->members);
+		push(@tokens, $lhs->sparql_tokens->elements);
 		push(@tokens, $r, $union, $l);
-		push(@tokens, $rhs->sparql_tokens->members);
+		push(@tokens, $rhs->sparql_tokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -256,7 +256,7 @@ package Attean::Algebra::Graph 0.009 {
 		my ($child)	= @{ $self->children };
 		my @vars	= $child->in_scope_variables;
 		if ($graph->does('Attean::API::Variable')) {
-			return Set::Scalar->new(@vars, $graph->value)->members;
+			return Set::Scalar->new(@vars, $graph->value)->elements;
 		} else {
 			return @vars;
 		}
@@ -289,9 +289,9 @@ package Attean::Algebra::Graph 0.009 {
 		
 		my @tokens;
 		push(@tokens, $graph);
-		push(@tokens, $self->graph->sparql_tokens->members);
+		push(@tokens, $self->graph->sparql_tokens->elements);
 		push(@tokens, $l);
-		push(@tokens, $child->sparql_tokens->members);
+		push(@tokens, $child->sparql_tokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -308,7 +308,7 @@ package Attean::Algebra::Extend 0.009 {
 		my $self	= shift;
 		my ($child)	= @{ $self->children };
 		my @vars	= $child->in_scope_variables;
-		return Set::Scalar->new(@vars, $self->variable->value)->members;
+		return Set::Scalar->new(@vars, $self->variable->value)->elements;
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
@@ -396,9 +396,9 @@ package Attean::Algebra::Minus 0.009 {
 		
 		my @tokens;
 		push(@tokens, $l);
-		push(@tokens, $lhs->sparql_tokens->members);
+		push(@tokens, $lhs->sparql_tokens->elements);
 		push(@tokens, $r, $minus, $l);
-		push(@tokens, $rhs->sparql_tokens->members);
+		push(@tokens, $rhs->sparql_tokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -414,7 +414,7 @@ package Attean::Algebra::Distinct 0.009 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 
 	sub algebra_as_string { return 'Distinct' }
 	sub as_sparql {
@@ -433,11 +433,6 @@ package Attean::Algebra::Distinct 0.009 {
 				. "${indent}}\n";
 		}
 	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
-	}
 }
 
 =item * L<Attean::Algebra::Reduced>
@@ -449,7 +444,7 @@ package Attean::Algebra::Reduced 0.009 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 
 	sub algebra_as_string { return 'Reduced' }
 	sub as_sparql {
@@ -468,11 +463,6 @@ package Attean::Algebra::Reduced 0.009 {
 				. "${indent}}\n";
 		}
 	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
-	}
 }
 
 =item * L<Attean::Algebra::Slice>
@@ -485,7 +475,7 @@ package Attean::Algebra::Slice 0.009 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
@@ -519,11 +509,6 @@ package Attean::Algebra::Slice 0.009 {
 		$sparql	.= "${indent}OFFSET " . $self->offset . "\n" if ($self->offset > 0);
 		return $sparql;
 	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
-	}
 }
 
 =item * L<Attean::Algebra::Project>
@@ -536,7 +521,7 @@ package Attean::Algebra::Project 0.009 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 
 	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
 
@@ -545,7 +530,7 @@ package Attean::Algebra::Project 0.009 {
 		my ($child)	= @{ $self->children };
 		my $set		= Set::Scalar->new( $child->in_scope_variables );
 		my $proj	= Set::Scalar->new( map { $_->value } @{ $self->variables } );
-		return $set->intersection($proj)->members;
+		return $set->intersection($proj)->elements;
 	}
 	sub algebra_as_string {
 		my $self	= shift;
@@ -587,11 +572,6 @@ package Attean::Algebra::Project 0.009 {
 		}
 		
 		return $sparql;
-	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
 	}
 }
 
@@ -638,10 +618,10 @@ package Attean::Algebra::Comparator 0.009 {
 		
 		my @tokens;
 		if ($self->ascending) {
-			push(@tokens, $self->expression->sparql_tokens->members);
+			push(@tokens, $self->expression->sparql_tokens->elements);
 		} else {
 			push(@tokens, $desc, $l);
-			push(@tokens, $self->expression->sparql_tokens->members);
+			push(@tokens, $self->expression->sparql_tokens->elements);
 			push(@tokens, $r);
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
@@ -660,7 +640,7 @@ package Attean::Algebra::OrderBy 0.009 {
 	use namespace::clean;
 	
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 	
 	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
 	
@@ -681,19 +661,6 @@ package Attean::Algebra::OrderBy 0.009 {
 			. $child->as_sparql( %args, level => $level+1 )
 			. "${indent}}\n"
 			. "${indent}ORDER BY " . join(' ', map { $_->as_sparql } @{ $self->comparators }) . "\n";
-	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		my $order	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ORDER'] );
-		my $by		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] );
-		
-		my @tokens;
-		push(@tokens, $order, $by);
-		foreach my $c (@{ $self->comparators }) {
-			push(@tokens, $c->sparql_tokens->members);
-		}
-		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
@@ -722,7 +689,7 @@ package Attean::Algebra::BGP 0.009 {
 			my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } $t->values;
 			$set->insert(@vars);
 		}
-		return $set->members;
+		return $set->elements;
 	}
 	
 	sub sparql_tokens {
@@ -826,9 +793,9 @@ package Attean::Algebra::Service 0.009 {
 		
 		my @tokens;
 		push(@tokens, $service);
-		push(@tokens, $self->endpoint->sparql_tokens->members);
+		push(@tokens, $self->endpoint->sparql_tokens->elements);
 		push(@tokens, $l);
-		push(@tokens, $child->sparql_tokens->members);
+		push(@tokens, $child->sparql_tokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -855,7 +822,7 @@ package Attean::Algebra::Path 0.009 {
 	sub in_scope_variables {
 		my $self	= shift;
 		my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } ($self->subject, $self->object);
-		return Set::Scalar->new(@vars)->members;
+		return Set::Scalar->new(@vars)->elements;
 	}
 
 	sub tree_attributes { return qw(subject path object) };
@@ -905,7 +872,7 @@ package Attean::Algebra::Group 0.009 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 
 	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
 	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
@@ -976,11 +943,6 @@ package Attean::Algebra::Group 0.009 {
 		}
 		$sparql	.= "\n";
 		return $sparql;
-	}
-	
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
 	}
 }
 
@@ -1350,7 +1312,7 @@ package Attean::Algebra::Table 0.009 {
 		my @tokens;
 		push(@tokens, $values, $lparen);
 		foreach my $var (@{ $self->variables }) {
-			push(@tokens, $var->sparql_tokens->members);
+			push(@tokens, $var->sparql_tokens->elements);
 		}
 		push(@tokens, $values, $rparen);
 		
@@ -1359,7 +1321,7 @@ package Attean::Algebra::Table 0.009 {
 			push(@tokens, $lparen);
 			foreach my $val ($row->values) {
 				# TODO: verify correct serialization of UNDEF
-				push(@tokens, $val->sparql_tokens->members);
+				push(@tokens, $val->sparql_tokens->elements);
 			}
 			push(@tokens, $rparen);
 		}
@@ -1380,7 +1342,7 @@ package Attean::Algebra::Ask 0.009 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 	
 	sub in_scope_variables { return; }
 
@@ -1396,11 +1358,6 @@ package Attean::Algebra::Ask 0.009 {
 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
 			. "${indent}}\n";
 	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
-	}
 }
 
 =item * L<Attean::Algebra::Construct>
@@ -1415,7 +1372,7 @@ package Attean::Algebra::Construct 0.009 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::SPARQLQuerySerializable';
 
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
 
@@ -1434,11 +1391,6 @@ package Attean::Algebra::Construct 0.009 {
 			. "${indent}} WHERE {\n"
 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
 			. "${indent}}\n";
-	}
-
-	sub sparql_tokens {
-		my $self	= shift;
-		return $self->query_tokens;
 	}
 }
 
