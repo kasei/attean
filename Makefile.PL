@@ -24,6 +24,7 @@ requires		'Scalar::Util'				=> 0;
 requires		'Set::Scalar'				=> 0;
 requires		'Type::Tiny'				=> 0;
 requires		'Moo'						=> 1.006000;
+requires		'MooX::Log::Any'			=> 0;
 requires		'Sub::Util'					=> 1.40;
 requires		'Sub::Install'				=> 0;
 requires		'Set::Scalar'				=> 0;
