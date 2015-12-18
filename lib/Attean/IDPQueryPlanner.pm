@@ -49,7 +49,8 @@ package Attean::IDPQueryPlanner 0.009 {
 	use Math::Cartesian::Product;
 	use namespace::clean;
 
-	with 'Attean::API::CostPlanner';
+	with 'Attean::API::CostPlanner',
+	     'MooX::Log::Any';
 	has 'counter' => (is => 'rw', isa => Int, default => 0);
 
 =back
@@ -713,6 +714,12 @@ sub-plan participating in the join.
 		my @plans		= @{ shift || [] };
 		no  sort 'stable';
 		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @plans;
+		if ($self->log->is_trace) {
+			$self->log->trace('============= Plan iteration separator ==============');
+			foreach my $plan (@sorted){
+				$self->log->trace("Cost: " . $self->cost_for_plan($plan, $model) . " for plan:\n". $plan->as_string);
+			}
+		}
 		return splice(@sorted, 0, 5);
 	}
 	
