@@ -54,13 +54,110 @@ package Attean::API::NaiveJoinPlanner 0.009 {
 		my $interesting		= shift;
 		my @args			= @_; # each $args[$i] here is an array reference containing alternate plans for element $i
 		
-		my @plans	= @{ shift(@args) };
+		my $plans	= shift(@args);
 		while (scalar(@args)) {
 			my $next	= shift(@args);
-			@plans		= $self->join_plans($model, $active_graphs, $default_graphs, [@plans], $next, 'inner');
+			my @plans	= $self->join_plans($model, $active_graphs, $default_graphs, $plans, $next, 'inner');
+			$plans		= \@plans;
 		}
 		
+		my @plans	= @$plans;
 		return @plans;
+	}
+}
+
+package Attean::API::SimpleCostPlanner 0.009 {
+	use Moo::Role;
+	use namespace::clean;
+	use Types::Standard qw(Int);
+	use Scalar::Util qw(blessed);
+	with 'Attean::API::CostPlanner';
+
+	has 'keep' => (is => 'ro', isa => Int, default => 5);
+	
+	around 'joins_for_plan_alternatives' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $model			= shift;
+		my @plans	= $orig->($self, $model, @_);
+		return $self->prune_plans($model, [], \@plans);
+	};
+	
+	sub prune_plans {
+		my $self		= shift;
+		my $model		= shift;
+		my $interesting	= shift;
+		my @plans		= @{ shift || [] };
+		no  sort 'stable';
+		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @plans;
+		
+		return ($self->keep) ? splice(@sorted, 0, $self->keep) : @sorted;
+	}
+	
+	sub cost_for_plan {
+		my $self	= shift;
+		my $plan	= shift;
+		my $model	= shift;
+		Carp::confess unless ref($model);
+		
+		if ($plan->has_cost) {
+			return $plan->cost;
+		} else {
+			if ($model->does('Attean::API::CostPlanner')) {
+				if (defined(my $cost = $model->cost_for_plan($plan, $model))) {
+					$plan->cost($cost);
+					return $cost;
+				}
+			}
+
+			my $cost	= 1;
+			my @children	= @{ $plan->children };
+			if ($plan->isa('Attean::Plan::Quad')) {
+				my @vars	= map { $_->value } grep { blessed($_) and $_->does('Attean::API::Variable') } $plan->values;
+				return scalar(@vars);
+			} elsif ($plan->isa('Attean::Plan::Table')) {
+				my $rows	= $plan->rows;
+				$cost		= scalar(@$rows);
+			} elsif ($plan->isa('Attean::Plan::NestedLoopJoin')) {
+				my $lcost		= $self->cost_for_plan($children[0], $model);
+				my $rcost		= $self->cost_for_plan($children[1], $model);
+				if ($lcost == 0) {
+					$cost	= $rcost;
+				} elsif ($rcost == 0) {
+					$cost	= $lcost;
+				} else {
+					$cost	= $lcost * $rcost;
+				}
+			} elsif ($plan->isa('Attean::Plan::HashJoin')) {
+				my $lcost		= $self->cost_for_plan($children[0], $model);
+				my $rcost		= $self->cost_for_plan($children[1], $model);
+				if ($lcost == 0) {
+					$cost	= $rcost;
+				} elsif ($rcost == 0) {
+					$cost	= $lcost;
+				} else {
+					$cost	= ($lcost + $rcost);
+				}
+			} elsif ($plan->isa('Attean::Plan::Service')) {
+				my $scost	= 10;
+				foreach my $c (@{ $plan->children }) {
+					$scost	+= $self->cost_for_plan($c, $model);
+				}
+				$cost	= 5 * $scost;
+			} elsif ($plan->isa('Attean::Plan::Unique')) {
+				$cost	= 0; # consider a filter on the iterator (like unique) to be essentially free
+				foreach my $c (@{ $plan->children }) {
+					$cost	+= $self->cost_for_plan($c, $model);
+				}
+			} else {
+				foreach my $c (@{ $plan->children }) {
+					$cost	+= $self->cost_for_plan($c, $model);
+				}
+			}
+			
+			$plan->cost($cost);
+			return $cost;
+		}
 	}
 }
 
@@ -80,7 +177,7 @@ package Attean::API::IDPJoinPlanner 0.009 {
 	use namespace::clean;
 
 	with 'Attean::API::JoinPlanner';
-	with 'Attean::API::CostPlanner';
+	with 'Attean::API::SimpleCostPlanner';
 
 	sub joins_for_plan_alternatives {
 		my $self			= shift;
