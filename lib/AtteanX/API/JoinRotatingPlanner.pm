@@ -35,7 +35,6 @@ package AtteanX::API::JoinRotatingPlanner {
 		if ($type eq 'inner') {
 			my @rotated;
 			foreach my $p (@plans) {
-				push(@rotated, $p);
 				if ($self->allow_join_rotation($p)) {
 					my ($lhs, $rhs)	= @{ $p->children };
 					if ($lhs->does('Attean::API::Plan::Join')) {
@@ -54,6 +53,7 @@ package AtteanX::API::JoinRotatingPlanner {
 						}
 					}
 				}
+				push(@rotated, $p);
 			}
 			return @rotated;
 		} else {
