@@ -44,6 +44,7 @@ lib/Attean/API/QuadParser.pod
 lib/Attean/API/QuadPattern.pod
 lib/Attean/API/QuadSerializer.pod
 lib/Attean/API/Query.pm
+lib/Attean/API/QueryPlanner.pm
 lib/Attean/API/RepeatableIterator.pod
 lib/Attean/API/Result.pod
 lib/Attean/API/ResultParser.pod
@@ -72,6 +73,7 @@ lib/Attean/Literal.pm
 lib/Attean/Plan.pm
 lib/Attean/Quad.pm
 lib/Attean/QuadModel.pm
+lib/Attean/QueryPlanner.pm
 lib/Attean/RDF.pm
 lib/Attean/Result.pm
 lib/Attean/SimpleQueryEvaluator.pm
@@ -80,6 +82,7 @@ lib/Attean/TreeRewriter.pm
 lib/Attean/Triple.pm
 lib/Attean/TripleModel.pm
 lib/Attean/Variable.pm
+lib/AtteanX/API/JoinRotatingPlanner.pm
 lib/AtteanX/API/Lexer.pm
 lib/AtteanX/Parser/NQuads.pm
 lib/AtteanX/Parser/NTriples.pm
@@ -127,11 +130,14 @@ t/00.load.t
 t/algebra.t
 t/binding-equality.t
 t/binding.t
+t/cost_planner.t
 t/expression.t
 t/http-negotiation.t
 t/idp_planner.t
 t/iter.t
+t/join_rotating_planner.t
 t/model-quad.t
+t/naive_planner.t
 t/parser-nquads.t
 t/parser-ntriples.t
 t/parser-sparqlxml.t
