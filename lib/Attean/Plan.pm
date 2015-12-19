@@ -2025,7 +2025,7 @@ package Attean::Plan::Aggregate 0.009 {
 # 	sub in_scope_variables {
 # 		my $self	= shift;
 # 		my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } ($self->subject, $self->object);
-# 		return Set::Scalar->new(@vars)->members;
+# 		return Set::Scalar->new(@vars)->elements;
 # 	}
 # 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
 # 	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
