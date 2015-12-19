@@ -134,35 +134,6 @@ package Attean::API::Plan::Join 0.009 {
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 0, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
 }
 
-package Attean::API::Planner 0.009 {
-	use Moo::Role;
-	use Types::Standard qw(CodeRef);
-	use namespace::clean;
-	
-	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
-}
-
-package Attean::API::CostPlanner 0.009 {
-	use Moo::Role;
-	use Types::Standard qw(CodeRef);
-	use namespace::clean;
-	with 'Attean::API::Planner';
-	
-	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, \@active_graphs, \@default_graphs)
-	requires 'cost_for_plan'; # cost_for_plan($plan, $model)
-	
-	sub plan_for_algebra {
-		my $self			= shift;
-		my $algebra			= shift;
-		my $model			= shift;
-		my $default_graphs	= shift;
-		my $active_graphs	= $default_graphs;
-		my @plans			= sort { $self->cost_for_plan($a, $model) <=> $self->cost_for_plan($b, $model) } $self->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs);
-		my $plan			= shift(@plans);
-		return $plan;
-	}
-}
-
 1;
 
 __END__

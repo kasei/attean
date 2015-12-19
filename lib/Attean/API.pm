@@ -192,7 +192,7 @@ package Attean::API 0.009 {
 	use Attean::API::Query;
 	use Attean::API::Expression;
 	use Attean::API::Plan;
-	use Attean::API::JoinPlanner;
+	use Attean::API::QueryPlanner;
 	
 	use Attean::Variable;
 	use Attean::Blank;

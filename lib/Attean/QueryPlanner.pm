@@ -49,7 +49,7 @@ package Attean::QueryPlanner 0.009 {
 	use Math::Cartesian::Product;
 	use namespace::clean;
 
-	with 'Attean::API::Planner';
+	with 'Attean::API::QueryPlanner';
 	has 'counter' => (is => 'rw', isa => Int, default => 0);
 
 =back

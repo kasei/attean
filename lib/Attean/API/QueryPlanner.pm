@@ -32,6 +32,35 @@ methods that consume the L<Attean::API::CostPlanner> role.
 
 =cut
 
+package Attean::API::QueryPlanner 0.009 {
+	use Moo::Role;
+	use Types::Standard qw(CodeRef);
+	use namespace::clean;
+	
+	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
+}
+
+package Attean::API::CostPlanner 0.009 {
+	use Moo::Role;
+	use Types::Standard qw(CodeRef);
+	use namespace::clean;
+	with 'Attean::API::QueryPlanner';
+	
+	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, \@active_graphs, \@default_graphs)
+	requires 'cost_for_plan'; # cost_for_plan($plan, $model)
+	
+	sub plan_for_algebra {
+		my $self			= shift;
+		my $algebra			= shift;
+		my $model			= shift;
+		my $default_graphs	= shift;
+		my $active_graphs	= $default_graphs;
+		my @plans			= sort { $self->cost_for_plan($a, $model) <=> $self->cost_for_plan($b, $model) } $self->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs);
+		my $plan			= shift(@plans);
+		return $plan;
+	}
+}
+
 package Attean::API::JoinPlanner 0.009 {
 	use Moo::Role;
 	use namespace::clean;
@@ -44,7 +73,7 @@ package Attean::API::NaiveJoinPlanner 0.009 {
 	use namespace::clean;
 
 	with 'Attean::API::JoinPlanner';
-	with 'Attean::API::Planner';
+	with 'Attean::API::QueryPlanner';
 
 	sub joins_for_plan_alternatives {
 		my $self			= shift;
