@@ -18,7 +18,7 @@ package TestPlanner 0.009 {
 
 my $p	= TestPlanner->new();
 isa_ok($p, 'TestPlanner');
-does_ok($p, 'Attean::API::Planner');
+does_ok($p, 'Attean::API::QueryPlanner');
 
 my $store	= AtteanX::Store::Memory->new();
 my $model	= Attean::MutableQuadModel->new( store => $store );
