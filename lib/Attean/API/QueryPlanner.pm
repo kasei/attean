@@ -385,6 +385,8 @@ package Attean::API::IDPJoinPlanner 0.009 {
 				}
 			}
 			
+			# Costs must be integers for comparisons to work in the IDP planning algorithm
+			$cost	= int($cost);
 			$plan->cost($cost);
 			return $cost;
 		}
