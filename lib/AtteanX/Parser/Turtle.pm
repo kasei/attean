@@ -10,7 +10,7 @@ AtteanX::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle version 0.009
+This document describes AtteanX::Parser::Turtle version 0.010
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ This module implements a parser for the Turtle RDF format.
 
 =cut
 
-package AtteanX::Parser::Turtle 0.009 {
+package AtteanX::Parser::Turtle 0.010 {
 	use Moo;
 	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 	use utf8;

@@ -4,7 +4,7 @@ Attean - A Semantic Web Framework
 
 =head1 VERSION
 
-This document describes Attean version 0.009
+This document describes Attean version 0.010
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ Semantic Web (RDF and SPARQL) data.
 package Attean {
 	use v5.14;
 	use warnings;
-	our $VERSION	= '0.009';
+	our $VERSION	= '0.010';
 	use Attean::API;
 	
 	use Attean::Blank;
@@ -249,14 +249,16 @@ The subsequent code will have to find out how to return a representation.
 		my $headers		= delete $options{ 'request_headers' };
 		my $restrict	= delete $options{ 'restrict' };
 		my $extend		= delete $options{ 'extend' } || {};
-		my %sclasses;
 		my %serializer_names;
 		my %media_types;
 		foreach my $sclass ($class->list_serializers) {
 			my $name	= $sclass =~ s/^.*://r;
 			$serializer_names{lc($name)}	= $sclass;
-			$media_types{$_}	= $sclass for (@{ $sclass->media_types });
+			for (@{ $sclass->media_types }) {
+				push(@{ $media_types{$_} }, $sclass);
+			}
 		}
+		my %sclasses;
 		if (ref($restrict) && ref($restrict) eq 'ARRAY') {
 			foreach (@$restrict) {
 				if (my $sclass = $serializer_names{lc($_)}) {
@@ -267,21 +269,23 @@ The subsequent code will have to find out how to return a representation.
 			%sclasses = reverse %serializer_names;
 		}
 		my @default_variants;
-		while (my($type, $sclass) = each(%media_types)) {
-			next unless $sclasses{$sclass};
-			my $qv;
-			# slightly prefer turtle as a readable format to others
-			# try hard to avoid using ntriples as 'text/plain' isn't very useful for conneg
-			if ($type eq 'application/n-triples') {
-				$qv	= 1.0;
-			} elsif ($type eq 'text/plain') {
-				$qv	= 0.2;
-			} else {
-				$qv	= 0.99;
-				$qv		-= 0.01 if ($type =~ m#/x-#);				# prefer non experimental media types
-				$qv		-= 0.01 if ($type =~ m#^application/(?!rdf[+]xml)#);	# prefer standard rdf/xml to other application/* formats
+		while (my($type, $sclasses) = each(%media_types)) {
+			foreach my $sclass (@$sclasses) {
+				next unless $sclasses{$sclass};
+				my $qv;
+				# slightly prefer turtle as a readable format to others
+				# try hard to avoid using ntriples as 'text/plain' isn't very useful for conneg
+				if ($type eq 'application/n-triples') {
+					$qv	= 1.0;
+				} elsif ($type eq 'text/plain') {
+					$qv	= 0.2;
+				} else {
+					$qv	= 0.99;
+					$qv		-= 0.01 if ($type =~ m#/x-#);				# prefer non experimental media types
+					$qv		-= 0.01 if ($type =~ m#^application/(?!rdf[+]xml)#);	# prefer standard rdf/xml to other application/* formats
+				}
+				push(@default_variants, [$type, $qv, $type]);
 			}
-			push(@default_variants, [$type, $qv, $type]);
 		}
 	
 		my %custom_thunks;
@@ -290,7 +294,7 @@ The subsequent code will have to find out how to return a representation.
 			push(@custom_variants, [$thunk, 1.0, $type]);
 			$custom_thunks{ $thunk }	= [$type, $thunk];
 		}
-	
+		
 		# remove variants with media types that are in custom_variants from @variants
 		my @variants	= grep { not exists $extend->{ $_->[2] } } @default_variants;
 		push(@variants, @custom_variants);
@@ -302,10 +306,10 @@ The subsequent code will have to find out how to return a representation.
 			return ($type, $thunk);
 		}
 	
-		if (defined($stype) and my $sclass = $media_types{ $stype }) {
-			return ($stype, $sclass);
+		if (defined($stype) and my $sclasses = $media_types{ $stype }) {
+			return ($stype, $sclasses->[0]);
 		} else {
-			die "No appropriate serializer found for content-negotiation";
+			die "No appropriate serializer found for content-negotiation: " . Data::Dumper->Dump([$headers, $restrict, $extend], [qw(headers restrict extend)]);
 		}
 	}
 	

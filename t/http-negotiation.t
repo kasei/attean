@@ -8,7 +8,7 @@ use Attean;
 
 {
 	my %negotiate_expect	= (
-		"text/plain"	=> [qr'AtteanX::Serializer::NTriples', 'text/plain'],
+		"text/plain"	=> [qr'AtteanX::Serializer::.*NTriples', 'text/plain'],
 		"application/rdf+xml;q=0,text/plain;q=1"	=> [qr'AtteanX::Serializer::.*NTriples', 'text/plain'], # Allow both NTriples and CanonicalNTriples
 # 		"application/rdf+xml"	=> ['RDFXML', 'application/rdf+xml'],
 # 		"image/jpeg;q=1,application/rdf+xml;q=0.5"	=> ['RDFXML', 'application/rdf+xml'],

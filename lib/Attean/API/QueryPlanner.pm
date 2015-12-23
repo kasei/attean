@@ -3,20 +3,20 @@ use warnings;
 
 =head1 NAME
 
-Attean::API::IDPJoinPlanning - Iterative dynamic programming query planning role
+Attean::API::IDPJoinPlanner - Iterative dynamic programming query planning role
 
 =head1 VERSION
 
-This document describes Attean::API::IDPJoinPlanning version 0.009
+This document describes Attean::API::IDPJoinPlanner version 0.010
 
 =head1 SYNOPSIS
 
   extends 'Attean::QueryPlanner';
-  with 'Attean::API::IDPJoinPlanning';
+  with 'Attean::API::IDPJoinPlanner';
 
 =head1 DESCRIPTION
 
-The Attean::API::IDPJoinPlanning role provides a query planner the
+The Attean::API::IDPJoinPlanner role provides a query planner the
 C<< joins_for_plan_alternatives >> method, as well as the cost estimation
 methods that consume the L<Attean::API::CostPlanner> role.
 
@@ -32,7 +32,7 @@ methods that consume the L<Attean::API::CostPlanner> role.
 
 =cut
 
-package Attean::API::QueryPlanner 0.009 {
+package Attean::API::QueryPlanner 0.010 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -40,7 +40,7 @@ package Attean::API::QueryPlanner 0.009 {
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
-package Attean::API::CostPlanner 0.009 {
+package Attean::API::CostPlanner 0.010 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -61,13 +61,13 @@ package Attean::API::CostPlanner 0.009 {
 	}
 }
 
-package Attean::API::JoinPlanner 0.009 {
+package Attean::API::JoinPlanner 0.010 {
 	use Moo::Role;
 	use namespace::clean;
 	requires 'joins_for_plan_alternatives';
 }
 
-package Attean::API::NaiveJoinPlanner 0.009 {
+package Attean::API::NaiveJoinPlanner 0.010 {
 	use Moo::Role;
 	use Math::Cartesian::Product;
 	use namespace::clean;
@@ -95,7 +95,7 @@ package Attean::API::NaiveJoinPlanner 0.009 {
 	}
 }
 
-package Attean::API::SimpleCostPlanner 0.009 {
+package Attean::API::SimpleCostPlanner 0.010 {
 	use Moo::Role;
 	use namespace::clean;
 	use Types::Standard qw(Int);
@@ -190,7 +190,7 @@ package Attean::API::SimpleCostPlanner 0.009 {
 	}
 }
 
-package Attean::API::IDPJoinPlanner 0.009 {
+package Attean::API::IDPJoinPlanner 0.010 {
 	use Moo::Role;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -205,6 +205,7 @@ package Attean::API::IDPJoinPlanner 0.009 {
 	use Math::Cartesian::Product;
 	use namespace::clean;
 
+	with 'MooX::Log::Any';
 	with 'Attean::API::JoinPlanner';
 	with 'Attean::API::SimpleCostPlanner';
 
@@ -313,6 +314,12 @@ package Attean::API::IDPJoinPlanner 0.009 {
 		my @plans		= @{ shift || [] };
 		no  sort 'stable';
 		my @sorted	= map { $_->[1] } sort { $a->[0] <=> $b->[0] } map { [$self->cost_for_plan($_, $model), $_] } @plans;
+		if ($self->log->is_trace) {
+			$self->log->trace('============= Plan iteration separator ==============');
+			foreach my $plan (@sorted){
+				$self->log->trace("Cost: " . $self->cost_for_plan($plan, $model) . " for plan:\n". $plan->as_string);
+			}
+		}
 		return splice(@sorted, 0, 5);
 	}
 	
@@ -323,7 +330,7 @@ package Attean::API::IDPJoinPlanner 0.009 {
 		my $self	= shift;
 		my $plan	= shift;
 		my $model	= shift;
-		Carp::confess unless ref($model);
+		Carp::confess "No model given" unless ref($model);
 		
 		if ($plan->has_cost) {
 			return $plan->cost;
@@ -385,6 +392,8 @@ package Attean::API::IDPJoinPlanner 0.009 {
 				}
 			}
 			
+			# Costs must be integers for comparisons to work in the IDP planning algorithm
+			$cost	= int($cost);
 			$plan->cost($cost);
 			return $cost;
 		}

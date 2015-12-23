@@ -1,4 +1,4 @@
-package AtteanX::API::Lexer 0.009 {
+package AtteanX::API::Lexer 0.010 {
 	use v5.14;
 	use strict;
 	use warnings;

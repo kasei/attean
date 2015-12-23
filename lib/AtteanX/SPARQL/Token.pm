@@ -7,7 +7,7 @@ AtteanX::SPARQL::Token - Token objects used for parsing and serializing SPARQL
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Token version 0.009
+This document describes AtteanX::SPARQL::Token version 0.010
 
 =head1 SYNOPSIS
 

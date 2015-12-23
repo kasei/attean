@@ -25,7 +25,7 @@ This document describes AtteanX::Parser::SPARQL version 2.916.
 
 =cut
 
-package AtteanX::Parser::SPARQL 0.009;
+package AtteanX::Parser::SPARQL 0.010;
 
 use strict;
 use warnings;

@@ -7,7 +7,7 @@ Attean::Algebra - Representation of SPARQL algebra operators
 
 =head1 VERSION
 
-This document describes Attean::Algebra version 0.009
+This document describes Attean::Algebra version 0.010
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ in the Attean::Algebra namespace:
 
 use Attean::API::Query;
 
-package Attean::Algebra::Sequence 0.009 {
+package Attean::Algebra::Sequence 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -63,7 +63,7 @@ package Attean::Algebra::Sequence 0.009 {
 
 =cut
 
-package Attean::Algebra::Join 0.009 {
+package Attean::Algebra::Join 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -103,7 +103,7 @@ package Attean::Algebra::Join 0.009 {
 
 =cut
 
-package Attean::Algebra::LeftJoin 0.009 {
+package Attean::Algebra::LeftJoin 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -163,7 +163,7 @@ package Attean::Algebra::LeftJoin 0.009 {
 
 =cut
 
-package Attean::Algebra::Filter 0.009 {
+package Attean::Algebra::Filter 0.010 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
@@ -191,7 +191,7 @@ package Attean::Algebra::Filter 0.009 {
 
 =cut
 
-package Attean::Algebra::Union 0.009 {
+package Attean::Algebra::Union 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -238,7 +238,7 @@ package Attean::Algebra::Union 0.009 {
 
 =cut
 
-package Attean::Algebra::Graph 0.009 {
+package Attean::Algebra::Graph 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -301,7 +301,7 @@ package Attean::Algebra::Graph 0.009 {
 
 =cut
 
-package Attean::Algebra::Extend 0.009 {
+package Attean::Algebra::Extend 0.010 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	sub in_scope_variables {
@@ -355,7 +355,7 @@ package Attean::Algebra::Extend 0.009 {
 
 =cut
 
-package Attean::Algebra::Minus 0.009 {
+package Attean::Algebra::Minus 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -409,7 +409,7 @@ package Attean::Algebra::Minus 0.009 {
 
 =cut
 
-package Attean::Algebra::Distinct 0.009 {
+package Attean::Algebra::Distinct 0.010 {
 	use Moo;
 	use namespace::clean;
 
@@ -439,7 +439,7 @@ package Attean::Algebra::Distinct 0.009 {
 
 =cut
 
-package Attean::Algebra::Reduced 0.009 {
+package Attean::Algebra::Reduced 0.010 {
 	use Moo;
 	use namespace::clean;
 
@@ -469,7 +469,7 @@ package Attean::Algebra::Reduced 0.009 {
 
 =cut
 
-package Attean::Algebra::Slice 0.009 {
+package Attean::Algebra::Slice 0.010 {
 	use Moo;
 	use Types::Standard qw(Int);
 	use namespace::clean;
@@ -515,7 +515,7 @@ package Attean::Algebra::Slice 0.009 {
 
 =cut
 
-package Attean::Algebra::Project 0.009 {
+package Attean::Algebra::Project 0.010 {
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use Moo;
 	use namespace::clean;
@@ -579,7 +579,7 @@ package Attean::Algebra::Project 0.009 {
 
 =cut
 
-package Attean::Algebra::Comparator 0.009 {
+package Attean::Algebra::Comparator 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -632,7 +632,7 @@ package Attean::Algebra::Comparator 0.009 {
 
 =cut
 
-package Attean::Algebra::OrderBy 0.009 {
+package Attean::Algebra::OrderBy 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -668,7 +668,7 @@ package Attean::Algebra::OrderBy 0.009 {
 
 =cut
 
-package Attean::Algebra::BGP 0.009 {
+package Attean::Algebra::BGP 0.010 {
 	use Moo;
 	use Attean::RDF;
 	use Set::Scalar;
@@ -751,7 +751,7 @@ package Attean::Algebra::BGP 0.009 {
 
 =cut
 
-package Attean::Algebra::Service 0.009 {
+package Attean::Algebra::Service 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -805,7 +805,7 @@ package Attean::Algebra::Service 0.009 {
 
 =cut
 
-package Attean::Algebra::Path 0.009 {
+package Attean::Algebra::Path 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -863,7 +863,7 @@ package Attean::Algebra::Path 0.009 {
 
 =cut
 
-package Attean::Algebra::Group 0.009 {
+package Attean::Algebra::Group 0.010 {
 	use utf8;
 	use Moo;
 	use AtteanX::SPARQL::Constants;
@@ -950,7 +950,7 @@ package Attean::Algebra::Group 0.009 {
 
 =cut
 
-package Attean::Algebra::NegatedPropertySet 0.009 {
+package Attean::Algebra::NegatedPropertySet 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -996,7 +996,7 @@ package Attean::Algebra::NegatedPropertySet 0.009 {
 
 =cut
 
-package Attean::Algebra::PredicatePath 0.009 {
+package Attean::Algebra::PredicatePath 0.010 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -1030,7 +1030,7 @@ package Attean::Algebra::PredicatePath 0.009 {
 
 =cut
 
-package Attean::Algebra::InversePath 0.009 {
+package Attean::Algebra::InversePath 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1073,7 +1073,7 @@ package Attean::Algebra::InversePath 0.009 {
 
 =cut
 
-package Attean::Algebra::SequencePath 0.009 {
+package Attean::Algebra::SequencePath 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1107,7 +1107,7 @@ package Attean::Algebra::SequencePath 0.009 {
 
 =cut
 
-package Attean::Algebra::AlternativePath 0.009 {
+package Attean::Algebra::AlternativePath 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1141,7 +1141,7 @@ package Attean::Algebra::AlternativePath 0.009 {
 
 =cut
 
-package Attean::Algebra::ZeroOrMorePath 0.009 {
+package Attean::Algebra::ZeroOrMorePath 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1183,7 +1183,7 @@ package Attean::Algebra::ZeroOrMorePath 0.009 {
 
 =cut
 
-package Attean::Algebra::OneOrMorePath 0.009 {
+package Attean::Algebra::OneOrMorePath 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1225,7 +1225,7 @@ package Attean::Algebra::OneOrMorePath 0.009 {
 
 =cut
 
-package Attean::Algebra::ZeroOrOnePath 0.009 {
+package Attean::Algebra::ZeroOrOnePath 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1267,7 +1267,7 @@ package Attean::Algebra::ZeroOrOnePath 0.009 {
 
 =cut
 
-package Attean::Algebra::Table 0.009 {
+package Attean::Algebra::Table 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1335,7 +1335,7 @@ package Attean::Algebra::Table 0.009 {
 
 =cut
 
-package Attean::Algebra::Ask 0.009 {
+package Attean::Algebra::Ask 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1364,7 +1364,7 @@ package Attean::Algebra::Ask 0.009 {
 
 =cut
 
-package Attean::Algebra::Construct 0.009 {
+package Attean::Algebra::Construct 0.010 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
