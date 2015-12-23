@@ -7,7 +7,7 @@ Attean::TreeRewriter - Walk and rewrite subtrees
 
 =head1 VERSION
 
-This document describes Attean::TreeRewriter version 0.009
+This document describes Attean::TreeRewriter version 0.010
 
 =head1 SYNOPSIS
 
@@ -30,7 +30,7 @@ None.
 
 =cut
 
-package Attean::TreeRewriter 0.009 {
+package Attean::TreeRewriter 0.010 {
 	use Moo;
 	use Types::Standard qw(CodeRef ArrayRef Str);
 	use Data::UUID;

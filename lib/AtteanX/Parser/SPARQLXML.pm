@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLXML - SPARQL XML Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLXML version 0.009
+This document describes AtteanX::Parser::SPARQLXML version 0.010
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ This document describes AtteanX::Parser::SPARQLXML version 0.009
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::SPARQLXML 0.009 {
+package AtteanX::Parser::SPARQLXML 0.010 {
 	use XML::SAX::ParserFactory;
 	use Attean;
 	use Moo;

@@ -7,7 +7,7 @@ Attean::Literal - RDF Literals
 
 =head1 VERSION
 
-This document describes Attean::Literal version 0.009
+This document describes Attean::Literal version 0.010
 
 =head1 SYNOPSIS
 
@@ -26,7 +26,7 @@ It conforms to the L<Attean::API::Literal|Attean::API::Term> role.
 
 =cut
 
-package Attean::Literal 0.009 {
+package Attean::Literal 0.010 {
 	use Moo;
 	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;

@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.009
+This document describes Attean::API::Binding version 0.010
 
 =head1 DESCRIPTION
 
@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.009 {
+package Attean::API::Binding 0.010 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
@@ -148,7 +148,7 @@ package Attean::API::Binding 0.009 {
 	}
 }
 
-package Attean::API::TripleOrQuadPattern 0.009 {
+package Attean::API::TripleOrQuadPattern 0.010 {
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
 	use Attean::API::Query;
@@ -227,12 +227,12 @@ package Attean::API::TripleOrQuadPattern 0.009 {
 	}
 }
 
-package Attean::API::TripleOrQuad 0.009 {
+package Attean::API::TripleOrQuad 0.010 {
 	use Moo::Role;
 	with 'Attean::API::TripleOrQuadPattern';
 }
 
-package Attean::API::TriplePattern 0.009 {
+package Attean::API::TriplePattern 0.010 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
@@ -280,7 +280,7 @@ package Attean::API::TriplePattern 0.009 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Triple 0.009 {
+package Attean::API::Triple 0.010 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -315,7 +315,7 @@ package Attean::API::Triple 0.009 {
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
 }
 
-package Attean::API::QuadPattern 0.009 {
+package Attean::API::QuadPattern 0.010 {
 	use Scalar::Util qw(blessed);
 	use Moo::Role;
 	
@@ -348,7 +348,7 @@ package Attean::API::QuadPattern 0.009 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.009 {
+package Attean::API::Quad 0.010 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -375,7 +375,7 @@ package Attean::API::Quad 0.009 {
 }
 
 
-package Attean::API::Result 0.009 {
+package Attean::API::Result 0.010 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(HashRef);

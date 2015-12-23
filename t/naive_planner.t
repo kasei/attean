@@ -9,7 +9,7 @@ use Attean;
 use Attean::RDF;
 use AtteanX::Store::Memory;
 
-package TestPlanner 0.009 {
+package TestPlanner {
 	use Moo;
 	extends 'Attean::QueryPlanner';
 	with 'Attean::API::NaiveJoinPlanner';

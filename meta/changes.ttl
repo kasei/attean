@@ -28,8 +28,44 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 ;
 	.
+
+my:v_0-010
+	a					:Version ;
+	dc:issued			"2015-12-22"^^xsd:date ;
+	:revision			"0.010" ;
+	dcterms:replaces	my:v_0-009 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add INVOKE function expression to allow representing IRI-defined functions." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::Algebra::Sequence class." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::SimpleCostPlanner." ],
+			[ a dcs:Addition ; rdfs:label "Added AtteanX::API::JoinRotatingPlanner role." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::UnionScopeVariablesPlan role to handle common computation of in-scope variables (Github issue #38)." ],
+			[ a dcs:Addition ; rdfs:label "Added simple SPARQL serializer implementation (Github issue #36)." ],
+			[ a dcs:Addition ; rdfs:label "Added SPARQL parsing support for RANK operator (Github issue #35)." ],
+			[ a dcs:Addition ; rdfs:label "Added initial algebra and plan support for group ranking (Github issue #34)." ],
+			[ a dcs:Addition ; rdfs:label "Added simple SPARQL HTML serializer (ported from RDF::Endpoint; Github issue #27)." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Algebra methods blank_nodes and subpatterns_of_type." ],
+			[ a dcs:Update ; rdfs:label "Improve serializer negotiation to support multiple classes that handle the same media type." ],
+			[ a dcs:Update ; rdfs:label "Ensure query plan costs are integers, fixing a bug when running on perl with long doubles (#42)." ],
+			[ a dcs:Update ; rdfs:label "Improve error messages in query planning code (manual patch from #41)." ],
+			[ a dcs:Update ; rdfs:label "Renamed Attean::API::Planner to Attean::API::QueryPlanner and re-organized planning code." ],
+			[ a dcs:Update ; rdfs:label "Refactored query planner to separate IDP code from the core planning code." ],
+			[ a dcs:Update ; rdfs:label "Fixed mis-named method call in AtteanX::Store::Memory." ],
+			[ a dcs:Update ; rdfs:label "Added ability to turn some query algebras into SPARQL token interators." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in t/http-negotiation.t that caused false failures when negotiation led to the Canonical NTriples serializer." ],
+			[ a dcs:Update ; rdfs:label "Compute in-scope variables in Attean::Plan::Quad instead of relying on calling code (Github issue #39)." ],
+			[ a dcs:Update ; rdfs:label "Updated attean_query to use the native SPARQL parser." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in Attean::Algebra::Project->in_scope_variables." ],
+			[ a dcs:Update ; rdfs:label "Fixed attean_query to support custom output serializers." ],
+			[ a dcs:Update ; rdfs:label "Update Changes metadata handling to use Module::Instal::DOAPChangeSets (Github issue #25)." ],
+			[ a dcs:Update ; rdfs:label "Ported RDF::Query SPARQL parser to Attean." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::Algebra::Join to be n-ary, not binary." ]
+	]
+	.
+
 
 my:v_0-009
 	a					:Version ;

@@ -7,7 +7,7 @@ AtteanX::SPARQL::Constants - Constant definitions for use in parsing and seriali
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Constants version 0.009
+This document describes AtteanX::SPARQL::Constants version 0.010
 
 =head1 SYNOPSIS
 
@@ -19,14 +19,14 @@ This document describes AtteanX::SPARQL::Constants version 0.009
 
 =cut
 
-package AtteanX::SPARQL::Constants 0.009 {
+package AtteanX::SPARQL::Constants 0.010 {
 	use v5.14;
 	use warnings;
 
 	our $VERSION;
 	our @EXPORT;
 	BEGIN {
-		$VERSION				= 0.009;
+		$VERSION				= 0.010;
 		@EXPORT = qw(
 			A
 			ANDAND
