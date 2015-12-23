@@ -35,7 +35,7 @@ iterative dynamic programming approach.
 =over 4
 
 =cut
-	
+
 package Attean::IDPQueryPlanner 0.010 {
 	use Moo;
 	use namespace::clean;
