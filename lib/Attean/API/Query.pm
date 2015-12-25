@@ -146,6 +146,9 @@ package Attean::API::SPARQLSerializable 0.010 {
 	
 	sub query_tokens {
 		my $self	= shift;
+		my $as		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['AS'] );
+		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
 		
 		my $algebra	= $self;
 		
@@ -182,11 +185,22 @@ package Attean::API::SPARQLSerializable 0.010 {
 			} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 				$modifiers{order}	= $algebra->comparators;
 			} elsif ($algebra->isa('Attean::Algebra::Extend')) {
-				die;
-				# $modifiers{project}	= [];
+				my $v		= $algebra->variable;
+				my $name	= $v->value;
+				my $expr	= $algebra->expression;
+				my @tokens;
+				push(@tokens, $lparen);
+				push(@tokens, $expr->sparql_tokens->elements);
+				push(@tokens, $as);
+				push(@tokens, $v->sparql_tokens->elements);
+				push(@tokens, $rparen);
+				$modifiers{project_expression_tokens}{$name}	= \@tokens;
 			} elsif ($algebra->isa('Attean::Algebra::Project')) {
-				die;
-				# $modifiers{project}	= [];
+				my $vars	= $algebra->variables;
+				foreach my $v (@$vars) {
+					my $name	= $v->value;
+					push(@{ $modifiers{project_tokens} }, { $name => [$v->sparql_tokens->elements] });
+				}
 			} elsif ($algebra->isa('Attean::Algebra::Group')) {
 				die;
 				# $modifiers{having}	= $expr;
@@ -205,8 +219,15 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['REDUCED'] ));
 			}
 			
-			if (my $p = $modifiers{project}) {
-				die;
+			if (my $p = $modifiers{project_tokens}) {
+				foreach my $data (@$p) {
+					my ($name, $tokens)	= %$data;
+					if (my $etokens = $modifiers{project_expression_tokens}{$name}) {
+						push(@tokens, @$etokens);
+					} else {
+						push(@tokens, @$tokens);
+					}
+				}
 			} else {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
 			}

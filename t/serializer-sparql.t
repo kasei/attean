@@ -3,7 +3,7 @@
 use v5.14;
 use autodie;
 use utf8;
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 use Digest::SHA qw(sha1_hex);
 use AtteanX::SPARQL::Constants;
@@ -219,6 +219,26 @@ subtest 'property paths' => sub {
 	};
 };
 
+subtest 'expected tokens: named graph tokens' => sub {
+	my $bgp	= Attean::Algebra::BGP->new(triples => [triple(iri('s'), iri('p'), literal('1'))]);
+	my $g	= iri('graphname');
+	my $a	= Attean::Algebra::Graph->new( children => [$bgp], graph => $g );
+	my $i	= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# GRAPH <graphname> { <s> <p> "1" . }
+	expect_token_stream($i, [KEYWORD, IRI, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+};
+
+subtest 'expected tokens: service tokens' => sub {
+	my $bgp	= Attean::Algebra::BGP->new(triples => [triple(iri('s'), iri('p'), literal('1'))]);
+	my $g	= iri('http://example.org/sparql');
+	my $a	= Attean::Algebra::Service->new( children => [$bgp], endpoint => $g );
+	my $i	= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# SERVICE <graphname> { <s> <p> "1" . }
+	expect_token_stream($i, [KEYWORD, IRI, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+};
+
 subtest 'expected tokens: union tokens' => sub {
 	my $lhs	= Attean::Algebra::BGP->new(triples => [triple(iri('s'), iri('p'), literal('1'))]);
 	my $rhs	= Attean::Algebra::BGP->new(triples => [triple(iri('s'), iri('p'), literal('2'))]);
@@ -248,19 +268,37 @@ subtest 'expected tokens: optional tokens' => sub {
 	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
 };
 
-TODO: {
-local($TODO)	= 'LeftJoin with filter expression';
+subtest 'expected tokens: table tokens' => sub {
+	my @rows;
+	push(@rows, Attean::Result->new( bindings => { 's' => iri('http://example.org/') }));
+	push(@rows, Attean::Result->new( bindings => { 's' => literal('sparql') }));
+	my $a	= Attean::Algebra::Table->new(variables => [variable('s')], rows => \@rows);
+	my $i	= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	
+	# VALUES (?s) { (<http://example.org>) ("sparql") }
+	expect_token_stream($i, [KEYWORD, LPAREN, VAR, RPAREN, LBRACE, LPAREN, IRI, RPAREN, LPAREN, STRING1D, RPAREN, RBRACE]);
+};
+
 subtest 'expected tokens: optional+filter tokens' => sub {
 	my $lhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
 	my $rhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('2'))]);
-	fail();
 	my $a	= Attean::Algebra::LeftJoin->new( children => [$lhs, $rhs] );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	# { ?s <p> "1" . } OPTIONAL { ?s <p> "1" . FILTER(...) }
 	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
 };
-}
+
+subtest 'expected tokens: project' => sub {
+	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $a		= Attean::Algebra::Project->new( children => [$bgp], variables => [variable('p')] );
+	my $i		= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	
+	# SELECT ?p WHERE { ?s <p> "1" . }
+	expect_token_stream($i, [KEYWORD, VAR, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+};
 
 subtest 'expected tokens: comparator tokens' => sub {
 	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
@@ -295,16 +333,35 @@ subtest 'expected tokens: ASK tokens' => sub {
 	expect_token_stream($i, [KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
 };
 
+subtest 'expected tokens: project expressions tokens' => sub {
+	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
+	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
+	my $e1		= Attean::ValueExpression->new( value => variable('o1') );
+	my $e2		= Attean::ValueExpression->new( value => variable('o2') );
+	my $expr	= Attean::BinaryExpression->new( operator => '+', children => [$e1, $e2] );
+	my $extend	= Attean::Algebra::Extend->new(children => [$bgp], variable => variable('sum'), expression => $expr);
+	subtest 'project ordering 1' => sub {
+		my $a		= Attean::Algebra::Project->new( children => [$extend], variables => [variable('s'), variable('sum')] );
+		my $i		= $a->sparql_tokens;
+		does_ok($i, 'Attean::API::Iterator');
+		# SELECT ?s (?o1 + ?o2 AS ?sum) WHERE { ?s <p> ?o1 . ?s <q> ?o2 . }
+		expect_token_stream($i, [KEYWORD, VAR, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, KEYWORD, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, RBRACE]);
+	};
+	subtest 'project ordering 2' => sub {
+		my $a		= Attean::Algebra::Project->new( children => [$extend], variables => [variable('sum'), variable('s')] );
+		my $i		= $a->sparql_tokens;
+		does_ok($i, 'Attean::API::Iterator');
+		# SELECT (?o1 + ?o2 AS ?sum) ?s WHERE { ?s <p> ?o1 . ?s <q> ?o2 . }
+		expect_token_stream($i, [KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, VAR, KEYWORD, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, RBRACE]);
+	};
+};
+
 
 
 # Attean::Algebra::Construct
 # Attean::Algebra::Extend
-# Attean::Algebra::Graph
-# Attean::Algebra::Project
 # Attean::Algebra::Sequence
-# Attean::Algebra::Service
-# Attean::Algebra::Table
-
 
 done_testing();
 exit;
@@ -421,11 +478,13 @@ exit;
 
 done_testing();
 
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
+sub warn_token_stream {
+	my $i		= shift;
+	while (my $t = $i->next) {
+		my $type	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
+		my $value	= $t->value;
+		warn sprintf("%-16s: %s\n", $type, $value);
+	}
 }
 
 sub expect_token_stream {

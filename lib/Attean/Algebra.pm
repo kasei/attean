@@ -1310,13 +1310,14 @@ package Attean::Algebra::Table 0.010 {
 		my $rbrace	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
 
 		my @tokens;
-		push(@tokens, $values, $lparen);
+		push(@tokens, $values);
+		push(@tokens, $lparen);
 		foreach my $var (@{ $self->variables }) {
 			push(@tokens, $var->sparql_tokens->elements);
 		}
-		push(@tokens, $values, $rparen);
+		push(@tokens, $rparen);
 		
-		push(@tokens, $values, $lbrace);
+		push(@tokens, $lbrace);
 		foreach my $row (@{ $self->rows }) {
 			push(@tokens, $lparen);
 			foreach my $val ($row->values) {
@@ -1325,7 +1326,7 @@ package Attean::Algebra::Table 0.010 {
 			}
 			push(@tokens, $rparen);
 		}
-		push(@tokens, $values, $rbrace);
+		push(@tokens, $rbrace);
 		
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
