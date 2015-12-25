@@ -32,7 +32,6 @@ package Attean::Algebra::Sequence 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub algebra_as_string { return 'Sequence' }
 	sub as_sparql {
@@ -70,7 +69,6 @@ package Attean::Algebra::Join 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub algebra_as_string { return 'Join' }
 
@@ -111,7 +109,6 @@ package Attean::Algebra::LeftJoin 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
 	sub algebra_as_string {
@@ -164,9 +161,14 @@ package Attean::Algebra::LeftJoin 0.010 {
 =cut
 
 package Attean::Algebra::Filter 0.010 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 	sub algebra_as_string {
 		my $self	= shift;
@@ -185,6 +187,22 @@ package Attean::Algebra::Filter 0.010 {
 		return $child->as_sparql( %args )
 			. "${indent}FILTER(" . $self->expression->as_sparql . ")\n";
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $f		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['FILTER'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my ($child)	= @{ $self->children };
+		my $expr	= $self->expression;
+		my @tokens;
+		push(@tokens, $child->sparql_tokens->elements);
+		push(@tokens, $f);
+		push(@tokens, $l);
+		push(@tokens, $expr->sparql_tokens->elements);
+		push(@tokens, $r);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
 }
 
 =item * L<Attean::Algebra::Union>
@@ -199,7 +217,6 @@ package Attean::Algebra::Union 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub algebra_as_string { return 'Union' }
 	sub as_sparql {
@@ -246,7 +263,6 @@ package Attean::Algebra::Graph 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 
@@ -302,8 +318,12 @@ package Attean::Algebra::Graph 0.010 {
 =cut
 
 package Attean::Algebra::Extend 0.010 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+	
 	sub in_scope_variables {
 		my $self	= shift;
 		my ($child)	= @{ $self->children };
@@ -311,8 +331,10 @@ package Attean::Algebra::Extend 0.010 {
 		return Set::Scalar->new(@vars, $self->variable->value)->elements;
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+
 	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+
 	sub algebra_as_string {
 		my $self	= shift;
 		return sprintf('Extend { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
@@ -349,6 +371,27 @@ package Attean::Algebra::Extend 0.010 {
 		}
 		return $sparql;
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $bind	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BIND'] );
+		my $as		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['AS'] );
+		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my ($child)	= @{ $self->children };
+		my $var		= $self->variable;
+		my $expr	= $self->expression;
+		
+		my @tokens;
+		push(@tokens, $child->sparql_tokens->elements);
+		push(@tokens, $bind);
+		push(@tokens, $l);
+		push(@tokens, $expr->sparql_tokens->elements);
+		push(@tokens, $as);
+		push(@tokens, $var->sparql_tokens->elements);
+		push(@tokens, $r);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
 }
 
 =item * L<Attean::Algebra::Minus>
@@ -363,7 +406,6 @@ package Attean::Algebra::Minus 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub in_scope_variables {
 		my $self	= shift;
@@ -413,8 +455,8 @@ package Attean::Algebra::Distinct 0.010 {
 	use Moo;
 	use namespace::clean;
 
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	sub algebra_as_string { return 'Distinct' }
 	sub as_sparql {
@@ -443,8 +485,8 @@ package Attean::Algebra::Reduced 0.010 {
 	use Moo;
 	use namespace::clean;
 
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	sub algebra_as_string { return 'Reduced' }
 	sub as_sparql {
@@ -474,8 +516,8 @@ package Attean::Algebra::Slice 0.010 {
 	use Types::Standard qw(Int);
 	use namespace::clean;
 
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
@@ -520,8 +562,8 @@ package Attean::Algebra::Project 0.010 {
 	use Moo;
 	use namespace::clean;
 
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
 
@@ -586,7 +628,6 @@ package Attean::Algebra::Comparator 0.010 {
 	use Types::Standard qw(Bool ConsumerOf);
 	use namespace::clean;
 
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
@@ -639,8 +680,8 @@ package Attean::Algebra::OrderBy 0.010 {
 	use Types::Standard qw(ArrayRef InstanceOf);
 	use namespace::clean;
 	
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	
 	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
 	
@@ -678,7 +719,6 @@ package Attean::Algebra::BGP 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree', 'Attean::API::CanonicalizingBindingSet';
-	with 'Attean::API::SPARQLSerializable';
 	
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']], default => sub { [] });
 	
@@ -759,7 +799,6 @@ package Attean::Algebra::Service 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree', 'Attean::API::UnionScopeVariables';
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
@@ -813,7 +852,6 @@ package Attean::Algebra::Path 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
@@ -871,8 +909,8 @@ package Attean::Algebra::Group 0.010 {
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 	
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	has 'groupby' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']]);
 	has 'aggregates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::AggregateExpression']]);
@@ -958,7 +996,6 @@ package Attean::Algebra::NegatedPropertySet 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::PropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
 	
@@ -1002,7 +1039,6 @@ package Attean::Algebra::PredicatePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::PropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	has 'predicate' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 	sub as_string {
@@ -1038,7 +1074,6 @@ package Attean::Algebra::InversePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnaryPropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub prefix_name { return "^" }
 	sub as_sparql {
@@ -1080,7 +1115,6 @@ package Attean::Algebra::SequencePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::NaryPropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub separator { return "/" }
 	sub as_sparql {
@@ -1114,7 +1148,6 @@ package Attean::Algebra::AlternativePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::NaryPropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub separator { return "|" }
 	sub as_sparql {
@@ -1149,7 +1182,6 @@ package Attean::Algebra::ZeroOrMorePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnaryPropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub postfix_name { return "*" }
 	sub as_sparql {
@@ -1191,7 +1223,6 @@ package Attean::Algebra::OneOrMorePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnaryPropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub postfix_name { return "+" }
 	sub as_sparql {
@@ -1233,7 +1264,6 @@ package Attean::Algebra::ZeroOrOnePath 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::UnaryPropertyPath';
-	with 'Attean::API::SPARQLSerializable';
 
 	sub postfix_name { return "?" }
 	sub as_sparql {
@@ -1275,7 +1305,6 @@ package Attean::Algebra::Table 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-	with 'Attean::API::SPARQLSerializable';
 
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
@@ -1342,8 +1371,8 @@ package Attean::Algebra::Ask 0.010 {
 	use AtteanX::SPARQL::Token;
 	use namespace::clean;
 	
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	
 	sub in_scope_variables { return; }
 
@@ -1372,8 +1401,8 @@ package Attean::Algebra::Construct 0.010 {
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 	
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
 

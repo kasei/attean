@@ -357,6 +357,49 @@ subtest 'expected tokens: project expressions tokens' => sub {
 	};
 };
 
+subtest 'expected tokens: filter tokens' => sub {
+	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
+	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
+	my $e1		= Attean::ValueExpression->new( value => variable('o1') );
+	my $e2		= Attean::ValueExpression->new( value => variable('o2') );
+	my $expr	= Attean::BinaryExpression->new( operator => '>', children => [$e1, $e2] );
+	my $a		= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
+	my $i		= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# ?s <p> ?o1 . ?s <q> ?o2 . FILTER(?o1 > ?o2)
+	expect_token_stream($i, [VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, GT, VAR, RPAREN]);
+};
+
+subtest 'expected tokens: non-projected extend tokens' => sub {
+	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
+	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
+	my $bgp1	= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
+	my $e1		= Attean::ValueExpression->new( value => variable('o1') );
+	my $e2		= Attean::ValueExpression->new( value => variable('o2') );
+	my $expr	= Attean::BinaryExpression->new( operator => '+', children => [$e1, $e2] );
+	my $extend	= Attean::Algebra::Extend->new(children => [$bgp1], variable => variable('sum'), expression => $expr);
+	subtest 'bare extend' => sub {
+		my $i		= $extend->sparql_tokens;
+		does_ok($i, 'Attean::API::Iterator');
+		# ?s <p> ?o1 . ?s <q> ?o2 . BIND(?o1 + ?o2 AS ?sum)
+		expect_token_stream($i, [VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN]);
+	};
+	
+	subtest 'extend within projection' => sub {
+		my $t3		= triple(variable('s'), iri('r'), variable('o3'));
+		my $bgp2		= Attean::Algebra::BGP->new(triples => [$t3]);
+
+		my $join	= Attean::Algebra::Join->new( children => [$extend, $bgp2] );
+		my $a		= Attean::Algebra::Project->new( children => [$join], variables => [variable('s'), variable('o3'), variable('sum')] );
+
+		my $i		= $a->sparql_tokens;
+		does_ok($i, 'Attean::API::Iterator');
+		# SELECT ?s ?o3 ?sum WHERE { { ?s <p> ?o1 . ?s <q> ?o2 . BIND(?o1 + ?o2 AS ?sum) ?s <r> ?o3 } }
+		expect_token_stream($i, [KEYWORD, VAR, VAR, VAR, KEYWORD, LBRACE, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, VAR, IRI, VAR, DOT, RBRACE, RBRACE]);
+	};
+};
+
 
 
 # Attean::Algebra::Construct

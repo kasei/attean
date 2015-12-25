@@ -284,6 +284,8 @@ package Attean::API::SPARQLQuerySerializable 0.010 {
 package Attean::API::Algebra 0.010 {
 	use Moo::Role;
 
+	with 'Attean::API::SPARQLSerializable';
+	
 	requires 'as_sparql';
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
 	
