@@ -150,6 +150,26 @@ package Attean::Algebra::LeftJoin 0.010 {
 		push(@tokens, $lhs->sparql_tokens->elements);
 		push(@tokens, $r, $opt, $l);
 		push(@tokens, $rhs->sparql_tokens->elements);
+		
+		my $expr	= $self->expression;
+		my $is_true	= 0;
+		if ($expr->isa('Attean::ValueExpression')) {
+			my $value	= $expr->value;
+			if ($value->equals(Attean::Literal->true)) {
+				$is_true	= 1;
+			}
+		}
+		
+		unless ($is_true) {
+			my $f		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['FILTER'] );
+			my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+			my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+			push(@tokens, $f);
+			push(@tokens, $lparen);
+			push(@tokens, $expr->sparql_tokens->elements);
+			push(@tokens, $rparen);
+		}
+		
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -888,7 +908,6 @@ package Attean::Algebra::Path 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-
 		my @tokens;
 		foreach my $t ($self->subject, $self->path, $self->object) {
 			push(@tokens, $t->sparql_tokens->elements);

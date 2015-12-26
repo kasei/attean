@@ -140,9 +140,20 @@ package Attean::API::SPARQLSerializable 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo::Role;
+	use Attean::API::Iterator;
+	use Attean::API::Serializer;
+	use AtteanX::Serializer::SPARQL;
 	use namespace::clean;
 
 	requires 'sparql_tokens';
+	
+	sub as_sparql2 {
+		my $self	= shift;
+		my $s		= AtteanX::Serializer::SPARQL->new();
+		my $i		= $self->sparql_tokens;
+		my $bytes	= $s->serialize_iter_to_bytes($i);
+		return $bytes;
+	}
 	
 	sub query_tokens {
 		my $self	= shift;
@@ -271,7 +282,7 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{offset}] ));
 			}
 		} elsif ($form eq 'ASK') {
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SELECT'] ));
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ASK'] ));
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));

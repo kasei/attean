@@ -12,110 +12,133 @@ use Attean;
 use Attean::RDF;
 
 subtest 'expected tokens: empty BGP tokens' => sub {
-	my $bgp	= Attean::Algebra::BGP->new(triples => []);
-	my $i	= $bgp->sparql_tokens;
+	my $a	= Attean::Algebra::BGP->new(triples => []);
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	expect_token_stream($i, []);
+	ws_is($a->as_sparql2, '');
 };
 
 subtest 'expected tokens: 1-triple BGP tokens' => sub {
 	my $t	= triple(iri('s'), iri('p'), literal('1'));
-	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-	my $i	= $bgp->sparql_tokens;
+	my $a	= Attean::Algebra::BGP->new(triples => [$t]);
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	expect_token_stream($i, [IRI, IRI, STRING1D, DOT]);
+	ws_is($a->as_sparql2, '<s> <p> "1" .');
 };
 
 subtest 'expected tokens: 2-BGP join tokens' => sub {
 	my $t	= triple(variable('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-	my $join	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
-	my $i	= $join->sparql_tokens;
+	my $a	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
-	# { ?v <p> "1" . ?v <p> "1" . }
+	# { ?s <p> "1" . ?s <p> "1" . }
 	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, '{ ?s <p> "1" . ?s <p> "1" . }');
 };
 
 subtest 'expected tokens: distinct/bgp' => sub {
 	my $t	= triple(iri('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-	my $dist	= Attean::Algebra::Distinct->new( children => [$bgp] );
-	my $i	= $dist->sparql_tokens;
+	my $a	= Attean::Algebra::Distinct->new( children => [$bgp] );
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
 	# SELECT DISTINCT * WHERE { <s> <p> "1" }
 	expect_token_stream($i, [KEYWORD, KEYWORD, STAR, KEYWORD, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, 'SELECT DISTINCT * WHERE { <s> <p> "1" . }');
 };
 
 subtest 'expected tokens: reduced/bgp' => sub {
 	my $t	= triple(iri('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-	my $dist	= Attean::Algebra::Reduced->new( children => [$bgp] );
-	my $i	= $dist->sparql_tokens;
+	my $a	= Attean::Algebra::Reduced->new( children => [$bgp] );
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
 	# SELECT REDUCED * WHERE { <s> <p> "1" }
 	expect_token_stream($i, [KEYWORD, KEYWORD, STAR, KEYWORD, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, 'SELECT REDUCED * WHERE { <s> <p> "1" . }');
 };
 
 subtest 'expected tokens: bgp/limit' => sub {
 	my $t	= triple(iri('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-	my $s	= Attean::Algebra::Slice->new( children => [$bgp], limit => 5 );
-	my $i	= $s->sparql_tokens;
+	my $a	= Attean::Algebra::Slice->new( children => [$bgp], limit => 5 );
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
 	# SELECT * WHERE { <s> <p> "1" } LIMIT 5
 	expect_token_stream($i, [KEYWORD, STAR, KEYWORD, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE, KEYWORD, INTEGER]);
+	ws_is($a->as_sparql2, 'SELECT * WHERE { <s> <p> "1" . } LIMIT 5');
 };
 
 subtest 'expected tokens: bgp/slice' => sub {
 	my $t	= triple(iri('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
-	my $s	= Attean::Algebra::Slice->new( children => [$bgp], limit => 5, offset => 5 );
-	my $i	= $s->sparql_tokens;
+	my $a	= Attean::Algebra::Slice->new( children => [$bgp], limit => 5, offset => 5 );
+	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
 	# SELECT * WHERE { <s> <p> "1" } LIMIT 5 OFFSET 5
 	expect_token_stream($i, [KEYWORD, STAR, KEYWORD, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE, KEYWORD, INTEGER, KEYWORD, INTEGER]);
+	ws_is($a->as_sparql2, 'SELECT * WHERE { <s> <p> "1" . } LIMIT 5 OFFSET 5');
 };
 
 subtest 'expected tokens: distinct/bgp/slice' => sub {
 	my $t		= triple(iri('s'), iri('p'), literal('1'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my $dist	= Attean::Algebra::Distinct->new( children => [$bgp] );
-	my $s		= Attean::Algebra::Slice->new( children => [$dist], limit => 5, offset => 5 );
-	my $i		= $s->sparql_tokens;
+	my $a		= Attean::Algebra::Slice->new( children => [$dist], limit => 5, offset => 5 );
+	my $i		= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
 	# SELECT DISTINCT * WHERE { <s> <p> "1" } LIMIT 5 OFFSET 5
 	expect_token_stream($i, [KEYWORD, KEYWORD, STAR, KEYWORD, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE, KEYWORD, INTEGER, KEYWORD, INTEGER]);
+	ws_is($a->as_sparql2, 'SELECT DISTINCT * WHERE { <s> <p> "1" . } LIMIT 5 OFFSET 5');
 };
 
 subtest 'property paths' => sub {
 	subtest 'expected tokens: predicate path' => sub {
 		my $p1	= iri('p1');
-		my $pp1	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
-		my $i		= $pp1->sparql_tokens;
+		my $a	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
+		my $i		= $a->sparql_tokens;
 		expect_token_stream($i, [IRI]);
+		
+		subtest 'predicate path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> <p1> <o>');
+		}
 	};
 	
 	subtest 'expected tokens: nps path' => sub {
 		my $p1	= iri('p1');
 		my $p2	= iri('p2');
-		my $nps	= Attean::Algebra::NegatedPropertySet->new( predicates => [$p1, $p2] );
-		my $i		= $nps->sparql_tokens;
+		my $a	= Attean::Algebra::NegatedPropertySet->new( predicates => [$p1, $p2] );
+		my $i		= $a->sparql_tokens;
 		# !(<p1>|<p2>)
 		expect_token_stream($i, [BANG, LPAREN, IRI, OR, IRI, RPAREN]);
+		
+		subtest 'nps path' => sub {
+			my $a	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($a->as_sparql2, '<s> !(<p1>|<p2>) <o>');
+		}
 	};
 	
 	subtest 'expected tokens: 1-IRI sequence path' => sub {
 		my $p2	= iri('p2');
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
-		my $seq	= Attean::Algebra::SequencePath->new( children => [$pp2] );
-		my $i	= $seq->sparql_tokens;
+		my $a	= Attean::Algebra::SequencePath->new( children => [$pp2] );
+		my $i	= $a->sparql_tokens;
 		expect_token_stream($i, [IRI]);
+		
+		subtest 'sequence path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> <p2> <o>');
+		}
 	};
 	
 	subtest 'expected tokens: 2-IRI sequence path' => sub {
@@ -123,17 +146,25 @@ subtest 'property paths' => sub {
 		my $p2	= iri('p2');
 		my $pp1	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
-		my $seq	= Attean::Algebra::SequencePath->new( children => [$pp1, $pp2] );
-		my $i	= $seq->sparql_tokens;
+		my $a	= Attean::Algebra::SequencePath->new( children => [$pp1, $pp2] );
+		my $i	= $a->sparql_tokens;
 		expect_token_stream($i, [IRI, SLASH, IRI]);
+		
+		my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+		ws_is($p->as_sparql2, '<s> <p1>/<p2> <o>');
 	};
 	
 	subtest 'expected tokens: 1-IRI alternative path' => sub {
 		my $p2	= iri('p2');
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
-		my $alt	= Attean::Algebra::AlternativePath->new( children => [$pp2] );
-		my $i	= $alt->sparql_tokens;
+		my $a	= Attean::Algebra::AlternativePath->new( children => [$pp2] );
+		my $i	= $a->sparql_tokens;
 		expect_token_stream($i, [IRI]);
+		
+		subtest 'alternative path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> <p2> <o>');
+		}
 	};
 	
 	subtest 'expected tokens: 2-IRI alternative path' => sub {
@@ -141,19 +172,29 @@ subtest 'property paths' => sub {
 		my $p2	= iri('p2');
 		my $pp1	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
-		my $alt	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
-		my $i	= $alt->sparql_tokens;
+		my $a	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
+		my $i	= $a->sparql_tokens;
 		# <p1>|<p2>
 		expect_token_stream($i, [IRI, OR, IRI]);
+		
+		subtest 'alternative path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> <p1>|<p2> <o>');
+		}
 	};
 	
 	subtest 'expected tokens: 1-IRI inverse path' => sub {
 		my $p2	= iri('p2');
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
-		my $inv	= Attean::Algebra::InversePath->new( children => [$pp2] );
-		my $i	= $inv->sparql_tokens;
+		my $a	= Attean::Algebra::InversePath->new( children => [$pp2] );
+		my $i	= $a->sparql_tokens;
 		# ^<p1>
 		expect_token_stream($i, [HAT, IRI]);
+		
+		subtest 'inverse path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> ^<p2> <o>');
+		}
 	};
 	
 	subtest 'expected tokens: 2-IRI inverse path' => sub {
@@ -162,10 +203,15 @@ subtest 'property paths' => sub {
 		my $pp1	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
 		my $seq	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
-		my $inv	= Attean::Algebra::InversePath->new( children => [$seq] );
-		my $i	= $inv->sparql_tokens;
-		# ^(<p1>/<p2>)
+		my $a	= Attean::Algebra::InversePath->new( children => [$seq] );
+		my $i	= $a->sparql_tokens;
+		# ^(<p1>|<p2>)
 		expect_token_stream($i, [HAT, LPAREN, IRI, OR, IRI, RPAREN]);
+		
+		subtest 'inverse path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> ^(<p1>|<p2>) <o>');
+		}
 	};
 	
 	subtest 'expected tokens: zero or more 2-IRI inverse path' => sub {
@@ -175,10 +221,15 @@ subtest 'property paths' => sub {
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
 		my $seq	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
 		my $inv	= Attean::Algebra::InversePath->new( children => [$seq] );
-		my $zom	= Attean::Algebra::ZeroOrMorePath->new( children => [$inv] );
-		my $i	= $zom->sparql_tokens;
+		my $a	= Attean::Algebra::ZeroOrMorePath->new( children => [$inv] );
+		my $i	= $a->sparql_tokens;
 		# (^(<p1>/<p2>))*
 		expect_token_stream($i, [LPAREN, HAT, LPAREN, IRI, OR, IRI, RPAREN, RPAREN, STAR]);
+
+		subtest '* path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> (^(<p1>|<p2>))* <o>');
+		}
 	};
 	
 	subtest 'expected tokens: one or more 2-IRI inverse path' => sub {
@@ -188,10 +239,15 @@ subtest 'property paths' => sub {
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
 		my $seq	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
 		my $inv	= Attean::Algebra::InversePath->new( children => [$seq] );
-		my $oom	= Attean::Algebra::OneOrMorePath->new( children => [$inv] );
-		my $i	= $oom->sparql_tokens;
+		my $a	= Attean::Algebra::OneOrMorePath->new( children => [$inv] );
+		my $i	= $a->sparql_tokens;
 		# (^(<p1>/<p2>))+
 		expect_token_stream($i, [LPAREN, HAT, LPAREN, IRI, OR, IRI, RPAREN, RPAREN, PLUS]);
+
+		subtest '+ path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> (^(<p1>|<p2>))+ <o>');
+		}
 	};
 	
 	subtest 'expected tokens: zero or one 2-IRI inverse path' => sub {
@@ -201,10 +257,15 @@ subtest 'property paths' => sub {
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
 		my $seq	= Attean::Algebra::AlternativePath->new( children => [$pp1, $pp2] );
 		my $inv	= Attean::Algebra::InversePath->new( children => [$seq] );
-		my $zoo	= Attean::Algebra::ZeroOrOnePath->new( children => [$inv] );
-		my $i	= $zoo->sparql_tokens;
+		my $a	= Attean::Algebra::ZeroOrOnePath->new( children => [$inv] );
+		my $i	= $a->sparql_tokens;
 		# (^(<p1>/<p2>))+
 		expect_token_stream($i, [LPAREN, HAT, LPAREN, IRI, OR, IRI, RPAREN, RPAREN, QUESTION]);
+
+		subtest '? path' => sub {
+			my $p	= Attean::Algebra::Path->new( path => $a, subject => iri('s'), object => iri('o') );
+			ws_is($p->as_sparql2, '<s> (^(<p1>|<p2>))? <o>');
+		}
 	};
 
 	subtest 'expected tokens: 2-IRI sequence path triple' => sub {
@@ -213,9 +274,10 @@ subtest 'property paths' => sub {
 		my $pp1	= Attean::Algebra::PredicatePath->new( predicate => $p1 );
 		my $pp2	= Attean::Algebra::PredicatePath->new( predicate => $p2 );
 		my $seq	= Attean::Algebra::SequencePath->new( children => [$pp1, $pp2] );
-		my $t	= Attean::Algebra::Path->new( path => $seq, subject => iri('s'), object => iri('o') );
-		my $i	= $t->sparql_tokens;
+		my $a	= Attean::Algebra::Path->new( path => $seq, subject => iri('s'), object => iri('o') );
+		my $i	= $a->sparql_tokens;
 		expect_token_stream($i, [IRI, IRI, SLASH, IRI, IRI]);
+		ws_is($a->as_sparql2, '<s> <p1>/<p2> <o>');
 	};
 };
 
@@ -227,6 +289,7 @@ subtest 'expected tokens: named graph tokens' => sub {
 	does_ok($i, 'Attean::API::Iterator');
 	# GRAPH <graphname> { <s> <p> "1" . }
 	expect_token_stream($i, [KEYWORD, IRI, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, 'GRAPH <graphname> { <s> <p> "1" . }');
 };
 
 subtest 'expected tokens: service tokens' => sub {
@@ -235,8 +298,9 @@ subtest 'expected tokens: service tokens' => sub {
 	my $a	= Attean::Algebra::Service->new( children => [$bgp], endpoint => $g );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
-	# SERVICE <graphname> { <s> <p> "1" . }
+	# SERVICE <http://example.org/sparql> { <s> <p> "1" . }
 	expect_token_stream($i, [KEYWORD, IRI, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, 'SERVICE <http://example.org/sparql> { <s> <p> "1" . }');
 };
 
 subtest 'expected tokens: union tokens' => sub {
@@ -246,6 +310,7 @@ subtest 'expected tokens: union tokens' => sub {
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	expect_token_stream($i, [LBRACE, IRI, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, IRI, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, '{ <s> <p> "1" . } UNION { <s> <p> "2" . }');
 };
 
 subtest 'expected tokens: minus tokens' => sub {
@@ -254,8 +319,9 @@ subtest 'expected tokens: minus tokens' => sub {
 	my $a	= Attean::Algebra::Minus->new( children => [$lhs, $rhs] );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
-	# { ?s <p> "1" . } MINUS { ?s <p> "1" . }
+	# { ?s <p> "1" . } MINUS { ?s <p> "2" . }
 	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, '{ ?s <p> "1" . } MINUS { ?s <p> "2" . }');
 };
 
 subtest 'expected tokens: optional tokens' => sub {
@@ -266,6 +332,7 @@ subtest 'expected tokens: optional tokens' => sub {
 	does_ok($i, 'Attean::API::Iterator');
 	# { ?s <p> "1" . } OPTIONAL { ?s <p> "1" . }
 	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, '{ ?s <p> "1" . } OPTIONAL { ?s <p> "2" . }');
 };
 
 subtest 'expected tokens: table tokens' => sub {
@@ -278,16 +345,20 @@ subtest 'expected tokens: table tokens' => sub {
 	
 	# VALUES (?s) { (<http://example.org>) ("sparql") }
 	expect_token_stream($i, [KEYWORD, LPAREN, VAR, RPAREN, LBRACE, LPAREN, IRI, RPAREN, LPAREN, STRING1D, RPAREN, RBRACE]);
+	ws_is($a->as_sparql2, 'VALUES (?s) { (<http://example.org/>) ("sparql") }');
 };
 
 subtest 'expected tokens: optional+filter tokens' => sub {
 	my $lhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
 	my $rhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('2'))]);
-	my $a	= Attean::Algebra::LeftJoin->new( children => [$lhs, $rhs] );
+	my $e		= Attean::ValueExpression->new( value => variable('s') );
+	my $expr	= Attean::FunctionExpression->new( operator => 'ISIRI', children => [$e] );
+	my $a	= Attean::Algebra::LeftJoin->new( children => [$lhs, $rhs], expression => $expr );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
-	# { ?s <p> "1" . } OPTIONAL { ?s <p> "1" . FILTER(...) }
-	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	# { ?s <p> "1" . } OPTIONAL { ?s <p> "1" . FILTER(ISIRI(?s)) }
+	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, KEYWORD, LPAREN, KEYWORD, LPAREN, VAR, RPAREN, RPAREN, RBRACE]);
+	ws_is($a->as_sparql2, '{ ?s <p> "1" . } OPTIONAL { ?s <p> "2" . FILTER(ISIRI(?s)) }');
 };
 
 subtest 'expected tokens: project' => sub {
@@ -298,13 +369,14 @@ subtest 'expected tokens: project' => sub {
 	
 	# SELECT ?p WHERE { ?s <p> "1" . }
 	expect_token_stream($i, [KEYWORD, VAR, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, 'SELECT ?p WHERE { ?s <p> "1" . }');
 };
 
 subtest 'expected tokens: comparator tokens' => sub {
 	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
 	my $expr	= Attean::ValueExpression->new( value => variable('s') );
-	my $cmp		= Attean::Algebra::Comparator->new(ascending => 0, expression => $expr);
-	my $i		= $cmp->sparql_tokens;
+	my $a		= Attean::Algebra::Comparator->new(ascending => 0, expression => $expr);
+	my $i		= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
 	
 	# DESC(?s)
@@ -331,6 +403,7 @@ subtest 'expected tokens: ASK tokens' => sub {
 	
 	# ASK { ?s <p> "1" . }
 	expect_token_stream($i, [KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql2, 'ASK { ?s <p> "1" . }');
 };
 
 subtest 'expected tokens: project expressions tokens' => sub {
@@ -347,6 +420,7 @@ subtest 'expected tokens: project expressions tokens' => sub {
 		does_ok($i, 'Attean::API::Iterator');
 		# SELECT ?s (?o1 + ?o2 AS ?sum) WHERE { ?s <p> ?o1 . ?s <q> ?o2 . }
 		expect_token_stream($i, [KEYWORD, VAR, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, KEYWORD, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, RBRACE]);
+		ws_is($a->as_sparql2, 'SELECT ?s (?o1 + ?o2 AS ?sum) WHERE { ?s <p> ?o1 . ?s <q> ?o2 . }');
 	};
 	subtest 'project ordering 2' => sub {
 		my $a		= Attean::Algebra::Project->new( children => [$extend], variables => [variable('sum'), variable('s')] );
@@ -354,6 +428,7 @@ subtest 'expected tokens: project expressions tokens' => sub {
 		does_ok($i, 'Attean::API::Iterator');
 		# SELECT (?o1 + ?o2 AS ?sum) ?s WHERE { ?s <p> ?o1 . ?s <q> ?o2 . }
 		expect_token_stream($i, [KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, VAR, KEYWORD, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, RBRACE]);
+		ws_is($a->as_sparql2, 'SELECT (?o1 + ?o2 AS ?sum) ?s WHERE { ?s <p> ?o1 . ?s <q> ?o2 . }');
 	};
 };
 
@@ -416,7 +491,8 @@ subtest 'expected tokens: non-projected extend tokens' => sub {
 	my $expr	= Attean::BinaryExpression->new( operator => '+', children => [$e1, $e2] );
 	my $extend	= Attean::Algebra::Extend->new(children => [$bgp1], variable => variable('sum'), expression => $expr);
 	subtest 'bare extend' => sub {
-		my $i		= $extend->sparql_tokens;
+		my $a		= $extend;
+		my $i		= $a->sparql_tokens;
 		does_ok($i, 'Attean::API::Iterator');
 		# ?s <p> ?o1 . ?s <q> ?o2 . BIND(?o1 + ?o2 AS ?sum)
 		expect_token_stream($i, [VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN]);
@@ -611,4 +687,14 @@ sub is_token_of_type {
 		my $value	= $t->value;
 		fail("Not expected token type (expected $expect_name, but got $got_name $value)");
 	}
+}
+
+sub ws_is {
+	my $got		= shift;
+	my $expect	= shift;
+	for ($got, $expect) {
+		chomp;
+		s/\s+//sg;
+	}
+	is($got, $expect);
 }
