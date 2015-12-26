@@ -292,6 +292,8 @@ package Attean::AggregateExpression 0.010 {
 	use Moo;
 	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf);
 	use Types::Common::String qw(UpperCaseStr);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use namespace::clean;
 
 	around 'BUILDARGS' => sub {
@@ -309,7 +311,9 @@ package Attean::AggregateExpression 0.010 {
 	has 'scalar_vars'	=> (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'distinct'		=> (is => 'ro', isa => Bool, default => 0);
 	has 'variable'		=> (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
+
 	with 'Attean::API::AggregateExpression';
+	with 'Attean::API::SPARQLSerializable';
 
 	sub tree_attributes { return qw(operator scalar_vars variable) }
 
@@ -320,12 +324,47 @@ package Attean::AggregateExpression 0.010 {
 		}
 		return 1;
 	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $distinct	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DISTINCT'] ),
+		my $func	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, [$self->operator] ),
+		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $comma	= AtteanX::SPARQL::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
+
+		my @tokens;
+		push(@tokens, $func);
+		push(@tokens, $lparen);
+		if ($self->distinct) {
+			push(@tokens, $distinct);
+		}
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $comma);
+		}
+		if (scalar(@tokens) > 2) {
+			pop(@tokens);	# remove the last comma
+		}
+		my $vars	= $self->scalar_vars;
+		my @keys	= keys %$vars;
+		if (scalar(@keys)) {
+			die "TODO: Implement SPARQL serialization for aggregate scalar vars";
+		}
+		push(@tokens, $rparen);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
 }
 
 package Attean::CastExpression 0.010 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use namespace::clean;
+
+	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 
 	has 'datatype'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI']);
 	sub BUILDARGS {
@@ -348,15 +387,37 @@ package Attean::CastExpression 0.010 {
 		return 1;
 	}
 
-	with 'Attean::API::UnaryExpression', 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
+	sub sparql_tokens {
+		my $self	= shift;
+		my $dt		= AtteanX::SPARQL::Token->fast_constructor( IRI, -1, -1, -1, -1, [$self->datatype->value] ),
+		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $comma	= AtteanX::SPARQL::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
+
+		my @tokens;
+		push(@tokens, $dt, $lparen);
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $comma);
+		}
+		if (scalar(@tokens) > 2) {
+			pop(@tokens);	# remove the last comma
+		}
+		push(@tokens, $rparen);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
 }
 
 package Attean::ExistsExpression 0.010 {
 	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
 
+	with 'Attean::API::SPARQLSerializable';
 	with 'Attean::API::Expression';
+
 	sub arity { return 0 }
 	sub BUILDARGS {
 		my $class	= shift;
@@ -388,6 +449,20 @@ package Attean::ExistsExpression 0.010 {
 		# TODO: need deep analysis of exists pattern to tell if this is stable
 		# (there might be an unstable filter expression deep inside the pattern)
 		return 0;
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $exists	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['EXISTS'] ),
+		my $lbrace	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
+		my $rbrace	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $child	= $self->pattern;
+		
+		my @tokens;
+		push(@tokens, $exists, $lbrace);
+		push(@tokens, $child->sparql_tokens->elements);
+		push(@tokens, $rbrace);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 

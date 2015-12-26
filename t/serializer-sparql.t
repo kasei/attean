@@ -357,7 +357,7 @@ subtest 'expected tokens: project expressions tokens' => sub {
 	};
 };
 
-subtest 'expected tokens: filter tokens' => sub {
+subtest 'expected tokens: binary filter tokens' => sub {
 	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
 	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
@@ -369,6 +369,42 @@ subtest 'expected tokens: filter tokens' => sub {
 	does_ok($i, 'Attean::API::Iterator');
 	# ?s <p> ?o1 . ?s <q> ?o2 . FILTER(?o1 > ?o2)
 	expect_token_stream($i, [VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, GT, VAR, RPAREN]);
+};
+
+subtest 'expected tokens: function filter tokens' => sub {
+	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my $e		= Attean::ValueExpression->new( value => variable('o') );
+	my $expr	= Attean::FunctionExpression->new( operator => 'ISIRI', children => [$e] );
+	my $a		= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
+	my $i		= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# ?s <p> ?o . FILTER(ISIRI(?o))
+	expect_token_stream($i, [VAR, IRI, VAR, DOT, KEYWORD, LPAREN, KEYWORD, LPAREN, VAR, RPAREN, RPAREN]);
+};
+
+subtest 'expected tokens: cast filter tokens' => sub {
+	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my $e		= Attean::ValueExpression->new( value => variable('o') );
+	my $expr	= Attean::CastExpression->new( datatype => iri('http://www.w3.org/2001/XMLSchema#integer'), children => [$e] );
+	my $a		= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
+	my $i		= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# ?s <p> ?o . FILTER(<http://www.w3.org/2001/XMLSchema#integer>(?o))
+	expect_token_stream($i, [VAR, IRI, VAR, DOT, KEYWORD, LPAREN, IRI, LPAREN, VAR, RPAREN, RPAREN]);
+};
+
+subtest 'expected tokens: exists filter tokens' => sub {
+	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my $u		= triple(variable('s'), iri('q'), literal('1'));
+	my $expr	= Attean::ExistsExpression->new( pattern => Attean::Algebra::BGP->new(triples => [$u]) );
+	my $a		= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
+	my $i		= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# ?s <p> ?o . FILTER( EXISTS { ?s <q> "1" } )
+	expect_token_stream($i, [VAR, IRI, VAR, DOT, KEYWORD, LPAREN, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, RPAREN]);
 };
 
 subtest 'expected tokens: non-projected extend tokens' => sub {
@@ -400,7 +436,27 @@ subtest 'expected tokens: non-projected extend tokens' => sub {
 	};
 };
 
-
+subtest 'expected tokens: aggregation' => sub {
+	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my @groups	= Attean::ValueExpression->new( value => variable('s') );
+	my @aggs	= Attean::AggregateExpression->new(
+		distinct	=> 0,
+		operator	=> 'SUM',
+		children	=> [Attean::ValueExpression->new( value => variable('o') )],
+		scalar_vars	=> {},
+		variable	=> variable("sum"),
+	);
+	my $a		= Attean::Algebra::Group->new(
+		children => [$bgp],
+		groupby => \@groups,
+		aggregates => \@aggs,
+	);
+	my $i		= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	# SELECT (SUM(?o) AS ?sum) WHERE { ?s <p> ?o . }
+	expect_token_stream($i, [KEYWORD, LPAREN, KEYWORD, LPAREN, VAR, RPAREN, KEYWORD, VAR, RPAREN, KEYWORD, LBRACE, VAR, IRI, VAR, DOT, RBRACE]);
+};
 
 # Attean::Algebra::Construct
 # Attean::Algebra::Extend

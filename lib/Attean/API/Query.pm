@@ -199,11 +199,27 @@ package Attean::API::SPARQLSerializable 0.010 {
 				my $vars	= $algebra->variables;
 				foreach my $v (@$vars) {
 					my $name	= $v->value;
-					push(@{ $modifiers{project_tokens} }, { $name => [$v->sparql_tokens->elements] });
+					unless ($modifiers{project_variables}{$name}++) {
+						push(@{ $modifiers{project_variables_order} }, $name);
+					}
 				}
 			} elsif ($algebra->isa('Attean::Algebra::Group')) {
-				die;
-				# $modifiers{having}	= $expr;
+				my $aggs	= $algebra->aggregates;
+				my $groups	= $algebra->groupby;
+				foreach my $agg (@$aggs) {
+					my $v		= $agg->variable;
+					my $name	= $v->value;
+					my @tokens;
+					push(@tokens, $lparen);
+					push(@tokens, $agg->sparql_tokens->elements);
+					push(@tokens, $as);
+					push(@tokens, $v->sparql_tokens->elements);
+					push(@tokens, $rparen);
+					unless ($modifiers{project_variables}{$name}++) {
+						push(@{ $modifiers{project_variables_order} }, $name);
+					}
+					$modifiers{project_expression_tokens}{$name}	= \@tokens;
+				}
 			} else {
 				die;
 			}
@@ -219,13 +235,13 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['REDUCED'] ));
 			}
 			
-			if (my $p = $modifiers{project_tokens}) {
-				foreach my $data (@$p) {
-					my ($name, $tokens)	= %$data;
+			if (my $p = $modifiers{project_variables_order}) {
+				foreach my $name (@$p) {
 					if (my $etokens = $modifiers{project_expression_tokens}{$name}) {
 						push(@tokens, @$etokens);
 					} else {
-						push(@tokens, @$tokens);
+						my $v	= Attean::Variable->new( value => $name );
+						push(@tokens, $v->sparql_tokens->elements);
 					}
 				}
 			} else {
