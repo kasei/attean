@@ -53,9 +53,7 @@ package Attean::API::Term 0.010 {
 	sub as_string {
 		shift->ntriples_string();
 	}
-	sub as_sparql {
-		shift->ntriples_string();
-	}
+
 	sub ebv { return 0; }
 	
 	requires 'compare';

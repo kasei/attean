@@ -147,7 +147,7 @@ package Attean::API::SPARQLSerializable 0.010 {
 
 	requires 'sparql_tokens';
 	
-	sub as_sparql2 {
+	sub as_sparql {
 		my $self	= shift;
 		my $s		= AtteanX::Serializer::SPARQL->new();
 		my $i		= $self->sparql_tokens;
@@ -231,6 +231,9 @@ package Attean::API::SPARQLSerializable 0.010 {
 					}
 					$modifiers{project_expression_tokens}{$name}	= \@tokens;
 				}
+				foreach my $group (@$groups) {
+					push(@{ $modifiers{groups} }, $group->sparql_tokens->elements);
+				}
 			} else {
 				die;
 			}
@@ -266,6 +269,12 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['HAVING'] ));
 				push(@tokens, $expr->sparql_tokens->elements);
 			}
+			if (my $groups = $modifiers{groups}) {
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['GROUP'] ));
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
+				push(@tokens, @$groups);
+			}
+			# TODO: HAVING clause
 			if (my $comps = $modifiers{order}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ORDER'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));

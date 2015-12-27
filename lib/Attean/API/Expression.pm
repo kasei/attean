@@ -101,29 +101,83 @@ package Attean::API::Expression 0.010 {
 
 package Attean::API::UnaryExpression 0.010 {
 	use Moo::Role;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use namespace::clean;
+	
 	with 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::SPARQLSerializable';
+	
 	sub as_string {
 		my $self	= shift;
 		my ($data)	= @{ $self->children };
 		return sprintf("%s(%s)", $self->operator, $data->as_string);
 	}
-	sub as_sparql {
+
+	my %ops	= (
+		'!'	=> AtteanX::SPARQL::Token->fast_constructor( BANG, -1, -1, -1, -1, ['!'] ),
+		'-'	=> AtteanX::SPARQL::Token->fast_constructor( MINUS, -1, -1, -1, -1, ['-'] ),
+		'+'	=> AtteanX::SPARQL::Token->fast_constructor( PLUS, -1, -1, -1, -1, ['+'] ),
+	);
+
+	sub sparql_tokens {
 		my $self	= shift;
-		return $self->as_string;
+		my $op		= $ops{$self->operator} // die;
+
+		my @tokens;
+		push(@tokens, $op);
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
 package Attean::API::BinaryExpression 0.010 {
 	use Moo::Role;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use namespace::clean;
+	
 	with 'Attean::API::Expression', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::SPARQLSerializable';
+
 	sub as_string {
 		my $self	= shift;
 		my ($lhs, $rhs)	= @{ $self->children };
 		return sprintf("(%s %s %s)", $lhs->as_string, $self->operator, $rhs->as_string);
 	}
-	sub as_sparql {
+# 	sub as_sparql {
+# 		my $self	= shift;
+# 		return $self->as_string;
+# 	}
+
+	my %ops	= (
+		'-'		=> AtteanX::SPARQL::Token->fast_constructor( MINUS, -1, -1, -1, -1, ['-'] ),
+		'+'		=> AtteanX::SPARQL::Token->fast_constructor( PLUS, -1, -1, -1, -1, ['+'] ),
+		'*'		=> AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ),
+		'/'		=> AtteanX::SPARQL::Token->fast_constructor( SLASH, -1, -1, -1, -1, ['/'] ),
+		'<'		=> AtteanX::SPARQL::Token->fast_constructor( LT, -1, -1, -1, -1, ['<'] ),
+		'>'		=> AtteanX::SPARQL::Token->fast_constructor( GT, -1, -1, -1, -1, ['>'] ),
+		'<='	=> AtteanX::SPARQL::Token->fast_constructor( LE, -1, -1, -1, -1, ['<='] ),
+		'>='	=> AtteanX::SPARQL::Token->fast_constructor( GE, -1, -1, -1, -1, ['>='] ),
+		'!='	=> AtteanX::SPARQL::Token->fast_constructor( NOTEQUALS, -1, -1, -1, -1, ['!='] ),
+		'='		=> AtteanX::SPARQL::Token->fast_constructor( EQUALS, -1, -1, -1, -1, ['='] ),
+		'&&'	=> AtteanX::SPARQL::Token->fast_constructor( ANDAND, -1, -1, -1, -1, ['&&'] ),
+		'||'	=> AtteanX::SPARQL::Token->fast_constructor( OROR, -1, -1, -1, -1, ['||'] ),
+	);
+	
+	sub sparql_tokens {
 		my $self	= shift;
-		return $self->as_string;
+		my $op		= $ops{$self->operator} // die;
+
+		my @tokens;
+		foreach my $t (@{ $self->children }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $op);
+		}
+		pop(@tokens);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
 
