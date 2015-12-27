@@ -1090,8 +1090,29 @@ package Attean::Algebra::Construct 0.010 {
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
 
 	sub in_scope_variables { return qw(subject predicate object); }
-	sub tree_attributes { return qw(triples) };
+	sub tree_attributes { return; }
 	sub algebra_as_string { return 'Construct' }
+}
+
+=item * L<Attean::Algebra::Describe>
+
+=cut
+
+package Attean::Algebra::Describe 0.010 {
+	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+	
+	with 'Attean::API::SPARQLQuerySerializable';
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+
+	has 'terms' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TermOrVariable']]);
+
+	sub in_scope_variables { return qw(subject predicate object); }
+	sub tree_attributes { return; }
+	sub algebra_as_string { return 'Describe' }
 }
 
 

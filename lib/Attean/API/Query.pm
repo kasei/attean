@@ -163,84 +163,91 @@ package Attean::API::SPARQLSerializable 0.010 {
 		
 		my $algebra	= $self;
 		
+		my %modifiers;
 		my $form	= 'SELECT';
 		if ($algebra->isa('Attean::Algebra::Ask')) {
 			$form	= 'ASK';
 			($algebra)	= @{ $algebra->children };
 		} elsif ($algebra->isa('Attean::Algebra::Describe')) {
 			$form	= 'DESCRIBE';
+			$modifiers{describe}	= $algebra->terms;
 			($algebra)	= @{ $algebra->children };
-			die;
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 			$form	= 'CONSTRUCT';
+			$modifiers{construct}	= $algebra->triples;
 			($algebra)	= @{ $algebra->children };
-			die;
 		}
 		
-		my %modifiers;
-		while ($algebra->isa('Attean::Algebra::Extend') or $algebra->isa('Attean::Algebra::Group') or $algebra->isa('Attean::Algebra::OrderBy') or $algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
-			# TODO: Handle projection
-			# TODO: Handle aggregation/having
-			# TODO: Error if Slice appears before distinct/reduced
-			if ($algebra->isa('Attean::Algebra::Distinct')) {
-				$modifiers{ distinct }	= 1;
-			} elsif ($algebra->isa('Attean::Algebra::Reduced')) {
-				$modifiers{ reduced }	= 1;
-			} elsif ($algebra->isa('Attean::Algebra::Slice')) {
-				if ($algebra->limit >= 0) {
-					$modifiers{ limit }		= $algebra->limit;
-				}
-				if ($algebra->offset > 0) {
-					$modifiers{ offset }	= $algebra->offset;
-				}
-			} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
-				$modifiers{order}	= $algebra->comparators;
-			} elsif ($algebra->isa('Attean::Algebra::Extend')) {
-				my $v		= $algebra->variable;
-				my $name	= $v->value;
-				my $expr	= $algebra->expression;
-				my @tokens;
-				push(@tokens, $lparen);
-				push(@tokens, $expr->sparql_tokens->elements);
-				push(@tokens, $as);
-				push(@tokens, $v->sparql_tokens->elements);
-				push(@tokens, $rparen);
-				$modifiers{project_expression_tokens}{$name}	= \@tokens;
-			} elsif ($algebra->isa('Attean::Algebra::Project')) {
-				my $vars	= $algebra->variables;
-				foreach my $v (@$vars) {
-					my $name	= $v->value;
-					unless ($modifiers{project_variables}{$name}++) {
-						push(@{ $modifiers{project_variables_order} }, $name);
+		unless ($form eq 'CONSTRUCT' or $form eq 'DESCRIBE') {
+			while ($algebra->isa('Attean::Algebra::Extend') or $algebra->isa('Attean::Algebra::Group') or $algebra->isa('Attean::Algebra::OrderBy') or $algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced') or $algebra->isa('Attean::Algebra::Slice') or $algebra->isa('Attean::Algebra::Project')) {
+				# TODO: Handle HAVING
+				# TODO: Error if Slice appears before distinct/reduced
+				if ($algebra->isa('Attean::Algebra::Distinct')) {
+					$modifiers{ distinct }	= 1;
+				} elsif ($algebra->isa('Attean::Algebra::Reduced')) {
+					$modifiers{ reduced }	= 1;
+				} elsif ($algebra->isa('Attean::Algebra::Slice')) {
+					if ($algebra->limit >= 0) {
+						$modifiers{ limit }		= $algebra->limit;
 					}
-				}
-			} elsif ($algebra->isa('Attean::Algebra::Group')) {
-				my $aggs	= $algebra->aggregates;
-				my $groups	= $algebra->groupby;
-				foreach my $agg (@$aggs) {
-					my $v		= $agg->variable;
+					if ($algebra->offset > 0) {
+						$modifiers{ offset }	= $algebra->offset;
+					}
+				} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
+					$modifiers{order}	= $algebra->comparators;
+				} elsif ($algebra->isa('Attean::Algebra::Extend')) {
+					my $v		= $algebra->variable;
 					my $name	= $v->value;
+					my $expr	= $algebra->expression;
 					my @tokens;
 					push(@tokens, $lparen);
-					push(@tokens, $agg->sparql_tokens->elements);
+					push(@tokens, $expr->sparql_tokens->elements);
 					push(@tokens, $as);
 					push(@tokens, $v->sparql_tokens->elements);
 					push(@tokens, $rparen);
-					unless ($modifiers{project_variables}{$name}++) {
-						push(@{ $modifiers{project_variables_order} }, $name);
-					}
 					$modifiers{project_expression_tokens}{$name}	= \@tokens;
+				} elsif ($algebra->isa('Attean::Algebra::Project')) {
+					my $vars	= $algebra->variables;
+					foreach my $v (@$vars) {
+						my $name	= $v->value;
+						unless ($modifiers{project_variables}{$name}++) {
+							push(@{ $modifiers{project_variables_order} }, $name);
+						}
+					}
+				} elsif ($algebra->isa('Attean::Algebra::Group')) {
+					my $aggs	= $algebra->aggregates;
+					my $groups	= $algebra->groupby;
+					foreach my $agg (@$aggs) {
+						my $v		= $agg->variable;
+						my $name	= $v->value;
+						my @tokens;
+						push(@tokens, $lparen);
+						push(@tokens, $agg->sparql_tokens->elements);
+						push(@tokens, $as);
+						push(@tokens, $v->sparql_tokens->elements);
+						push(@tokens, $rparen);
+						unless ($modifiers{project_variables}{$name}++) {
+							push(@{ $modifiers{project_variables_order} }, $name);
+						}
+						$modifiers{project_expression_tokens}{$name}	= \@tokens;
+					}
+					foreach my $group (@$groups) {
+						push(@{ $modifiers{groups} }, $group->sparql_tokens->elements);
+					}
+				} else {
+					die;
 				}
-				foreach my $group (@$groups) {
-					push(@{ $modifiers{groups} }, $group->sparql_tokens->elements);
-				}
-			} else {
-				die;
+				($algebra)	= @{ $algebra->children };
 			}
-			($algebra)	= @{ $algebra->children };
 		}
 		
 		my @tokens;
+
+		my $where	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['WHERE'] );
+		my $lbrace	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
+		my $rbrace	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+
+
 		if ($form eq 'SELECT') {
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SELECT'] ));
 			if ($modifiers{distinct}) {
@@ -261,20 +268,19 @@ package Attean::API::SPARQLSerializable 0.010 {
 			} else {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
 			}
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['WHERE'] ));
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
+			push(@tokens, $where);
+			push(@tokens, $lbrace);
 			push(@tokens, $algebra->sparql_tokens->elements);
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));
-			if (my $expr = $modifiers{having}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['HAVING'] ));
-				push(@tokens, $expr->sparql_tokens->elements);
-			}
+			push(@tokens, $rbrace);
 			if (my $groups = $modifiers{groups}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['GROUP'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
 				push(@tokens, @$groups);
 			}
-			# TODO: HAVING clause
+			if (my $expr = $modifiers{having}) {
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['HAVING'] ));
+				push(@tokens, $expr->sparql_tokens->elements);
+			}
 			if (my $comps = $modifiers{order}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ORDER'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
@@ -290,11 +296,32 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['OFFSET'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{offset}] ));
 			}
+		} elsif ($form eq 'DESCRIBE') {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DESCRIBE'] ));
+			foreach my $t (@{ $modifiers{describe} }) {
+				push(@tokens, $t->sparql_tokens->elements);
+			}
+			push(@tokens, $where);
+			push(@tokens, $lbrace);
+			push(@tokens, $algebra->sparql_tokens->elements);
+			push(@tokens, $rbrace);
+		} elsif ($form eq 'CONSTRUCT') {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['CONSTRUCT'] ));
+			push(@tokens, $lbrace);
+			foreach my $t (@{ $modifiers{construct} }) {
+				push(@tokens, $t->sparql_tokens->elements);
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] ));
+			}
+			push(@tokens, $rbrace);
+			push(@tokens, $where);
+			push(@tokens, $lbrace);
+			push(@tokens, $algebra->sparql_tokens->elements);
+			push(@tokens, $rbrace);
 		} elsif ($form eq 'ASK') {
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ASK'] ));
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
+			push(@tokens, $lbrace);
 			push(@tokens, $algebra->sparql_tokens->elements);
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));
+			push(@tokens, $rbrace);
 		} else {
 			die;
 		}

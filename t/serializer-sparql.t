@@ -406,6 +406,29 @@ subtest 'expected tokens: ASK tokens' => sub {
 	ws_is($a->as_sparql, 'ASK { ?s <p> "1" . }');
 };
 
+subtest 'expected tokens: CONSTRUCT tokens' => sub {
+	my $bgp	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $t	= triple(variable('s'), iri('q'), literal('2'));
+	my $a	= Attean::Algebra::Construct->new( children => [$bgp], triples => [$t] );
+	my $i	= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	
+	# CONSTRUCT { ?s <q> "2" } WHERE { ?s <p> "1" . }
+	expect_token_stream($i, [KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql, 'CONSTRUCT { ?s <q> "2" . } WHERE { ?s <p> "1" . }');
+};
+
+subtest 'expected tokens: DESCRIBE tokens' => sub {
+	my $bgp	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $a	= Attean::Algebra::Describe->new( children => [$bgp], terms => [variable('s'), iri('q')] );
+	my $i	= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	
+	# DESCRIBE ?s <q> WHERE { ?s <p> "1" . }
+	expect_token_stream($i, [KEYWORD, VAR, IRI, KEYWORD, LBRACE, VAR, IRI, STRING1D, DOT, RBRACE]);
+	ws_is($a->as_sparql, 'DESCRIBE ?s <q> WHERE { ?s <p> "1" . }');
+};
+
 subtest 'expected tokens: project expressions tokens' => sub {
 	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
 	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
