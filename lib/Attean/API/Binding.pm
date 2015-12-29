@@ -268,6 +268,20 @@ package Attean::API::TriplePattern 0.010 {
 		return $self->apply_statement(@_);
 	}
 
+	sub canonicalize {
+		my $self = shift;
+		my @keyterms = $self->values;
+		my @varnames = $self->variables;
+		my $i = 0;
+		foreach my $term (@keyterms) {
+			if ($term->is_variable) {
+				$keyterms[$i] = Attean::Variable->new($varnames[$i]); # Normalize variable names
+			}
+			$i++;
+		}
+		return Attean::TriplePattern->new(@keyterms);
+	}
+
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
