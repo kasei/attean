@@ -35,6 +35,8 @@ package Attean::API::TermOrVariable 0.010 {
 	use Sub::Util qw(set_subname);
 	use namespace::clean;
 
+	with 'Attean::API::SPARQLSerializable';
+
 	sub equals {
 		my ($a, $b)	= @_;
 		return ($a->as_string eq $b->as_string);
@@ -71,13 +73,7 @@ package Attean::API::Variable 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::TermOrVariable';
-	with 'Attean::API::SPARQLSerializable';
 
-	sub as_sparql {
-		my $self	= shift;
-		return '?' . $self->value;
-	}
-	
 	sub as_string {
 		my $self	= shift;
 		return '?' . $self->value;

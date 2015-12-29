@@ -140,12 +140,26 @@ package Attean::API::SPARQLSerializable 0.010 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo::Role;
+	use Attean::API::Iterator;
+	use Attean::API::Serializer;
+	use AtteanX::Serializer::SPARQL;
 	use namespace::clean;
 
 	requires 'sparql_tokens';
 	
+	sub as_sparql {
+		my $self	= shift;
+		my $s		= AtteanX::Serializer::SPARQL->new();
+		my $i		= $self->sparql_tokens;
+		my $bytes	= $s->serialize_iter_to_bytes($i);
+		return $bytes;
+	}
+	
 	sub query_tokens {
 		my $self	= shift;
+		my $as		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['AS'] );
+		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
+		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
 		
 		my $algebra	= $self;
 		
@@ -182,14 +196,44 @@ package Attean::API::SPARQLSerializable 0.010 {
 			} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 				$modifiers{order}	= $algebra->comparators;
 			} elsif ($algebra->isa('Attean::Algebra::Extend')) {
-				die;
-				# $modifiers{project}	= [];
+				my $v		= $algebra->variable;
+				my $name	= $v->value;
+				my $expr	= $algebra->expression;
+				my @tokens;
+				push(@tokens, $lparen);
+				push(@tokens, $expr->sparql_tokens->elements);
+				push(@tokens, $as);
+				push(@tokens, $v->sparql_tokens->elements);
+				push(@tokens, $rparen);
+				$modifiers{project_expression_tokens}{$name}	= \@tokens;
 			} elsif ($algebra->isa('Attean::Algebra::Project')) {
-				die;
-				# $modifiers{project}	= [];
+				my $vars	= $algebra->variables;
+				foreach my $v (@$vars) {
+					my $name	= $v->value;
+					unless ($modifiers{project_variables}{$name}++) {
+						push(@{ $modifiers{project_variables_order} }, $name);
+					}
+				}
 			} elsif ($algebra->isa('Attean::Algebra::Group')) {
-				die;
-				# $modifiers{having}	= $expr;
+				my $aggs	= $algebra->aggregates;
+				my $groups	= $algebra->groupby;
+				foreach my $agg (@$aggs) {
+					my $v		= $agg->variable;
+					my $name	= $v->value;
+					my @tokens;
+					push(@tokens, $lparen);
+					push(@tokens, $agg->sparql_tokens->elements);
+					push(@tokens, $as);
+					push(@tokens, $v->sparql_tokens->elements);
+					push(@tokens, $rparen);
+					unless ($modifiers{project_variables}{$name}++) {
+						push(@{ $modifiers{project_variables_order} }, $name);
+					}
+					$modifiers{project_expression_tokens}{$name}	= \@tokens;
+				}
+				foreach my $group (@$groups) {
+					push(@{ $modifiers{groups} }, $group->sparql_tokens->elements);
+				}
 			} else {
 				die;
 			}
@@ -205,8 +249,15 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['REDUCED'] ));
 			}
 			
-			if (my $p = $modifiers{project}) {
-				die;
+			if (my $p = $modifiers{project_variables_order}) {
+				foreach my $name (@$p) {
+					if (my $etokens = $modifiers{project_expression_tokens}{$name}) {
+						push(@tokens, @$etokens);
+					} else {
+						my $v	= Attean::Variable->new( value => $name );
+						push(@tokens, $v->sparql_tokens->elements);
+					}
+				}
 			} else {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
 			}
@@ -218,6 +269,12 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['HAVING'] ));
 				push(@tokens, $expr->sparql_tokens->elements);
 			}
+			if (my $groups = $modifiers{groups}) {
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['GROUP'] ));
+				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
+				push(@tokens, @$groups);
+			}
+			# TODO: HAVING clause
 			if (my $comps = $modifiers{order}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ORDER'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
@@ -234,7 +291,7 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{offset}] ));
 			}
 		} elsif ($form eq 'ASK') {
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SELECT'] ));
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ASK'] ));
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] ));
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] ));
@@ -263,6 +320,8 @@ package Attean::API::SPARQLQuerySerializable 0.010 {
 package Attean::API::Algebra 0.010 {
 	use Moo::Role;
 
+	with 'Attean::API::SPARQLSerializable';
+	
 	requires 'as_sparql';
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
 	

@@ -263,11 +263,6 @@ package Attean::API::TriplePattern 0.010 {
 		return Attean::Triple->new($self->values);
 	}
 	
-	sub as_sparql {
-		my $self	= shift;
-		return join(' ', map { $_->as_sparql } $self->values) . " .\n";
-	}
-	
 	sub apply_triple {
 		my $self	= shift;
 		return $self->apply_statement(@_);
