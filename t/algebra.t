@@ -136,6 +136,12 @@ if ($ENV{ATTEAN_TYPECHECK}) {
 }
 
 {
+	note 'Triple canonicalization';
+	my $t = triplepattern(variable('foo'), iri('p'), variable('bar'));
+	is($t->canonicalize->as_string, '?subject <p> ?object .', 'Canonical string ok');
+}
+
+{
 	my $t		= triple(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
