@@ -135,11 +135,28 @@ if ($ENV{ATTEAN_TYPECHECK}) {
 	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
 }
 
-{
-	note 'Triple canonicalization';
-	my $t = triplepattern(variable('foo'), iri('p'), variable('bar'));
-	is($t->canonicalize->as_string, '?subject <p> ?object .', 'Canonical string ok');
-}
+subtest 'Triple canonicalization' => sub {
+	my $t = triplepattern(variable('bar'), iri('p'), variable('foo'));
+	my $u = triplepattern(variable('subject'), iri('p'), variable('object'));
+	my $v = triplepattern(variable('foo'), iri('p'), variable('foo'));
+	my $w = triplepattern(variable('x'), iri('p'), variable('x'));
+	is($t->canonicalize->as_string, $u->canonicalize->as_string, 'Canonical strings match for 2-variable triple');
+	isnt($t->canonicalize->as_string, $v->canonicalize->as_string, 'Canonical strings do not match for 2-variable triple');
+	is($v->canonicalize->as_string, $w->canonicalize->as_string, 'Canonical strings match for 1 shared-variable triple');
+};
+
+subtest 'Quad canonicalization' => sub {
+	my $t = quadpattern(variable('bar'), iri('p'), variable('foo'), iri('g'));
+	my $u = quadpattern(variable('subject'), iri('p'), variable('object'), iri('g'));
+	my $v = quadpattern(variable('foo'), iri('p'), literal('1'), variable('foo'));
+	my $w = quadpattern(variable('x'), iri('p'), literal('1'), variable('x'));
+	my $x = quadpattern(variable('x'), iri('p'), variable('x'), variable('x'));
+	my $y = quadpattern(variable('x'), iri('p'), variable('x'), variable('x'));
+	is($t->canonicalize->as_string, $u->canonicalize->as_string, 'Canonical strings match for 2-variable quad');
+	isnt($t->canonicalize->as_string, $v->canonicalize->as_string, 'Canonical strings do not match for 2-variable quad');
+	is($v->canonicalize->as_string, $w->canonicalize->as_string, 'Canonical strings match for 1 shared-variable quad');
+	is($x->canonicalize->as_string, $y->canonicalize->as_string, 'Canonical strings match for 1 twice-shared-variable quad');
+};
 
 {
 	my $t		= triple(variable('s'), iri('p'), variable('o'));

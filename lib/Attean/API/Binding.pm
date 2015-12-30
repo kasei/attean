@@ -225,6 +225,16 @@ package Attean::API::TripleOrQuadPattern 0.010 {
 		}
 		return Attean::Result->new( bindings => \%data );
 	}
+
+	sub canonicalize {
+		my $self	= shift;
+		my $type	= ref($self);
+		my $role	= $self->does('Attean::API::TriplePattern') ? 'Attean::API::TriplePattern' : 'Attean::API::QuadPattern';
+		my $iter	= Attean::ListIterator->new( values => [$self], item_type => $role );
+		my $triples	= $iter->canonical_set();
+		my ($t)		= @$triples;
+		return $t;
+	}
 }
 
 package Attean::API::TripleOrQuad 0.010 {
@@ -266,20 +276,6 @@ package Attean::API::TriplePattern 0.010 {
 	sub apply_triple {
 		my $self	= shift;
 		return $self->apply_statement(@_);
-	}
-
-	sub canonicalize {
-		my $self = shift;
-		my @keyterms = $self->values;
-		my @varnames = $self->variables;
-		my $i = 0;
-		foreach my $term (@keyterms) {
-			if ($term->is_variable) {
-				$keyterms[$i] = Attean::Variable->new($varnames[$i]); # Normalize variable names
-			}
-			$i++;
-		}
-		return Attean::TriplePattern->new(@keyterms);
 	}
 
 	requires 'subject';

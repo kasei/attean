@@ -41,7 +41,7 @@ package Attean::RDF 0.010 {
 	use namespace::clean;
 
 	our @ISA	= qw(Exporter);
-	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern);
+	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern quadpattern);
 
 =item C<< variable( $value ) >>
 
@@ -134,8 +134,18 @@ C<< Attean::Quad->new( @terms ) >>
 	sub quad {
 		return Attean::Quad->new(@_);
 	}
-}
 
+=item C<< quadpattern( @terms ) >>
+
+C<< Attean::QuadPattern->new( @terms ) >>
+
+=cut
+
+	sub quadpattern {
+		return Attean::QuadPattern->new(@_);
+	}
+}
+	
 1;
 
 __END__
