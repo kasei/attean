@@ -124,6 +124,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 		foreach my $i (0 .. $#tuples) {
 			my $p		= $tuples[$i];
 			my ($str, $t)	= @$p;
+			my $item_class	= ref($t);
 			my ($next, $last)	= ('')x2;
 			$last	= $tuples[$i-1][0] if ($i > 0);
 			$next	= $tuples[$i+1][0] if ($i < $#tuples);
@@ -140,7 +141,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
 					my %t		= $p->[1]->mapping;
 					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
-					my $t	= Attean::Triple->new( %t );
+					my $t	= $item_class->new( %t );
 					$p->[1]	= $t;
 					$p->[0]	= $t->tuples_string;
 				}
@@ -149,6 +150,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 	
 		foreach my $p (@tuples) {
 			my ($str, $t)	= @$p;
+			my $item_class	= ref($t);
 			foreach my $pos (reverse $t->variables) {
 				if (defined(my $tstr = $p->[2]{$pos})) {
 					$tstr	=~ /^([?]|_:)([^#]+)$/;
@@ -165,7 +167,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
 					my %t		= $p->[1]->mapping;
 					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
-					my $t	= Attean::Triple->new( %t );
+					my $t	= $item_class->new( %t );
 					$p->[1]	= $t;
 					$p->[0]	= $t->tuples_string;
 				}
