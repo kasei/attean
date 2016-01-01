@@ -567,6 +567,7 @@ package Attean::Plan::Extend 0.010 {
 	use Encode;
 	use Data::UUID;
 	use URI::Escape;
+	use Data::Dumper;
 	use I18N::LangTags;
 	use POSIX qw(ceil floor);
 	use Digest::SHA;
@@ -576,6 +577,7 @@ package Attean::Plan::Extend 0.010 {
 	use Types::Standard qw(ConsumerOf InstanceOf HashRef);
 	use namespace::clean;
 
+	with 'MooX::Log::Any';
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
 	
@@ -670,9 +672,7 @@ package Attean::Plan::Extend 0.010 {
 				}
 				return Attean::Literal->new(value => $num, datatype => $expr->datatype);
 			}
-			use Data::Dumper;
-			warn "Cast as $datatype: " . $term->as_string;
-			warn 'Cast expression unimplemented: ' . Dumper($expr);
+			$self->log->warn("Cast expression unimplemented for $datatype: " . Dumper($expr));
 		} elsif ($expr->isa('Attean::ValueExpression')) {
 			my $node	= $expr->value;
 			if ($node->does('Attean::API::Variable')) {
@@ -741,15 +741,14 @@ package Attean::Plan::Extend 0.010 {
 				}
 			}
 			
-			use Data::Dumper;
-			warn "Binary operator $op expression evaluation unimplemented: " . Dumper($expr);
+			$self->log->warn("Binary operator $op expression evaluation unimplemented: " . Dumper($expr));
 			die "Expression evaluation unimplemented: " . $expr->as_string;
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
 			my $func	= $expr->operator;
 			if ($func eq 'IF') {
 				my ($check, @children)	= @{ $expr->children };
 				my ($term)		= $self->evaluate_expression($model, $check, $r);
-				warn $@ if $@;
+				$self->log->warn($@) if ($@);
 				my $expr	= $children[ (blessed($term) and $term->ebv) ? 0 : 1 ];
 				my $value	= $self->evaluate_expression($model, $expr, $r);
 # 				warn '############# ' . $value->as_string;
@@ -1073,7 +1072,7 @@ package Attean::Plan::Extend 0.010 {
 					return Attean::Blank->new();
 				}
 			} else {
-				warn "Expression evaluation unimplemented: " . $expr->as_string;
+				$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
 				die "Expression evaluation unimplemented: " . $expr->as_string;
 			}
 		} elsif ($expr->isa('Attean::ExistsPlanExpression')) {
@@ -1088,7 +1087,7 @@ package Attean::Plan::Extend 0.010 {
 			
 			return $found ? Attean::Literal->true : Attean::Literal->false;
 		} else {
-			warn "Expression evaluation unimplemented: " . $expr->as_string;
+			$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
 			die "Expression evaluation unimplemented: " . $expr->as_string;
 		}
 	}

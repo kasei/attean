@@ -103,7 +103,6 @@ Returns a list of file extensions that may be parsed with the parser.
 							my $dt		= $value->{datatype};
 							$data{ $v }	= Attean::Literal->new( value => $data, datatype => $dt );
 						} else {
-							warn Dumper($data, $b);
 							die "Unknown node type $type during parsing of SPARQL JSON Results";
 						}
 					}

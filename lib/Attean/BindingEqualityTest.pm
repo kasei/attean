@@ -18,7 +18,7 @@ package Attean::BindingEqualityTest 0.010 {
 	use Attean::RDF;
 	use namespace::clean;
 	
-	our $debug	= 0;
+	with 'MooX::Log::Any';
 	
 	has error => (is => 'rw', isa => Str, init_arg => undef);
 	
@@ -170,21 +170,21 @@ solutions, the solution returned is arbitrary.
 				Attean::Blank->new($_)->as_string => Attean::Blank->new($mapping_str{$_})
 			} (keys %mapping_str);
 			my $mapper	= Attean::TermMap->rewrite_map(\%mapping);
-			warn "trying mapping: " . Dumper($mapping) if ($debug);
+			$self->log->trace("trying mapping: " . Dumper($mapping));
 		
 			my %bb	= %bb_master;
 			foreach my $st (@$ba) {
 				my $mapped_st	= $st->apply_map($mapper)->as_string;
-				warn "checking for '$mapped_st' in " . Dumper(\%bb) if ($debug);
+				$self->log->trace("checking for '$mapped_st' in " . Dumper(\%bb));
 				if ($bb{ $mapped_st }) {
-					warn "Found mapping for binding: " . Dumper($mapped_st) if ($debug);
+					$self->log->trace("Found mapping for binding: " . Dumper($mapped_st));
 					delete $bb{ $mapped_st };
 				} else {
-					warn "No mapping found for binding: " . Dumper($mapped_st) if ($debug);
+					$self->log->trace("No mapping found for binding: " . Dumper($mapped_st));
 					next MAPPING;
 				}
 			}
-			$self->error("found mapping: " . Dumper(\%mapping_str)) if ($debug);
+			$self->error("found mapping: " . Dumper(\%mapping_str));
 			return \%mapping_str;
 		}
 	

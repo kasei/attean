@@ -91,7 +91,10 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 	use Moo::Role;
 	use Attean::RDF;
 	use namespace::clean;
+
+	with 'MooX::Log::Any';
 	requires 'elements';
+
 	sub canonical_set {
 		my $self	= shift;
 		my ($set)	= $self->canonical_set_with_mapping;
@@ -159,7 +162,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 					my $key		= "$prefix$name";
 					delete $p->[2]{$pos};
 					unless (exists($mapping{$key})) {
-						warn "Cannot canonicalize binding set";
+						$self->error("Cannot canonicalize binding set");
 						return;
 					}
 					my $id		= $mapping{$key}{id};

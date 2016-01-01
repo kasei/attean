@@ -11,6 +11,10 @@ package Attean::TripleModel 0.010 {
 	use Scalar::Util qw(reftype);
 	use namespace::clean;
 
+	with 'MooX::Log::Any';
+	with 'Attean::API::Model';
+	with 'Attean::API::CostPlanner';
+
 	has 'stores'	=> (
 		is => 'ro',
 		isa => HashRef[ConsumerOf['Attean::API::TripleStore']],
@@ -95,7 +99,8 @@ L<Attean::API::QuadIterator>.
 				return $iter->as_quads($g);
 			}
 		} else {
-			warn "*** unhandled graph: " . $g->as_string;
+			my $name	= $g->can('as_string') ? $g->as_string : "$g";
+			$self->log->warn("TripleModel cannot produce quads for non-IRI graph: $name");
 		}
 		return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
 	}
@@ -130,9 +135,6 @@ L<Attean::API::QuadIterator>.
 		}
 		return;
 	}
-	
-	with 'Attean::API::Model';
-	with 'Attean::API::CostPlanner';
 }
 
 1;

@@ -193,7 +193,6 @@ supplied C<< $active_graph >>.
 				my $b	= Attean::Result->new( bindings => {} );
 				return Attean::ListIterator->new(variables => [], values => [$b], item_type => 'Attean::API::Result');
 			} else {
-				warn $req->as_string;
 				die "Service error: " . $response->status_line;
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
