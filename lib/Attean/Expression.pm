@@ -356,9 +356,9 @@ package Attean::ExistsExpression 0.010 {
 	has 'pattern' => (is => 'ro', isa => ConsumerOf['Attean::API::Algebra']);
 	sub as_string {
 		my $self	= shift;
-		# TODO: implement as_string for EXISTS patterns
-		warn "TODO: Attean::ExistsExpression->as_string";
-		return "EXISTS { ... }";
+		my $sparql	= $self->pattern->as_sparql;
+		$sparql		=~ s/\s+/ /g;
+		return "EXISTS { $sparql }";
 	}
 
 	sub tree_attributes { return qw(operator pattern) }
