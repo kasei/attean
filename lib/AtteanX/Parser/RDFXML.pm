@@ -81,10 +81,20 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler );
 		my $p			= XML::SAX::ParserFactory->parser(Handler => $saxhandler);
 		$saxhandler->push_base( $self->base ) if ($self->has_base);
-		if (ref($data)) {
-			$p->parse_file($data);
-		} else {
-			$p->parse_string($data);
+		eval {
+			if (ref($data)) {
+				$p->parse_file($data);
+			} else {
+				$p->parse_string($data);
+			}
+		};
+		
+		if ($@) {
+			if ($@ =~ /no element found at line 1, column 0, byte 0/) {
+				# silence XML::Parser output on empty input
+			} else {
+				die $@;
+			}
 		}
 		my $nodes	= $saxhandler->{nodes};
 		if ($nodes and scalar(@$nodes)) {
