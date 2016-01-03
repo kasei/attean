@@ -1,4 +1,4 @@
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 
 use v5.14;
@@ -6,6 +6,7 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
+use Attean::RDF;
 use Type::Tiny::Role;
 
 {
@@ -140,8 +141,7 @@ use Type::Tiny::Role;
 	}
 }
 
-{
-	note('List helper methods');
+subtest 'List helper methods' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/list-graph');
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
@@ -154,13 +154,28 @@ use Type::Tiny::Role;
 	my $list	= $model->get_list($graph, $head);
 	does_ok($list, 'Attean::API::Iterator', 'get_list returned iterator');
 	is_deeply([map { $_->value } $list->elements], [1,2,3], 'get_list elements');
-}
+};
+
+subtest 'Sequence helper methods' => sub {
+	my $graph	= Attean::IRI->new('http://example.org/list-graph');
+	my $store	= Attean->get_store('Memory')->new();
+	my $parser	= Attean->get_parser('ntriples')->new();
+	my $data	= <<'END';
+<http://example.org/favourite-fruit> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq> .
+<http://example.org/favourite-fruit> <http://www.w3.org/1999/02/22-rdf-syntax-ns#_1> "banana" .
+<http://example.org/favourite-fruit> <http://www.w3.org/1999/02/22-rdf-syntax-ns#_2> "apple" .
+<http://example.org/favourite-fruit> <http://www.w3.org/1999/02/22-rdf-syntax-ns#_3> "pear" .
+END
+	my $iter	= $parser->parse_iter_from_bytes($data);
+	my $quads	= $iter->as_quads($graph);
+	$store->add_iter($quads);
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $seq		= $model->get_sequence($graph, iri('http://example.org/favourite-fruit'));
+	does_ok($seq, 'Attean::API::Iterator', 'get_sequence returned iterator');
+	is_deeply([map { $_->value } $seq->elements], [qw(banana apple pear)], 'get_sequence elements');
+	
+	$model->add_quad(quad(iri('http://example.org/favourite-fruit'), iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#_2'), literal('kiwi'), $graph));
+	dies_ok { $model->get_sequence($graph, iri('http://example.org/favourite-fruit')) } 'get_sequence dies on invalid sequence data';
+};
 
 done_testing();
-
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
-}
