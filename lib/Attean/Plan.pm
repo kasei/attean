@@ -278,16 +278,61 @@ package Attean::Plan::HashJoin 0.010 {
 			my @vars	= @{ $self->join_variables };
 			my $rhs		= $children[1]->();
 			while (my $r = $rhs->next()) {
-				my $key	= join(',', map { ref($_) ? $_->as_string : '' } map { $r->value($_) } @vars);
-				push(@{ $hash{$key} }, $r);
+				my $has_unbound_right_join_var	= 0;
+				my @values;
+				foreach my $var (@vars) {
+					my $value	= $r->value($var);
+					unless (defined($value)) {
+						$has_unbound_right_join_var++;
+					}
+					push(@values, $value);
+				}
+				if ($has_unbound_right_join_var) {
+					# this is a RHS row that doesn't have a term bound to one of the join variables.
+					# this will make it impossible to compute the proper hash key to access the row bucket,
+					# so we add this row to the null bucket (hash key '') which we try to join all LHS rows
+					# against.
+					push(@{ $hash{''} }, $r);
+				} else {
+					my $key	= join(',', map { ref($_) ? $_->as_string : '' } @values);
+					push(@{ $hash{$key} }, $r);
+				}
 			}
 			
 			my @results;
 			my $lhs		= $children[0]->();
 			while (my $l = $lhs->next()) {
 				my $seen	= 0;
-				my $key		= join(',', map { ref($_) ? $_->as_string : '' } map { $l->value($_) } @vars);
-				if (my $rows = $hash{$key}) {
+				my @values;
+				my $has_unbound_left_join_var	= 0;
+				foreach my $var (@vars) {
+					my $value	= $l->value($var);
+					unless (defined($value)) {
+						$has_unbound_left_join_var++;
+					}
+					push(@values, $value);
+				}
+				
+				my @buckets;
+				if (my $b = $hash{''}) {
+					push(@buckets, $b);
+				}
+				
+				if ($has_unbound_left_join_var) {
+					my $pattern	= join(',', map { ref($_) ? quotemeta($_->as_string) : '.*' } @values);
+					foreach my $key (keys %hash) {
+						if ($key =~ /^${pattern}$/) {
+							push(@buckets, $hash{$key});
+						}
+					}
+				} else {
+					my $key		= join(',', map { ref($_) ? $_->as_string : '' } @values);
+					if (my $rows = $hash{$key}) {
+						push(@buckets, $rows);
+					}
+				}
+				
+				foreach my $rows (@buckets) {
 					foreach my $r (@$rows) {
 						if (my $j = $l->join($r)) {
 							$seen++;
