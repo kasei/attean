@@ -138,6 +138,10 @@ L<IO::Handle> object C<< $fh >>.
 				$io->print('?');
 				$io->print($t->value);
 				$need_space++;
+			} elsif ($type == ANON) {
+				$io->print('_:');
+				$io->print($t->value);
+				$need_space++;
 			} elsif ($type == A) {
 				$io->print('a');
 				$need_space++;
@@ -153,12 +157,14 @@ L<IO::Handle> object C<< $fh >>.
 				$need_space++;
 			}
 			
-			if ($type == DOT and $semicolon) {
-				$indent--;
+			if ($type == DOT) {
+				if ($semicolon) {
+					$indent--;
+					$semicolon	= 0;
+				}
 				$need_space	= 0;
 				$io->print("\n");
 				$newline	= 1;
-				$semicolon	= 0;
 			} elsif ($type == LBRACE) {
 				$io->print("\n");
 				$need_space	= 0;
@@ -174,7 +180,9 @@ L<IO::Handle> object C<< $fh >>.
 				}
 			}
 		}
-		$io->print("\n");
+		unless ($newline) {
+			$io->print("\n");
+		}
 		return;
 	}
 	

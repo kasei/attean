@@ -561,22 +561,26 @@ subtest 'expected tokens: aggregation' => sub {
 # Attean::Algebra::Extend
 # Attean::Algebra::Sequence
 
-{
-	note('BGP with blank');
-	my $b		= blank('person');
+subtest 'BGP with blank' => sub {
+	my $b			= blank('person');
 	my $rdf_type	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 	my $foaf_name	= iri('http://xmlns.com/foaf/0.1/name');
 	my $foaf_knows	= iri('http://xmlns.com/foaf/0.1/knows');
 	my $foaf_Person	= iri('http://xmlns.com/foaf/0.1/Person');
-	my $bgp1	= Attean::Algebra::BGP->new( triples => [
+	my $bgp1		= Attean::Algebra::BGP->new( triples => [
 		triplepattern($b, $rdf_type, $foaf_Person),
 		triplepattern($b, $foaf_name, variable('name')),
 		triplepattern($b, $foaf_knows, variable('knows')),
 	] );
 	lives_ok {
 		my $string = $bgp1->as_sparql;
+		is($string, <<"END", 'expected serialization');
+_:person <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .
+_:person <http://xmlns.com/foaf/0.1/name> ?name .
+_:person <http://xmlns.com/foaf/0.1/knows> ?knows .
+END
 	} 'as_sparql returns a string on blank';
-}
+};
 
 done_testing();
 exit;

@@ -489,7 +489,8 @@ package Attean::API::Blank 0.010 {
 	
 	sub sparql_tokens {
 		my $self	= shift;
-		die;
+		my $t	= AtteanX::SPARQL::Token->fast_constructor( ANON, -1, -1, -1, -1, [$self->value] );
+		return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
 	}
 	
 	sub compare {
