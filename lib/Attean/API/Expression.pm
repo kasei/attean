@@ -74,6 +74,7 @@ package Attean::API::Expression 0.010 {
 	
 	has 'operator' => (is => 'ro', isa => Str, required => 1);
 	requires 'is_stable'; # is stable for sorting (won't change across evaluations)
+	requires 'unaggregated_variables';
 	requires 'as_string';
 	requires 'as_sparql';
 	
@@ -120,6 +121,12 @@ package Attean::API::UnaryExpression 0.010 {
 		'+'	=> AtteanX::SPARQL::Token->fast_constructor( PLUS, -1, -1, -1, -1, ['+'] ),
 	);
 
+	sub unaggregated_variables {
+		my $self	= shift;
+		my ($child)	= @{ $self->children };
+		return $child->unaggregated_variables;
+	}
+	
 	sub sparql_tokens {
 		my $self	= shift;
 		my $op		= $ops{$self->operator} // die;
@@ -147,11 +154,12 @@ package Attean::API::BinaryExpression 0.010 {
 		my ($lhs, $rhs)	= @{ $self->children };
 		return sprintf("(%s %s %s)", $lhs->as_string, $self->operator, $rhs->as_string);
 	}
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		return $self->as_string;
-# 	}
 
+	sub unaggregated_variables {
+		my $self	= shift;
+		return map { $_->unaggregated_variables } @{ $self->children };
+	}
+	
 	my %ops	= (
 		'-'		=> AtteanX::SPARQL::Token->fast_constructor( MINUS, -1, -1, -1, -1, ['-'] ),
 		'+'		=> AtteanX::SPARQL::Token->fast_constructor( PLUS, -1, -1, -1, -1, ['+'] ),
@@ -189,9 +197,15 @@ package Attean::API::NaryExpression 0.010 {
 		my @children	= map { $_->as_string } @{ $self->children };
 		return sprintf("%s(%s)", $self->operator, join(', ', @children));
 	}
+
 	sub as_sparql {
 		my $self	= shift;
 		return $self->as_string;
+	}
+
+	sub unaggregated_variables {
+		my $self	= shift;
+		return map { $_->unaggregated_variables } @{ $self->children };
 	}
 }
 
@@ -206,9 +220,14 @@ package Attean::API::AggregateExpression 0.010 {
 		my @children	= map { $_->as_string } @{ $self->children };
 		return sprintf("%s(%s)", $self->operator, join(', ', @children));
 	}
+
 	sub as_sparql {
 		my $self	= shift;
 		return $self->as_string;
+	}
+
+	sub unaggregated_variables {
+		return;
 	}
 }
 

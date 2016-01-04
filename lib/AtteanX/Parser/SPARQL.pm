@@ -780,23 +780,6 @@ sub _SelectQuery {
 	}
 	
 	my %projected	= map { $_ => 1 } $self->__solution_modifiers( $star, @exprs );
-
-	my $pattern	= $self->{build}{triples}[0];
-	my @agg		= $pattern->subpatterns_of_type('Attean::Algebra::Group'); # TODO: this probably breaks when a sub-query uses aggregation
-	if (my $agg = shift @agg) {
-		my @gvars	= @{ $agg->groupby };
-		if (scalar(@gvars) == 0) {
-			# aggregate query with no explicit group keys
-			warn 'TODO: check for projected variables in aggregate query with no grouping';
-# 			foreach my $v (@{ $self->{build}{variables} }) {
-# 				if ($v->isa('RDF::Query::Node::Variable')) {
-# 					my $name	= $v->name;
-# 					throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# 				}
-# 			}
-		}
-	}
-	
 	delete $self->{build}{options};
 	$self->{build}{method}		= 'SELECT';
 }
@@ -1500,6 +1483,7 @@ sub _SubSelect {
 		local($self->{stack})					= [];
 		local($self->{filters})					= [];
 		local($self->{pattern_container_stack})	= [];
+
 		my $triples								= $self->_push_pattern_container();
 		local($self->{build})					= { triples => $triples};
 		if ($self->{baseURI}) {
@@ -3133,11 +3117,13 @@ sub __solution_modifiers {
 		$self->{build}{triples}[0]	= $pattern;
 	}
 	
+	my $has_aggregation	= 0;
 	my $having_expr;
 	my $aggdata	= delete( $self->{build}{__aggregate} );
 	my $groupby	= delete( $self->{build}{__group_by} ) || [];
 	my @aggkeys	= keys %{ $aggdata || {} };
 	if (scalar(@aggkeys) or scalar(@$groupby)) {
+		$has_aggregation++;
 		my @aggs;
 		foreach my $k (@aggkeys) {
 			my ($var, $expr)	= @{ $aggdata->{$k} };
@@ -3149,9 +3135,24 @@ sub __solution_modifiers {
 		if (my $having = delete( $self->{build}{__having} )) {
 			$having_expr	= $having;
 		}
-		
 		my $agg		= Attean::Algebra::Group->new( children => [$ggp], groupby => $groupby, aggregates => \@aggs );
 		push(@{ $self->{build}{triples} }, $agg);
+	}
+	
+	my %group_vars;
+	my %agg_vars;
+	if ($has_aggregation) {
+		foreach my $agg_var (map { $_->[0] } values %$aggdata) {
+			$agg_vars{ $agg_var->value }++;
+		}
+		foreach my $g (@$groupby) {
+			if ($g->isa('Attean::ValueExpression') and $g->value->does('Attean::API::Variable')) {
+				$group_vars{ $g->value->value }++;
+			} else {
+				use Data::Dumper;
+				die Dumper($g);
+			}
+		}
 	}
 	
 	my @project;
@@ -3160,10 +3161,23 @@ sub __solution_modifiers {
 	if ($star) {
 		my $pattern	= ${ $self->{build}{triples} }[-1];
 		push(@project, $pattern->in_scope_variables);
+		if ($has_aggregation) {
+			die "Cannot SELECT * in an aggregate query";
+		}
 	} else {
 		for (my $i = 0; $i < $#exprs; $i += 2) {
 			my $k	= $exprs[$i];
 			my $v	= $exprs[$i+1];
+			if ($has_aggregation) {
+				my @vars	= $v->does('Attean::API::Variable') ? $v : $v->unaggregated_variables;
+				foreach my $var (@vars) {
+					my $name	= $var->value;
+					unless (exists $agg_vars{$name} or exists $group_vars{$name}) {
+						die "Cannot project variable ?$name that is not aggregated or used in grouping";
+					}
+				}
+			}
+			
 			push(@project, $k);
 			if ($v->does('Attean::API::Variable')) {
 				push(@vars, $v);

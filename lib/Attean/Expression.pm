@@ -87,6 +87,14 @@ package Attean::ValueExpression 0.010 {
 		my $self	= shift;
 		return $self->value->sparql_tokens;
 	}
+
+	sub unaggregated_variables {
+		my $self	= shift;
+		if ($self->value->does('Attean::API::Variable')) {
+			return $self->value;
+		}
+		return;
+	}
 }
 
 =item * L<Attean::UnaryExpression>
@@ -383,6 +391,11 @@ package Attean::ExistsExpression 0.010 {
 		push(@tokens, $rbrace);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+
+	sub unaggregated_variables {
+		my $self	= shift;
+		return map { Attean::Variable->new($_) } $self->pattern->in_scope_variables;
+	}
 }
 
 package Attean::ExistsPlanExpression 0.010 {
@@ -420,6 +433,11 @@ package Attean::ExistsPlanExpression 0.010 {
 		# TODO: need deep analysis of exists pattern to tell if this is stable
 		# (there might be an unstable filter expression deep inside the pattern)
 		return 0;
+	}
+
+	sub unaggregated_variables {
+		my $self	= shift;
+		die "unaggregated_variables cannot be called on Attean::ExistsPlanExpression";
 	}
 }
 
