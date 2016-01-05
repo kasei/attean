@@ -89,7 +89,8 @@ sub configure_lexer {
 
 sub parse {
 	my $self	= shift;
-	my ($algebra) = $self->parse_list_from_bytes(@_);
+	my $parser	= ref($self) ? $self : $self->new();
+	my ($algebra) = $parser->parse_list_from_bytes(@_);
 	return $algebra;
 }
 
