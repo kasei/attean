@@ -13,7 +13,9 @@ This document describes AtteanX::Parser::SPARQL version 2.916.
 
  use AtteanX::Parser::SPARQL;
  my $parser	= AtteanX::Parser::SPARQL->new();
- my $iterator = $parser->parse( $query, $base_uri );
+ my $algbrea = $parser->parse($sparql, $base_uri);
+ # or:
+ my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
 
 =head1 DESCRIPTION
 
@@ -85,13 +87,19 @@ sub configure_lexer {
 	return $l;
 }
 
+sub parse {
+	my $self	= shift;
+	my ($algebra) = $self->parse_list_from_bytes(@_);
+	return $algebra;
+}
+
 sub parse_list_from_io {
 	my $self	= shift;
 	my $p 		= AtteanX::Parser::SPARQLLex->new();
 	my $l		= $self->configure_lexer( $p->parse_iter_from_io(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
-	my $q		= $self->parse();
+	my $q		= $self->_parse();
 	return unless (ref($q));
 	my $a	= $q->{triples}[0];
 	return unless (ref($a));
@@ -104,7 +112,7 @@ sub parse_list_from_bytes {
 	my $l		= $self->configure_lexer( $p->parse_iter_from_bytes(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
-	my $q		= $self->parse();
+	my $q		= $self->_parse();
 	return unless (ref($q));
 	my $a	= $q->{triples}[0];
 	return unless (ref($a));
@@ -118,7 +126,7 @@ SPARQL 1.1 Update statements.
 
 =cut
 
-sub parse {
+sub _parse {
 	my $self	= shift;
 	
 	my $t		= $self->lexer->peek;
