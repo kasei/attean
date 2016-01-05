@@ -208,10 +208,17 @@ package Attean::API::SPARQLSerializable 0.010 {
 					$modifiers{project_expression_tokens}{$name}	= \@tokens;
 				} elsif ($algebra->isa('Attean::Algebra::Project')) {
 					my $vars	= $algebra->variables;
-					foreach my $v (@$vars) {
-						my $name	= $v->value;
-						unless ($modifiers{project_variables}{$name}++) {
-							push(@{ $modifiers{project_variables_order} }, $name);
+					my ($child)	= @{ $algebra->children };
+					my @vars	= sort(map { $_->value } @$vars);
+					my @subvars	= sort($child->in_scope_variables);
+					if (scalar(@vars) == scalar(@subvars) and join('.', @vars) eq join('.', @subvars)) {
+						# this is a SELECT * query
+					} else {
+						foreach my $v (@$vars) {
+							my $name	= $v->value;
+							unless ($modifiers{project_variables}{$name}++) {
+								push(@{ $modifiers{project_variables_order} }, $name);
+							}
 						}
 					}
 				} elsif ($algebra->isa('Attean::Algebra::Group')) {
