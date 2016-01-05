@@ -74,11 +74,14 @@ L<IO::Handle> object C<< $fh >>.
 				if ($type == RBRACE) {
 					$io->print("\n");
 					$newline	= 1;
-					$indent--;
 				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE)$/) {
 					$io->print("\n");
 					$newline	= 1;
 				}
+			}
+			
+			if ($type == RBRACE) {
+				$indent--;
 			}
 			
 			if ($newline) {
