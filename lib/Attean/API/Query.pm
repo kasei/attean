@@ -155,6 +155,21 @@ package Attean::API::SPARQLSerializable 0.010 {
 		return $bytes;
 	}
 	
+	sub sparql_subtokens {
+		my $self	= shift;
+		if ($self->does('Attean::API::SPARQLQuerySerializable')) {
+			my $l	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
+			my $r	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+			my @tokens;
+			push(@tokens, $l);
+			push(@tokens, $self->sparql_tokens->elements);
+			push(@tokens, $r);
+			return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+		} else {
+			return $self->sparql_tokens;
+		}
+	}
+	
 	sub query_tokens {
 		my $self	= shift;
 		my $as		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['AS'] );
@@ -276,9 +291,14 @@ package Attean::API::SPARQLSerializable 0.010 {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
 			}
 			push(@tokens, $where);
-			push(@tokens, $lbrace);
-			push(@tokens, $algebra->sparql_tokens->elements);
-			push(@tokens, $rbrace);
+			if ($algebra->isa('Attean::Algebra::Join')) {
+				# don't emit extraneous braces at the top-level
+				push(@tokens, $algebra->sparql_tokens->elements);
+			} else {
+				push(@tokens, $lbrace);
+				push(@tokens, $algebra->sparql_tokens->elements);
+				push(@tokens, $rbrace);
+			}
 			if (my $groups = $modifiers{groups}) {
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['GROUP'] ));
 				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));

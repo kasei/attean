@@ -71,7 +71,7 @@ package Attean::Algebra::Join 0.010 {
 		my @tokens;
 		push(@tokens, $l);
 		foreach my $t (@{ $self->children }) {
-			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $t->sparql_subtokens->elements);
 		}
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
@@ -106,9 +106,9 @@ package Attean::Algebra::LeftJoin 0.010 {
 		
 		my @tokens;
 		push(@tokens, $l);
-		push(@tokens, $lhs->sparql_tokens->elements);
+		push(@tokens, $lhs->sparql_subtokens->elements);
 		push(@tokens, $r, $opt, $l);
-		push(@tokens, $rhs->sparql_tokens->elements);
+		push(@tokens, $rhs->sparql_subtokens->elements);
 		
 		my $expr	= $self->expression;
 		my $is_true	= 0;
@@ -194,9 +194,9 @@ package Attean::Algebra::Union 0.010 {
 		
 		my @tokens;
 		push(@tokens, $l);
-		push(@tokens, $lhs->sparql_tokens->elements);
+		push(@tokens, $lhs->sparql_subtokens->elements);
 		push(@tokens, $r, $union, $l);
-		push(@tokens, $rhs->sparql_tokens->elements);
+		push(@tokens, $rhs->sparql_subtokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -244,7 +244,7 @@ package Attean::Algebra::Graph 0.010 {
 		push(@tokens, $graph);
 		push(@tokens, $self->graph->sparql_tokens->elements);
 		push(@tokens, $l);
-		push(@tokens, $child->sparql_tokens->elements);
+		push(@tokens, $child->sparql_subtokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -328,9 +328,9 @@ package Attean::Algebra::Minus 0.010 {
 		
 		my @tokens;
 		push(@tokens, $l);
-		push(@tokens, $lhs->sparql_tokens->elements);
+		push(@tokens, $lhs->sparql_subtokens->elements);
 		push(@tokens, $r, $minus, $l);
-		push(@tokens, $rhs->sparql_tokens->elements);
+		push(@tokens, $rhs->sparql_subtokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
@@ -587,7 +587,7 @@ package Attean::Algebra::Service 0.010 {
 		push(@tokens, $service);
 		push(@tokens, $self->endpoint->sparql_tokens->elements);
 		push(@tokens, $l);
-		push(@tokens, $child->sparql_tokens->elements);
+		push(@tokens, $child->sparql_subtokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}

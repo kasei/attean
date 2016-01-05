@@ -530,8 +530,8 @@ subtest 'expected tokens: non-projected extend tokens' => sub {
 
 		my $i		= $a->sparql_tokens;
 		does_ok($i, 'Attean::API::Iterator');
-		# SELECT ?s ?o3 ?sum WHERE { { ?s <p> ?o1 . ?s <q> ?o2 . BIND(?o1 + ?o2 AS ?sum) ?s <r> ?o3 } }
-		expect_token_stream($i, [KEYWORD, VAR, VAR, VAR, KEYWORD, LBRACE, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, VAR, IRI, VAR, DOT, RBRACE, RBRACE]);
+		# SELECT ?s ?o3 ?sum WHERE { ?s <p> ?o1 . ?s <q> ?o2 . BIND(?o1 + ?o2 AS ?sum) ?s <r> ?o3 }
+		expect_token_stream($i, [KEYWORD, VAR, VAR, VAR, KEYWORD, LBRACE, VAR, IRI, VAR, DOT, VAR, IRI, VAR, DOT, KEYWORD, LPAREN, VAR, PLUS, VAR, KEYWORD, VAR, RPAREN, VAR, IRI, VAR, DOT, RBRACE]);
 	};
 };
 
