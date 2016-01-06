@@ -1,0 +1,23 @@
+# Comments must be removed from this file to make it valid JSON
+
+{
+		"store": "Memory;/Users/greg/foaf.ttl",
+		"endpoint": {
+			"update": true,				# allow SPARQL Update operations
+			"load_data": false,			# allow loading RDF data via SPARQL Protocol or FROM/FROM NAMED clauses
+			"html": {
+				"resource_links": true,	# turn resources into links in HTML query result pages
+				"embed_images": false,	# display foaf:Images as images in HTML query result pages
+				"image_width": 200		# with 'embed_images', scale images to this width
+			},
+			"service_description": {
+				"default": true,		# generate dataset description of the default graph
+				"named_graphs": true,	# generate dataset description of the available named graphs
+				"related": ["http://dbpedia.org/sparql", "http://kasei.us/sparql"],
+				"software": "http://kasei.us/code/rdf-query/#rdf-query-2.909",
+				"namespaces": {
+					"foaf": "http://xmlns.com/foaf/0.1/"
+				}
+			}
+		}
+}
