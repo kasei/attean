@@ -134,6 +134,19 @@ package Attean::API::DirectedAcyclicGraph 0.010 {
 			$cb->( $self );
 		}
 	}
+
+	sub subpatterns_of_type {
+		my $self	= shift;
+		my @types	= @_;
+		my @p;
+		$self->walk( prefix => sub {
+			my $a	= shift;
+			foreach my $t (@types) {
+				push(@p, $a) if ($a->isa($t) or $a->does($t));
+			}
+		});
+		return @p;
+	}
 }
 
 package Attean::API::SPARQLSerializable 0.010 {
@@ -401,19 +414,6 @@ package Attean::API::Algebra 0.010 {
 			$string	.= "-$indent " .  $a->algebra_as_string . "\n";
 		});
 		return $string;
-	}
-	
-	sub subpatterns_of_type {
-		my $self	= shift;
-		my @types	= @_;
-		my @p;
-		$self->walk( prefix => sub {
-			my $a	= shift;
-			foreach my $t (@types) {
-				push(@p, $a) if ($a->isa($t) or $a->does($t));
-			}
-		});
-		return @p;
 	}
 	
 	sub blank_nodes {
