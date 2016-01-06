@@ -7,6 +7,7 @@ install:
   - "cpanm --quiet --installdeps --notest RDF::Trine"
   - "cpanm --quiet --installdeps --notest RDF::Query"
   - "cpanm --quiet --notest Module::Install::AuthorTests"
+  - "cpanm --quiet --notest Module::Install::DOAPChangeSets"
   - "cpanm --quiet --notest IRI"
   - "cpanm --quiet --notest URI::Namespace"
   - "cpanm --quiet --notest DBD::Pg"
