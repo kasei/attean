@@ -24,6 +24,7 @@ install:
   - "cpanm --quiet --notest Type::Tiny"
   - "cpanm --quiet --notest HTTP::Negotiate"
   - "cpanm --quiet --notest Math::Cartesian::Product"
+  - "cpanm --quiet --notest Regexp/Common.pm"
 env:
   - RDFTRINE_STORE_PG_DATABASE="travis_ci_test" RDFTRINE_STORE_PG_MODEL="testmodel"
 script:
