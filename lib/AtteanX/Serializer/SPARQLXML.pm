@@ -112,7 +112,7 @@ END
 						$label	=~ s/"/&quot;/g;
 						print $fh qq(\t\t\t<binding name="${name}"><bnode>${label}</bnode></binding>\n);
 					} else {
-						die;
+						die "Term object has an unrecognized type: " . ref($term);
 					}
 				}
 			}

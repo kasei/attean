@@ -270,7 +270,7 @@ package Attean::API::SPARQLSerializable 0.010 {
 						push(@{ $modifiers{groups} }, $group->sparql_tokens->elements);
 					}
 				} else {
-					die;
+					die "Unexpected pattern type encountered in query_tokens: " . ref($algebra);
 				}
 				($algebra)	= @{ $algebra->children };
 			}
@@ -363,7 +363,7 @@ package Attean::API::SPARQLSerializable 0.010 {
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, $rbrace);
 		} else {
-			die;
+			die "Unexpected query for '$form' in query_tokens";
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}

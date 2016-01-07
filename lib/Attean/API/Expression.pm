@@ -129,7 +129,7 @@ package Attean::API::UnaryExpression 0.010 {
 	
 	sub sparql_tokens {
 		my $self	= shift;
-		my $op		= $ops{$self->operator} // die;
+		my $op		= $ops{$self->operator} // die "No operator found in Attean::API::UnaryExpression->sparql_tokens";
 
 		my @tokens;
 		push(@tokens, $op);
@@ -177,7 +177,7 @@ package Attean::API::BinaryExpression 0.010 {
 	
 	sub sparql_tokens {
 		my $self	= shift;
-		my $op		= $ops{$self->operator} // die;
+		my $op		= $ops{$self->operator} // die "No operator found in Attean::API::BinaryExpression->sparql_tokens";
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
