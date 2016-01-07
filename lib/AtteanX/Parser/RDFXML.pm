@@ -54,10 +54,6 @@ package AtteanX::Parser::RDFXML 0.010 {
 	use Scalar::Util qw(blessed);
 	use Module::Load::Conditional qw[can_load];
 
-=head1 METHODS
-
-=over 4
-
 =item C<< canonical_media_type >>
 
 Returns the canonical media type for SPARQL XML: application/sparql-results+json.

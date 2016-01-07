@@ -39,8 +39,6 @@ This role provides default implementations of the following methods:
 
 Returns a string serialization of the term.
 
-=back
-
 =cut
 
 package Attean::API::Term 0.010 {
@@ -554,6 +552,8 @@ package Attean::API::IRI 0.010 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

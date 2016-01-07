@@ -92,8 +92,6 @@ C<< $limit >> elements of the referent.
 Returns a new L<Attean::API::RepeatableIterator> object containing all the
 elements from the referent.
 
-=back
-
 =cut
 
 package Attean::API::Iterator 0.010 {
@@ -373,6 +371,8 @@ package Attean::API::TermIterator 0.010 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

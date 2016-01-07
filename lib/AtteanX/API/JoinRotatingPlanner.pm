@@ -1,6 +1,8 @@
 use v5.14;
 use warnings;
 
+=encoding utf8
+
 =head1 NAME
 
 AtteanX::API::JoinRotatingPlanner - Query planning role to produce alternative join plans
