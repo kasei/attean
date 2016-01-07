@@ -39,6 +39,20 @@ with 'Attean::API::CostPlanner';
 
 my @pos_names	= Attean::API::Quad->variables;
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< subject >>
+
+=item C<< predicate >>
+
+=item C<< object >>
+
+=item C<< graph >>
+
+=back
+
 =head1 METHODS
 
 Beyond the methods documented below, this class inherits methods from the
@@ -403,6 +417,10 @@ sub etag_value_for_quads {
 	my $self	= shift;
 	return $self->hash->b64digest;
 }
+
+=item C<< mtime_for_quads >>
+
+=cut
 
 sub mtime_for_quads {
 	my $self	= shift;

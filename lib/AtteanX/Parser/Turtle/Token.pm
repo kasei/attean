@@ -21,6 +21,36 @@ This document describes AtteanX::Parser::Turtle::Token version 0.010
 The AtteanX::Parser::Turtle::Token class represents tokens produced and used
 during parsing of Turtle.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< type >>
+
+An integer indicating the token type, defined in L<AtteanX::Parser::Turtle::Constants>
+
+=item C<< start_line >>
+
+The line number in the source text that this token begins on.
+
+=item C<< start_column >>
+
+The column number in the source text that this token begins on.
+
+=item C<< line >>
+
+The line number in the source text that this token ends on.
+
+=item C<< column >>
+
+The column number in the source text that this token ends on.
+
+=item C<< args >>
+
+An array of values associated with the token (e.g. the integer value of an INT token).
+
+=back
+
 =head1 METHODS
 
 =over 4

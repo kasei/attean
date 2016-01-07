@@ -7,6 +7,7 @@ use Module::Load::Conditional qw[can_load];
 
 my @modules	= all_modules();
 foreach my $mod (@modules) {
+	next if ($mod =~ /^Test::/);
 	if (can_load( modules => { $mod => 0 } )) {
 		pod_coverage_ok($mod, { also_private => [ qr{^[A-Z][A-Z0-9_]*$} ] });
 	} else {

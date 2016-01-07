@@ -19,6 +19,10 @@ This document describes Attean::API version 0.010
 This is a utility package that will load all the Attean-related Moo roles
 in the Attean::API namespace.
 
+=head1 METHODS
+
+=over 4
+
 =cut
 
 package Attean::API::ResultOrTerm 0.010 {
@@ -73,6 +77,12 @@ package Attean::API::Variable 0.010 {
 	use namespace::clean;
 
 	with 'Attean::API::TermOrVariable';
+
+=item C<< as_string >>
+
+Returns a string representation of the variable.'
+
+=cut
 
 	sub as_string {
 		my $self	= shift;
@@ -203,6 +213,8 @@ package Attean::API 0.010 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

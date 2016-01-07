@@ -61,7 +61,7 @@ package Attean::CodeIterator 0.010 {
 	with 'Attean::API::Iterator';
 	
 	has generator => (is => 'ro', isa => CodeRef, required => 1);
-	has buffer => (is => 'ro', isa => ArrayRef, init_arg => undef, default => sub { [] });
+	has _buffer => (is => 'ro', isa => ArrayRef, init_arg => undef, default => sub { [] });
 
 =item C<< next >>
 
@@ -71,7 +71,7 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 
 	sub next {
 		my $self	= shift;
-		my $buffer	= $self->buffer;
+		my $buffer	= $self->_buffer;
 		if (scalar(@$buffer)) {
 			return shift(@$buffer);
 		}

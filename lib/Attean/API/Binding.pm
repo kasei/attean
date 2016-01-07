@@ -108,23 +108,48 @@ package Attean::API::Binding 0.010 {
 		return scalar(@blanks);
 	}
 	
+=item C<< is_ground >>
+
+Returns tue is all the bound values consume L<Attean::API::Term>, false otherwise.
+
+=cut
+
 	sub is_ground {
 		my $self	= shift;
 		my @bad	= grep { not($_->does('Attean::API::Term')) } $self->values;
 		return (scalar(@bad) == 0);
 	}
 	
+=item C<< values_consuming_role( $role ) >>
+
+Returns the list of bound values that consume C<< $role >>.
+
+=cut
+
 	sub values_consuming_role {
 		my $self	= shift;
 		my $role	= shift;
 		return grep { $_->does($role) } $self->values;
 	}
 	
+=item C<< tree_attributes >>
+
+Returns the variables which are bound in this object.
+
+=cut
+
 	sub tree_attributes {
 		my $self	= shift;
 		return $self->variables;
 	}
 	
+=item C<< apply_bindings( $binding ) >>
+
+Construct a new binding by replacing variables with their bound values from
+C<< $binding >>.
+
+=cut
+
 	sub apply_bindings {
 		my $self	= shift;
 		my $class	= ref($self);

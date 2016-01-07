@@ -1,3 +1,43 @@
+=head1 NAME
+
+AtteanX::Parser::RDFXML - RDF/XML Parser
+
+=head1 VERSION
+
+This document describes AtteanX::Parser::RDFXML version 0.010
+
+=head1 SYNOPSIS
+
+ use Attean;
+ my $parser = Attean->get_parser('RDFXML')->new();
+ $parser->parse_list_from_io( $fh );
+
+=head1 DESCRIPTION
+
+...
+
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=item C<< media_types >>
+
+=item C<< file_extensions >>
+
+=item C<< bnode_prefix >>
+
+A string prefix for identifiers generated for blank nodes.
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
 use v5.14;
 use warnings;
 
@@ -666,5 +706,20 @@ sub get_named_bnode {
 __END__
 
 =back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/perlrdf/issues>.
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2006-2012 Gregory Todd Williams. This
+program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut

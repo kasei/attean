@@ -1,6 +1,39 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::QuadModel - RDF model backed by a quad-store
+
+=head1 VERSION
+
+This document describes Attean::QuadModel version 0.010
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+  my $model = Attean::QuadModel->new( store => $store );
+
+=head1 DESCRIPTION
+
+The Attean::QuadModel class represents a model that is backed by a single
+L<Attean::API::QuadStore|Attean::API::Store> object.
+It conforms to the L<Attean::API::Model> role.
+
+The Attean::QuadModel constructor requires one named argument:
+
+=over 4
+
+=item stores
+
+A hash mapping graph IRI values to L<Attean::API::TripleStore|Attean::API::Store>
+objects representing the backing triple-store for that graph.
+
+=back
+
+=head1 METHODS
+
 =over 4
 
 =cut
@@ -22,6 +55,44 @@ package Attean::TripleModel 0.010 {
 		default => sub { +{} },
 	);
 	
+=item C<< size >>
+
+=cut
+
+	sub size {
+		my $self	= shift;
+		my $count	= 0;
+		foreach my $store (values %{ $self->stores }) {
+			$count	+= $store->size;
+		}
+	}
+	
+
+=item C<< count_quads >>
+
+=cut
+
+	sub count_quads {
+		my $self	= shift;
+		# TODO: don't materialize results here just to count them
+		my $iter	= $self->get_quads( @_ );
+		my $count	= 0;
+		while (my $r = $iter->next) {
+			$count++;
+		}
+		return $count;
+	}
+
+=item C<< get_graphs >>
+
+=cut
+
+	sub get_graphs {
+		my $self	= shift;
+		my @graphs	= map { Attean::IRI->new($_) } keys %{ $self->stores };
+		return Attean::ListIterator->new( values => \@graphs, item_type => 'Attean::API::Term' );
+	}
+	
 =item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
 
 Returns an L<Attean::API::Iterator> for quads in the model that match the
@@ -35,31 +106,6 @@ L<Attean::API::QuadIterator>.
 
 =cut
 
-	sub size {
-		my $self	= shift;
-		my $count	= 0;
-		foreach my $store (values %{ $self->stores }) {
-			$count	+= $store->size;
-		}
-	}
-	
-	sub count_quads {
-		my $self	= shift;
-		# TODO: don't materialize results here just to count them
-		my $iter	= $self->get_quads( @_ );
-		my $count	= 0;
-		while (my $r = $iter->next) {
-			$count++;
-		}
-		return $count;
-	}
-
-	sub get_graphs {
-		my $self	= shift;
-		my @graphs	= map { Attean::IRI->new($_) } keys %{ $self->stores };
-		return Attean::ListIterator->new( values => \@graphs, item_type => 'Attean::API::Term' );
-	}
-	
 	sub get_quads {
 		my $self	= shift;
 		my @nodes	= @_[0..3];
@@ -105,6 +151,13 @@ L<Attean::API::QuadIterator>.
 		return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
 	}
 	
+=item C<< plans_for_algebra( $algebra, $model, $active_graphs, $default_graphs ) >>
+
+Delegates to an underlying store if the active graph is bound to the store,
+and the store consumes Attean::API::CostPlanner.
+
+=cut
+
 	sub plans_for_algebra {
 		my $self	= shift;
 		my $algebra	= shift;
@@ -123,6 +176,12 @@ L<Attean::API::QuadIterator>.
 		return @plans;
 	}
 	
+=item C<< cost_for_plan( $plan ) >>
+
+Attempts to delegate to all the underlying stores if that store consumes Attean::API::CostPlanner.
+
+=cut
+
 	sub cost_for_plan {
 		my $self	= shift;
 		my $plan	= shift;

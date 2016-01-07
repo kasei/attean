@@ -90,6 +90,12 @@ L<Attean::API::QuadIterator>.
 		}
 	}
 	
+=item C<< plans_for_algebra( $algebra, $model, $active_graphs, $default_graphs ) >>
+
+Delegates to the underlying store if the store consumes Attean::API::CostPlanner.
+
+=cut
+
 	sub plans_for_algebra {
 		my $self	= shift;
 		if ($self->store->does('Attean::API::CostPlanner')) {
@@ -98,6 +104,12 @@ L<Attean::API::QuadIterator>.
 		return;
 	}
 	
+=item C<< cost_for_plan( $plan ) >>
+
+Delegates to the underlying store if the store consumes Attean::API::CostPlanner.
+
+=cut
+
 	sub cost_for_plan {
 		my $self	= shift;
 		if ($self->store->does('Attean::API::CostPlanner')) {

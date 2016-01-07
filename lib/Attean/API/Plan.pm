@@ -13,11 +13,40 @@ This document describes Attean::API::Plan version 0.010
 
 The Attean::API::Plan role defines a common API for all query plans.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< cost >>
+
+=item C<< distinct >>
+
+=item C<< item_type >>
+
+=item C<< in_scope_variables >>
+
+=item C<< ordered >>
+
+=back
+
 =head1 REQUIRED METHODS
 
 The following methods are required by the L<Attean::API::Plan> role:
 
 =over 4
+
+=item C<< impl( $model ) >>
+
+Returns a code reference that when called (without arguments), returns an
+L<Attean::API::Iterator> object.
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item C<< has_cost >>
 
 =cut
 
@@ -37,10 +66,22 @@ package Attean::API::Plan 0.010 {
 	
 	requires 'impl';
 	
+=item C<< plan_as_string >>
+
+Returns a string representation of this plan, excluding children.
+
+=cut
+
 	sub plan_as_string {
 		my $self	= shift;
 		return "$self";
 	}
+
+=item C<< as_string >>
+
+Returns a tree-structured string representation of this plan, including children.
+
+=cut
 	
 	sub as_string {
 		my $self	= shift;
@@ -70,11 +111,23 @@ package Attean::API::Plan 0.010 {
 		return $string;
 	}
 
+=item C<< evaluate( $model ) >>
+
+Evaluates this plan and returns the resulting iterator.
+
+=cut
+
 	sub evaluate {
 		my $self	= shift;
 		my $impl	= $self->impl(@_);
 		return $impl->();
 	}
+
+=item C<< in_scope_variables_union( @plans ) >>
+
+Returns the set union of C<< in_scope_variables >> of the given plan objects.
+
+=cut
 
 	sub in_scope_variables_union {
 		my @plans	= grep { blessed($_) } @_;

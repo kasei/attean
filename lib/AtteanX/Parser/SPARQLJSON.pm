@@ -16,6 +16,18 @@ This document describes AtteanX::Parser::SPARQLJSON version 0.010
 
 ...
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=item C<< media_types >>
+
+=item C<< file_extensions >>
+
+=back
+
 =head1 METHODS
 
 =over 4
@@ -31,35 +43,20 @@ package AtteanX::Parser::SPARQLJSON 0.010 {
 	use JSON;
 	use Encode qw(decode);
 	
-=item C<< canonical_media_type >>
-
-Returns the canonical media type for SPARQL JSON: application/sparql-results+json.
-
-=cut
-
 	sub canonical_media_type { return "application/sparql-results+json" }
-
-=item C<< media_types >>
-
-Returns a list of media types that may be parsed with the SPARQL JSON parser:
-application/sparql-results+json.
-
-=cut
 
 	sub media_types {
 		return [qw(application/sparql-results+json)];
 	}
 	
-=item C<< file_extensions >>
-
-Returns a list of file extensions that may be parsed with the parser.
-
-=cut
-
 	sub file_extensions { return [qw(srj)] }
 
 	with 'Attean::API::ResultOrTermParser';
 	with 'Attean::API::AtOnceParser';
+
+=item C<< parse_list_from_io( $fh ) >>
+
+=cut
 
 	sub parse_list_from_io {
 		my $self	= shift;
@@ -68,6 +65,10 @@ Returns a list of file extensions that may be parsed with the parser.
 		return $self->parse_list_from_bytes($data);
 	}
 	
+=item C<< parse_list_from_bytes( $bytes ) >>
+
+=cut
+
 	sub parse_list_from_bytes {
 		my $self	= shift;
 		my $octets	= shift;

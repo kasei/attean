@@ -22,6 +22,22 @@ This document describes AtteanX::Parser::Turtle version 0.010
 
 This module implements a parser for the Turtle RDF format.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=item C<< media_types >>
+
+=item C<< file_extensions >>
+
+=item C<< canonicalize >>
+
+A boolean indicating whether term values should be canonicalized during parsing.
+
+=back
+
 =head1 METHODS
 
 =over 4
@@ -40,37 +56,25 @@ package AtteanX::Parser::Turtle 0.010 {
 	use Attean::API::Parser;
 	use namespace::clean;
 
-=item C<< canonical_media_type >>
-
-Returns the canonical media type for Turtle: text/turtle.
-
-=cut
-
 	sub canonical_media_type { return "text/turtle" }
-
-=item C<< media_types >>
-
-Returns a list of media types that may be parsed with the Turtle parser:
-text/turtle.
-
-=cut
 
 	sub media_types {
 		return [qw(application/x-turtle application/turtle text/turtle)];
 	}
 
-=item C<< file_extensions >>
-
-Returns a list of file extensions that may be parsed with the parser.
-
-=cut
-
 	sub file_extensions { return [qw(ttl)] }
 
 	has 'canonicalize'	=> (is => 'rw', isa => Bool, default => 0);
-	has 'map' => (is => 'ro', isa => HashRef[Str], default => sub { +{} });
+	has '_map' => (is => 'ro', isa => HashRef[Str], default => sub { +{} });
+
+=item C<< has_namespaces >>
+
+Returns true if the parser has a namespace map, false otherwise.
+
+=cut
+
 	has 'namespaces' => (is => 'rw', isa => Maybe[InstanceOf['URI::NamespaceMap']], predicate => 'has_namespaces');
-	has	'stack'	=> (
+	has	'_stack'	=> (
 		is => 'ro',
 		isa => ArrayRef,
 		default => sub { [] },
@@ -123,6 +127,8 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		$self->_parse($l);
 	}
 
+=item C<< parse_term_from_string ( $string, $base ) >>
+
 =item C<< parse_node ( $string, $base ) >>
 
 Returns the Attean::API::Term object corresponding to the node whose N-Triples
@@ -162,14 +168,14 @@ serialization is found at the beginning of C<< $string >>.
 	sub _unget_token {
 		my $self	= shift;
 		my $t		= shift;
-		push(@{ $self->stack }, $t);
+		push(@{ $self->_stack }, $t);
 # 		push(@{ $self->{ stack } }, $t);
 	}
 
 	sub _next_nonws {
 		my $self	= shift;
-		if (scalar(@{ $self->stack })) {
-			return pop(@{ $self->stack });
+		if (scalar(@{ $self->_stack })) {
+			return pop(@{ $self->_stack });
 		}
 		my $l		= shift;
 		while (1) {
@@ -227,7 +233,7 @@ serialization is found at the beginning of C<< $string >>.
 	# 				$self->_unget_token($t);
 	# 			}
 			}
-			$self->map->{$name}	= $iri;
+			$self->_map->{$name}	= $iri;
 			if ($self->has_namespaces) {
 				my $ns	= $self->namespaces;
 				unless ($ns->namespace_uri($name)) {
@@ -515,10 +521,10 @@ serialization is found at the beginning of C<< $string >>.
 		elsif ($type eq PREFIXNAME) {
 			my ($ns, $local)	= @{ $t->args };
 			$ns		=~ s/:$//;
-			unless (exists $self->map->{$ns}) {
+			unless (exists $self->_map->{$ns}) {
 				$self->_throw_error("Use of undeclared prefix '$ns'", $t);
 			}
-			my $prefix			= $self->map->{$ns};
+			my $prefix			= $self->_map->{$ns};
 			no warnings 'uninitialized';
 			my $iri				= Attean::IRI->new("${prefix}${local}");
 			return $iri;

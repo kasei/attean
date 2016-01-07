@@ -21,6 +21,16 @@ This document describes Attean::Variable version 0.010
 The Attean::Variable class represents variables for use in pattern matching.
 It conforms to the L<Attean::API::TermOrVariable|Attean::API> role.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< value >>
+
+=item C<< ntriples_string >>
+
+=back
+
 =cut
 
 package Attean::Variable 0.010 {

@@ -1,6 +1,27 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+Attean::BindingEqualityTest - Test for equality of binding sets with bnode isomorphism
+
+=head1 VERSION
+
+This document describes Attean::BindingEqualityTest version 0.010
+
+=head1 SYNOPSIS
+
+  use v5.14;
+  use Attean;
+  my $test	= Attean::BindingEqualityTest->new();
+  if ($test->equals($iter_a, $iter_b)) {
+    say "Iterators contain equivalent bindings";
+  }
+
+=head1 DESCRIPTION
+
+...
+
 =head1 METHODS
 
 =over 4
@@ -22,7 +43,7 @@ package Attean::BindingEqualityTest 0.010 {
 	
 	has error => (is => 'rw', isa => Str, init_arg => undef);
 	
-	sub coerce {
+	sub _coerce {
 		my $o	= shift;
 		if ($o->does('Attean::API::Model')) {
 			return $o->get_quads;
@@ -47,7 +68,7 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 
 	sub _check_equality {
 		my $self	= shift;
-		my ($a, $b)	= map { coerce($_) } @_;
+		my ($a, $b)	= map { _coerce($_) } @_;
 		
 		my @graphs	= ($a, $b);
 		my ($ba, $nba)	= $self->split_blank_statements($a);
@@ -111,7 +132,7 @@ solutions, the solution returned is arbitrary.
 
 	sub _check_subgraph {
 		my $self	= shift;
-		my ($a, $b)	= map { coerce($_) } @_;
+		my ($a, $b)	= map { _coerce($_) } @_;
 	
 		my @graphs	= ($a, $b);
 		my ($ba, $nba)	= $self->split_blank_statements($a);
@@ -220,5 +241,24 @@ containing blank nodes and bindings without any blank nodes, respectively.
 __END__
 
 =back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut

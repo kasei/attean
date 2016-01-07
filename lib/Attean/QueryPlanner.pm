@@ -58,6 +58,12 @@ package Attean::QueryPlanner 0.010 {
 
 =over 4
 
+=item C<< new_temporary( $type ) >>
+
+Returns a new unique (in the context of the query planner) ID string that may
+be used for things like fresh (temporary) variables. The C<< $type >> string is
+used in the generated name to aid in identifying different uses for the names.
+
 =cut
 
 	sub new_temporary {
@@ -68,11 +74,9 @@ package Attean::QueryPlanner 0.010 {
 		return sprintf('.%s-%d', $type, $c);
 	}
 
-=item C<< plans_for_algebra( $algebra, $model, \@active_graphs, \@default_graphs ) >>
+=item C<< plan_for_algebra( $algebra, $model, \@active_graphs, \@default_graphs ) >>
 
-Returns L<Attean::API::Plan> objects representing alternate query plans for
-evaluating the query C<< $algebra >> against the C<< $model >>, using
-the supplied C<< $active_graph >>.
+Returns the first plan returned from C<< plans_for_algebra >>.
 
 =cut
 
@@ -82,6 +86,14 @@ the supplied C<< $active_graph >>.
 		return shift(@plans);
 	}
 	
+=item C<< plans_for_algebra( $algebra, $model, \@active_graphs, \@default_graphs ) >>
+
+Returns L<Attean::API::Plan> objects representing alternate query plans for
+evaluating the query C<< $algebra >> against the C<< $model >>, using
+the supplied C<< $active_graph >>.
+
+=cut
+
 	sub plans_for_algebra {
 		my $self			= shift;
 		my $algebra			= shift;
@@ -477,6 +489,13 @@ the supplied C<< $active_graph >>.
 		}
 	}
 	
+=item C<< simplify_path( $subject, $path, $object ) >>
+
+Return a simplified L<Attean::API::Algebra> object corresponding to the given
+property path.
+
+=cut
+
 	sub simplify_path {
 		my $self	= shift;
 		my $s		= shift;
@@ -515,6 +534,16 @@ the supplied C<< $active_graph >>.
 		}
 	}
 	
+=item C<< new_projection( $plan, $distinct, @variable_names ) >>
+
+Return a new L<< Attean::Plan::Project >> plan over C<< $plan >>, projecting
+the named variables. C<< $disctinct >> should be true if the caller can
+guarantee that the resulting plan will produce distinct results, false otherwise.
+
+This method takes care of computing plan metadata such as the resulting ordering.
+
+=cut
+
 	sub new_projection {
 		my $self		= shift;
 		my $plan		= shift;
@@ -616,6 +645,14 @@ sub-plan participating in the join.
 		return $self->joins_for_plan_alternatives(@_);
 	}
 	
+=item C<< joins_for_plan_alternatives( $model, \@active_graphs, \@default_graphs, $interesting, \@plan_A, \@plan_B, ... ) >>
+
+Returns a list of alternative plans that may all be used to produce results
+matching the join of C<< plan_A >>, C< plan_B >>, etc. Each plan array here
+(e.g. C<< @plan_A >>) should contain equivalent plans.
+
+=cut
+
 	sub joins_for_plan_alternatives {
 		my $self			= shift;
 		my $model			= shift;
@@ -623,9 +660,17 @@ sub-plan participating in the join.
 		my $default_graphs	= shift;
 		my $interesting		= shift;
 		my @args			= @_; # each $args[$i] here is an array reference containing alternate plans for element $i
-		die;
+		die "This query planner does not seem to consume a Attean::API::JoinPlanner role (which is necessary for query planning)";
 	}
 	
+=item C<< access_plans( $model, $active_graphs, $pattern ) >>
+
+Returns a list of alternative L<Attean::API::Plan> objects that may be used to
+produce results matching the L<Attean::API::TripleOrQuadPattern> $pattern in
+the context of C<< $active_graphs >>.
+
+=cut
+
 	# $pattern is a Attean::API::TripleOrQuadPattern object
 	# Return a Attean::API::Plan object that represents the evaluation of $pattern.
 	# e.g. different plans might represent different ways of producing the matches (table scan, index match, etc.)
@@ -659,6 +704,17 @@ sub-plan participating in the join.
 		return $plan;
 	}
 	
+=item C<< join_plans( $model, \@active_graphs, \@default_graphs, \@plan_left, \@plan_right, $type [, $expr] ) >>
+
+Returns a list of alternative plans for the join of one plan from C<< @plan_left >>
+and one plan from C<< @plan_right >>. The join C<< $type >> must be one of
+C<< 'inner' >>, C<< 'left' >>, or C<< 'minus' >>, indicating the join algorithm
+to be used. If C<< $type >> is C<< 'left' >>, then the optional C<< $expr >>
+may be used to supply a filter expression that should be used by the SPARQL
+left-join algorithm.
+
+=cut
+
 	# $lhs and $rhs are both Attean::API::Plan objects
 	# Return a Attean::API::Plan object that represents the evaluation of $lhs ⋈ $rhs.
 	# The $left and $minus flags indicate the type of the join to be performed (⟕ and ▷, respectively).

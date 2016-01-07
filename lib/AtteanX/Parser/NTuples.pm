@@ -30,6 +30,12 @@ package AtteanX::Parser::NTuples 0.010 {
 	use Encode qw(decode);
 	use namespace::clean;
 	
+=item C<< parse_term_from_string( $string ) >>
+
+Parses the given C<< $string >> and returns a corresponding L<Attean::API::Term> object.
+
+=cut
+
 	sub parse_term_from_string {
 		my $self	= shift;
 		my $string	= shift;

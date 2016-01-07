@@ -24,6 +24,28 @@ This document describes Attean::Literal version 0.010
 The Attean::Literal class represents RDF literals.
 It conforms to the L<Attean::API::Literal|Attean::API::Term> role.
 
+=head1 ATTRIBUTES
+
+The following attributes exist:
+
+=over 4
+
+=item C<< value >>
+
+=item C<< language >>
+
+=item C<< datatype >>
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item C<< has_language >>
+
+Returns true if the literal has a language tag, false otherwise.
+
 =cut
 
 package Attean::Literal 0.010 {
@@ -95,11 +117,23 @@ package Attean::Literal 0.010 {
 		}
 	}
 
+=item C<< true >>
+
+The xsd:true term.
+
+=cut
+
 	sub true {
 		state $v	= Attean::Literal->new( value => 'true', datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
 		return $v;
 	}
 	
+=item C<< false >>
+
+The xsd:false term.
+
+=cut
+
 	sub false {
 		state $v	= Attean::Literal->new( value => 'false', datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
 		return $v;
@@ -123,6 +157,8 @@ package Attean::Literal 0.010 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

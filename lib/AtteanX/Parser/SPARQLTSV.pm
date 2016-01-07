@@ -17,6 +17,18 @@ This document describes AtteanX::Parser::SPARQLTSV version 0.010
 
 ...
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=item C<< media_types >>
+
+=item C<< file_extensions >>
+
+=back
+
 =head1 METHODS
 
 =over 4
@@ -38,12 +50,6 @@ package AtteanX::Parser::SPARQLTSV 0.010 {
 		return [qw(text/tab-separated-values)];
 	}
 	
-=item C<< file_extensions >>
-
-Returns a list of file extensions that may be parsed with the parser.
-
-=cut
-
 	sub file_extensions { return [qw(tsv)] }
 
 	with 'Attean::API::ResultParser', 'Attean::API::PullParser', 'Attean::API::Parser';

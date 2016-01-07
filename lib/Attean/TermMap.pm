@@ -25,6 +25,17 @@ skolemize nodes, or map the nodes in some other, custom way.
 
 It conforms to the L<Attean::API::Mapper> role.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< mapper >>
+
+A CODE reference that will map L<Attean::API::Term> objects to (possibly different)
+term objects.
+
+=back
+
 =head1 CLASS METHODS
 
 =over 4
@@ -118,6 +129,14 @@ alphabetic names (e.g. _:a, _:b).
 			}
 		});
 	}
+
+=item C<< rewrite_map( \%map ) >>
+
+Given C<< %map >> whose keys are term C<< as_string >> serializations, and
+objects are L<Attean::API::Term> objects, returns a new term map object that
+maps terms matching entries in C<< %map >>, and all other terms to themselves.
+
+=cut
 
 	sub rewrite_map {
 		my $class	= shift;

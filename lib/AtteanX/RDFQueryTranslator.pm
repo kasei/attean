@@ -1,6 +1,35 @@
 use v5.14;
 use warnings;
 
+=head1 NAME
+
+AtteanX::RDFQueryTranslator - Translate RDF::Query objects to Attean::API::Algebra objects.
+
+=head1 VERSION
+
+This document describes AtteanX::RDFQueryTranslator version 0.010
+
+=head1 DESCRIPTION
+
+The AtteanX::RDFQueryTranslator class translates RDF::Query objects into an
+L<Attean::API::Algebra> tree.
+
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< base >>
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item C<< has_base >>
+
+=cut
+
 package AtteanX::RDFQueryTranslator 0.010 {
 	use v5.14;
 	use warnings;
@@ -13,9 +42,15 @@ package AtteanX::RDFQueryTranslator 0.010 {
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Bool ConsumerOf HashRef);
-	has 'in_expr' => (is => 'rw', isa => Bool, default => 0);
+	has '_in_expr' => (is => 'rw', isa => Bool, default => 0);
 	has 'base' => (is => 'rw', isa => ConsumerOf['Attean::IRI'], predicate => 'has_base');
 	
+=item C<< translate_query( $query ) >>
+
+Returns an algebra object for the given L<RDF::Query> object.
+
+=cut
+
 	sub translate_query {
 		my $class	= shift;
 		my $query	= shift;
@@ -52,6 +87,13 @@ package AtteanX::RDFQueryTranslator 0.010 {
 		return $algebra;
 	}
 	
+=item C<< translate( $algebra ) >>
+
+Returns an algebra object for the given L<RDF::Query::Algebra>,
+L<RDF::Query::Expression>, or L<RDF::Query::Node> object.
+
+=cut
+
 	sub translate {
 		my $self	= shift;
 		my $a		= shift;
@@ -90,15 +132,15 @@ package AtteanX::RDFQueryTranslator 0.010 {
 			return Attean::TriplePattern->new(@nodes);
 		} elsif ($a->isa('RDF::Query::Node::Variable')) {
 			my $value	= variable($a->isa("RDF::Query::Node::Variable::ExpressionProxy") ? ("." . $a->name) : $a->name);
-			$value		= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value		= Attean::ValueExpression->new(value => $value) if ($self->_in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Resource')) {
 			my $value	= iri($a->uri_value);
-			$value		= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value		= Attean::ValueExpression->new(value => $value) if ($self->_in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Blank')) {
 			my $value	= blank($a->blank_identifier);
-			$value		= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value		= Attean::ValueExpression->new(value => $value) if ($self->_in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Node::Literal')) {
 			my $value;
@@ -109,7 +151,7 @@ package AtteanX::RDFQueryTranslator 0.010 {
 			} else {
 				$value	= literal($a->literal_value);
 			}
-			$value	= Attean::ValueExpression->new(value => $value) if ($self->in_expr);
+			$value	= Attean::ValueExpression->new(value => $value) if ($self->_in_expr);
 			return $value;
 		} elsif ($a->isa('RDF::Query::Algebra::Limit')) {
 			my $child	= $a->pattern;
@@ -283,26 +325,44 @@ package AtteanX::RDFQueryTranslator 0.010 {
 		Carp::confess "Unrecognized algebra " . ref($a);
 	}
 
+=item C<< translate_expr( $algebra ) >>
+
+Returns an expression object for the given L<RDF::Query::Expression> object.
+
+=cut
+
 	sub translate_expr {
 		my $self	= shift;
 		my $a		= shift;
-		my $prev	= $self->in_expr;
-		$self->in_expr(1);
+		my $prev	= $self->_in_expr;
+		$self->_in_expr(1);
 		my $expr	= $self->translate($a);
-		$self->in_expr($prev);
+		$self->_in_expr($prev);
 		return $expr;
 	}
 	
+=item C<< translate_pattern( $algebra ) >>
+
+Translate expression, algebra, or node in a non-expression context.
+
+=cut
+
 	sub translate_pattern {
 		my $self	= shift;
 		my $a		= shift;
-		my $prev	= $self->in_expr;
-		$self->in_expr(0);
+		my $prev	= $self->_in_expr;
+		$self->_in_expr(0);
 		my $expr	= $self->translate($a);
-		$self->in_expr($prev);
+		$self->_in_expr($prev);
 		return $expr;
 	}
 	
+=item C<< translate_path( $path ) >>
+
+Translate a node or property path into an equivalent property path algebra.
+
+=cut
+
 	sub translate_path {
 		my $self	= shift;
 		my $path	= shift;
@@ -352,3 +412,27 @@ package AtteanX::RDFQueryTranslator 0.010 {
 
 1;
 
+__END__
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

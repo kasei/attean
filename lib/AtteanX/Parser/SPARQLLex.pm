@@ -17,6 +17,22 @@ This document describes AtteanX::Parser::SPARQLLex version 0.010
 
 ...
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=item C<< media_types >>
+
+=item C<< file_extensions >>
+
+=item C<< handled_type >>
+
+=item C<< extend >>
+
+=back
+
 =head1 METHODS
 
 =over 4

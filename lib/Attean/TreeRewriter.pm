@@ -28,6 +28,10 @@ sub-trees based on handlers that have been registered prior to rewriting.
 
 None.
 
+=head1 METHODS
+
+=over 4
+
 =cut
 
 package Attean::TreeRewriter 0.010 {
@@ -40,6 +44,21 @@ package Attean::TreeRewriter 0.010 {
 	has types => (is => 'rw', isa => ArrayRef[Str], default => sub { ['Attean::API::DirectedAcyclicGraph'] });
 	has pre_handlers => (is => 'rw', isa => ArrayRef[CodeRef], default => sub { [] });
 	
+=item C<< register_pre_handler( \&code ) >>
+
+Register a handler that will be called for each sub-tree during tree rewriting.
+
+The function will be called as C<< &code( $tree, $parent_node, $thunk ) >> where
+C<< $thunk >> is an opaque value passed to C<< rewrite >>.
+
+The function must return a list C<< ($handled, $descend, $rewritten) >>.
+C<< $handled >> is a boolean indicating whether the handler function rewrote
+the sub-tree, which is returned as C<< $rewritten >>. The C<< $descend >>
+boolean value indicates whether the the tree rewriting should continue downwards
+in the tree.
+
+=cut
+
 	sub register_pre_handler {
 		my $self	= shift;
 		my $code	= shift;
@@ -63,6 +82,19 @@ package Attean::TreeRewriter 0.010 {
 		}
 		return ($main_descend, undef);
 	}
+
+=item C<< rewrite( $tree, $thunk, \%seen, $parent ) >>
+
+Rewrites the given C<< $tree >> using the registered handler functions.
+C<< $thunk >> is passed through to each handler function.
+C<< %seen >> is currently unused.
+C<< $parent >> is passed through to the handler functions as the value of the
+pseudo-parent tree node for C<< $tree >>.
+
+Returns a list C<< ($handled, $tree) >> with C<< $handled >> indicating whether
+rewriting was performed, with the corresponding rewritten C<< $tree >>.
+
+=cut
 
 	sub rewrite {
 		my $self	= shift;
@@ -152,6 +184,8 @@ package Attean::TreeRewriter 0.010 {
 1;
 
 __END__
+
+=back
 
 =head1 BUGS
 

@@ -1,7 +1,48 @@
+use v5.14;
+use warnings;
+
+=head1 NAME
+
+AtteanX::API::Lexer - Role defining common functionality for lexers.
+
+=head1 VERSION
+
+This document describes AtteanX::API::Lexer version 0.010
+
+=head1 DESCRIPTION
+
+The AtteanX::API::Lexer role provides a common interface and implementation
+for lexer implementations, allowing line-based buffer filling, and consuming
+of characters, constant strings, and fixed-length buffers.
+
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< file >>
+
+=item C<< linebuffer >>
+
+=item C<< line >>
+
+=item C<< column >>
+
+=item C<< buffer >>
+
+=item C<< start_column >>
+
+=item C<< start_line >>
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=cut
+
 package AtteanX::API::Lexer 0.010 {
-	use v5.14;
 	use strict;
-	use warnings;
 	use Moo::Role;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 	use namespace::clean;
@@ -21,6 +62,12 @@ package AtteanX::API::Lexer 0.010 {
 		return $orig->( $class, @_ );
 	};
 
+=item C<< fill_buffer >>
+
+Fills the buffer with a new line from the underlying filehandle.
+
+=cut
+
 	sub fill_buffer {
 		my $self	= shift;
 		unless (length($self->buffer)) {
@@ -29,11 +76,24 @@ package AtteanX::API::Lexer 0.010 {
 		}
 	}
 
+=item C<< check_for_bom >>
+
+Remove a BOM character if one appears at the start of the buffer.
+
+=cut
+
 	sub check_for_bom {
 		my $self	= shift;
 		my $c		= $self->peek_char();
 		$self->get_char if (defined($c) and $c eq "\x{FEFF}");
 	}
+
+=item C<< get_char_safe( $char ) >>
+
+Consume the single character C<< $char >> from the buffer.
+Throw an error if C<< $char >> is not at the start of the buffer.
+
+=cut
 
 	sub get_char_safe {
 		my $self	= shift;
@@ -42,6 +102,13 @@ package AtteanX::API::Lexer 0.010 {
 		$self->_throw_error("Expected '$char' but got '$c'") if ($c ne $char);
 		return $c;
 	}
+
+=item C<< get_char_fill_buffer >>
+
+Consume and return a single character from the buffer.
+If the buffer is empty, fill it first.
+
+=cut
 
 	sub get_char_fill_buffer {
 		my $self	= shift;
@@ -59,6 +126,12 @@ package AtteanX::API::Lexer 0.010 {
 		return $c;
 	}
 
+=item C<< get_char( $char ) >>
+
+Consume and return a single character from the buffer.
+
+=cut
+
 	sub get_char {
 		my $self	= shift;
 		my $c		= substr($self->{buffer}, 0, 1, '');
@@ -73,6 +146,12 @@ package AtteanX::API::Lexer 0.010 {
 		return $c;
 	}
 
+=item C<< peek_char( $char ) >>
+
+Return a single character from the start of the buffer.
+
+=cut
+
 	sub peek_char {
 		my $self	= shift;
 		if (length($self->{buffer}) == 0) {
@@ -81,6 +160,13 @@ package AtteanX::API::Lexer 0.010 {
 		}
 		return substr($self->{buffer}, 0, 1);
 	}
+
+=item C<< read_word( $word ) >>
+
+Consume the string C<< $word >> from the start of the buffer.
+Throw an error if C<< $word >> is not at the start of the buffer.
+
+=cut
 
 	sub read_word {
 		my $self	= shift;
@@ -99,6 +185,12 @@ package AtteanX::API::Lexer 0.010 {
 		}
 		substr($self->{buffer}, 0, length($word), '');
 	}
+
+=item C<< read_length( $length ) >>
+
+Consume and return C<< $length >> characters  from the start of the buffer.
+
+=cut
 
 	sub read_length {
 		my $self	= shift;
@@ -122,3 +214,28 @@ package AtteanX::API::Lexer 0.010 {
 }
 
 1;
+
+__END__
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

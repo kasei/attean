@@ -1,12 +1,43 @@
 use v5.14;
-use Test::Modern;
-use Attean;
-use Attean::RDF;
-use Attean::IDPQueryPlanner;
+use warnings;
+
+=head1 NAME
+
+AtteanX::API::JoinRotatingPlanner - Query planning role to produce alternative join plans
+
+=head1 VERSION
+
+This document describes AtteanX::API::JoinRotatingPlanner version 0.010
+
+=head1 DESCRIPTION
+
+The AtteanX::API::JoinRotatingPlanner role, when used with L<Attean::QueryPlanner>,
+produces alternatives for join query plans. Specifically, joins of the form
+(A⋈B)⋈C are rotated to A⋈(B⋈C), with the ability to coalesce B⋈C (e.g. for
+adjacent BGPs).
+
+=head1 REQUIRED METHODS
+
+=over 4
+
+=item C<< allow_join_rotation( $join_plan ) >>
+
+Returns true if join rotation should be attempted on the given join plan.
+
+=item C<< coalesce_rotated_join( $join_plan ) >>
+
+Given a L<Attean::API::Plan::Join> plan C<< $join_plan >>, returns a list of
+equivalent plans. This is useful when the join can be reduced to a more
+fundamental plan type, such as merging two adjacent BGP plans into a single
+plan.
+
+=cut
 
 package AtteanX::API::JoinRotatingPlanner {
 	# Rotate joins like (A⋈B)⋈C to A⋈(B⋈C), with the ability to coalesce B⋈C (e.g. for adjacent BGPs)
 	use Moo::Role;
+	use Attean;
+	use Attean::RDF;
 	use namespace::clean;
 	
 	requires 'coalesce_rotated_join';
@@ -63,3 +94,28 @@ package AtteanX::API::JoinRotatingPlanner {
 }
 
 1;
+
+__END__
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to through the GitHub web interface
+at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.perlrdf.org/>
+
+=head1 AUTHOR
+
+Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut

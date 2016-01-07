@@ -54,6 +54,12 @@ package Attean::API::Term 0.010 {
 		shift->ntriples_string();
 	}
 
+=item C<< ebv >>
+
+Returns true if the term has a true SPARQL "effective boolean value", false otherwise.
+
+=cut
+
 	sub ebv { return 0; }
 	
 	requires 'compare';

@@ -16,6 +16,14 @@ This document describes AtteanX::Serializer::SPARQLHTML version 0.010
 
 ...
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< canonical_media_type >>
+
+=back
+
 =head1 METHODS
 
 =over 4
@@ -115,6 +123,12 @@ and returns the serialization as a UTF-8 encoded byte string.
 		close($fh);
 		return $data;
 	}
+
+=item C<< node_as_html($node) >>
+
+Serializes the L<Attean::API::Term> object as HTML.
+
+=cut
 
 	sub node_as_html {
 		my $self	= shift;
