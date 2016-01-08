@@ -106,7 +106,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				if (length($string)) {
 					my $var	= $vars[$i];
 					my $bytes	= encode('UTF-8', $string, Encode::FB_CROAK);
-					my $term	= $parser->parse_term_from_string($bytes);
+					my $term	= $parser->parse_term_from_bytes($bytes);
 					if ($term) {
 						$binding{ $var }	= $term;
 					}

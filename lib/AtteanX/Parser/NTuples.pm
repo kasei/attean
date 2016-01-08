@@ -29,14 +29,24 @@ package AtteanX::Parser::NTuples 0.010 {
 	use Attean;
 	use Encode qw(decode);
 	use namespace::clean;
-	
-=item C<< parse_term_from_string( $string ) >>
 
-Parses the given C<< $string >> and returns a corresponding L<Attean::API::Term> object.
+=item C<< parse_term_from_string( $bytes ) >>
+
+This method is deprecated, as the name was misleading.
+Calls should be replaced with C<< parse_term_from_bytes >>.
+	
+=item C<< parse_term_from_bytes( $bytes ) >>
+
+Parses the given C<< $bytes >> and returns a corresponding L<Attean::API::Term> object.
 
 =cut
 
 	sub parse_term_from_string {
+# 		TODO: warn "parse_term_from_string is now called parse_term_from_bytes\n";
+		return shift->parse_term_from_bytes(@_);
+	}
+	
+	sub parse_term_from_bytes {
 		my $self	= shift;
 		my $string	= shift;
 		my $n = $self->_eat_node( 0, $string );

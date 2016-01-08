@@ -127,17 +127,26 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		$self->_parse($l);
 	}
 
-=item C<< parse_term_from_string ( $string, $base ) >>
+=item C<< parse_term_from_string( $bytes ) >>
 
-=item C<< parse_node ( $string, $base ) >>
+This method is deprecated, as the name was misleading.
+Calls should be replaced with C<< parse_term_from_bytes >>.
+	
+=item C<< parse_term_from_bytes ( $bytes, $base ) >>
+
+=item C<< parse_node ( $bytes, $base ) >>
 
 Returns the Attean::API::Term object corresponding to the node whose N-Triples
-serialization is found at the beginning of C<< $string >>.
+serialization is found at the beginning of C<< $bytes >>.
 
 =cut
 
-	# TODO: this method is badly named. it actually accepts bytes, not strings.
 	sub parse_term_from_string {
+# 		TODO: warn "parse_term_from_string is now called parse_term_from_bytes\n";
+		return shift->parse_term_from_bytes(@_);
+	}
+	
+	sub parse_term_from_bytes {
 		my $self	= shift;
 		return $self->parse_node(@_);
 	}
