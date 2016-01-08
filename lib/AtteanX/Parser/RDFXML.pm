@@ -114,7 +114,11 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		my $self	= shift;
 		my $data	= shift;
 
-		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler );
+		my @args;
+		if (my $map = $self->namespaces) {
+			push(@args, namespaces => $map);
+		}
+		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler, @args );
 		my $p			= XML::SAX::ParserFactory->parser(Handler => $saxhandler);
 		$saxhandler->push_base( $self->base ) if ($self->has_base);
 		eval {
