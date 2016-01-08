@@ -3,25 +3,28 @@ use warnings;
 
 =head1 NAME
 
-Attean::QuadModel - RDF model backed by a quad-store
+Attean::TripleModel - RDF model backed by a set of triple-stores
 
 =head1 VERSION
 
-This document describes Attean::QuadModel version 0.010
+This document describes Attean::TripleModel version 0.010
 
 =head1 SYNOPSIS
 
   use v5.14;
   use Attean;
-  my $model = Attean::QuadModel->new( store => $store );
+  my $model = Attean::TripleModel->new( stores => {
+    'http://example.org/graph1' => $store1,
+    'http://example.org/graph2' => $store2,
+  } );
 
 =head1 DESCRIPTION
 
-The Attean::QuadModel class represents a model that is backed by a single
-L<Attean::API::QuadStore|Attean::API::Store> object.
-It conforms to the L<Attean::API::Model> role.
+The Attean::TripleModel class represents a model that is backed by a set of
+L<Attean::API::TripleStore|Attean::API::Store> objects, identified by an IRI
+string. It conforms to the L<Attean::API::Model> role.
 
-The Attean::QuadModel constructor requires one named argument:
+The Attean::TripleModel constructor requires one named argument:
 
 =over 4
 
@@ -41,7 +44,7 @@ objects representing the backing triple-store for that graph.
 package Attean::TripleModel 0.010 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
-	use Scalar::Util qw(reftype);
+	use Scalar::Util qw(reftype blessed);
 	use namespace::clean;
 
 	with 'MooX::Log::Any';
@@ -65,6 +68,7 @@ package Attean::TripleModel 0.010 {
 		foreach my $store (values %{ $self->stores }) {
 			$count	+= $store->size;
 		}
+		return $count;
 	}
 	
 
@@ -121,7 +125,8 @@ L<Attean::API::QuadIterator>.
 			foreach my $p (@{ $nodes[1] }) {
 				foreach my $o (@{ $nodes[2] }) {
 					foreach my $g (@{ $nodes[3] }) {
-						push(@iters, $self->_get_quads($s, $p, $o, $g));
+						my $iter	= $self->_get_quads($s, $p, $o, $g);
+						push(@iters, $iter);
 					}
 				}
 			}
@@ -139,11 +144,21 @@ L<Attean::API::QuadIterator>.
 		my $p		= shift;
 		my $o		= shift;
 		my $g		= shift;
-		if ($g->does('Attean::API::IRI')) {
-			if (my $store = $self->store->{ $g->value }) {
+		if (blessed($g) and $g->does('Attean::API::IRI')) {
+			if (my $store = $self->stores->{ $g->value }) {
 				my $iter	= $store->get_triples($s, $p, $o);
 				return $iter->as_quads($g);
 			}
+		} elsif (blessed($g) and $g->does('Attean::API::Variable')) {
+			my @iters;
+			while (my ($g, $store) = each %{ $self->stores }) {
+				my $iter	= $store->get_triples($s, $p, $o);
+				my $graph	= Attean::IRI->new($g);
+				my $quads	= $iter->map(sub { $_->as_quad($graph) }, 'Attean::API::Quad');
+				push(@iters, $quads);
+			}
+			my $iter	= Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
+			return $iter;
 		} else {
 			my $name	= $g->can('as_string') ? $g->as_string : "$g";
 			$self->log->warn("TripleModel cannot produce quads for non-IRI graph: $name");
@@ -193,6 +208,89 @@ Attempts to delegate to all the underlying stores if that store consumes Attean:
 			}
 		}
 		return;
+	}
+}
+
+package Attean::MutableTripleModel 0.010 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
+	use Scalar::Util qw(reftype);
+	use namespace::clean;
+
+	extends 'Attean::TripleModel';
+	with 'Attean::API::MutableModel';
+	
+	has 'stores'	=> (
+		is => 'ro',
+		isa => HashRef[ConsumerOf['Attean::API::MutableTripleStore']],
+		required => 1,
+		default => sub { +{} },
+	);
+
+=item C<< add_quad ( $quad ) >>
+
+Adds the specified C<$quad> to the underlying model.
+
+=cut
+
+	sub add_quad {
+		my $self	= shift;
+		my $q		= shift;
+		my $g		= $q->graph;
+		die "Cannot add a quad whose graph is not an IRI" unless ($g->does('Attean::API::IRI'));
+		my $v		= $g->value;
+		if (my $store = $self->stores->{ $v }) {
+			$store->add_triple( $q->as_triple );
+		} else {
+			die "No such graph: $v";
+		}
+	}
+
+=item C<< remove_quad ( $quad ) >>
+
+Removes the specified C<< $quad >> from the underlying store.
+
+=cut
+
+	sub remove_quad {
+		my $self	= shift;
+		my $q		= shift;
+		my $g		= $q->graph;
+		if ($g->does('Attean::API::IRI')) {
+			my $v		= $g->value;
+			if (my $store = $self->stores->{ $v }) {
+				$store->remove_triple( $q->as_triple );
+			}
+		}
+	}
+	
+	sub create_graph { die }
+
+=item C<< drop_graph( $graph ) >>
+
+Removes the store associated with the given C<< $graph >>.
+
+=cut
+
+	sub drop_graph {
+		my $self	= shift;
+		my $g		= shift;
+		if ($g->does('Attean::API::IRI')) {
+			delete $self->stores->{ $g->value };
+		}
+	}
+	
+=item C<< clear_graph( $graph ) >>
+
+Removes all quads with the given C<< $graph >>.
+
+=cut
+
+	sub clear_graph {
+		my $self	= shift;
+		my $g		= shift;
+		$self->drop_graph($g);
+		$self->create_graph($g);
 	}
 }
 
