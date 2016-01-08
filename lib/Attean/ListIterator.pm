@@ -51,6 +51,7 @@ iterator.
 
 package Attean::ListIterator 0.010 {
 	use Moo;
+	use Scalar::Util qw(blessed);
 	use Type::Tiny::Role;
 	use Types::Standard qw(ArrayRef Int);
 	use namespace::clean;
@@ -63,7 +64,7 @@ package Attean::ListIterator 0.010 {
 		my $role	= $self->item_type;
 		foreach my $item (@{ $self->values }) {
 			if (Role::Tiny->is_role($role)) {
-				die "ListIterator item is not a $role" unless ($item->does($role));
+				die "ListIterator item <$item> is not a $role" unless (blessed($item) and $item->does($role));
 			}
 		}
 	}
