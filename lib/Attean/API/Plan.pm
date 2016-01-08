@@ -134,6 +134,63 @@ Returns the set union of C<< in_scope_variables >> of the given plan objects.
 		my %vars	= map { $_ => 1 } map { @{ $_->in_scope_variables } } @plans;
 		return keys %vars;
 	}
+
+=item C<< subplans_of_type_are_variable_connected( $type ) >>
+
+Returns true if the subpatterns of the given C<< $type >> are all connected
+through their C<< in_scope_variables >>, false otherwise (implying a cartesian
+product if the connecting plans perform some form of join.
+
+=cut
+
+	sub subplans_of_type_are_variable_connected {
+		# TODO: In the worst case, this is going to run in O(n^2) in the number
+		# of children. Better indexing of the children by variables can speed
+		# this up.
+		my $self	= shift;
+		my @types	= @_;
+		my @c		= $self->subpatterns_of_type(@types);
+# 		warn "===========================\n";
+# 		foreach my $c (@c) {
+# 			warn $c->as_string;
+# 		}
+		return 1 unless (scalar(@c));
+		
+		my %vars_by_child;
+		foreach my $i (0 .. $#c) {
+			my $c	= $c[$i];
+			foreach my $var (@{ $c->in_scope_variables }) {
+				$vars_by_child{$i}{$var}++;
+			}
+		}
+		
+		#
+		my @remaining	= keys %vars_by_child;
+		return 1 unless (scalar(@remaining));
+		my $current		= shift(@remaining);
+# 		warn 'Starting with ' . $c[$current]->as_string;
+		my %seen_vars	= %{ $vars_by_child{$current} };
+		LOOP: while (scalar(@remaining)) {
+			foreach my $i (0 .. $#remaining) {
+				my $candidate	= $remaining[$i];
+				my @candidate_vars	= keys %{ $vars_by_child{$candidate} };
+				foreach my $var (@candidate_vars) {
+					if (exists $seen_vars{ $var }) {
+						foreach my $var (@candidate_vars) {
+							$seen_vars{$var}++;
+						}
+# 						warn "connected with $var: " . $c[$candidate]->as_string;
+						splice(@remaining, $i, 1);
+						next LOOP;
+					}
+				}
+			}
+# 			warn 'Not fully connected';
+			return 0;
+		}
+# 		warn 'Fully connected';
+		return 1;
+	}
 }
 
 package Attean::API::BindingSubstitutionPlan 0.010 {
