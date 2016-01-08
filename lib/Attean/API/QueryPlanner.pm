@@ -133,7 +133,7 @@ package Attean::API::SimpleCostPlanner 0.010 {
 			return $plan->cost;
 		} else {
 			if ($model->does('Attean::API::CostPlanner')) {
-				if (defined(my $cost = $model->cost_for_plan($plan, $model))) {
+				if (defined(my $cost = $model->cost_for_plan($plan, $self))) {
 					$plan->cost($cost);
 					return $cost;
 				}
