@@ -144,12 +144,32 @@ product if the connecting plans perform some form of join.
 =cut
 
 	sub subplans_of_type_are_variable_connected {
+		my $self	= shift;
+		my @types	= @_;
+		my @c		= $self->subpatterns_of_type(@types);
+		return $self->_plans_are_variable_connected(@c);
+	}
+	
+=item C<< children_are_variable_connected( $type ) >>
+
+Returns true if the children of this plan are all connected
+through their C<< in_scope_variables >>, false otherwise (implying a cartesian
+product if this plan performs some form of join.
+
+=cut
+
+	sub children_are_variable_connected {
+		my $self	= shift;
+		my @c		= @{ $self->children };
+		return $self->_plans_are_variable_connected(@c);
+	}
+	
+	sub _plans_are_variable_connected {
 		# TODO: In the worst case, this is going to run in O(n^2) in the number
 		# of children. Better indexing of the children by variables can speed
 		# this up.
 		my $self	= shift;
-		my @types	= @_;
-		my @c		= $self->subpatterns_of_type(@types);
+		my @c		= @_;
 # 		warn "===========================\n";
 # 		foreach my $c (@c) {
 # 			warn $c->as_string;
