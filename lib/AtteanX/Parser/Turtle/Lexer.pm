@@ -145,10 +145,10 @@ Returns the next token present in the input.
 					return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
 				} elsif ($self->buffer =~ /^BASE(?!:)\b/oi) {
 					$self->read_length(4);
-					return $self->new_token(SPARQLBASE, $start_line, $start_column);
+					return $self->new_token(BASE, $start_line, $start_column);
 				} elsif ($self->buffer =~ /^PREFIX(?!:)\b/io) {
 					$self->read_length(6);
-					return $self->new_token(SPARQLPREFIX, $start_line, $start_column);
+					return $self->new_token(PREFIX, $start_line, $start_column);
 				} else {
 					return $self->_get_pname;
 				}
@@ -403,10 +403,10 @@ Returns the next token present in the input.
 		$self->get_char_safe('@');
 		if ($self->buffer =~ /^base/o) {
 			$self->read_word('base');
-			return $self->new_token(BASE, $self->start_line, $self->start_column);
+			return $self->new_token(TURTLEBASE, $self->start_line, $self->start_column);
 		} elsif ($self->buffer =~ /^prefix/o) {
 			$self->read_word('prefix');
-			return $self->new_token(PREFIX, $self->start_line, $self->start_column);
+			return $self->new_token(TURTLEPREFIX, $self->start_line, $self->start_column);
 		} else {
 			if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
 				my $lang	= $self->read_length($+[0]);

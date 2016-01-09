@@ -218,7 +218,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $t		= shift;
 		my $type	= $t->type;
 	# 		when (WS) {}
-		if ($type == PREFIX or $type == SPARQLPREFIX) {
+		if ($type == TURTLEPREFIX or $type == PREFIX) {
 			$t	= $self->_get_token_type($l, PREFIXNAME);
 			use Data::Dumper;
 			unless (defined($t->value)) {
@@ -235,7 +235,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			}
 			my $r	= Attean::IRI->new(%args);
 			my $iri	= $r->as_string;
-			if ($type == PREFIX) {
+			if ($type == TURTLEPREFIX) {
 				$t	= $self->_get_token_type($l, DOT);
 	# 			$t	= $self->_next_nonws($l);
 	# 			if ($t and $t->type != DOT) {
@@ -250,7 +250,7 @@ serialization is found at the beginning of C<< $bytes >>.
 				}
 			}
 		}
-		elsif ($type == BASE or $type == SPARQLBASE) {
+		elsif ($type == TURTLEBASE or $type == BASE) {
 			$t	= $self->_get_token_type($l, IRI);
 			my %args	= (value => $t->value);
 			if ($self->has_base) {
@@ -258,7 +258,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			}
 			my $r	= Attean::IRI->new(%args);
 			my $iri	= $r->as_string;
-			if ($type == BASE) {
+			if ($type == TURTLEBASE) {
 				$t	= $self->_get_token_type($l, DOT);
 	# 			$t	= $self->_next_nonws($l);
 	# 			if ($t and $t->type != DOT) {

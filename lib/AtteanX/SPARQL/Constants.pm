@@ -22,37 +22,22 @@ This document describes AtteanX::SPARQL::Constants version 0.010
 package AtteanX::SPARQL::Constants 0.010 {
 	use v5.14;
 	use warnings;
-
+	use AtteanX::Parser::Turtle::Constants;
+	
 	our $VERSION;
 	our @EXPORT;
+	our @LOCAL_TYPES;
 	BEGIN {
 		$VERSION				= 0.010;
-		@EXPORT = qw(
-			A
+		@LOCAL_TYPES	= qw(
 			ANDAND
 			ANON
 			BANG
-			BASE
-			BNODE
-			BOOLEAN
-			COMMA
-			COMMENT
-			DECIMAL
-			DOT
-			DOUBLE
-			EQUALS
 			GE
 			GT
 			HAT
-			HATHAT
-			INTEGER
-			IRI
 			KEYWORD
-			LANG
-			LBRACE
-			LBRACKET
 			LE
-			LPAREN
 			LT
 			MINUS
 			NIL
@@ -60,23 +45,13 @@ package AtteanX::SPARQL::Constants 0.010 {
 			OR
 			OROR
 			PLUS
-			PREFIX
-			PREFIXNAME
 			QUESTION
-			RBRACE
-			RBRACKET
-			RPAREN
-			SEMICOLON
 			SLASH
 			STAR
-			STRING1D
-			STRING1S
-			STRING3D
-			STRING3S
 			VAR
-			WS
 			decrypt_constant
-		)
+		);
+		@EXPORT = (@AtteanX::Parser::Turtle::Constants::EXPORT, @LOCAL_TYPES);
 	};
 	use base 'Exporter';
 
@@ -84,8 +59,8 @@ package AtteanX::SPARQL::Constants 0.010 {
 		my %mapping;
 		my %reverse;
 		BEGIN {
-			my $cx	= 0;
-			foreach my $name (grep { $_ ne 'decrypt_constant' } @EXPORT) {
+			my $cx	= scalar(@AtteanX::Parser::Turtle::Constants::EXPORT) - 1;
+			foreach my $name (grep { $_ ne 'decrypt_constant' } @LOCAL_TYPES) {
 				my $value	= ++$cx;
 				$reverse{ $value }	= $name;
 				$mapping{ $name }	= $value;
@@ -99,7 +74,15 @@ Returns the token name for the given token type.
 
 =cut
 
-		sub decrypt_constant { my $num	= +shift; $reverse{$num} }
+		no warnings 'redefine';
+		sub decrypt_constant {
+			my $num	= +shift;
+			if (exists $reverse{$num}) {
+				return $reverse{$num};
+			} else {
+				return AtteanX::Parser::Turtle::Constants::decrypt_constant($num);
+			}
+		}
 	}
 }
 
