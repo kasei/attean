@@ -157,7 +157,13 @@ package Attean::API::SimpleCostPlanner 0.010 {
 				} else {
 					$cost	= $lcost * $rcost;
 				}
+				
+				# a cartesian nested loop join is bad, but the algorithm already
+				# has to check for all possible joins, so it's not as bad as
+				# a cartesian hash join (below)
+				$cost	*= 10 unless ($plan->children_are_variable_connected);
 			} elsif ($plan->isa('Attean::Plan::HashJoin')) {
+				my $joined		= $plan->children_are_variable_connected;
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
 				if ($lcost == 0) {
@@ -167,6 +173,8 @@ package Attean::API::SimpleCostPlanner 0.010 {
 				} else {
 					$cost	= ($lcost + $rcost);
 				}
+
+				$cost	*= 100 unless ($plan->children_are_variable_connected);
 			} elsif ($plan->isa('Attean::Plan::Service')) {
 				my $scost	= 10;
 				foreach my $c (@{ $plan->children }) {
