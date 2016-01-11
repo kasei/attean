@@ -164,7 +164,18 @@ package Attean::API::Literal 0.010 {
 		my @tokens;
 		my $value	= $self->__ntriples_string;
 		my $t	= AtteanX::SPARQL::Token->fast_constructor( STRING1D, -1, -1, -1, -1, [$value] );
-		return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
+		push(@tokens, $t);
+		if (my $lang = $self->language) {
+			my $l	= AtteanX::SPARQL::Token->fast_constructor( LANG, -1, -1, -1, -1, ["@$lang"] );
+			push(@tokens, $l);
+		} elsif (my $dt = $self->datatype) {
+			unless ($dt->value eq 'http://www.w3.org/2001/XMLSchema#string') {
+				my $hathat	= AtteanX::SPARQL::Token->fast_constructor( HATHAT, -1, -1, -1, -1, ['^^'] );
+				push(@tokens, $hathat);
+				push(@tokens, $dt->sparql_tokens->elements);
+			}
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 	
 	sub ebv {
