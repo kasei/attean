@@ -195,10 +195,10 @@ L<IO::Handle> object C<< $fh >>.
 				$io->print("\n");
 				$need_space	= 0;
 				$newline	= 1;
-				$semicolon	= 1;
 				unless ($semicolon) {
 					$indent++;
 				}
+				$semicolon	= 1;
 			}
 		}
 		unless ($newline) {

@@ -97,7 +97,9 @@ L<IO::Handle> object C<< $fh >>.
 		# TODO: look for shared subject-predicate in repeated triples, and emit COMMA syntax
 		# TODO: look for shared subject in repeated triples, and emit SEMICOLON syntax
 		
-		my $dot	= AtteanX::Parser::Turtle::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] );
+		my $dot		= AtteanX::Parser::Turtle::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] );
+		my $comma	= AtteanX::Parser::Turtle::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
+		my $semi	= AtteanX::Parser::Turtle::Token->fast_constructor( SEMICOLON, -1, -1, -1, -1, [';'] );
 		if (my $map = $self->namespaces) {
 			my $prefix	= AtteanX::Parser::Turtle::Token->fast_constructor( TURTLEPREFIX, -1, -1, -1, -1, ['@prefix'] );
 			foreach my $ns ($map->list_prefixes) {
@@ -111,21 +113,45 @@ L<IO::Handle> object C<< $fh >>.
 			}
 		}
 		
+		my $last_subj;
+		my $last_pred;
 		my $sub	= sub {
-			LOOP: while (1) {
-				if (scalar(@buffer)) {
-					return shift(@buffer);
-				}
-			
-				while (my $t = $iter->next) {
-					my @tokens	= $t->sparql_tokens->elements;
-					push(@buffer, @tokens);
-					push(@buffer, $dot);
-					next LOOP;
+			if (scalar(@buffer)) {
+				return shift(@buffer);
+			}
+			if (my $t = $iter->next) {
+				my ($subj, $pred, $obj)	= $t->values;
+				if (defined($last_subj) and $subj->equals($last_subj)) {
+					if (defined($last_pred) and $pred->equals($last_pred)) {
+						push(@buffer, $comma);
+						push(@buffer, $obj->sparql_tokens->elements);
+					} else {
+						push(@buffer, $semi);
+						push(@buffer, $pred->sparql_tokens->elements);
+						push(@buffer, $obj->sparql_tokens->elements);
+					}
+				} else {
+					if (defined($last_pred)) {
+						push(@buffer, $dot);
+					}
+					foreach my $term ($subj, $pred, $obj) {
+						push(@buffer, $term->sparql_tokens->elements);
+					}
 				}
 				
-				return;
+				$last_subj	= $subj;
+				$last_pred	= $pred;
+				return shift(@buffer);
 			}
+
+			if (defined($last_subj)) {
+				push(@buffer, $dot);
+				$last_subj	= undef;
+				$last_pred	= undef;
+				return shift(@buffer);
+			}
+			
+			return;
 		};
 		
 		my $titer	= Attean::CodeIterator->new( generator => $sub, item_type => 'AtteanX::Parser::Turtle::Token' );

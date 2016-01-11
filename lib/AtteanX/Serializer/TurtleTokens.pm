@@ -85,17 +85,10 @@ L<IO::Handle> object C<< $fh >>.
 			}
 			
 			unless ($newline) {
-				if ($type == RBRACE) {
-					$io->print("\n");
-					$newline	= 1;
-				} elsif ($type == BASE or $type == PREFIX or $type == TURTLEBASE or $type == TURTLEPREFIX) {
+				if ($type == BASE or $type == PREFIX or $type == TURTLEBASE or $type == TURTLEPREFIX) {
 					$io->print("\n");
 					$newline	= 1;
 				}
-			}
-			
-			if ($type == RBRACE) {
-				$indent--;
 			}
 			
 			if ($newline) {
@@ -178,19 +171,14 @@ L<IO::Handle> object C<< $fh >>.
 				$need_space	= 0;
 				$io->print("\n");
 				$newline	= 1;
-			} elsif ($type == LBRACE) {
-				$io->print("\n");
-				$need_space	= 0;
-				$newline	= 1;
-				$indent++;
 			} elsif ($type == SEMICOLON) {
 				$io->print("\n");
 				$need_space	= 0;
 				$newline	= 1;
-				$semicolon	= 1;
 				unless ($semicolon) {
 					$indent++;
 				}
+				$semicolon	= 1;
 			}
 		}
 		unless ($newline) {
