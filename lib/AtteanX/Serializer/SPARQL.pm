@@ -113,6 +113,10 @@ L<IO::Handle> object C<< $fh >>.
 				my $args	= $t->args;
 				$io->print(join('', @$args));
 				$need_space++;
+			} elsif ($type == BNODE) {
+				$io->print('_:');
+				$io->print($t->value);
+				$need_space++;
 			} elsif ($type == IRI) {
 				# TODO: escape
 				$io->print('<');
