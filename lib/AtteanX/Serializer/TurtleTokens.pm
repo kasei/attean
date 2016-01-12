@@ -46,6 +46,7 @@ package AtteanX::Serializer::TurtleTokens 0.010 {
 	use Attean::ListIterator;
 	use List::MoreUtils qw(any);
 	use AtteanX::Parser::Turtle::Constants;
+	use AtteanX::Parser::Turtle::Lexer;
 	use namespace::clean;
 	with 'Attean::API::AbbreviatingSerializer';
 	
@@ -80,6 +81,18 @@ L<IO::Handle> object C<< $fh >>.
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
 			
+			if (my $map = $self->namespaces) {
+				if ($type == IRI) {
+					my $value	= $t->value;
+					if ($value =~ /^(?<namespace>.*?)(?<local>$AtteanX::Parser::Turtle::Lexer::r_PN_LOCAL)$/) {
+						if (my $ns = $map->prefix_for($+{namespace})) {
+							$type	= PREFIXNAME;
+							$t		= AtteanX::SPARQL::Token->fast_constructor( $type, $t->start_line, $t->start_column, $t->line, $t->column, ["${ns}:", $+{local}] );
+						}
+					}
+				}
+			}
+			
 			if ($type == LANG or $type == HATHAT) {
 				$need_space= 0;
 			}
@@ -99,7 +112,37 @@ L<IO::Handle> object C<< $fh >>.
 				$need_space	= 0;
 			}
 			
-			if ($type == PREFIXNAME) {
+			if ($type == PREFIX or $type == TURTLEPREFIX) {
+				# If we're serializing a PREFIX, also serialize the PREFIXNAME
+				# and IRI that must follow it so that we don't accidentally
+				# shorten the prefix IRI with its own namespace. For example,
+				# if we didn't serialize the PREFIXNAME and IRI here, we might
+				# end up with this:
+				# 
+				#    @prefix foaf: foaf:
+				# 
+				# instead of:
+				# 
+				#    @prefix foaf: <http://xmlns.com/foaf/0.1/>
+				$io->print($t->value);
+				$io->print(' ');
+				my $pname	= $iter->next();
+				unless ($pname->type == PREFIXNAME) {
+					die "PREFIX namespace not found during Turtle serialization";
+				}
+				my $args	= $pname->args;
+				$io->print(join('', @$args));
+				$io->print(' ');
+				
+				my $iri = $iter->next();
+				unless ($iri->type == IRI) {
+					die "PREFIX IRI not found during Turtle serialization";
+				}
+				$io->print('<');
+				$io->print($iri->value);
+				$io->print('>');
+				$need_space++;
+			} elsif ($type == PREFIXNAME) {
 				my $args	= $t->args;
 				$io->print(join('', @$args));
 				$need_space++;
