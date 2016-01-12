@@ -62,6 +62,8 @@ package AtteanX::SPARQL::Token;
 use Moo;
 use Types::Standard qw(ArrayRef Str);
 use List::MoreUtils qw(zip);
+use Sub::Util qw(set_subname);
+use AtteanX::SPARQL::Constants;
 use namespace::clean;
 
 has type => ( is => 'ro', );
@@ -95,6 +97,60 @@ sub fast_constructor {
 	return $class->new(
 		zip @KEYS, @_
 	);
+}
+
+{
+	my %tokens	= (
+		a			=> [A, 'a'],
+		prefix		=> [PREFIX, '@prefix'],
+		base		=> [BASE, '@base'],
+		lparen		=> [LPAREN, '('],
+		rparen		=> [RPAREN, ')'],
+		lbracket	=> [LBRACKET, '['],
+		rbracket	=> [RBRACKET, ']'],
+		dot			=> [DOT, '.'],
+		comma		=> [COMMA, ','],
+		semicolon	=> [SEMICOLON, ';'],
+		hathat		=> [HATHAT, '^^'],
+
+
+		lbrace		=> [LBRACE, '{'],
+		rbrace		=> [RBRACE, '}'],
+		op_andand	=> [ANDAND, '&&'],
+		anon		=> [ANON, '[]'],
+		op_bang		=> [BANG, '!'],
+		op_ge		=> [GE, '>='],
+		op_gt		=> [GT, '>'],
+		path_hat	=> [HAT, '^'],
+		op_le		=> [LE, '<='],
+		op_lt		=> [LT, '<'],
+		minus		=> [MINUS, '-'],
+		nil			=> [NIL, '()'],
+		op_ne		=> [NOTEQUALS, '!='],
+		path_or		=> [OR, '|'],
+		op_oror		=> [OROR, '||'],
+		op_plus		=> [PLUS, '+'],
+		question	=> [QUESTION, '?'],
+		slash		=> [SLASH, '/'],
+		star		=> [STAR, '*'],
+	);
+	for my $name (keys %tokens) {
+		my ($type, $value)	= @{ $tokens{ $name } };
+		my $code	= sub {
+			my $class	= shift;
+			return $class->fast_constructor($type, -1, -1, -1, -1, [$value]);
+		};
+		Sub::Install::install_sub({
+			code	=> set_subname($name, $code),
+			as		=> $name
+		});
+	}
+}
+
+sub keyword {
+	my $class	= shift;
+	my $kw		= shift;
+	return $class->fast_constructor(KEYWORD, -1, -1, -1, -1, [uc($kw)]);
 }
 
 __PACKAGE__->meta->make_immutable;

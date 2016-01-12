@@ -178,8 +178,7 @@ package Attean::API::Literal 0.010 {
 			push(@tokens, $l);
 		} else {
 			if ($dt->value ne 'http://www.w3.org/2001/XMLSchema#string') {
-				my $hathat	= AtteanX::SPARQL::Token->fast_constructor( HATHAT, -1, -1, -1, -1, ['^^'] );
-				push(@tokens, $hathat);
+				push(@tokens, AtteanX::Parser::Turtle::Token->hathat);
 				push(@tokens, $dt->sparql_tokens->elements);
 			}
 		}
@@ -539,8 +538,13 @@ package Attean::API::IRI 0.010 {
 	
 	sub sparql_tokens {
 		my $self	= shift;
-		my $t	= AtteanX::SPARQL::Token->fast_constructor( IRI, -1, -1, -1, -1, [$self->value] );
-		return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
+		my @tokens;
+		if ($self->value eq '') {
+			push(@tokens, AtteanX::Parser::Turtle::Token->a);
+		} else {
+			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( IRI, -1, -1, -1, -1, [$self->value] ));
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 	
 	sub compare {

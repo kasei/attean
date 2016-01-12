@@ -37,7 +37,7 @@ package Attean::Algebra::Sequence 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $semi	= AtteanX::SPARQL::Token->fast_constructor( SEMICOLON, -1, -1, -1, -1, [';'] );
+		my $semi	= AtteanX::SPARQL::Token->semicolon;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -65,8 +65,8 @@ package Attean::Algebra::Join 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $l	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $r	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $l	= AtteanX::SPARQL::Token->lbrace;
+		my $r	= AtteanX::SPARQL::Token->rbrace;
 
 		my @tokens;
 		push(@tokens, $l);
@@ -99,9 +99,9 @@ package Attean::Algebra::LeftJoin 0.010 {
 	sub tree_attributes { return qw(expression) };
 	sub sparql_tokens {
 		my $self	= shift;
-		my $opt	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['OPTIONAL'] );
-		my $l	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $r	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $opt	= AtteanX::SPARQL::Token->keyword('OPTIONAL');
+		my $l	= AtteanX::SPARQL::Token->lbrace;
+		my $r	= AtteanX::SPARQL::Token->rbrace;
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		my @tokens;
@@ -120,9 +120,9 @@ package Attean::Algebra::LeftJoin 0.010 {
 		}
 		
 		unless ($is_true) {
-			my $f		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['FILTER'] );
-			my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-			my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+			my $f		= AtteanX::SPARQL::Token->keyword('FILTER');
+			my $lparen	= AtteanX::SPARQL::Token->lparen;
+			my $rparen	= AtteanX::SPARQL::Token->rparen;
 			push(@tokens, $f);
 			push(@tokens, $lparen);
 			push(@tokens, $expr->sparql_tokens->elements);
@@ -156,9 +156,9 @@ package Attean::Algebra::Filter 0.010 {
 	sub tree_attributes { return qw(expression) };
 	sub sparql_tokens {
 		my $self	= shift;
-		my $f		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['FILTER'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $f		= AtteanX::SPARQL::Token->keyword('FILTER');
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 		my ($child)	= @{ $self->children };
 		my $expr	= $self->expression;
 		my @tokens;
@@ -187,9 +187,9 @@ package Attean::Algebra::Union 0.010 {
 	sub algebra_as_string { return 'Union' }
 	sub sparql_tokens {
 		my $self	= shift;
-		my $union	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['UNION'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $union	= AtteanX::SPARQL::Token->keyword('UNION');
+		my $l		= AtteanX::SPARQL::Token->lbrace;
+		my $r		= AtteanX::SPARQL::Token->rbrace;
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		my @tokens;
@@ -235,9 +235,9 @@ package Attean::Algebra::Graph 0.010 {
 	sub tree_attributes { return qw(graph) };
 	sub sparql_tokens {
 		my $self	= shift;
-		my $graph	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['GRAPH'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $graph	= AtteanX::SPARQL::Token->keyword('GRAPH');
+		my $l		= AtteanX::SPARQL::Token->lbrace;
+		my $r		= AtteanX::SPARQL::Token->rbrace;
 		my ($child)	= @{ $self->children };
 		
 		my @tokens;
@@ -279,10 +279,10 @@ package Attean::Algebra::Extend 0.010 {
 	sub tree_attributes { return qw(variable expression) };
 	sub sparql_tokens {
 		my $self	= shift;
-		my $bind	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BIND'] );
-		my $as		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['AS'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $bind	= AtteanX::SPARQL::Token->keyword('BIND');
+		my $as		= AtteanX::SPARQL::Token->keyword('AS');
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 		my ($child)	= @{ $self->children };
 		my $var		= $self->variable;
 		my $expr	= $self->expression;
@@ -321,9 +321,9 @@ package Attean::Algebra::Minus 0.010 {
 	sub algebra_as_string { return 'Minus' }
 	sub sparql_tokens {
 		my $self	= shift;
-		my $minus	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['MINUS'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $minus	= AtteanX::SPARQL::Token->keyword('MINUS');
+		my $l		= AtteanX::SPARQL::Token->lbrace;
+		my $r		= AtteanX::SPARQL::Token->rbrace;
 		my ($lhs, $rhs)	= @{ $self->children };
 		
 		my @tokens;
@@ -443,10 +443,10 @@ package Attean::Algebra::Comparator 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $asc		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ASC'] );
-		my $desc	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DESC'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $asc		= AtteanX::SPARQL::Token->keyword('ASC');
+		my $desc	= AtteanX::SPARQL::Token->keyword('DESC');
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 		
 		my @tokens;
 		if ($self->ascending) {
@@ -513,7 +513,7 @@ package Attean::Algebra::BGP 0.010 {
 	sub sparql_tokens {
 		my $self	= shift;
 		my @tokens;
-		my $dot	= AtteanX::SPARQL::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] );
+		my $dot	= AtteanX::SPARQL::Token->dot;
 		foreach my $t (@{ $self->triples }) {
 			push(@tokens, $t->sparql_tokens->elements);
 			push(@tokens, $dot);
@@ -578,9 +578,9 @@ package Attean::Algebra::Service 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $service	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SERVICE'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $service	= AtteanX::SPARQL::Token->keyword('SERVICE');
+		my $l		= AtteanX::SPARQL::Token->lbrace;
+		my $r		= AtteanX::SPARQL::Token->rbrace;
 		my ($child)	= @{ $self->children };
 		
 		my @tokens;
@@ -720,10 +720,10 @@ package Attean::Algebra::NegatedPropertySet 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $bang	= AtteanX::SPARQL::Token->fast_constructor( BANG, -1, -1, -1, -1, ['!'] );
-		my $or		= AtteanX::SPARQL::Token->fast_constructor( OR, -1, -1, -1, -1, ['|'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $bang	= AtteanX::SPARQL::Token->op_bang;
+		my $or		= AtteanX::SPARQL::Token->path_or;
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 
 		my @tokens;
 		push(@tokens, $bang, $l);
@@ -792,9 +792,9 @@ package Attean::Algebra::InversePath 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $hat		= AtteanX::SPARQL::Token->fast_constructor( HAT, -1, -1, -1, -1, ['^'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $hat		= AtteanX::SPARQL::Token->path_hat;
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -833,7 +833,7 @@ package Attean::Algebra::SequencePath 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $slash	= AtteanX::SPARQL::Token->fast_constructor( SLASH, -1, -1, -1, -1, ['/'] );
+		my $slash	= AtteanX::SPARQL::Token->slash;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -866,7 +866,7 @@ package Attean::Algebra::AlternativePath 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $or		= AtteanX::SPARQL::Token->fast_constructor( OR, -1, -1, -1, -1, ['|'] );
+		my $or		= AtteanX::SPARQL::Token->path_or;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -900,9 +900,9 @@ package Attean::Algebra::ZeroOrMorePath 0.010 {
 	
 	sub sparql_tokens {
 		my $self	= shift;
-		my $star	= AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $star	= AtteanX::SPARQL::Token->star;
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -941,9 +941,9 @@ package Attean::Algebra::OneOrMorePath 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $plus	= AtteanX::SPARQL::Token->fast_constructor( PLUS, -1, -1, -1, -1, ['+'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $plus	= AtteanX::SPARQL::Token->op_plus;
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -982,9 +982,9 @@ package Attean::Algebra::ZeroOrOnePath 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $q		= AtteanX::SPARQL::Token->fast_constructor( QUESTION, -1, -1, -1, -1, ['?'] );
-		my $l		= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $r		= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my $q		= AtteanX::SPARQL::Token->question;
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
 
 		my @tokens;
 		foreach my $t (@{ $self->children }) {
@@ -1026,11 +1026,11 @@ package Attean::Algebra::Table 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $values	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['VALUES'] );
-		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
-		my $lbrace	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $rbrace	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $values	= AtteanX::SPARQL::Token->keyword('VALUES');
+		my $lparen	= AtteanX::SPARQL::Token->lparen;
+		my $rparen	= AtteanX::SPARQL::Token->rparen;
+		my $lbrace	= AtteanX::SPARQL::Token->lbrace;
+		my $rbrace	= AtteanX::SPARQL::Token->rbrace;
 
 		my @tokens;
 		push(@tokens, $values);

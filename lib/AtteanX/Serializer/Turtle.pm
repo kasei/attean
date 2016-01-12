@@ -97,11 +97,11 @@ L<IO::Handle> object C<< $fh >>.
 		# TODO: look for shared subject-predicate in repeated triples, and emit COMMA syntax
 		# TODO: look for shared subject in repeated triples, and emit SEMICOLON syntax
 		
-		my $dot		= AtteanX::Parser::Turtle::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] );
-		my $comma	= AtteanX::Parser::Turtle::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
-		my $semi	= AtteanX::Parser::Turtle::Token->fast_constructor( SEMICOLON, -1, -1, -1, -1, [';'] );
+		my $dot		= AtteanX::Parser::Turtle::Token->dot;
+		my $comma	= AtteanX::Parser::Turtle::Token->comma;
+		my $semi	= AtteanX::Parser::Turtle::Token->semicolon;
 		if (my $map = $self->namespaces) {
-			my $prefix	= AtteanX::Parser::Turtle::Token->fast_constructor( TURTLEPREFIX, -1, -1, -1, -1, ['@prefix'] );
+			my $prefix	= AtteanX::Parser::Turtle::Token->prefix;
 			foreach my $ns ($map->list_prefixes) {
 				my $uri		= Attean::IRI->new( value => $map->namespace_uri($ns)->as_string );
 				my $name	= AtteanX::Parser::Turtle::Token->fast_constructor( PREFIXNAME, -1, -1, -1, -1, ["${ns}:"] );

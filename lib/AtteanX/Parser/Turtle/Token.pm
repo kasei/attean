@@ -62,6 +62,8 @@ package AtteanX::Parser::Turtle::Token;
 use Moo;
 use Types::Standard qw(ArrayRef Str);
 use List::MoreUtils qw(zip);
+use Sub::Util qw(set_subname);
+use AtteanX::Parser::Turtle::Constants;
 use namespace::clean;
 
 has type => ( is => 'ro', );
@@ -95,6 +97,39 @@ sub fast_constructor {
 	return $class->new(
 		zip @KEYS, @_
 	);
+}
+
+{
+	my %tokens	= (
+		a			=> [A, 'a'],
+		prefix		=> [PREFIX, '@prefix'],
+		base		=> [BASE, '@base'],
+		lparen		=> [LPAREN, '('],
+		rparen		=> [RPAREN, ')'],
+		lbracket	=> [LBRACKET, '['],
+		rbracket	=> [RBRACKET, ']'],
+		dot			=> [DOT, '.'],
+		comma		=> [COMMA, ','],
+		semicolon	=> [SEMICOLON, ';'],
+		hathat		=> [HATHAT, '^^'],
+	);
+	for my $name (keys %tokens) {
+		my ($type, $value)	= @{ $tokens{ $name } };
+		my $code	= sub {
+			my $class	= shift;
+			my $sl		= shift // -1;
+			my $sc		= shift // -1;
+			my $l		= shift // $sl;
+			my $c		= shift // $sc;
+			if ($sl > $l) { die '$start_line cannot be greater than $line in AtteanX::Parser::Turtle::Token constructor' }
+			if ($sc > $c) { die '$start_line cannot be greater than $line in AtteanX::Parser::Turtle::Token constructor' }
+			return $class->fast_constructor($type, $sl, $sc, $l, $c, [$value]);
+		};
+		Sub::Install::install_sub({
+			code	=> set_subname($name, $code),
+			as		=> $name
+		});
+	}
 }
 
 __PACKAGE__->meta->make_immutable;

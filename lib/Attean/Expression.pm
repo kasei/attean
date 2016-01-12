@@ -207,10 +207,10 @@ package Attean::FunctionExpression 0.010 {
 	
 	sub sparql_tokens {
 		my $self	= shift;
-		my $func	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, [$self->operator] ),
-		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
-		my $comma	= AtteanX::SPARQL::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
+		my $func	= AtteanX::SPARQL::Token->keyword($self->operator);
+		my $lparen	= AtteanX::SPARQL::Token->lparen;
+		my $rparen	= AtteanX::SPARQL::Token->rparen;
+		my $comma	= AtteanX::SPARQL::Token->comma;
 
 		my @tokens;
 		push(@tokens, $func, $lparen);
@@ -265,11 +265,11 @@ package Attean::AggregateExpression 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $distinct	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DISTINCT'] ),
-		my $func	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, [$self->operator] ),
-		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
-		my $comma	= AtteanX::SPARQL::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
+		my $distinct	= AtteanX::SPARQL::Token->keyword('DISTINCT');
+		my $func	= AtteanX::SPARQL::Token->keyword($self->operator);
+		my $lparen	= AtteanX::SPARQL::Token->lparen;
+		my $rparen	= AtteanX::SPARQL::Token->rparen;
+		my $comma	= AtteanX::SPARQL::Token->comma;
 
 		my @tokens;
 		push(@tokens, $func);
@@ -328,9 +328,9 @@ package Attean::CastExpression 0.010 {
 	sub sparql_tokens {
 		my $self	= shift;
 		my $dt		= AtteanX::SPARQL::Token->fast_constructor( IRI, -1, -1, -1, -1, [$self->datatype->value] ),
-		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
-		my $comma	= AtteanX::SPARQL::Token->fast_constructor( COMMA, -1, -1, -1, -1, [','] );
+		my $lparen	= AtteanX::SPARQL::Token->lparen;
+		my $rparen	= AtteanX::SPARQL::Token->rparen;
+		my $comma	= AtteanX::SPARQL::Token->comma;
 
 		my @tokens;
 		push(@tokens, $dt, $lparen);
@@ -380,9 +380,9 @@ package Attean::ExistsExpression 0.010 {
 
 	sub sparql_tokens {
 		my $self	= shift;
-		my $exists	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['EXISTS'] ),
-		my $lbrace	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $rbrace	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $exists	= AtteanX::SPARQL::Token->keyword('EXISTS');
+		my $lbrace	= AtteanX::SPARQL::Token->lbrace;
+		my $rbrace	= AtteanX::SPARQL::Token->rbrace;
 		my $child	= $self->pattern;
 		
 		my @tokens;
