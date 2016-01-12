@@ -352,6 +352,7 @@ package Attean::API::IDPJoinPlanner 0.010 {
 			if ($model->does('Attean::API::CostPlanner')) {
 				if (defined(my $cost = $model->cost_for_plan($plan, $model))) {
 					$plan->cost($cost);
+					$self->log->info('Model \''.ref($model).'\' did cost planning for \''.ref($plan).'\' and got cost '.$cost);
 					return $cost;
 				}
 			}
