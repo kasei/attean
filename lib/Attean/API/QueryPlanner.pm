@@ -101,6 +101,7 @@ package Attean::API::SimpleCostPlanner 0.010 {
 	use Types::Standard qw(Int);
 	use Scalar::Util qw(blessed);
 	with 'Attean::API::CostPlanner';
+	with 'MooX::Log::Any';
 
 	has 'keep' => (is => 'ro', isa => Int, default => 5);
 	
@@ -135,6 +136,7 @@ package Attean::API::SimpleCostPlanner 0.010 {
 			if ($model->does('Attean::API::CostPlanner')) {
 				if (defined(my $cost = $model->cost_for_plan($plan, $self))) {
 					$plan->cost($cost);
+					$self->log->info('Model \''.ref($model).'\' did cost planning for \''.ref($plan).'\' and got cost '.$cost);
 					return $cost;
 				}
 			}
@@ -193,6 +195,11 @@ package Attean::API::SimpleCostPlanner 0.010 {
 			}
 			
 			$plan->cost($cost);
+			if ($self->log->is_trace) {
+				$self->log->trace("Cost $cost estimated for\n".$plan->as_string);
+			} else {
+				$self->log->debug('Estimated cost for \''.ref($plan).'\' is '.$cost);
+			}
 			return $cost;
 		}
 	}
@@ -213,7 +220,6 @@ package Attean::API::IDPJoinPlanner 0.010 {
 	use Math::Cartesian::Product;
 	use namespace::clean;
 
-	with 'MooX::Log::Any';
 	with 'Attean::API::JoinPlanner';
 	with 'Attean::API::SimpleCostPlanner';
 
@@ -346,6 +352,7 @@ package Attean::API::IDPJoinPlanner 0.010 {
 			if ($model->does('Attean::API::CostPlanner')) {
 				if (defined(my $cost = $model->cost_for_plan($plan, $model))) {
 					$plan->cost($cost);
+					$self->log->info('Model \''.ref($model).'\' did cost planning for \''.ref($plan).'\' and got cost '.$cost);
 					return $cost;
 				}
 			}
