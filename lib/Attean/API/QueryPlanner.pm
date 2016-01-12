@@ -198,7 +198,7 @@ package Attean::API::SimpleCostPlanner 0.010 {
 			if ($self->log->is_trace) {
 				$self->log->trace("Cost $cost estimated for\n".$plan->as_string);
 			} else {
-				$self->log->info('Estimated cost for \''.ref($plan).'\' is '.$cost);
+				$self->log->debug('Estimated cost for \''.ref($plan).'\' is '.$cost);
 			}
 			return $cost;
 		}
