@@ -147,6 +147,13 @@ sub fast_constructor {
 	}
 }
 
+=item C<< keyword( $kw ) >>
+
+Returns a new L<AtteanX::SPARQL::Token> object with the C<KEYWORD> type and
+C<$kw> value.
+
+=cut
+
 sub keyword {
 	my $class	= shift;
 	my $kw		= shift;
