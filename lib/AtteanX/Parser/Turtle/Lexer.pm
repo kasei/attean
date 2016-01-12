@@ -47,12 +47,12 @@ package AtteanX::Parser::Turtle::Lexer 0.010 {
 	my $r_bnode_id				= qr"(?:${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?"o;
 
 	my $r_PN_CHARS_BASE			= qr/([A-Z]|[a-z]|[\x{00C0}-\x{00D6}]|[\x{00D8}-\x{00F6}]|[\x{00F8}-\x{02FF}]|[\x{0370}-\x{037D}]|[\x{037F}-\x{1FFF}]|[\x{200C}-\x{200D}]|[\x{2070}-\x{218F}]|[\x{2C00}-\x{2FEF}]|[\x{3001}-\x{D7FF}]|[\x{F900}-\x{FDCF}]|[\x{FDF0}-\x{FFFD}]|[\x{10000}-\x{EFFFF}])/o;
-	my $r_PN_PREFIX				= qr/(${r_PN_CHARS_BASE}((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
-	my $r_PN_LOCAL_ESCAPED		= qr{(\\([-~.!&'()*+,;=/?#@%_\$]))|%[0-9A-Fa-f]{2}}o;
-	my $r_PN_LOCAL				= qr/((${r_PN_CHARS_U}|[:0-9]|${r_PN_LOCAL_ESCAPED})((${r_PN_CHARS}|${r_PN_LOCAL_ESCAPED}|[:.])*(${r_PN_CHARS}|[:]|${r_PN_LOCAL_ESCAPED}))?)/o;
-	my $r_PN_LOCAL_BNODE		= qr/((${r_PN_CHARS_U}|[0-9])((${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
-	my $r_PNAME_NS				= qr/((${r_PN_PREFIX})?:)/o;
-	my $r_PNAME_LN				= qr/(${r_PNAME_NS}${r_PN_LOCAL})/o;
+	my $r_PN_PREFIX				= qr/(?:${r_PN_CHARS_BASE}(?:(?:${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
+	my $r_PN_LOCAL_ESCAPED		= qr{(?:\\(?:[-~.!&'()*+,;=/?#@%_\$]))|%[0-9A-Fa-f]{2}}o;
+	our $r_PN_LOCAL				= qr/(?:(?:${r_PN_CHARS_U}|[:0-9]|${r_PN_LOCAL_ESCAPED})(?:(?:${r_PN_CHARS}|${r_PN_LOCAL_ESCAPED}|[:.])*(?:${r_PN_CHARS}|[:]|${r_PN_LOCAL_ESCAPED}))?)/o;
+	my $r_PN_LOCAL_BNODE		= qr/(?:(?:${r_PN_CHARS_U}|[0-9])(?:(?:${r_PN_CHARS}|[.])*${r_PN_CHARS})?)/o;
+	our $r_PNAME_NS				= qr/(?:(?:${r_PN_PREFIX})?:)/o;
+	our $r_PNAME_LN				= qr/(?:${r_PNAME_NS}${r_PN_LOCAL})/o;
 
 	with 'AtteanX::API::Lexer';
 
