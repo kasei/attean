@@ -153,7 +153,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 					my $type	= ($prefix eq '?' ? 'variable' : 'blank');
 					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
 					my %t		= $p->[1]->mapping;
-					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
+					$t{ $pos }	= ($type eq 'blank') ? Attean::Blank->new($id) : Attean::Variable->new($id);
 					my $t	= $item_class->new( %t );
 					$p->[1]	= $t;
 					$p->[0]	= $t->tuples_string;
@@ -179,7 +179,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 					my $type	= ($prefix eq '?' ? 'variable' : 'blank');
 					$mapping{ $key }	= { id => $id, prefix => $prefix, type => $type };
 					my %t		= $p->[1]->mapping;
-					$t{ $pos }	= ($type eq 'blank') ? blank($id) : variable($id);
+					$t{ $pos }	= ($type eq 'blank') ? Attean::Blank->new($id) : Attean::Variable->new($id);
 					my $t	= $item_class->new( %t );
 					$p->[1]	= $t;
 					$p->[0]	= $t->tuples_string;
