@@ -108,6 +108,8 @@ lib/AtteanX/Serializer/SPARQLCSV.pm
 lib/AtteanX/Serializer/SPARQLHTML.pm
 lib/AtteanX/Serializer/SPARQLTSV.pm
 lib/AtteanX/Serializer/SPARQLXML.pm
+lib/AtteanX/Serializer/Turtle.pm
+lib/AtteanX/Serializer/TurtleTokens.pm
 lib/AtteanX/SPARQL/Constants.pm
 lib/AtteanX/SPARQL/Token.pm
 lib/AtteanX/Store/Memory.pm
@@ -140,13 +142,16 @@ t/model-quad.t
 t/naive_planner.t
 t/parser-nquads.t
 t/parser-ntriples.t
+t/parser-rdfxml.t
 t/parser-sparqlxml.t
 t/parser-turtle.t
 t/parser.t
+t/plan.t
 t/serializer-canonicalntriples.t
 t/serializer-nquads.t
 t/serializer-ntriples.t
 t/serializer-sparql.t
+t/serializer-turtle.t
 t/simple-eval.t
 t/simple.t
 t/store-memory.t
