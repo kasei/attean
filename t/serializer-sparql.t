@@ -636,7 +636,7 @@ exit;
 		aggregates => \@aggs,
 	);
 	my $s	= $agg->as_string;
-	like($s, qr/Group { [?]s } aggregate { [?]sum ← SUM\([?]s\) }/, 'aggregate serialization');
+	like($s, qr/Group [{] [?]s [}] aggregate [{] [?]sum ← SUM\([?]s\) [}]/, 'aggregate serialization');
 }
 
 {
@@ -657,7 +657,7 @@ exit;
 		aggregates => \@aggs,
 	);
 	my $s	= $agg->as_string;
-	like($s, qr/Group { [?]s } aggregate { [?]sum ← SUM\([?]s\) }/, 'aggregate serialization');
+	like($s, qr/Group [{] [?]s [}] aggregate [{] [?]sum ← SUM\([?]s\) [}]/, 'aggregate serialization');
 }
 
 {
@@ -692,7 +692,7 @@ exit;
 		),
 	);
 	my $s	= $rank->as_string;
-	like($s, qr/Group { [?]school } aggregate { [?]rank ← RANK\([?]age\) }/, 'ranking serialization');
+	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 }
 
 done_testing();
