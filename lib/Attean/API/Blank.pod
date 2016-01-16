@@ -4,7 +4,7 @@ Attean::API::Blank - Role representing RDF blank terms
 
 =head1 VERSION
 
-This document describes Attean::API::Blank version 0.010
+This document describes Attean::API::Blank version 0.011
 
 =head1 SYNOPSIS
 

@@ -7,7 +7,7 @@ Attean::API - Utility package for loading all Attean role packages.
 
 =head1 VERSION
 
-This document describes Attean::API version 0.010
+This document describes Attean::API version 0.011
 
 =head1 SYNOPSIS
 
@@ -25,15 +25,15 @@ in the Attean::API namespace.
 
 =cut
 
-package Attean::API::ResultOrTerm 0.010 {
+package Attean::API::ResultOrTerm 0.011 {
 	use Moo::Role;
 }
 
-package Attean::API::BlankOrIRI 0.010 {
+package Attean::API::BlankOrIRI 0.011 {
 	use Moo::Role;
 }
 
-package Attean::API::TermOrVariable 0.010 {
+package Attean::API::TermOrVariable 0.011 {
 	use Moo::Role;
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
@@ -65,12 +65,12 @@ package Attean::API::TermOrVariable 0.010 {
 	}
 }
 
-package Attean::Mapper 0.010 {
+package Attean::Mapper 0.011 {
 	use Moo::Role;
 	requires 'map'; # my $that = $object->map($this)
 }
 
-package Attean::API::Variable 0.010 {
+package Attean::API::Variable 0.011 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo::Role;
@@ -97,7 +97,7 @@ Returns a string representation of the variable.'
 	
 }
 
-package Attean::API::CanonicalizingBindingSet 0.010 {
+package Attean::API::CanonicalizingBindingSet 0.011 {
 	use Moo::Role;
 	use Attean::RDF;
 	use namespace::clean;
@@ -193,7 +193,7 @@ package Attean::API::CanonicalizingBindingSet 0.010 {
 	}
 }
 
-package Attean::API 0.010 {
+package Attean::API 0.011 {
 	use Attean::API::Term;
 	use Attean::API::Store;
 	use Attean::API::Model;

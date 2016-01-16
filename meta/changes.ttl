@@ -28,8 +28,47 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010, my:v_0-011 ;
 	.
+
+my:v_0-011
+	a					:Version ;
+	dc:issued			"2016-01-16"^^xsd:date ;
+	:revision			"0.011" ;
+	dcterms:replaces	my:v_0-010 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add initial implementation for Attean::MutableTripleModel." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Plan->children_are_variable_connected." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Plan->subplans_of_type_are_variable_connected method." ],
+			[ a dcs:Addition ; rdfs:label "Added Turtle serializer." ],
+			[ a dcs:Addition ; rdfs:label "Added RDF/XML parser tests." ],
+			[ a dcs:Addition ; rdfs:label "Add logging of costs to query planner (#56 from KjetilK)." ],
+			[ a dcs:Addition ; rdfs:label "Added AtteanX::Parser::SPARQL->parse convenience method." ],
+			[ a dcs:Addition ; rdfs:label "Added tests for get_sequence model accessor method (#3)." ],
+			[ a dcs:Addition ; rdfs:label "Added exportable quadpattern constructor." ],
+			[ a dcs:Addition ; rdfs:label "Add use of MooX::Log::Any (from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Fix use of blank and variable shortcut constructors (#57 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Updated copyright years." ],
+			[ a dcs:Update ; rdfs:label "Make regexes used for prefixname parsing publicly accessibly." ],
+			[ a dcs:Update ; rdfs:label "Merged shared constants for Turtle and SPARQL tokens." ],
+			[ a dcs:Update ; rdfs:label "Improve cost estimation for cartesian joins in Attean::API::QueryPlanner." ],
+			[ a dcs:Update ; rdfs:label "Improved error handling in Attean::ListIterator->BUILD." ],
+			[ a dcs:Update ; rdfs:label "Update AtteanX::Parser::RDFXML to populate a namespace map during parsing." ],
+			[ a dcs:Update ; rdfs:label "Renamed parse_term_from_string methods to parse_term_from_bytes (adding delegating methods that should be decprecated in the future)." ],
+			[ a dcs:Update ; rdfs:label "Change API for Attean::API::CostPlanner->cost_for_plan to pass in the query planner." ],
+			[ a dcs:Update ; rdfs:label "Moved subpatterns_of_type from Attean::API::Algebra to Attean::API::DirectedAcyclicGraph." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in AtteanX::Serializer::SPARQLHTML->serialize_iter_to_bytes." ],
+			[ a dcs:Update ; rdfs:label "Improved recognition of invalid aggregation queries." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in handling unbound join variables in hash join evaluation." ],
+			[ a dcs:Update ; rdfs:label "Silence XML::Parser warnings on empty input documents." ],
+			[ a dcs:Update ; rdfs:label "Improve Attean::ExistsExpression->as_string." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::API::CanonicalizingBindingSet to produce the same type of object as are input." ],
+			[ a dcs:Update ; rdfs:label "Implementation of canonicalize method for triple and quad patterns (#43 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Improved SPARQL serialization of algebra and expression trees (including #51)." ]
+	]
+	.
+
 
 my:v_0-010
 	a					:Version ;

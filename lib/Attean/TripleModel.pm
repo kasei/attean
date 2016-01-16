@@ -7,7 +7,7 @@ Attean::TripleModel - RDF model backed by a set of triple-stores
 
 =head1 VERSION
 
-This document describes Attean::TripleModel version 0.010
+This document describes Attean::TripleModel version 0.011
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ objects representing the backing triple-store for that graph.
 
 =cut
 
-package Attean::TripleModel 0.010 {
+package Attean::TripleModel 0.011 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
 	use Scalar::Util qw(reftype blessed);
@@ -211,7 +211,7 @@ Attempts to delegate to all the underlying stores if that store consumes Attean:
 	}
 }
 
-package Attean::MutableTripleModel 0.010 {
+package Attean::MutableTripleModel 0.011 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
 	use Scalar::Util qw(reftype);

@@ -9,7 +9,7 @@ AtteanX::API::JoinRotatingPlanner - Query planning role to produce alternative j
 
 =head1 VERSION
 
-This document describes AtteanX::API::JoinRotatingPlanner version 0.010
+This document describes AtteanX::API::JoinRotatingPlanner version 0.011
 
 =head1 DESCRIPTION
 

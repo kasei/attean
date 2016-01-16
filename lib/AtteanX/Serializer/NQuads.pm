@@ -4,7 +4,7 @@ AtteanX::Serializer::NQuads - N-Triples Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::NQuads version 0.010
+This document describes AtteanX::Serializer::NQuads version 0.011
 
 =head1 SYNOPSIS
 
@@ -30,7 +30,7 @@ This document describes AtteanX::Serializer::NQuads version 0.010
 
 =cut
 
-package AtteanX::Serializer::NQuads 0.010 {
+package AtteanX::Serializer::NQuads 0.011 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);
