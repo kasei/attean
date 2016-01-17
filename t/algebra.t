@@ -175,7 +175,7 @@ subtest 'Quad canonicalization' => sub {
 		aggregates => \@aggs,
 	);
 	my $s	= $agg->as_string;
-	like($s, qr/Group { [?]s } aggregate { [?]sum ← SUM\([?]s\) }/, 'aggregate serialization');
+	like($s, qr/Group [{] [?]s [}] aggregate [{] [?]sum ← SUM\([?]s\) [}]/, 'aggregate serialization');
 }
 
 {
@@ -196,7 +196,7 @@ subtest 'Quad canonicalization' => sub {
 		aggregates => \@aggs,
 	);
 	my $s	= $agg->as_string;
-	like($s, qr/Group { [?]s } aggregate { [?]sum ← SUM\([?]s\) }/, 'aggregate serialization');
+	like($s, qr/Group [{] [?]s [}] aggregate [{] [?]sum ← SUM\([?]s\) [}]/, 'aggregate serialization');
 }
 
 {
@@ -231,7 +231,7 @@ subtest 'Quad canonicalization' => sub {
 		),
 	);
 	my $s	= $rank->as_string;
-	like($s, qr/Group { [?]school } aggregate { [?]rank ← RANK\([?]age\) }/, 'ranking serialization');
+	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 }
 
 done_testing();
