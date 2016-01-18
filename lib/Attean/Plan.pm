@@ -406,6 +406,7 @@ package Attean::Plan::Construct 0.011 {
 			die "Plan children do not all consume BindingSubstitutionPlan role:\n" . $self->as_string;
 		}
 		
+		warn "TODO: fix substitute_impl to substitute construct triples";
 		my @children	= map { $_->substitute_impl($model, $b) } @{ $self->children };
 		return $self->_impl($model, @children);
 	}
@@ -437,6 +438,86 @@ package Attean::Plan::Construct 0.011 {
 						if (scalar(@buffer)) {
 							my $t	= shift(@buffer);
 							return $t;
+						}
+					}
+				}
+			)->grep(sub {
+				return not $seen{$_->as_string}++;
+			});
+		}
+	}
+}
+
+=item * L<Attean::Plan::Describe>
+
+=cut
+
+package Attean::Plan::Describe 0.011 {
+	use Moo;
+	use Attean::RDF;
+	use List::MoreUtils qw(all);
+	use Types::Standard qw(Str ArrayRef ConsumerOf InstanceOf);
+	use namespace::clean;
+
+	has 'graph'	=> (is => 'ro');
+	has 'terms' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TermOrVariable']]);
+
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $terms	= $self->terms;
+		return sprintf('Describe { %s }', join(' . ', map { $_->as_string } @$terms));
+	}
+
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $b		= shift;
+		unless (all { $_->does('Attean::API::BindingSubstitutionPlan') } @{ $self->children }) {
+			die "Plan children do not all consume BindingSubstitutionPlan role:\n" . $self->as_string;
+		}
+		
+		warn "TODO: fix substitute_impl to substitute describe terms";
+		my @children	= map { $_->substitute_impl($model, $b) } @{ $self->children };
+		return $self->_impl($model, @children);
+	}
+	
+	sub _impl {
+		my $self		= shift;
+		my $model		= shift;
+		my $child		= shift;
+		
+		my $graph		= $self->graph;
+		my @terms		= @{ $self->terms };
+		return sub {
+			my $iter	= $child->();
+			my @buffer;
+			my %seen;
+			return Attean::CodeIterator->new(
+				item_type => 'Attean::API::Triple',
+				generator => sub {
+					if (scalar(@buffer)) {
+						return shift(@buffer);
+					}
+					while (my $row = $iter->next) {
+						foreach my $term (@terms) {
+							my $value	= $term->apply_binding($row);
+							if ($value->does('Attean::API::Term')) {
+								my $iter	= $model->get_quads( $value, variable('predicate'), variable('object'), $graph );
+								push(@buffer, $iter->elements);
+							}
+							if (scalar(@buffer)) {
+								return shift(@buffer);
+							}
 						}
 					}
 				}

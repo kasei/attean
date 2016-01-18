@@ -198,6 +198,16 @@ does_ok($p, 'Attean::API::CostPlanner');
 		isa_ok($plan, 'Attean::Plan::Union');
 		is(scalar(@{ $plan->children }), 0);
 	};
+	
+	subtest 'Describe' => sub {
+		note("Describe query with 1-triple BGP");
+		my $bgp			= Attean::Algebra::BGP->new(triples => [$t]);
+		my $describe	= Attean::Algebra::Describe->new(children => [$bgp], terms => [variable('s')]);
+		my $plan		= $p->plan_for_algebra($describe, $model, [$graph]);
+		does_ok($plan, 'Attean::API::Plan');
+		isa_ok($plan, 'Attean::Plan::Describe');
+		is(scalar(@{ $plan->children }), 1);
+	};
 }
 
 done_testing();

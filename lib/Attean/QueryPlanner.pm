@@ -451,6 +451,13 @@ the supplied C<< $active_graph >>.
 				push(@plans, Attean::Plan::Construct->new(triples => $algebra->triples, children => [$plan], distinct => 0, ordered => []));
 			}
 			return @plans;
+		} elsif ($algebra->isa('Attean::Algebra::Describe')) {
+			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			my @plans;
+			foreach my $plan (@children) {
+				push(@plans, Attean::Plan::Describe->new(terms => $algebra->terms, graph => $active_graphs, children => [$plan], distinct => 0, ordered => []));
+			}
+			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
