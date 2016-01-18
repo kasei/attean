@@ -9,7 +9,6 @@ use Scalar::Util qw(blessed);
 use Attean;
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
-use AtteanX::RDFQueryTranslator;
 use RDF::Query;
 use Data::Dumper;
 use Getopt::Long;
@@ -59,12 +58,13 @@ try {
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 
+	my $map		= URI::NamespaceMap->new();
 	while (my $data = shift(@ARGV)) {
 		my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($data));
 		open(my $fh, '<:encoding(UTF-8)', $data);
 		warn "Parsing data from $data...\n" if ($verbose);
 		my $pclass	= Attean->get_parser( filename => $data ) // 'AtteanX::Parser::Turtle';
-		my $parser	= $pclass->new(base => $base);
+		my $parser	= $pclass->new(base => $base, namespaces => $map);
 		my $iter	= $parser->parse_iter_from_io($fh);
 		my $quads	= $iter->as_quads($graph);
 		$model->add_iter($quads);
@@ -79,7 +79,7 @@ try {
 
 	warn "Parsing query...\n" if ($verbose);
 	my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
-	my $s 		= AtteanX::Parser::SPARQL->new(base => $base);
+	my $s 		= AtteanX::Parser::SPARQL->new(base => $base, namespaces => $map);
 	open(my $fh, '<:utf8', $qfile) or die $!;
 	my $algebra;
 	eval {
@@ -114,7 +114,7 @@ try {
 		my $count	= 1;
 		my $class	= Attean->get_serializer($out_format);
 		if ($out_format and $class) {
-			my $s	= $class->new();
+			my $s	= $class->new(namespaces => $map);
 			$s->serialize_iter_to_io(\*STDOUT, $iter);
 		} else {
 			while (my $r = $iter->next) {
