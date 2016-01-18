@@ -35,6 +35,7 @@ package Attean::API::BlankOrIRI 0.011 {
 
 package Attean::API::TermOrVariable 0.011 {
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
 	use namespace::clean;
@@ -46,6 +47,23 @@ package Attean::API::TermOrVariable 0.011 {
 		return ($a->as_string eq $b->as_string);
 	}
 	
+	sub apply_binding {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $bind	= shift;
+		if ($self->does('Attean::API::Variable')) {
+			my $name	= $self->value;
+			my $replace	= $bind->value($name);
+			if (defined($replace) and blessed($replace)) {
+				return $replace;
+			} else {
+				return $self;
+			}
+		} else {
+			return $self;
+		}
+	}
+
 	BEGIN {
 		my %types	= (
 			variable	=> 'Variable',
