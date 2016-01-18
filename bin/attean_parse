@@ -62,17 +62,18 @@ while (defined(my $file = shift)) {
 	my $out_io		= \*STDOUT;
 	$|				= 1;
 	my $parser;
+	my $map			= URI::NamespaceMap->new( \%namespaces );
 	if ($in eq 'GUESS') {
 		my $class	= Attean->get_parser( filename => $file ) // 'AtteanX::Parser::NTriples';
-		$parser		= $class->new( base => $base );
+		$parser		= $class->new( base => $base, namespaces => $map );
 	} else {
-		$parser		= Attean->get_parser($in)->new();
+		$parser		= Attean->get_parser($in)->new(namespaces => $map);
 	}
 	if ($out eq 'STRING') {
 		parse_to_string($parser, $fh);
 	} else {
 		my $sclass		= Attean->get_serializer($out) || die "*** No serializer found for format $out\n";
-		my $serializer	= $sclass->new(namespaces => \%namespaces);
+		my $serializer	= $sclass->new(namespaces => $map);
 
 		try {
 			if ($pull) {
@@ -139,7 +140,7 @@ sub push_transcode {
 	my $fh			= shift;
 	my $out_io		= shift;
 	warn "Push parser\n" if ($verbose);
-	if ($serializer->does('Attean::API::AppendableSerializer')) {
+	if ($serializer->does('Attean::API::AppendableSerializer')) { # XXXXXXXXXXXXXX
 		my $count	= 0;
 		my $start	= [gettimeofday];
 		my @queue;
@@ -152,7 +153,7 @@ sub push_transcode {
 			print STDERR "\r" if ($verbose);
 			
 			push(@queue, $triple);
-			if (scalar(@queue) > 100) {
+			if (scalar(@queue) > 1000) {
 				$serializer->serialize_list_to_io($out_io, @queue);
 				@queue	= ();
 			}
@@ -174,6 +175,6 @@ sub push_transcode {
 			print STDERR sprintf("\r%6d (%9.1f T/s)\n", $count, $tps);
 		}
 	} else {
-		pull_transcode($parser, $serializer, $out_io);
+		pull_transcode($parser, $serializer, $fh, $out_io);
 	}
 }
