@@ -51,6 +51,7 @@ package AtteanX::Serializer::Turtle 0.011 {
 	use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 	use namespace::clean;
 	with 'Attean::API::AbbreviatingSerializer';
+	with 'Attean::API::AppendableSerializer';
 	with 'Attean::API::TripleSerializer';
 	
 	sub canonical_media_type { return "text/turtle" }

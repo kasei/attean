@@ -49,6 +49,7 @@ package AtteanX::Serializer::TurtleTokens 0.011 {
 	use AtteanX::Parser::Turtle::Lexer;
 	use namespace::clean;
 	with 'Attean::API::AbbreviatingSerializer';
+	with 'Attean::API::AppendableSerializer';
 	
 	sub canonical_media_type { return "text/turtle" }
 
