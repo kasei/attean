@@ -947,7 +947,9 @@ sub _ConstructQuery {
 sub _DescribeQuery {
 	my $self	= shift;
 	
+	my $star	= 0;
 	if ($self->_optional_token(STAR)) {
+		$star	= 1;
 		$self->{build}{variables}	= ['*'];
 	} else {
 		$self->_VarOrIRIref;
@@ -968,6 +970,10 @@ sub _DescribeQuery {
 	
 	$self->_SolutionModifier();
 	$self->{build}{method}		= 'DESCRIBE';
+
+	my $pattern	= $self->{build}{triples}[0];
+	my $terms	= $star ? [map { Attean::Variable->new($_) } $pattern->in_scope_variables] : $self->{build}{variables};
+	$self->{build}{triples}[0]	= Attean::Algebra::Describe->new( terms => $terms, children => [$pattern] );
 }
 
 # [8] AskQuery ::= 'ASK' DatasetClause* WhereClause
