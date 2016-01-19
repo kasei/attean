@@ -8,6 +8,7 @@ no warnings 'redefine';
 use Attean;
 use Attean::RDF;
 use Type::Tiny::Role;
+use AtteanX::Parser::Turtle::Constants;
 
 my $constraint	= 'Attean::API::Triple';
 
@@ -108,4 +109,40 @@ END
 	is($turtle, $expected, 'serialize_iter_to_bytes');
 };
 
+subtest 'escaping' => sub {
+	my @tokens;
+	my $dq	= literal('"');
+	my $sq	= literal("'");
+	my $bq	= literal(q["']);
+	
+	@tokens	= $dq->sparql_tokens->elements;
+	expect(shift(@tokens), STRING1D, ['"'], 'double quote');
+
+	@tokens	= $sq->sparql_tokens->elements;
+	expect(shift(@tokens), STRING1D, ["'"], 'single quote');
+	
+	@tokens	= $bq->sparql_tokens->elements;
+	expect(shift(@tokens), STRING1D, [q["']], 'double and single quotes');
+	
+	my $ser = Attean->get_serializer('Turtle')->new();
+	my @triples	= map { triple(iri('s'), iri('p'), $_) } ($dq, $sq, $bq);
+	my $iter	= Attean::ListIterator->new(values => \@triples, item_type => 'Attean::API::Triple');
+	my $turtle	= $ser->serialize_iter_to_bytes($iter);
+	my $expected	= qq[<s> <p> "\\"" , "'" , "\\"'" .\n];
+	is($turtle, $expected, 'serialize_iter_to_bytes');
+};
+
+
 done_testing();
+
+sub expect {
+	my $token	= shift;
+	my $type	= shift;
+	my $values	= shift;
+	my $name	= shift // '';
+	if (length($name)) {
+		$name	= "${name}: ";
+	}
+	is($token->type, $type, "${name}token type");
+	is_deeply($token->args, $values, "${name}token values");
+}

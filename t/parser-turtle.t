@@ -1,29 +1,17 @@
 use v5.14;
 use autodie;
 use utf8;
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 use FindBin qw($Bin);
 use File::Glob qw(bsd_glob);
 use File::Spec;
 
 use Attean;
+use Attean::RDF;
+use AtteanX::Parser::Turtle;
+use AtteanX::Parser::Turtle::Constants;
 use Type::Tiny::Role;
-
-sub iri {
-	my $value	= shift;
-	return Attean::IRI->new(value => $value);
-}
-
-sub literal {
-	my $value	= shift;
-	my $lang	= shift;
-	my $dt		= shift;
-	my %args	= (value => $value);
-	$args{language}	= $lang if (defined($lang));
-	$args{datatype}	= $dt if (defined($dt));
-	return Attean::IRI->new(%args);
-}
 
 {
 	my $parser	= Attean->get_parser('Turtle')->new();
@@ -59,10 +47,31 @@ END
 	is($foaf->as_string, 'http://xmlns.com/foaf/0.1/');
 }
 
+subtest 'escaping' => sub {
+	my $turtle	= q[<s> ex:p "\\"", '\\'', '\\u706b\\U0000661F' .];
+	open(my $fh, '<:encoding(UTF-8)', \$turtle);
+	my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+	
+	expect($l->get_token, IRI, ['s'], 'subject');
+	expect($l->get_token, PREFIXNAME, ['ex:', 'p'], 'predicate');
+	expect($l->get_token, STRING1D, ['"'], 'double quote');
+	expect($l->get_token, COMMA, [',']);
+	expect($l->get_token, STRING1S, ["'"], 'single quote');
+	expect($l->get_token, COMMA, [',']);
+	expect($l->get_token, STRING1S, ["火星"], 'unicode \\u and \\U escapes');
+};
+
+
 done_testing();
 
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
+sub expect {
+	my $token	= shift;
+	my $type	= shift;
+	my $values	= shift;
+	my $name	= shift // '';
+	if (length($name)) {
+		$name	= "${name}: ";
+	}
+	is($token->type, $type, "${name}token type");
+	is_deeply($token->args, $values, "${name}token values");
 }
