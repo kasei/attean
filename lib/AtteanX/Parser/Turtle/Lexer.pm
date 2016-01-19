@@ -134,7 +134,7 @@ Returns the next token present in the input.
 				return $self->_get_number();
 			}
 		
-			if (defined(my $name = $CHAR_TOKEN{$c})) { $self->get_char; return $self->new_token($name, $start_line, $start_column); }
+			if (defined(my $name = $CHAR_TOKEN{$c})) { $self->get_char; return $self->new_token($name, $start_line, $start_column, $c); }
 			elsif (defined(my $method = $METHOD_TOKEN{$c})) { return $self->$method() }
 			elsif ($c =~ /[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o) {
 				if ($self->buffer =~ /^a(?!:)\s/o) {
