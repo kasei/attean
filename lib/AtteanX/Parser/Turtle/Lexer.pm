@@ -139,7 +139,7 @@ Returns the next token present in the input.
 			elsif ($c =~ /[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o) {
 				if ($self->buffer =~ /^a(?!:)\s/o) {
 					$self->get_char;
-					return $self->new_token(A, $start_line, $start_column);
+					return $self->new_token(A, $start_line, $start_column, 'a');
 				} elsif ($self->buffer =~ /^(?:true|false)(?!:)\b/o) {
 					my $bool	= $self->read_length($+[0]);
 					return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
