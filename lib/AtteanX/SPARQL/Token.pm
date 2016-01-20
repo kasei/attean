@@ -13,8 +13,6 @@ This document describes AtteanX::SPARQL::Token version 0.011
 
   use v5.14;
   use Attean;
-  my $term = Attean::Blank->new('b1');
-  $term->ntriples_string; # _:b1
 
 =head1 DESCRIPTION
 
@@ -158,6 +156,17 @@ sub keyword {
 	my $class	= shift;
 	my $kw		= shift;
 	return $class->fast_constructor(KEYWORD, -1, -1, -1, -1, [uc($kw)]);
+}
+
+sub as_string {
+	my $self	= shift;
+	my $type	= decrypt_constant($self->type);
+	my @args	= @{ $self->args };
+	if (scalar(@args)) {
+		return "$type(" . join(', ', @args) . ")";
+	} else {
+		return $type;
+	}
 }
 
 __PACKAGE__->meta->make_immutable;
