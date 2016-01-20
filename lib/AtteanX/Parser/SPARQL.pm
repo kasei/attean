@@ -78,7 +78,6 @@ has 'lexer' 		=> (is => 'rw', isa => InstanceOf['AtteanX::Parser::SPARQLLex::Ite
 has 'args'			=> (is => 'ro', isa => HashRef);
 has 'build'			=> (is => 'rw', isa => HashRef);
 has 'update'		=> (is => 'rw', isa => Bool);
-has 'namespaces'	=> (is => 'rw', isa => InstanceOf['URI::NamespaceMap'], default => sub { URI::NamespaceMap->new() });
 has 'baseURI'		=> (is => 'rw');
 has '_stack'			=> (is => 'rw', isa => ArrayRef);
 has 'filters'		=> (is => 'rw', isa => ArrayRef);
@@ -354,7 +353,7 @@ sub _Prologue {
 			$iri	= $r->value;
 		}
 		$namespaces{ $ns }	= $iri;
-		$self->{namespaces}{$ns}	= $iri;
+		$self->namespaces->add_mapping($ns, $iri);
 	}
 
 	$self->{build}{namespaces}	= \%namespaces;
@@ -3123,13 +3122,13 @@ sub _PrefixedName {
 	chop($ns);
 # 		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 	
-	unless (exists $self->{namespaces}{$ns}) {
+	unless ($self->namespaces->namespace_uri($ns)) {
 		die "Syntax error: Use of undefined namespace '$ns'";
 	}
 	
-	my $iri		= $self->{namespaces}{$ns} . $local;
+	my $iri		= $self->namespaces->namespace_uri($ns)->iri($local);
 	my $base	= $self->__base;
-	my $p		= Attean::IRI->new( value => $iri, $base ? (base => $base) : () );
+	my $p		= Attean::IRI->new( value => $iri->value, $base ? (base => $base) : () );
 	return $p;
 }
 
