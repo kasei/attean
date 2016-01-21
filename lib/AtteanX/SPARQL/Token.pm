@@ -158,6 +158,13 @@ sub keyword {
 	return $class->fast_constructor(KEYWORD, -1, -1, -1, -1, [uc($kw)]);
 }
 
+=item C<< as_string >>
+
+Returns a string description of the token including the token type and any
+associated values.
+
+=cut
+
 sub as_string {
 	my $self	= shift;
 	my $type	= decrypt_constant($self->type);
