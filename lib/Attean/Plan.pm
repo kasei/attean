@@ -179,6 +179,7 @@ package Attean::Plan::NestedLoopJoin 0.011 {
 		my @children	= @_;
 		my $left		= $self->left;
 		my $anti		= $self->anti;
+		my $iter_variables	= $self->in_scope_variables;
 		
 		return sub {
 			my ($lhs, $rhs)	= map { $_->() } @children;
@@ -211,7 +212,8 @@ package Attean::Plan::NestedLoopJoin 0.011 {
 			}
 			return Attean::ListIterator->new(
 				item_type => 'Attean::API::Result',
-				values => \@results
+				variables => $iter_variables,
+				values => \@results,
 			);
 		}
 	}
@@ -273,6 +275,8 @@ package Attean::Plan::HashJoin 0.011 {
 		my $model		= shift;
 		my @children	= @_;
 		my $left	= $self->left;
+		my $iter_variables	= $self->in_scope_variables;
+
 		return sub {
 			my %hash;
 			my @vars	= @{ $self->join_variables };
@@ -351,6 +355,7 @@ package Attean::Plan::HashJoin 0.011 {
 			}
 			return Attean::ListIterator->new(
 				item_type => 'Attean::API::Result',
+				variables => $iter_variables,
 				values => \@results
 			);
 		}
@@ -498,6 +503,9 @@ package Attean::Plan::Describe 0.011 {
 		
 		my $graph		= $self->graph;
 		my @terms		= @{ $self->terms };
+		# TODO: Split @terms into ground terms and variables.
+		#       Only call get_quads once for ground terms.
+		#       For variable terms, call get_quads for each variable-result combination.
 		return sub {
 			my $iter	= $child->();
 			my @buffer;
@@ -656,11 +664,14 @@ package Attean::Plan::Union 0.011 {
 		my $self		= shift;
 		my $model		= shift;
 		my @children	= @_;
+		my $iter_variables	= $self->in_scope_variables;
+
 		return sub {
 			my $current	= shift(@children);
 			my $iter	= $current->();
 			return Attean::CodeIterator->new(
 				item_type => 'Attean::API::Result',
+				variables => $iter_variables,
 				generator => sub {
 					while (blessed($iter)) {
 						my $row	= $iter->next();
@@ -1241,10 +1252,13 @@ package Attean::Plan::Extend 0.011 {
 		my $model	= shift;
 		my $impl	= shift;
 		my %exprs	= @_;
+		my $iter_variables	= $self->in_scope_variables;
+
 		return sub {
 			my $iter	= $impl->();
 			return Attean::CodeIterator->new(
 				item_type => 'Attean::API::Result',
+				variables => $iter_variables,
 				generator => sub {
 					ROW: while (my $r = $iter->next) {
 # 						warn 'Extend Row -------------------------------> ' . $r->as_string;
@@ -1422,6 +1436,7 @@ package Attean::Plan::Project 0.011 {
 		my $bind	= shift;
 		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
 		my @vars	= map { $_->value } @{ $self->variables };
+		my $iter_variables	= $self->in_scope_variables;
 
 		# TODO: substitute variables in the projection where appropriate
 		return sub {
@@ -1430,7 +1445,7 @@ package Attean::Plan::Project 0.011 {
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			});
+			}, $iter->item_type, $iter_variables);
 		};
 	}
 	
@@ -1439,6 +1454,7 @@ package Attean::Plan::Project 0.011 {
 		my $model	= shift;
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		my @vars	= map { $_->value } @{ $self->variables };
+		my $iter_variables	= $self->in_scope_variables;
 
 		return sub {
 			my $iter	= $impl->();
@@ -1446,7 +1462,7 @@ package Attean::Plan::Project 0.011 {
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			});
+			}, $iter->item_type, $iter_variables);
 		};
 	}
 }
@@ -1507,11 +1523,17 @@ package Attean::Plan::OrderBy 0.011 {
 		my $vars	= $self->variables;
 		my $ascending	= $self->ascending;
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		my $iter_variables	= $self->in_scope_variables;
+
 		return sub {
 			my $iter	= $impl->();
 			my @rows	= $iter->elements;
 			my @sorted	= $self->sort_rows($vars, $ascending, \@rows);
-			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type);
+			return Attean::ListIterator->new(
+				values => \@sorted,
+				variables => $iter_variables,
+				item_type => $iter->item_type
+			);
 		}
 	}
 }
@@ -1594,9 +1616,12 @@ package Attean::Plan::Table 0.011 {
 		my $self	= shift;
 		my $model	= shift;
 		my $rows	= $self->rows;
+		my $iter_variables	= $self->in_scope_variables;
+
 		return sub {
 			return Attean::ListIterator->new(
 				item_type => 'Attean::API::Result',
+				variables => $iter_variables,
 				values => $rows
 			);
 		};
@@ -1690,7 +1715,8 @@ package Attean::Plan::ALPPath 0.011 {
 		my $start	= $self->step_begin->value;
 		my $end		= $self->step_end->value;
 		my $skip	= $self->skip;
-		
+		my $iter_variables	= $self->in_scope_variables;
+
 		for ($subject, $object) {
 			if ($_->does('Attean::API::Variable')) {
 				my $name	= $_->value;
@@ -1719,6 +1745,7 @@ package Attean::Plan::ALPPath 0.011 {
 				}
 				return Attean::ListIterator->new(
 					item_type => 'Attean::API::Result',
+					variables => $iter_variables,
 					values => \@rows,
 				);
 			};
@@ -1729,6 +1756,7 @@ package Attean::Plan::ALPPath 0.011 {
 				my @rows	= map { Attean::Result->new( bindings => { $object->value => $_ } ) } (values %seen);
 				return Attean::ListIterator->new(
 					item_type => 'Attean::API::Result',
+					variables => $iter_variables,
 					values => \@rows,
 				);
 			};
@@ -1739,9 +1767,17 @@ package Attean::Plan::ALPPath 0.011 {
 				my %seen;
 				alp($model, $graph, $skip, $subject, $path, \%seen, $start, $end, $bind);
 				if (exists $seen{ $object->as_string }) {
-					return Attean::ListIterator->new( item_type => 'Attean::API::Result', values => [Attean::Result->new()] );
+					return Attean::ListIterator->new(
+						item_type => 'Attean::API::Result',
+						variables => $iter_variables,
+						values => [Attean::Result->new()]
+					);
 				} else {
-					return Attean::ListIterator->new( item_type => 'Attean::API::Result', values => [] );
+					return Attean::ListIterator->new(
+						item_type => 'Attean::API::Result',
+						variables => $iter_variables,
+						values => []
+					);
 				}
 			};
 		}
@@ -1783,6 +1819,7 @@ package Attean::Plan::ZeroOrOnePath 0.011 {
 		my $model	= shift;
 		my $bind	= shift;
 		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
+		my $iter_variables	= $self->in_scope_variables;
 
 		my $subject	= $self->subject;
 		my $object	= $self->object;
@@ -1818,6 +1855,7 @@ package Attean::Plan::ZeroOrOnePath 0.011 {
 			my %seen;
 			return Attean::CodeIterator->new(
 				item_type => 'Attean::API::Result',
+				variables => $iter_variables,
 				generator => sub {
 					while (scalar(@extra)) {
 						my $r	= shift(@extra);
@@ -1999,6 +2037,8 @@ package Attean::Plan::Aggregate 0.011 {
 		my $model	= shift;
 		my %aggs	= %{ $self->aggregates };
 		my @groups	= @{ $self->groups };
+		my $iter_variables	= $self->in_scope_variables;
+
 		my $group_template_generator	= sub {
 			my $r	= shift;
 			my %components;
@@ -2086,7 +2126,11 @@ package Attean::Plan::Aggregate 0.011 {
 					push(@results, $result);
 				}
 			}
-			return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
+			return Attean::ListIterator->new(
+				values => \@results,
+				variables => $iter_variables,
+				item_type => 'Attean::API::Result'
+			);
 		};
 	}
 }

@@ -155,6 +155,29 @@ package Attean::API::ResultSerializer 0.011 {
 		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Result');
 		return $ITEM_TYPE;
 	}
+	
+	around 'serialize_list_to_io' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $io		= shift;
+		my @vars;
+		if (scalar(@_)) {
+			@vars	= $_[0]->variables;
+		}
+		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type->role, variables => \@vars );
+		return $self->serialize_list_to_io($io, $iter);
+	};
+	
+	around 'serialize_list_to_bytes' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my @vars;
+		if (scalar(@_)) {
+			@vars	= $_[0]->variables;
+		}
+		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type->role, variables => \@vars );
+		return $self->serialize_iter_to_bytes($iter);
+	};
 }
 
 1;

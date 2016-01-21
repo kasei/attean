@@ -307,6 +307,25 @@ package Attean::API::ResultOrTermIterator 0.011 {
 			}
 		});
 	}
+	
+	around 'grep' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $block	= shift;
+		my $iter	= $orig->($self, $block, @_);
+		Attean::CodeIterator->new(
+			item_type => $iter->item_type,
+			generator => sub {
+				while (1) {
+					my $item	= $iter->next();
+					return unless defined($item);
+					local($_)	= $item;
+					return $item if ($block->($item));
+				}
+			},
+			variables => $self->variables,
+		);
+	};
 }
 
 package Attean::API::TripleIterator 0.011 {
