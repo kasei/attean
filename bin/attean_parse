@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env/perl
 
 use v5.14;
 use autodie;
@@ -140,7 +140,7 @@ sub push_transcode {
 	my $fh			= shift;
 	my $out_io		= shift;
 	warn "Push parser\n" if ($verbose);
-	if ($serializer->does('Attean::API::AppendableSerializer')) { # XXXXXXXXXXXXXX
+	if ($serializer->does('Attean::API::AppendableSerializer')) {
 		my $count	= 0;
 		my $start	= [gettimeofday];
 		my @queue;
