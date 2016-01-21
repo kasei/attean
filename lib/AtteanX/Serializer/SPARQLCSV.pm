@@ -66,16 +66,16 @@ L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $io		= shift;
 		my $iter	= shift;
-		my $first	= 1;
 		my $csv = Text::CSV->new ( { binary => 1 } );
+
+		my @vars	= @{ $iter->variables };
+		$csv->print($io, \@vars);
+		print $io "\n";
+		
 		while (my $t = $iter->next()) {
-			if ($first) {
-				$csv->print($io, [$t->variables]);
-				print $io "\n";
-				$first	= 0;
-			}
 			my @strings;
-			foreach my $term ($t->values) {
+			foreach my $var (@vars) {
+				my $term	= $t->value($var);
 				if (blessed($term)) {
 					if ($term->does('Attean::API::Blank')) {
 						push(@strings, $term->ntriples_string);
@@ -103,17 +103,16 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my $self	= shift;
 		my $iter	= shift;
 		my $data	= encode('UTF-8', '');
-		my $first	= 1;
 		my $csv = Text::CSV->new ( { binary => 1 } );
+
+		my @vars	= @{ $iter->variables };
+		$csv->combine(map { encode('UTF-8', $_) } @vars);
+		$data		.= $csv->string . "\n";
+
 		while (my $t = $iter->next()) {
-			if ($first) {
-				if ($csv->combine(map { encode('UTF-8', $_) } $t->variables)) {
-					$data	.= $csv->string . "\n";
-				}
-				$first	= 0;
-			}
 			my @strings;
-			foreach my $term ($t->values) {
+			foreach my $var (@vars) {
+				my $term	= $t->value($var);
 				if (blessed($term)) {
 					if ($term->does('Attean::API::Blank')) {
 						push(@strings, $term->ntriples_string);

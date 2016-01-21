@@ -65,13 +65,12 @@ L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $io		= shift;
 		my $iter	= shift;
-		my $first	= 1;
+		
+		my @vars	= @{ $iter->variables };
+		$io->print(join("\t", map { "?$_" } @vars) . "\n");
+		
 		while (my $t = $iter->next()) {
-			if ($first) {
-				$io->print(join("\t", map { "?$_" } $t->variables) . "\n");
-				$first	= 0;
-			}
-			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } $t->values;
+			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } map { $t->value($_) } @vars;
 			$io->print(join("\t", @strings) . "\n");
 		}
 		return;
@@ -88,8 +87,12 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my $self	= shift;
 		my $iter	= shift;
 		my $data	= '';
+
+		my @vars	= @{ $iter->variables };
+		$data		.= join("\t", map { "?$_" } @vars) . "\n";
+		
 		while (my $t = $iter->next()) {
-			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } $t->values;
+			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } map { $t->value($_) } @vars;
 			my $str		= join("\t", @strings);
 			$data		.= $str . "\n";
 		}
