@@ -166,7 +166,7 @@ package Attean::API::Literal 0.011 {
 		my $dt = $self->datatype;
 		if ($self->does('Attean::API::NumericLiteral') and $dt->value eq 'http://www.w3.org/2001/XMLSchema#integer') {
 			if ($self->value =~ /^\d+$/) {
-				my $t	= AtteanX::Parser::Turtle::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$self->value] );
+				my $t	= AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$self->value] );
 				return Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
 			}
 		}
@@ -178,7 +178,7 @@ package Attean::API::Literal 0.011 {
 			push(@tokens, $l);
 		} else {
 			if ($dt->value ne 'http://www.w3.org/2001/XMLSchema#string') {
-				push(@tokens, AtteanX::Parser::Turtle::Token->hathat);
+				push(@tokens, AtteanX::SPARQL::Token->hathat);
 				push(@tokens, $dt->sparql_tokens->elements);
 			}
 		}
