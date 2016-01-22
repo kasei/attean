@@ -159,10 +159,6 @@ L<IO::Handle> object C<< $fh >>.
 				$io->print('?');
 				$io->print($t->value);
 				$need_space++;
-			} elsif ($type == ANON) {
-				$io->print('_:');
-				$io->print($t->value);
-				$need_space++;
 			} elsif ($type == A) {
 				$io->print('a');
 				$need_space++;
