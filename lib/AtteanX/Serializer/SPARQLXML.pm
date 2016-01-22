@@ -70,8 +70,9 @@ L<IO::Handle> object C<< $fh >>.
 <sparql xmlns="http://www.w3.org/2005/sparql-results#">
 <head>
 END
+		my @vars	= @{ $iter->variables };
 		if ($iter->does('Attean::API::ResultIterator')) {
-			foreach my $v (@{ $iter->variables }) {
+			foreach my $v (@vars) {
 				print $fh qq(\t<variable name="$v"/>\n);
 			}
 		}
@@ -83,7 +84,7 @@ END
 		
 		while (my $t = $iter->next()) {
 			print $fh "\t\t<result>\n";
-			foreach my $name ($t->variables) {
+			foreach my $name (@vars) {
 				my $term	= $t->value($name);
 				if (blessed($term)) {
 					if ($term->does('Attean::API::IRI')) {
