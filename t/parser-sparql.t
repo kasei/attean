@@ -32,7 +32,7 @@ subtest 'parser construction and metadata' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $a		= $parser->parse("SELECT * { ?s <p> '''hello!''' OPTIONAL { ?s <q> ?x } FILTER(!BOUND(?x)) } LIMIT 5 OFFSET 5");
 	does_ok($a, 'Attean::API::Algebra');
-	isa_ok($a, 'Attean::Algebra::Ask');
+	isa_ok($a, 'Attean::Algebra::Slice');
 }
 
 {
@@ -62,7 +62,7 @@ END
 	my $foaf	= $map->namespace_uri('foaf');
 	isa_ok($foaf, 'URI::Namespace');
 	is($foaf->as_string, 'http://xmlns.com/foaf/0.1/');
-	isa_ok($a, 'Attean::Algebra::Project')
+	isa_ok($a, 'Attean::Algebra::Slice')
 }
 
 subtest 'escaping' => sub {
