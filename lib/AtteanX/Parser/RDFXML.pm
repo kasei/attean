@@ -118,6 +118,10 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		if (my $map = $self->namespaces) {
 			push(@args, namespaces => $map);
 		}
+		
+		if ($self->has_base) {
+			push(@args, base => $self->base);
+		}
 		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler, @args );
 		my $p			= XML::SAX::ParserFactory->parser(Handler => $saxhandler);
 		$saxhandler->push_base( $self->base ) if ($self->has_base);
@@ -130,7 +134,7 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		};
 		
 		if ($@) {
-			if ($@ =~ /no element found at line 1, column 0, byte 0/) {
+			if ($@ =~ /no element found at line 1, column 0, byte/) {
 				# silence XML::Parser output on empty input
 			} else {
 				die $@;
