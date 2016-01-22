@@ -12,6 +12,14 @@ use Attean::RDF;
 use AtteanX::SPARQL::Constants;
 use Type::Tiny::Role;
 
+subtest 'parser construction and metadata' => sub {
+	my $parser	= Attean->get_parser('SPARQL')->new();
+	isa_ok( $parser, 'AtteanX::Parser::SPARQL' );
+	is($parser->canonical_media_type, 'application/sparql-query', 'canonical_media_type');
+	my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
+	ok(exists $extensions{'rq'}, 'file_extensions');
+};
+
 {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	isa_ok($parser, 'AtteanX::Parser::SPARQL');
@@ -21,7 +29,14 @@ use Type::Tiny::Role;
 }
 
 {
-	my $data	= "ASK {}";
+	my $parser	= Attean->get_parser('SPARQL')->new();
+	my $a		= $parser->parse("SELECT * { ?s <p> '''hello!''' OPTIONAL { ?s <q> ?x } FILTER(!BOUND(?x)) } LIMIT 5 OFFSET 5");
+	does_ok($a, 'Attean::API::Algebra');
+	isa_ok($a, 'Attean::Algebra::Ask');
+}
+
+{
+	my $data	= "ASK { ?s ?p ?o FILTER(?o > -2.0 && ?o < +3e0 ) }";
 	open(my $fh, '<', \$data);
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $iter	= $parser->parse_iter_from_io($fh);
@@ -38,8 +53,9 @@ use Type::Tiny::Role;
 PREFIX ex: <http://example.org/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 SELECT * WHERE {
-	?s a foaf:Person .
+	?s a foaf:Person ; foaf:name 'Alice'
 }
+OFFSET 10
 END
 	my ($a)	= $parser->parse_list_from_bytes($content);
 	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);

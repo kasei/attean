@@ -1,4 +1,4 @@
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 
 use v5.14;
@@ -61,6 +61,20 @@ use Types::Standard qw(Int);
 	is($double->item_type, 'Int', 'expected item_type');
 	is($double->next, 8, 'expected value');
 	is($double->next, 10, 'expected value');
+}
+
+{
+	note('CodeIterator[Int] with generator producing multiple items');
+	my $value	= 0;
+	my $code	= sub {
+		my @list	= ($value+1, $value+2);
+		$value		+= 2;
+		return @list;
+	};
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => 'Int' );
+	is($iter->next, 1, 'expected value');
+	is($iter->next, 2, 'expected value');
+	is($iter->next, 3, 'expected value');
 }
 
 {
@@ -139,12 +153,23 @@ use Types::Standard qw(Int);
 	is($iter->next, undef, 'expected eof');
 }
 
-done_testing();
-
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
+{
+	note('CodeIterator[Triple] with non-Triple scalar items');
+	my $code	= sub {
+		return 'Hello';
+	};
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => 'Attean::API::Triple' );
+	dies_ok { $iter->next } 'expected failure';
 }
 
+{
+	note('CodeIterator[Triple] with non-Triple object items');
+	my $value	= 0;
+	my $code	= sub {
+		return Attean::Literal->integer(++$value);
+	};
+	my $iter	= Attean::CodeIterator->new( generator => $code, item_type => 'Attean::API::Triple' );
+	dies_ok { $iter->next } 'expected failure';
+}
+
+done_testing();

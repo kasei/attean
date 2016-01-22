@@ -11,10 +11,22 @@ use AtteanX::SPARQL::Constants;
 use Attean;
 use Attean::RDF;
 
-my $ser	= Attean->get_serializer('SPARQL')->new();
-does_ok($ser, 'Attean::API::Serializer');
-isa_ok($ser, 'AtteanX::Serializer::SPARQL');
 
+subtest 'serializer construction and metadata' => sub {
+	my $ser	= Attean->get_serializer('SPARQL')->new();
+	does_ok($ser, 'Attean::API::Serializer');
+	isa_ok($ser, 'AtteanX::Serializer::SPARQL');
+	is($ser->canonical_media_type, 'application/sparql-query', 'canonical_media_type');
+	my %types	= map { $_ => 1 } @{ $ser->media_types };
+	ok(exists $types{'application/sparql-query'}, 'media_types');
+	my $type	= $ser->handled_type;
+	can_ok($type, 'role');
+	is($type->role, 'AtteanX::SPARQL::Token');
+	my %extensions	= map { $_ => 1 } @{ $ser->file_extensions };
+	ok(exists $extensions{'rq'}, 'file_extensions');
+};
+
+my $ser	= Attean->get_serializer('SPARQL')->new();
 subtest 'expected tokens: empty BGP tokens' => sub {
 	my $a	= Attean::Algebra::BGP->new(triples => []);
 	my $i	= $a->sparql_tokens;
