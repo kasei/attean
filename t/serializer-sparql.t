@@ -11,6 +11,10 @@ use AtteanX::SPARQL::Constants;
 use Attean;
 use Attean::RDF;
 
+my $ser	= Attean->get_serializer('SPARQL')->new();
+does_ok($ser, 'Attean::API::Serializer');
+isa_ok($ser, 'AtteanX::Serializer::SPARQL');
+
 subtest 'expected tokens: empty BGP tokens' => sub {
 	my $a	= Attean::Algebra::BGP->new(triples => []);
 	my $i	= $a->sparql_tokens;
@@ -38,6 +42,20 @@ subtest 'expected tokens: 2-BGP join tokens' => sub {
 	# { ?s <p> "1" . ?s <p> "1" . }
 	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, DOT, VAR, IRI, STRING1D, DOT, RBRACE]);
 	ws_is($a->as_sparql, '{ ?s <p> "1" . ?s <p> "1" . }');
+};
+
+subtest 'expected tokens: 2-triple BGP tokens with language and datatype' => sub {
+	my $t	= triple(variable('s'), iri('p'), Attean::Literal->new(value => '1', datatype => iri('http://example.org/type')));
+	my $u	= triple(variable('s'), iri('q'), Attean::Literal->new(value => 'hello', language => 'en-US'));
+	
+	my $bgp	= Attean::Algebra::BGP->new(triples => [$t, $u]);
+	my $a	= Attean::Algebra::Join->new( children => [$bgp] );
+	my $i	= $a->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	
+	# { ?s <p> "1"^^<http://example.org/type> . ?s <p> "1" . }
+	expect_token_stream($i, [LBRACE, VAR, IRI, STRING1D, HATHAT, IRI, DOT, VAR, IRI, STRING1D, LANG, DOT, RBRACE]);
+	ws_is($a->as_sparql, '{ ?s <p> "1"^^<http://example.org/type> . ?s <q> "hello"@en-US . }');
 };
 
 subtest 'expected tokens: distinct/bgp' => sub {
