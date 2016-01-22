@@ -55,6 +55,7 @@ that will be returned from the iterator.
 package Attean::CodeIterator 0.011 {
 	use Moo;
 	use Type::Tiny::Role;
+	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef ArrayRef);
 	use namespace::clean;
 	
@@ -83,7 +84,7 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		}
 		my $role	= $self->item_type;
 		if (Role::Tiny->is_role($role)) {
-			die "CodeIterator item is not a $role" unless ($item->does($role));
+			die "CodeIterator item is not a $role" unless (blessed($item) and $item->does($role));
 		}
 		return $item;
 	}
