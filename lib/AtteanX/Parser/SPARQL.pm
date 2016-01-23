@@ -62,7 +62,6 @@ use warnings;
 no warnings 'redefine';
 
 use Attean;
-use RDF::Query;
 use Data::Dumper;
 use URI::NamespaceMap;
 use AtteanX::Parser::SPARQLLex;
@@ -183,18 +182,7 @@ sub _parse {
 		$build->{base}	= $self->baseURI;
 	}
 
-# 	try {
-		$self->_RW_Query();
-# 	} catch RDF::Query::Error with {
-# 		my $e	= shift;
-# 		$self->{build}	= undef;
-# 		$build			= undef;
-# 	} otherwise {
-# 		my $e	= shift;
-# 		$self->{build}	= undef;
-# 		$build			= undef;
-# 	};
-	
+	$self->_RW_Query();
 	delete $build->{star};
 	my $data								= $build;
 #	$data->{triples}						= $self->_pop_pattern_container();
@@ -372,6 +360,7 @@ sub _InsertDataUpdate {
 	$self->_expected_token(RBRACE);
 	
 	my $empty	= Attean::Algebra::BGP->new();
+	die "unimplemented";
 	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $empty, undef, 1);
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
@@ -387,6 +376,7 @@ sub _DeleteDataUpdate {
 	$self->_expected_token(RBRACE);
 	
 	my $empty	= Attean::Algebra::BGP->new();
+	die "unimplemented";
 	my $delete	= RDF::Query::Algebra::Update->new($data, undef, $empty, undef, 1);
 	$self->_add_patterns( $delete );
 	$self->{build}{method}		= 'UPDATE';
@@ -437,6 +427,7 @@ sub _InsertUpdate {
 		$dataset{ default }	= [$graph || ()];
 	}
 	
+	die "unimplemented";
 	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $ggp, \%dataset, 0);
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
@@ -511,6 +502,7 @@ sub _DeleteUpdate {
 		$dataset{ default }	= [$graph || ()];
 	}
 	
+	die "unimplemented";
 	my $insert	= RDF::Query::Algebra::Update->new($delete_data, $insert_data, $ggp, \%dataset, 0);
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
@@ -576,9 +568,11 @@ sub _LoadUpdate {
 		$self->_expected_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Load->new( $iri, $graph, $silent );
 		$self->_add_patterns( $pat );
 	} else {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Load->new( $iri, undef, $silent );
 		$self->_add_patterns( $pat );
 	}
@@ -592,6 +586,7 @@ sub _CreateGraph {
 	$self->_expected_token(KEYWORD< 'GRAPH');
 	$self->_IRIref;
 	my ($graph)	= splice( @{ $self->{_stack} } );
+	die "unimplemented";
 	my $pat	= RDF::Query::Algebra::Create->new( $graph );
 	$self->_add_patterns( $pat );
 	$self->{build}{method}		= 'CREATE';
@@ -604,15 +599,19 @@ sub _ClearGraphUpdate {
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'DEFAULT')) {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'NAMED')) {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'ALL')) {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
 		$self->_add_patterns( $pat );
 	}
@@ -626,15 +625,19 @@ sub _DropGraph {
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'DEFAULT')) {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'NAMED')) {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'ALL')) {
+		die "unimplemented";
 		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
 		$self->_add_patterns( $pat );
 	}
@@ -660,6 +663,7 @@ sub _CopyUpdate {
 	my $from	= $self->__graph();
 	$self->_expected_token(KEYWORD, 'TO');
 	my $to	= $self->__graph();
+	die "unimplemented";
 	my $pattern	= RDF::Query::Algebra::Copy->new( $from, $to, $silent );
 	$self->_add_patterns( $pattern );
 	$self->{build}{method}		= 'UPDATE';
@@ -672,6 +676,7 @@ sub _MoveUpdate {
 	my $from	= $self->__graph();
 	$self->_expected_token(KEYWORD, 'TO');
 	my $to	= $self->__graph();
+	die "unimplemented";
 	my $pattern	= RDF::Query::Algebra::Move->new( $from, $to, $silent );
 	$self->_add_patterns( $pattern );
 	$self->{build}{method}		= 'UPDATE';
@@ -703,6 +708,7 @@ sub __UpdateShortcuts {
 		($to)	= splice( @{ $self->{_stack} } );
 	}
 	
+	die "unimplemented";
 	my $from_pattern	= RDF::Query::Algebra::GroupGraphPattern->new(
 							RDF::Query::Algebra::BasicGraphPattern->new(
 								RDF::Query::Algebra::Triple->new(
