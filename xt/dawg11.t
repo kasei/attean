@@ -42,12 +42,6 @@ use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 use AtteanX::RDFQueryTranslator;
 
-use RDF::Query;
-use RDF::Trine qw(statement);
-use RDF::Trine::Graph;
-use RDF::Trine::Namespace qw(rdf rdfs xsd);
-use RDF::Trine::Iterator qw(smap);
-
 use Carp;
 use HTTP::Request;
 use HTTP::Response;
@@ -167,17 +161,20 @@ foreach my $file (@manifests) {
 }
 warn "done parsing manifests" if $debug;
 
-my $rs		= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tests/result-set#');
-my $mf		= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#');
-my $ut		= RDF::Trine::Namespace->new('http://www.w3.org/2009/sparql/tests/test-update#');
-my $rq		= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tests/test-query#');
-my $dawgt	= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#');
+my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
+my $RDF		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+my $RDFS	= 'http://www.w3.org/2000/01/rdf-schema#';
+my $RS		= 'http://www.w3.org/2001/sw/DataAccess/tests/result-set#';
+my $MF		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#';
+my $UT		= 'http://www.w3.org/2009/sparql/tests/test-update#';
+my $RQ		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-query#';
+my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 
 {
-	my @manifests	= $model->subjects( iri($rdf->type->uri_value), iri($mf->Manifest->uri_value) )->elements;
+	my @manifests	= $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") )->elements;
 	foreach my $m (@manifests) {
 # 		warn "Manifest: " . $m->as_string . "\n" if ($debug);
-		my ($list)	= $model->objects( $m, iri($mf->entries->uri_value) )->elements;
+		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
 		unless (blessed($list)) {
 			warn "No mf:entries found for manifest " . $m->as_string . "\n";
 		}
@@ -193,10 +190,10 @@ my $dawgt	= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tes
 				if ($RUN_QUERY_TESTS) {
 					{
 						# Evaluation Tests
-						my $et	= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->QueryEvaluationTest->uri_value));
-						my $ct	= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->CSVResultFormatTest->uri_value));
+						my $et	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}QueryEvaluationTest"));
+						my $ct	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}CSVResultFormatTest"));
 						if ($et + $ct) {
-							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 							warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
 							my $count	= $args{ stress } || 1;
 							query_eval_test( $model, $test, $count );
@@ -207,11 +204,11 @@ my $dawgt	= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tes
 						# Syntax Tests
 						my $total	= 0;
 						foreach my $type (qw(PositiveSyntaxTest11 NegativeSyntaxTest11)) {
-							$total	+= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->$type->uri_value));
+							$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
 						}
 
 						if ($total) {
-							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 							warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
 							my $count	= $args{ stress } || 1;
 							syntax_test( 'query', $model, $test, $count );
@@ -222,8 +219,8 @@ my $dawgt	= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tes
 				if ($RUN_UPDATE_TESTS) {
 					{
 						# Evaluation Tests
-						if ($model->count_quads($test, iri($rdf->type->uri_value), iri($ut->UpdateEvaluationTest->uri_value)) or $model->count_statements($test, iri($rdf->type->uri_value), iri($mf->UpdateEvaluationTest->uri_value))) {
-							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+						if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_statements($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
+							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 							unless ($test->value =~ /$PATTERN/) {
 								next;
 							}
@@ -236,11 +233,11 @@ my $dawgt	= RDF::Trine::Namespace->new('http://www.w3.org/2001/sw/DataAccess/tes
 						# Syntax Tests
 						my $total	= 0;
 						foreach my $type (qw(PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest11)) {
-							$total	+= $model->count_quads($test, iri($rdf->type->uri_value), iri($mf->$type->uri_value));
+							$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
 						}
 
 						if ($total) {
-							my ($name)	= $model->objects( $test, iri($mf->name->uri_value) )->elements;
+							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 							warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
 							my $count	= $args{ stress } || 1;
 							syntax_test( 'update', $model, $test, $count );
@@ -260,8 +257,8 @@ sub syntax_test {
 	
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
-	my ($queryd)	= $model->objects( $test, iri($mf->action->uri_value) )->elements;
-	my ($approved)	= $model->objects( $test, iri($dawgt->approval->uri_value) )->elements;
+	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
+	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($name)		= $model->objects( $test, $mfname )->elements;
 	my $namevalue	= $name->value;
 	
@@ -270,16 +267,16 @@ sub syntax_test {
 			warn "- skipping test because it isn't approved\n" if ($debug);
 			return;
 		}
-		if ($approved->equal($dawgt->NotClassified)) {
+		if ($approved->equal("${DAWGT}NotClassified")) {
 			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
 			return;
 		}
 	}
 
-	my $is_pos_query	= $model->count_quads($test, $type, iri($mf->PositiveSyntaxTest11->uri_value));
-	my $is_pos_update	= $model->count_quads($test, $type, iri($mf->PositiveUpdateSyntaxTest11->uri_value));
-	my $is_neg_query	= $model->count_quads($test, $type, iri($mf->NegativeSyntaxTest->uri_value)) + $model->count_quads($test, $type, iri($mf->NegativeSyntaxTest11->uri_value));
-	my $is_neg_update	= $model->count_quads($test, $type, iri($mf->NegativeUpdateSyntaxTest->uri_value)) + $model->count_quads($test, $type, iri($mf->NegativeUpdateSyntaxTest11->uri_value));
+	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
+	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
+	my $is_neg_query	= $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest11"));
+	my $is_neg_update	= $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest11"));
 	
 	my $uri					= URI->new( $queryd->value );
 	my $filename			= $uri->file;
@@ -327,21 +324,21 @@ sub query_eval_test {
 	my $test		= shift;
 	my $count		= shift || 1;
 	
-	my ($action)	= $model->objects( $test, iri($mf->action->uri_value) )->elements;
-	my ($result)	= $model->objects( $test, iri($mf->result->uri_value) )->elements;
-	my ($req)		= $model->objects( $test, iri($mf->requires->uri_value) )->elements;
-	my ($approved)	= $model->objects( $test, iri($dawgt->approval->uri_value) )->elements;
-	my ($queryd)	= $model->objects( $action, iri($rq->query->uri_value) )->elements;
-	my ($data)		= $model->objects( $action, iri($rq->data->uri_value) )->elements;
-	my @gdata		= $model->objects( $action, iri($rq->graphData->uri_value) )->elements;
-	my @sdata		= $model->objects( $action, iri($rq->serviceData->uri_value) )->elements;
+	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
+	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
+	my ($req)		= $model->objects( $test, iri("${MF}requires") )->elements;
+	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
+	my ($queryd)	= $model->objects( $action, iri("${RQ}query") )->elements;
+	my ($data)		= $model->objects( $action, iri("${RQ}data") )->elements;
+	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
+	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
 	
 	if ($STRICT_APPROVAL) {
 		unless ($approved) {
 			warn "- skipping test because it isn't approved\n" if ($debug);
 			return;
 		}
-		if ($approved->equal($dawgt->NotClassified)) {
+		if ($approved->equal("${DAWGT}NotClassified")) {
 			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
 			return;
 		}
@@ -475,15 +472,6 @@ sub get_actual_results {
 	my $sparql		= shift;
 	my $base		= shift;
 
-	if (0) {
-		my $q	= RDF::Query->new($sparql);
-		die RDF::Query->error unless ($q);
-		my $t	= AtteanX::RDFQueryTranslator->new();
-		my $a	= $t->translate_query($q);
-		warn "Translated query:\n";
-		warn $a->as_string;
-		warn "------------------------------------------------------";
-	}
 	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
 	my $algebra;
 	eval {
@@ -546,7 +534,7 @@ sub get_actual_results {
 	if ($results->is_bindings) {
 		return ($results, 'bindings');
 	} elsif ($results->is_boolean) {
-		$rmodel->add_statement( statement( iri("${testns}result"), iri("${testns}boolean"), literal(($results->get_boolean ? 'true' : 'false'), undef, $xsd->boolean) ) );
+		$rmodel->add_statement( triple( iri("${testns}result"), iri("${testns}boolean"), literal(($results->get_boolean ? 'true' : 'false'), undef, "${XSD}boolean") ) );
 		return ($rmodel->get_statements, 'boolean');
 	} elsif ($results->is_graph) {
 		return ($results, 'graph');
@@ -571,7 +559,6 @@ sub get_expected_results {
 	my $file		= shift;
 	my $type		= shift;
 	
-	my $testns	= RDF::Trine::Namespace->new('http://example.com/test-results#');
 	if ($type eq 'graph') {
 		my $model	= memory_model();
 		add_to_model($model, $default_graph, $file);
@@ -638,25 +625,25 @@ sub get_expected_results {
 	} elsif ($file =~ /[.](ttl|rdf|nt)/) {
 		my $model	= memory_model();
 		add_to_model($model, $default_graph, $file);
-		my ($res)	= $model->subjects( iri($rdf->type->uri_value), iri($rs->ResultSet->uri_value) )->elements;
-		if (my($b) = $model->objects( $res, iri($rs->boolean->uri_value) )->elements) {
+		my ($res)	= $model->subjects( iri("${RDF}type"), iri("${RS}ResultSet") )->elements;
+		if (my($b) = $model->objects( $res, iri("${RS}boolean") )->elements) {
 			my $bool	= $b->value;
-			my $term	= literal(value => $bool, datatype => $xsd->boolean->uri_value);
+			my $term	= literal(value => $bool, datatype => "${XSD}boolean");
 			if ($args{ results }) {
 				warn "Expected result: " . $term->as_string . "\n";
 			}
 			return Attean::ListIterator->new(values => [$term], item_type => 'Attean::API::Term');
 		} else {
-			my @vars	= $model->objects( $res, iri($rs->resultVariable->uri_value) )->elements;
-			my @sols	= $model->objects( $res, iri($rs->solution->uri_value) )->elements;
+			my @vars	= $model->objects( $res, iri("${RS}resultVariable") )->elements;
+			my @sols	= $model->objects( $res, iri("${RS}solution") )->elements;
 			my @names	= map { $_->value } @vars;
 			my @bindings;
 			foreach my $r (@sols) {
 				my %data;
-				my @b	= $model->objects( $r, iri($rs->binding->uri_value) )->elements;
+				my @b	= $model->objects( $r, iri("${RS}binding") )->elements;
 				foreach my $b (@b) {
-					my ($value)	= $model->objects( $b, iri($rs->value->uri_value) )->elements;
-					my ($var)	= $model->objects( $b, iri($rs->variable->uri_value) )->elements;
+					my ($value)	= $model->objects( $b, iri("${RS}value") )->elements;
+					my ($var)	= $model->objects( $b, iri("${RS}variable") )->elements;
 					$data{ $var->value }	= $value;
 				}
 				push(@bindings, Attean::Result->new( bindings => \%data ));
