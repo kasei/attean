@@ -42,8 +42,13 @@ L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $io		= shift;
 		my $iter	= shift;
-		my $bytes	= $self->serialize_iter_to_bytes($iter);
-		$io->print(decode('UTF-8', $bytes, Encode::FB_CROAK));
+		$iter		= $iter->materialize;
+		my $triples	= $iter->canonical_set();
+		
+		foreach my $t (@$triples) {
+			my $str = $t->tuples_string;
+			$io->print($str . "\n");
+		}
 		return;
 	}
 	
@@ -57,15 +62,11 @@ and returns the serialization as a UTF-8 encoded byte string.
 	sub serialize_iter_to_bytes {
 		my $self	= shift;
 		my $iter	= shift;
-		$iter		= $iter->materialize;
-		my $triples	= $iter->canonical_set();
-		
-		my $data	= '';
-		foreach my $t (@$triples) {
-			my $str = $t->tuples_string;
-			$data	.= $str . "\n";
-		}
-		return encode('UTF-8', $data);
+		my $data	= encode('UTF-8', '');
+		open(my $fh, '>', \$data);
+		$self->serialize_iter_to_io($fh, $iter);
+		close($fh);
+		return $data;
 	}
 }
 
