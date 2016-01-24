@@ -114,7 +114,7 @@ L<Attean::API::QuadIterator>.
 		my $self	= shift;
 		my @nodes	= @_[0..3];
 		foreach my $i (0..3) {
-			my $t	= $nodes[$i];
+			my $t	= $nodes[$i] // Attean::Variable->new();
 			if (not(ref($t)) or reftype($t) ne 'ARRAY') {
 				$nodes[$i]	= [$t];
 			}
@@ -160,7 +160,7 @@ L<Attean::API::QuadIterator>.
 			my $iter	= Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
 			return $iter;
 		} else {
-			my $name	= $g->can('as_string') ? $g->as_string : "$g";
+			my $name	= (blessed($g) and $g->can('as_string')) ? $g->as_string : "$g";
 			$self->log->warn("TripleModel cannot produce quads for non-IRI graph: $name");
 		}
 		return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
@@ -211,6 +211,70 @@ Attempts to delegate to all the underlying stores if that store consumes Attean:
 	}
 }
 
+package Attean::AddativeTripleModelRole 0.011 {
+	use Moo::Role;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(CodeRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Model';
+	has 'store_constructor'	=> (is => 'ro', isa => CodeRef, required => 1);
+	
+=item C<< add_store( $graph => $store ) >>
+
+Add the L<Attean::TripleStore> C<< $store >> object to the model using the
+IRI string value C<< $graph >> as the graph name.
+
+=cut
+
+	sub add_store {
+		my $self	= shift;
+		my $graph	= shift;
+		my $iri		= blessed($graph) ? $graph->value : $graph;
+		my $store	= shift;
+		
+		die if exists $self->stores->{ $iri };
+		$self->stores->{ $iri }	= $store;
+	}
+
+=item C<< create_graph( $graph ) >>
+
+Create a new L<Attean::TripleStore> and add it to the model using the
+L<Attean::API::IRI> C<< $graph >> as the graph name.
+
+The store is constructed by using this object's C<< store_constructor >>
+attribute:
+
+  my $store = $self->store_constructor->($graph);
+
+=cut
+
+	sub create_graph {
+		my $self	= shift;
+		my $graph	= shift;
+		my $iri		= $graph->value;
+		return if exists $self->stores->{ $iri };
+
+		my $store	= $self->store_constructor->($graph);
+		$self->stores->{ $iri }	= $store;
+	};
+
+=item C<< drop_graph( $graph ) >>
+
+Removes the store associated with the given C<< $graph >>.
+
+=cut
+
+	sub drop_graph {
+		my $self	= shift;
+		my $g		= shift;
+		if ($g->does('Attean::API::IRI')) {
+			delete $self->stores->{ $g->value };
+		}
+	}
+}
+
+
 package Attean::MutableTripleModel 0.011 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
@@ -242,7 +306,7 @@ Adds the specified C<$quad> to the underlying model.
 		if (my $store = $self->stores->{ $v }) {
 			$store->add_triple( $q->as_triple );
 		} else {
-			die "No such graph: $v";
+			Carp::confess "No such graph: $v";
 		}
 	}
 
@@ -264,7 +328,7 @@ Removes the specified C<< $quad >> from the underlying store.
 		}
 	}
 	
-	sub create_graph { die }
+	sub create_graph { die; }
 
 =item C<< drop_graph( $graph ) >>
 
@@ -293,6 +357,27 @@ Removes all quads with the given C<< $graph >>.
 		$self->create_graph($g);
 	}
 }
+
+package Attean::AddativeTripleModel 0.011 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(CodeRef);
+	use namespace::clean;
+	
+	extends 'Attean::TripleModel';
+	with 'Attean::AddativeTripleModelRole';
+}
+
+package Attean::AddativeMutableTripleModel 0.011 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(CodeRef);
+	use namespace::clean;
+	
+	extends 'Attean::MutableTripleModel';
+	with 'Attean::AddativeTripleModelRole';
+}
+
 
 1;
 
