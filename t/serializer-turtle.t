@@ -10,6 +10,36 @@ use Attean::RDF;
 use Type::Tiny::Role;
 use AtteanX::Parser::Turtle::Constants;
 
+subtest 'serializer construction and metadata' => sub {
+	{
+		my $ser	= Attean->get_serializer('Turtle')->new();
+		does_ok($ser, 'Attean::API::Serializer');
+		isa_ok($ser, 'AtteanX::Serializer::Turtle');
+		is($ser->canonical_media_type, 'text/turtle', 'canonical_media_type');
+		my %types	= map { $_ => 1 } @{ $ser->media_types };
+		ok(exists $types{'text/turtle'}, 'media_types');
+		my $type	= $ser->handled_type;
+		can_ok($type, 'role');
+		is($type->role, 'Attean::API::Triple');
+		my %extensions	= map { $_ => 1 } @{ $ser->file_extensions };
+		ok(exists $extensions{'ttl'}, 'file_extensions');
+	}
+	{
+		my $ser	= Attean->get_serializer('TurtleTokens')->new();
+		does_ok($ser, 'Attean::API::Serializer');
+		isa_ok($ser, 'AtteanX::Serializer::TurtleTokens');
+		is($ser->canonical_media_type, 'text/turtle', 'canonical_media_type');
+		my %types	= map { $_ => 1 } @{ $ser->media_types };
+		ok(exists $types{'text/turtle'}, 'media_types');
+		my $type	= $ser->handled_type;
+		can_ok($type, 'role');
+		is($type->role, 'AtteanX::Parser::Turtle::Token');
+		my %extensions	= map { $_ => 1 } @{ $ser->file_extensions };
+		ok(exists $extensions{'ttl'}, 'file_extensions');
+	}
+};
+
+
 my $constraint	= 'Attean::API::Triple';
 
 my $s	= blank('x');
@@ -132,6 +162,26 @@ subtest 'escaping' => sub {
 	is($turtle, $expected, 'serialize_iter_to_bytes');
 };
 
+subtest 'token serialization' => sub {
+	my $ser	= Attean->get_serializer('TurtleTokens')->new();
+	my @tokens;
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(A, -1, -1, -1, -1, ['a']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(COMMENT, -1, -1, -1, -1, ['comment']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(STRING1S, -1, -1, -1, -1, ['xyz']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(COMMA, -1, -1, -1, -1, [',']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(STRING3S, -1, -1, -1, -1, ['hello']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(COMMA, -1, -1, -1, -1, [',']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(STRING3D, -1, -1, -1, -1, ['world']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(HATHAT, -1, -1, -1, -1, ['^^']));
+	push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(PREFIXNAME, -1, -1, -1, -1, ['xsd:', 'string']));
+	my $iter	= Attean::ListIterator->new(values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token');
+	my $data	= $ser->serialize_iter_to_bytes($iter);
+	like($data, qr/\ba\b/);
+	like($data, qr/# comment/);
+	like($data, qr/'xyz'(?!')/);
+	like($data, qr/'''hello'''/);
+	like($data, qr/"""world"""\^\^xsd:string/);
+};
 
 done_testing();
 
