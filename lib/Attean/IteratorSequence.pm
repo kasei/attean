@@ -50,7 +50,7 @@ package Attean::IteratorSequence 0.011 {
 	
 	with 'Attean::API::Iterator';
 	
-	has iterators => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Iterator']], required => 1);
+	has iterators => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Iterator']], default => sub { [] });
 	
 =item C<< next >>
 
