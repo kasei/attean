@@ -103,29 +103,6 @@ Throw an error if C<< $char >> is not at the start of the buffer.
 		return $c;
 	}
 
-=item C<< get_char_fill_buffer >>
-
-Consume and return a single character from the buffer.
-If the buffer is empty, fill it first.
-
-=cut
-
-	sub get_char_fill_buffer {
-		my $self	= shift;
-		if (length($self->{buffer}) == 0) {
-			$self->fill_buffer;
-			return if (length($self->{buffer}) == 0);
-		}
-		my $c		= substr($self->{buffer}, 0, 1, '');
-		if ($c eq "\n") {
-			$self->{line}	= 1+$self->{line};
-			$self->{column}	= 1;
-		} else {
-			$self->{column}	= 1+$self->{column};
-		}
-		return $c;
-	}
-
 =item C<< get_char( $char ) >>
 
 Consume and return a single character from the buffer.
