@@ -168,14 +168,7 @@ package Attean::API::SimpleCostPlanner 0.011 {
 				my $joined		= $plan->children_are_variable_connected;
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
-				if ($lcost == 0) {
-					$cost	= $rcost;
-				} elsif ($rcost == 0) {
-					$cost	= $lcost;
-				} else {
-					$cost	= ($lcost + $rcost);
-				}
-
+				$cost	= ($lcost + $rcost);
 				$cost	*= 100 unless ($plan->children_are_variable_connected);
 			} elsif ($plan->isa('Attean::Plan::Service')) {
 				my $scost	= 10;
