@@ -96,6 +96,8 @@ package AtteanX::Parser::SPARQLJSON 0.011 {
 							my $data	= $value->{value};
 							if (my $lang = $value->{'xml:lang'}) {
 								$data{ $v }	= Attean::Literal->new( value => $data, language => $lang );
+							} elsif (my $dt = $value->{'datatype'}) {
+								$data{ $v }	= Attean::Literal->new( value => $data, datatype => $dt );
 							} else {
 								$data{ $v }	= Attean::Literal->new( $data );
 							}

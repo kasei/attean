@@ -13,11 +13,20 @@ use AtteanX::SPARQL::Constants;
 use Type::Tiny::Role;
 
 subtest 'parser construction and metadata' => sub {
-	my $parser	= Attean->get_parser('SPARQL')->new();
-	isa_ok( $parser, 'AtteanX::Parser::SPARQL' );
-	is($parser->canonical_media_type, 'application/sparql-query', 'canonical_media_type');
-	my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
-	ok(exists $extensions{'rq'}, 'file_extensions');
+	{
+		my $parser	= Attean->get_parser('SPARQL')->new();
+		isa_ok( $parser, 'AtteanX::Parser::SPARQL' );
+		is($parser->canonical_media_type, 'application/sparql-query', 'canonical_media_type');
+		my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
+		ok(exists $extensions{'rq'}, 'file_extensions');
+	}
+	{
+		my $parser	= Attean->get_parser('SPARQLLex')->new();
+		isa_ok( $parser, 'AtteanX::Parser::SPARQLLex' );
+		is($parser->canonical_media_type, 'application/x-sparql-query-tokens', 'canonical_media_type');
+		my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
+		ok(exists $extensions{'rq'}, 'file_extensions');
+	}
 };
 
 {

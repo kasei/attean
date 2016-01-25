@@ -244,14 +244,15 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.011 {
 		my $self	= shift;
 		my $r		= shift;
 		my $ttype	= shift;
-		my $convert	= shift // sub { shift };
+		my $convert	= shift;
 		my $extend	= $self->extend;
 		push(@$extend, sub {
 			my $l	= shift;
 			
 			if ($l->buffer =~ /^$r\b/) {
 				my $value	= $self->read_length($+[0]);
-				return $l->new_token($ttype, $l->start_line, $l->start_column, $convert->($value));
+				my $c		= $convert ? $convert->($value) : $value;
+				return $l->new_token($ttype, $l->start_line, $l->start_column, $c);
 			}
 		});
 	}

@@ -26,6 +26,11 @@ subtest 'serializer construction and metadata' => sub {
 	ok(exists $extensions{'rq'}, 'file_extensions');
 };
 
+subtest 'sparql token as_string' => sub {
+	my $t	= AtteanX::SPARQL::Token->fast_constructor(IRI, -1, -1, -1, -1, ['http://example.org/hello']);
+	is($t->as_string, 'IRI(http://example.org/hello)');
+};
+
 my $ser	= Attean->get_serializer('SPARQL')->new();
 subtest 'expected tokens: empty BGP tokens' => sub {
 	my $a	= Attean::Algebra::BGP->new(triples => []);

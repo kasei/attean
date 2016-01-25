@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 use autodie;
-use Test::More;
+use Test::Modern;
 use utf8;
 
 use Attean;
@@ -18,6 +18,17 @@ sub literal {
 		return Attean::Literal->new($value);
 	}
 }
+
+subtest 'parser construction and metadata' => sub {
+	my $parser	= Attean->get_parser('NQuads')->new();
+	isa_ok($parser, 'AtteanX::Parser::NQuads');
+	is($parser->canonical_media_type, 'application/n-quads', 'canonical_media_type');
+	my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
+	ok(exists $extensions{'nq'}, 'file_extensions');
+	my $type	= $parser->handled_type;
+	can_ok($type, 'role');
+	is($type->role, 'Attean::API::TripleOrQuad');
+};
 
 my $parser	= Attean->get_parser('NQuads')->new();
 isa_ok( $parser, 'AtteanX::Parser::NQuads' );
@@ -111,9 +122,3 @@ END
 }
 
 done_testing();
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
-}
