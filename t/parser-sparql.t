@@ -75,8 +75,8 @@ END
 }
 
 subtest 'escaping' => sub {
-	my $turtle	= q[ASK { <s> ex:p "\\"", '\\'', '\\u706b\\U0000661F' \\u007d];
-	open(my $fh, '<:encoding(UTF-8)', \$turtle);
+	my $sparql	= q[ASK { <s> ex:p "\\"", '\\'', '\\u706b\\U0000661F' \\u007d];
+	open(my $fh, '<:encoding(UTF-8)', \$sparql);
 	my $l		= AtteanX::Parser::SPARQLLex->new();
 	my $iter	= $l->parse_iter_from_io($fh);
 	
@@ -90,6 +90,23 @@ subtest 'escaping' => sub {
 	expect($iter->next, COMMA, [',']);
 	expect($iter->next, STRING1S, ["火星"], 'unicode \\u and \\U escapes');
 	expect($iter->next, RBRACE, ['}'], 'escaped closing brace');
+};
+
+subtest 'custom function' => sub {
+	my $sparql	= q[PREFIX ex: <http://example.org/> SELECT * WHERE { ?s ?p ?o FILTER(ex:test(?o)) }];
+	open(my $fh, '<:encoding(UTF-8)', \$sparql);
+	my $parser	= AtteanX::Parser::SPARQL->new();
+	my ($a)		= $parser->parse($sparql);
+	my ($f)		= $a->subpatterns_of_type('Attean::Algebra::Filter');
+	isa_ok($f, 'Attean::Algebra::Filter');
+	my $expr	= $f->expression;
+	isa_ok($expr, 'Attean::FunctionExpression');
+	is($expr->operator, 'INVOKE');
+	my ($iri, $term)	= map { $_->value } @{ $expr->children };
+	does_ok($iri, 'Attean::API::IRI');
+	is($iri->value, 'http://example.org/test');
+	does_ok($term, 'Attean::API::Variable');
+	is($term->value, 'o');
 };
 
 
