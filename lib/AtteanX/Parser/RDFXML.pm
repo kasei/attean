@@ -129,7 +129,9 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 			if (ref($data)) {
 				$p->parse_file($data);
 			} else {
-				$p->parse_string($data);
+				if (length($data) > 0) {
+					$p->parse_string($data);
+				}
 			}
 		};
 		
