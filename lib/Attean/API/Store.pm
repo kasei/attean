@@ -41,10 +41,20 @@ package Attean::API::Store 0.011 {
 
 package Attean::API::TripleStore 0.011 {
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
+	use namespace::clean;
+	
 	with 'Attean::API::Store';
 
 	requires 'get_triples';
 
+	before 'get_triples' => sub {
+		if (scalar(@_) == 2 and blessed($_[1]) and not($_[1]->does('Attean::API::TermOrVariable'))) {
+			my $type	= ref($_[0]);
+			die "get_triples called with a single $type argument, but expecting a list of terms/variables";
+		}
+	};
+	
 	sub count_triples {
 		my $self	= shift;
 		my $iter	= $self->get_triples(@_);
@@ -90,10 +100,20 @@ package Attean::API::TimeCacheableTripleStore 0.011 {
 
 package Attean::API::QuadStore 0.011 {
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
+	use namespace::clean;
+	
 	with 'Attean::API::Store';
 
 	requires 'get_quads';
 
+	before 'get_quads' => sub {
+		if (scalar(@_) == 2 and blessed($_[1]) and not($_[1]->does('Attean::API::TermOrVariable'))) {
+			my $type	= ref($_[0]);
+			die "get_quads called with a single $type argument, but expecting a list of terms/variables";
+		}
+	};
+	
 	sub count_quads {
 		my $self	= shift;
 		my $iter	= $self->get_quads(@_);
