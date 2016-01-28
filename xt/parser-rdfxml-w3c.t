@@ -216,7 +216,7 @@ foreach my $file (@good) {
 			note($name);
 			my (undef, undef, $test)	= File::Spec->splitpath( $file );
 			{
-				open( my $fh, '<:encoding(UTF-8)', $file ) or die $!;
+				open( my $fh, '<:', $file ) or die $!;
 				my $iter;
 				lives_ok {
 					my ($filename)	= $file	=~ m/rdfxml-w3c(.*)$/;

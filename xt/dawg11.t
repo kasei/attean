@@ -583,7 +583,7 @@ sub get_expected_results {
 	} elsif ($file =~ /[.]srx/) {
 		my $model	= memory_model();
 		my $parser	= Attean->get_parser('sparqlxml')->new();
-		open(my $fh, '<:encoding(UTF-8)', $file);
+		open(my $fh, '<', $file);
 		my $results	= $parser->parse_iter_from_io($fh);
 		
 		print_results("Expected results", \$results) if ($args{ results });
