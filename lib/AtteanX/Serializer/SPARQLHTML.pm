@@ -141,6 +141,22 @@ Serializes the L<Attean::API::Term> object as HTML.
 				s/</&lt;/g;
 			}
 			my $html	= $uri;
+
+			if (my $map = $self->namespaces) {
+				my $abr = $map->abbreviate($html);
+
+				if ($abr) {
+					return qq[<a href="${html}">$abr</a>];
+				} else {
+					return $html;
+				}
+
+			} else {
+			
+				return $html;
+			}
+
+
 # 			if ($link) {
 # 				$html	= qq[<a href="${uri}">$html</a>];
 # 			}
@@ -162,6 +178,7 @@ Serializes the L<Attean::API::Term> object as HTML.
 		}
 	}
 	with 'Attean::API::ResultSerializer';
+	with 'Attean::API::AbbreviatingSerializer';
 }
 
 1;
