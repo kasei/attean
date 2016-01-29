@@ -18,8 +18,8 @@ NAMESPACEMAP:{
 
 	my $s = $sclass->new(namespaces => $map);
 
-	is ($s->node_as_html($n1), '<a href="http://xmlns.com/foaf/0.1/Person">foaf:Person</a>', 'Return HTML link for IRI');
-	is ($s->node_as_html($n2), 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', 'Return plain IRI - 1');
+	is ($s->node_as_html($n1), '<a href="http://xmlns.com/foaf/0.1/Person">foaf:Person</a>', 'Return HTML link for IRI with abbrev');
+	is ($s->node_as_html($n2), '<a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">http://www.w3.org/1999/02/22-rdf-syntax-ns#type</a>', 'Return HTML link for IRI - 1');
 
 }
 
@@ -27,8 +27,8 @@ NO_NAMESPACEMAP:{
 
 	my $s = $sclass->new();
 	
-	is ($s->node_as_html($n1), 'http://xmlns.com/foaf/0.1/Person', 'Return plain IRI - 2');
-	is ($s->node_as_html($n2), 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', 'Return plain IRI - 3');
+	is ($s->node_as_html($n1), '<a href="http://xmlns.com/foaf/0.1/Person">http://xmlns.com/foaf/0.1/Person</a>', 'Return HTML link for IRI - 2');
+	is ($s->node_as_html($n2), '<a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type">http://www.w3.org/1999/02/22-rdf-syntax-ns#type</a>', 'Return HTML link for IRI - 3');
 
 }
 

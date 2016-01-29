@@ -41,11 +41,11 @@ END
 		my @rows	= ($b =~ /(<tr)/g);
 		cmp_ok(scalar(@rows), '>=', 4, 'at least 1 header row and 3 data rows');
 		like($b, qr[<td>x</td>]);
-		like($b, qr[<td>http://example.org/p</td>]);
+		like($b, qr[<td><a href="http://example.org/p">http://example.org/p</a></td>]);
 		like($b, qr[<td>1</td>]);
 		like($b, qr[<td>x</td>]);
 		like($b, qr[<td>2</td>]);
-		like($b, qr[<td>http://perlrdf.org/</td>]);
+		like($b, qr[<td><a href="http://perlrdf.org/">http://perlrdf.org/</a></td>]);
 	};
 
 	subtest 'serialize_iter_to_io' => sub {
@@ -58,11 +58,11 @@ END
 		my @rows	= ($b =~ /(<tr)/g);
 		cmp_ok(scalar(@rows), '>=', 4, 'at least 1 header row and 3 data rows');
 		like($b, qr[<td>x</td>]);
-		like($b, qr[<td>http://example.org/p</td>]);
+		like($b, qr[<td><a href="http://example.org/p">http://example.org/p</a></td>]);
 		like($b, qr[<td>1</td>]);
 		like($b, qr[<td>x</td>]);
 		like($b, qr[<td>2</td>]);
-		like($b, qr[<td>http://perlrdf.org/</td>]);
+		like($b, qr[<td><a href="http://perlrdf.org/">http://perlrdf.org/</a></td>]);
 	};
 }
 
