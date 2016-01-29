@@ -140,13 +140,13 @@ Serializes the L<Attean::API::Term> object as HTML.
 				s/&/&amp;/g;
 				s/</&lt;/g;
 			}
-			my $html	= $uri;
+			my $html = qq[<a href="${uri}">$uri</a>];
 
 			if (my $map = $self->namespaces) {
-				my $abr = $map->abbreviate($html);
+				my $abr = $map->abbreviate($uri);
 
 				if ($abr) {
-					return qq[<a href="${html}">$abr</a>];
+					return qq[<a href="${uri}">$abr</a>];
 				} else {
 					return $html;
 				}
@@ -160,7 +160,6 @@ Serializes the L<Attean::API::Term> object as HTML.
 # 			if ($link) {
 # 				$html	= qq[<a href="${uri}">$html</a>];
 # 			}
-			return $html;
 		} elsif ($node->does('Attean::API::Literal')) {
 			my $html	= $node->value;
 			for ($html) {
