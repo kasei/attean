@@ -49,7 +49,7 @@ package Attean::QueryPlanner 0.011 {
 	use Math::Cartesian::Product;
 	use namespace::clean;
 
-	with 'Attean::API::QueryPlanner';
+	with 'Attean::API::QueryPlanner', 'MooX::Log::Any';
 	has 'counter' => (is => 'rw', isa => Int, default => 0);
 
 =back
@@ -107,7 +107,7 @@ the supplied C<< $active_graph >>.
 			if (@plans) {
 				return @plans; # trust that the model knows better than us what plans are best
 			} else {
-# 				warn "*** Model did not provide plans: $model";
+ 				$self->log->info("*** Model did not provide plans: $model");
 			}
 		}
 		
