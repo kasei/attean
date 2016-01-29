@@ -40,7 +40,8 @@ package Attean::TreeRewriter 0.011 {
 	use Data::UUID;
 	use Scalar::Util qw(blessed refaddr);
 	use namespace::clean;
-	
+	with 'MooX::Log::Any';
+
 	has types => (is => 'rw', isa => ArrayRef[Str], default => sub { ['Attean::API::DirectedAcyclicGraph'] });
 	has pre_handlers => (is => 'rw', isa => ArrayRef[CodeRef], default => sub { [] });
 	
@@ -112,7 +113,7 @@ rewriting was performed, with the corresponding rewritten C<< $tree >>.
 			}
 		}
 		unless ($ok) {
-# 			warn "$tree does not conform to any rewrite roles\n";
+ 			$self->log->debug(ref($tree) . ' does not conform to any rewrite roles');
 			return (0, $tree);
 		}
 		
@@ -140,7 +141,7 @@ rewriting was performed, with the corresponding rewritten C<< $tree >>.
 					my ($childchanged, $child) = $self->rewrite($p, $thunk, $seen, $tree);
 					push(@children, $childchanged ? $child : $p);
 					if ($childchanged) {
-# 						warn "Child $p changed for parent $tree";
+ 						$self->log->debug("Child $p changed for parent $tree");
 						$changed	 = 1;
 					}
 				}
