@@ -40,6 +40,7 @@ requires		'Type::Tiny'				=> 0;
 requires		'URI::Escape'				=> 1.36;
 requires		'URI::NamespaceMap'			=> 0.12;
 requires		'XML::SAX'					=> 0;
+requires		'File::Slurp'				=> 0;
 requires		'RDF::Query'				=> 2.910;
 
 resources(
