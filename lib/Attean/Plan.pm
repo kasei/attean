@@ -1965,7 +1965,15 @@ package Attean::Plan::Aggregate 0.011 {
 		if ($op eq 'COUNT') {
 			my $count	= 0;
 			foreach my $r (@$rows) {
-				$count++;
+				if ($e) {
+					my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+					if ($term) {
+						$count++;
+					}
+				} else {
+					# This is the special-case branch for COUNT(*)
+					$count++;
+				}
 			}
 			return Attean::Literal->new(value => $count, datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 		} elsif ($op eq 'SUM') {
