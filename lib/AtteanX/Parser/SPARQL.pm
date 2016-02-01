@@ -3586,7 +3586,7 @@ sub _expected_token {
 	} else {
 		my $t			= $self->_peek_token;
 		my $expecting	= AtteanX::SPARQL::Constants::decrypt_constant($type);
-		my $got			= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
+		my $got			= blessed($t) ? AtteanX::SPARQL::Constants::decrypt_constant($t->type) : '(undef)';
 		if (@_) {
 			my $value	= shift;
 			my $value2	= $t->value;
