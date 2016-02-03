@@ -51,10 +51,10 @@ does_ok($p, 'Attean::API::CostPlanner');
 	my $store	= TestStore->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= iri('http://example.org/');
-	my $t		= triple(variable('s'), iri('p'), literal('1'));
-	my $u		= triple(variable('s'), iri('p'), variable('o'));
-	my $v		= triple(variable('s'), iri('q'), blank('xyz'));
-	my $w		= triple(variable('a'), iri('b'), iri('c'));
+	my $t		= triplepattern(variable('s'), iri('p'), literal('1'));
+	my $u		= triplepattern(variable('s'), iri('p'), variable('o'));
+	my $v		= triplepattern(variable('s'), iri('q'), blank('xyz'));
+	my $w		= triplepattern(variable('a'), iri('b'), iri('c'));
 
 	subtest 'Empty BGP' => sub {
 		note("An empty BGP should produce the join identity table plan");

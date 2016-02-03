@@ -55,7 +55,7 @@ if ($ENV{ATTEAN_TYPECHECK}) {
 }
 
 {
-	my $t	= triple(variable('s'), iri('p'), literal('1'));
+	my $t	= triplepattern(variable('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
 	my $join	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
 	my @walk;
@@ -159,7 +159,7 @@ subtest 'Quad canonicalization' => sub {
 };
 
 {
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
 	my @aggs	= Attean::AggregateExpression->new(
@@ -180,7 +180,7 @@ subtest 'Quad canonicalization' => sub {
 
 {
 	note('Aggregation');
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
 	my @aggs	= Attean::AggregateExpression->new(
@@ -203,9 +203,9 @@ subtest 'Quad canonicalization' => sub {
 	note('Ranking');
 	# RANKing example for 2 youngest students per school
 	my $bgp		= Attean::Algebra::BGP->new(triples => [
-		triple(variable('p'), iri('ex:name'), variable('name')),
-		triple(variable('p'), iri('ex:school'), variable('school')),
-		triple(variable('p'), iri('ex:age'), variable('age')),
+		triplepattern(variable('p'), iri('ex:name'), variable('name')),
+		triplepattern(variable('p'), iri('ex:school'), variable('school')),
+		triplepattern(variable('p'), iri('ex:age'), variable('age')),
 	]);
 	my @groups	= Attean::ValueExpression->new( value => variable('school') );
 	my $r_agg	= Attean::AggregateExpression->new(
