@@ -264,7 +264,16 @@ package Attean::API::TripleOrQuadPattern 0.011 {
 
 package Attean::API::TripleOrQuad 0.011 {
 	use Moo::Role;
+	use List::MoreUtils qw(any);
+	use Carp;
 	with 'Attean::API::TripleOrQuadPattern';
+
+	sub BUILD {
+		my $self = shift;
+		if (any { $_->does('Attean::API::Variable') } $self->values) {
+			croak 'Use a Pattern class to construct when using variables';
+		}
+	}
 }
 
 package Attean::API::TriplePattern 0.011 {
