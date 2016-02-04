@@ -1012,7 +1012,7 @@ package Attean::Algebra::Table 0.011 {
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
 
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
