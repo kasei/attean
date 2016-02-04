@@ -7,7 +7,7 @@ Attean::API::IDPJoinPlanner - Iterative dynamic programming query planning role
 
 =head1 VERSION
 
-This document describes Attean::API::IDPJoinPlanner version 0.011
+This document describes Attean::API::IDPJoinPlanner version 0.012
 
 =head1 SYNOPSIS
 
@@ -32,7 +32,7 @@ methods that consume the L<Attean::API::CostPlanner> role.
 
 =cut
 
-package Attean::API::QueryPlanner 0.011 {
+package Attean::API::QueryPlanner 0.012 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -40,7 +40,7 @@ package Attean::API::QueryPlanner 0.011 {
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
-package Attean::API::CostPlanner 0.011 {
+package Attean::API::CostPlanner 0.012 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -61,13 +61,13 @@ package Attean::API::CostPlanner 0.011 {
 	}
 }
 
-package Attean::API::JoinPlanner 0.011 {
+package Attean::API::JoinPlanner 0.012 {
 	use Moo::Role;
 	use namespace::clean;
 	requires 'joins_for_plan_alternatives';
 }
 
-package Attean::API::NaiveJoinPlanner 0.011 {
+package Attean::API::NaiveJoinPlanner 0.012 {
 	use Moo::Role;
 	use Math::Cartesian::Product;
 	use namespace::clean;
@@ -95,7 +95,7 @@ package Attean::API::NaiveJoinPlanner 0.011 {
 	}
 }
 
-package Attean::API::SimpleCostPlanner 0.011 {
+package Attean::API::SimpleCostPlanner 0.012 {
 	use Moo::Role;
 	use namespace::clean;
 	use Types::Standard qw(Int);
@@ -198,7 +198,7 @@ package Attean::API::SimpleCostPlanner 0.011 {
 	}
 }
 
-package Attean::API::IDPJoinPlanner 0.011 {
+package Attean::API::IDPJoinPlanner 0.012 {
 	use Moo::Role;
 	use Encode qw(encode);
 	use Attean::RDF;

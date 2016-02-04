@@ -7,7 +7,7 @@ Attean::API::Store - Triple/quad store role
 
 =head1 VERSION
 
-This document describes Attean::Store version 0.011
+This document describes Attean::Store version 0.012
 
 =head1 DESCRIPTION
 
@@ -35,11 +35,11 @@ The Attean::Store role is an empty role that more specialized roles conform to:
 
 =cut
 
-package Attean::API::Store 0.011 {
+package Attean::API::Store 0.012 {
 	use Moo::Role;
 }
 
-package Attean::API::TripleStore 0.011 {
+package Attean::API::TripleStore 0.012 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
@@ -76,7 +76,7 @@ package Attean::API::TripleStore 0.011 {
 	}
 }
 
-package Attean::API::MutableTripleStore 0.011 {
+package Attean::API::MutableTripleStore 0.012 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
@@ -92,21 +92,21 @@ package Attean::API::MutableTripleStore 0.011 {
 	};
 }
 
-package Attean::API::ETagCacheableTripleStore 0.011 {
+package Attean::API::ETagCacheableTripleStore 0.012 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'etag_value_for_triples';
 }
 
-package Attean::API::TimeCacheableTripleStore 0.011 {
+package Attean::API::TimeCacheableTripleStore 0.012 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'mtime_for_triples';
 }
 
-package Attean::API::QuadStore 0.011 {
+package Attean::API::QuadStore 0.012 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
@@ -154,7 +154,7 @@ package Attean::API::QuadStore 0.011 {
 	}
 }
 
-package Attean::API::MutableQuadStore 0.011 {
+package Attean::API::MutableQuadStore 0.012 {
 	use Moo::Role;
 	use Type::Tiny::Role;
 	with 'Attean::API::QuadStore';
@@ -185,14 +185,14 @@ package Attean::API::MutableQuadStore 0.011 {
 	}
 }
 
-package Attean::API::ETagCacheableQuadStore 0.011 {
+package Attean::API::ETagCacheableQuadStore 0.012 {
 	use Moo::Role;
 	with 'Attean::API::QuadStore';
 	
 	requires 'etag_value_for_quads';
 }
 
-package Attean::API::TimeCacheableQuadStore 0.011 {
+package Attean::API::TimeCacheableQuadStore 0.012 {
 	use Moo::Role;
 	with 'Attean::API::QuadStore';
 	

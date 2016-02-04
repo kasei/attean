@@ -7,7 +7,7 @@ Attean::Plan - Representation of SPARQL query plan operators
 
 =head1 VERSION
 
-This document describes Attean::Plan version 0.011
+This document describes Attean::Plan version 0.012
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ Evaluates a quad pattern against the model.
 
 =cut
 
-package Attean::Plan::Quad 0.011 {
+package Attean::Plan::Quad 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf ArrayRef);
@@ -136,7 +136,7 @@ Evaluates a join (natural-, anti-, or left-) using a nested loop.
 
 =cut
 
-package Attean::Plan::NestedLoopJoin 0.011 {
+package Attean::Plan::NestedLoopJoin 0.012 {
 	use Moo;
 	use List::MoreUtils qw(all);
 	use namespace::clean;
@@ -225,7 +225,7 @@ Evaluates a join (natural-, anti-, or left-) using a hash join.
 
 =cut
 
-package Attean::Plan::HashJoin 0.011 {
+package Attean::Plan::HashJoin 0.012 {
 	use Moo;
 	use List::MoreUtils qw(all);
 	use namespace::clean;
@@ -366,7 +366,7 @@ package Attean::Plan::HashJoin 0.011 {
 
 =cut
 
-package Attean::Plan::Construct 0.011 {
+package Attean::Plan::Construct 0.012 {
 	use Moo;
 	use List::MoreUtils qw(all);
 	use Types::Standard qw(Str ArrayRef ConsumerOf InstanceOf);
@@ -457,7 +457,7 @@ package Attean::Plan::Construct 0.011 {
 
 =cut
 
-package Attean::Plan::Describe 0.011 {
+package Attean::Plan::Describe 0.012 {
 	use Moo;
 	use Attean::RDF;
 	use List::MoreUtils qw(all);
@@ -543,7 +543,7 @@ named variable binding.
 
 =cut
 
-package Attean::Plan::EBVFilter 0.011 {
+package Attean::Plan::EBVFilter 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ConsumerOf);
@@ -602,7 +602,7 @@ ordering.
 
 =cut
 
-package Attean::Plan::Merge 0.011 {
+package Attean::Plan::Merge 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ArrayRef ConsumerOf);
@@ -631,7 +631,7 @@ Evaluates a set of sub-plans, returning the union of results.
 
 =cut
 
-package Attean::Plan::Union 0.011 {
+package Attean::Plan::Union 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
@@ -699,7 +699,7 @@ expressions, binding the produced values to new variables.
 
 =cut
 
-package Attean::Plan::Extend 0.011 {
+package Attean::Plan::Extend 0.012 {
 	use Moo;
 	use Encode;
 	use Data::UUID;
@@ -1293,7 +1293,7 @@ hash of already-seen results.
 
 =cut
 
-package Attean::Plan::HashDistinct 0.011 {
+package Attean::Plan::HashDistinct 0.012 {
 	use Moo;
 	use namespace::clean;
 	
@@ -1321,7 +1321,7 @@ filtering out sequential duplicates.
 
 =cut
 
-package Attean::Plan::Unique 0.011 {
+package Attean::Plan::Unique 0.012 {
 	use Moo;
 	use namespace::clean;
 	
@@ -1356,7 +1356,7 @@ number of results ("offset") and limiting the total number of returned results
 
 =cut
 
-package Attean::Plan::Slice 0.011 {
+package Attean::Plan::Slice 0.012 {
 	use Moo;
 	use Types::Standard qw(Int);
 	use namespace::clean;
@@ -1397,7 +1397,7 @@ of variable bindings in each result.
 
 =cut
 
-package Attean::Plan::Project 0.011 {
+package Attean::Plan::Project 0.012 {
 	use Moo;
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -1474,7 +1474,7 @@ sorting is applied.
 
 =cut
 
-package Attean::Plan::OrderBy 0.011 {
+package Attean::Plan::OrderBy 0.012 {
 	use Moo;
 	use Types::Standard qw(HashRef ArrayRef InstanceOf Bool Str);
 	use namespace::clean;
@@ -1544,7 +1544,7 @@ Evaluates a SPARQL query against a remove endpoint.
 
 =cut
 
-package Attean::Plan::Service 0.011 {
+package Attean::Plan::Service 0.012 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf Bool Str);
 	use namespace::clean;
@@ -1576,7 +1576,7 @@ Returns a constant set of results.
 
 =cut
 
-package Attean::Plan::Table 0.011 {
+package Attean::Plan::Table 0.012 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -1632,7 +1632,7 @@ package Attean::Plan::Table 0.011 {
 
 =cut
 
-package Attean::Plan::ALPPath 0.011 {
+package Attean::Plan::ALPPath 0.012 {
 	use Moo;
 	use Attean::TreeRewriter;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -1784,7 +1784,7 @@ package Attean::Plan::ALPPath 0.011 {
 	}
 }
 
-package Attean::Plan::ZeroOrOnePath 0.011 {
+package Attean::Plan::ZeroOrOnePath 0.012 {
 	use Moo;
 	use Attean::TreeRewriter;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -1883,7 +1883,7 @@ results were produced by evaluating the sub-plan.
 
 =cut
 
-package Attean::Plan::Exists 0.011 {
+package Attean::Plan::Exists 0.012 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -1913,7 +1913,7 @@ package Attean::Plan::Exists 0.011 {
 
 =cut
 
-package Attean::Plan::Aggregate 0.011 {
+package Attean::Plan::Aggregate 0.012 {
 	use Moo;
 	use Encode;
 	use Data::UUID;
@@ -2147,7 +2147,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::Ask 0.011 {
+# package Attean::Algebra::Ask 0.012 {
 # 	use Moo;
 # 	sub in_scope_variables { return; }
 # 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
@@ -2169,7 +2169,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::Construct 0.011 {
+# package Attean::Algebra::Construct 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ArrayRef ConsumerOf);
 # 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
@@ -2196,7 +2196,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::Path 0.011 {
+# package Attean::Algebra::Path 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	sub in_scope_variables {
@@ -2234,7 +2234,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::NegatedPropertySet 0.011 {
+# package Attean::Algebra::NegatedPropertySet 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ArrayRef ConsumerOf);
 # 	with 'Attean::API::PropertyPath';
@@ -2255,7 +2255,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::PredicatePath 0.011 {
+# package Attean::Algebra::PredicatePath 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::PropertyPath';
@@ -2279,7 +2279,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::InversePath 0.011 {
+# package Attean::Algebra::InversePath 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
@@ -2295,7 +2295,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::SequencePath 0.011 {
+# package Attean::Algebra::SequencePath 0.012 {
 # 	use Moo;
 # 	with 'Attean::API::NaryPropertyPath';
 # 	sub separator { return "/" }
@@ -2310,7 +2310,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::AlternativePath 0.011 {
+# package Attean::Algebra::AlternativePath 0.012 {
 # 	use Moo;
 # 	with 'Attean::API::NaryPropertyPath';
 # 	sub separator { return "|" }
@@ -2325,7 +2325,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::ZeroOrMorePath 0.011 {
+# package Attean::Algebra::ZeroOrMorePath 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
@@ -2341,7 +2341,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::OneOrMorePath 0.011 {
+# package Attean::Algebra::OneOrMorePath 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
@@ -2357,7 +2357,7 @@ package Attean::Plan::Aggregate 0.011 {
 # 
 # =cut
 # 
-# package Attean::Algebra::ZeroOrOnePath 0.011 {
+# package Attean::Algebra::ZeroOrOnePath 0.012 {
 # 	use Moo;
 # 	use Types::Standard qw(ConsumerOf);
 # 	with 'Attean::API::UnaryPropertyPath';
