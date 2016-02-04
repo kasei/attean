@@ -82,6 +82,14 @@ package Attean::API::MutableTripleStore 0.011 {
 	
 	requires 'add_triple';
 	requires 'remove_triple';
+
+	before 'add_triple' => sub {
+		my $self	= shift;
+		my $quad	= shift;
+		unless ($quad->is_ground) {
+			die "Cannot add a non-ground triple (with variables) to a model";
+		}
+	};
 }
 
 package Attean::API::ETagCacheableTripleStore 0.011 {
@@ -156,6 +164,15 @@ package Attean::API::MutableQuadStore 0.011 {
 	requires 'create_graph';
 	requires 'drop_graph';
 	requires 'clear_graph';
+
+	before 'add_quad' => sub {
+		my $self	= shift;
+		my $quad	= shift;
+		unless ($quad->is_ground) {
+			die "Cannot add a non-ground quad (with variables) to a store";
+		}
+	};
+
 	sub add_iter {
 		my $self	= shift;
 		my $iter	= shift;
