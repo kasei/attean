@@ -71,6 +71,8 @@ has line => ( is => 'ro', );
 has column => ( is => 'ro', );
 has args => ( is => 'ro', isa => ArrayRef[Str]);
 
+extends 'AtteanX::Parser::Turtle::Token';
+
 =item C<< value >>
 
 Returns the token value.

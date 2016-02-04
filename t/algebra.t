@@ -9,13 +9,6 @@ use Attean;
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 
-if ($ENV{ATTEAN_TYPECHECK}) {
-	my $bgp	= Attean::Algebra::BGP->new();
-	dies_ok { Attean::Algebra::Join->new( children => [] ); } 'bad join arity (0)';
-	dies_ok { Attean::Algebra::Join->new( children => [$bgp] ); } 'bad join arity (1)';
-	dies_ok { Attean::Algebra::Join->new( children => [$bgp, $bgp, $bgp] ); } 'bad join arity (3)';
-}
-
 {
 	my $b	= Attean::Algebra::BGP->new(triples => []);
 	isa_ok($b, 'Attean::Algebra::BGP');

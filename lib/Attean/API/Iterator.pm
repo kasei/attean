@@ -146,8 +146,10 @@ package Attean::API::Iterator 0.011 {
 			my $class	= ref($self);
 			my $term	= $self->$orig(@_);
 			return unless defined($term);
-			unless ($term->does($type)) {
-				die "${class} returned an element that failed conformance check for $type";
+			if (blessed($term)) {
+				unless ($term->does($type) or $term->isa($type)) {
+					die "${class} returned an element that failed conformance check for $type: $term";
+				}
 			}
 			return $term;
 		};

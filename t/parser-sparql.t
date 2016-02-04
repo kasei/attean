@@ -34,7 +34,7 @@ subtest 'parser construction and metadata' => sub {
 	isa_ok($parser, 'AtteanX::Parser::SPARQL');
 	my $type	= $parser->handled_type;
 	can_ok($type, 'role');
-	is($type->role, 'Attean::Algebra');
+	is($type->role, 'Attean::API::Algebra');
 }
 
 {

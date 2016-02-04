@@ -91,7 +91,7 @@ sub media_types {
 }
 
 sub handled_type {
-	state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::Algebra');
+	state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Algebra');
 	return $ITEM_TYPE;
 }
 
