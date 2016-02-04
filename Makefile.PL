@@ -8,13 +8,17 @@ all_from		'lib/Attean.pm';
 author			'Gregory Todd Williams <gwilliams@cpan.org>';
 license			'perl';
 
-build_requires	'Test::Exception'			=> 0;
-build_requires	'Test::LWP::UserAgent'		=> 0;
-build_requires	'Test::Modern'				=> 0;
-build_requires	'Test::Moose'				=> 0;
-build_requires	'Test::More'				=> 0.88;
-build_requires	'Test::Roo'					=> 0;
-build_requires	'XML::Simple'				=> 0;
+test_requires	'Test::Exception'			=> 0;
+test_requires	'Test::LWP::UserAgent'		=> 0;
+test_requires	'Test::Modern'				=> 0;
+test_requires	'Test::Moose'				=> 0;
+test_requires	'Test::More'				=> 0.88;
+test_requires	'Test::Roo'					=> 0;
+
+### This is required for running xt/dawg11.t, which also requires manual
+### downloading of the SPARQL test suite, so will not be relevant to automated
+### tooling:
+# test_requires	'XML::Simple'				=> 0;
 
 perl_version	'5.014';
 
@@ -47,7 +51,7 @@ resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",
 	'repository' => "http://github.com/kasei/attean/",
 	'bugtracker' => "https://github.com/kasei/attean/issues",
-	'IRC'			=> "irc://irc.perl.org/#perlrdf",
+	'IRC'        => "irc://irc.perl.org/#perlrdf",
 );
 
 author_tests('xt');
@@ -56,5 +60,6 @@ install_script glob('bin/attean_parse');
 install_script glob('bin/attean_query');
 
 write_doap_changes "meta/changes.ttl", "Changes", "turtle";
+
 sign;
 WriteAll;
