@@ -1115,6 +1115,196 @@ package Attean::Algebra::Describe 0.012 {
 	sub algebra_as_string { return 'Describe' }
 }
 
+=item * L<Attean::Algebra::Load>
+
+=cut
+
+package Attean::Algebra::Load 0.012 {
+	use Moo;
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(Bool ConsumerOf);
+	use namespace::clean;
+	
+	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'url' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
+	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::Term'], predicate => 'has_graph');
+
+	sub in_scope_variables { return; }
+	sub tree_attributes { return; }
+	sub algebra_as_string { return 'Load' }
+
+	sub sparql_tokens {
+		my $self	= shift;
+
+		my @tokens;
+		push(@tokens, AtteanX::SPARQL::Token->keyword('LOAD'));
+		if ($self->silent) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('SILENT'));
+		}
+		push(@tokens, $self->url->sparql_tokens->elements);
+		
+		if ($self->has_graph) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('INTO'));
+			push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+			push(@tokens, $self->graph->sparql_tokens->elements);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
+=item * L<Attean::Algebra::Clear>
+
+=cut
+
+package Attean::Algebra::Clear 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(Enum Bool ConsumerOf);
+	use namespace::clean;
+	
+	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+
+	has 'drop' => (is => 'ro', isa => Bool, default => 0);
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'target' => (is => 'ro', isa => Enum[qw(GRAPH DEFAULT NAMED ALL)], required => 1);
+	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::Term']);
+
+	sub BUILD {
+		my $self	= shift;
+		if ($self->target eq 'GRAPH') {
+			unless (blessed($self->graph)) {
+				die "Attean::Algebra::Clear operations with a GRAPH target must include a graph IRI";
+			}
+		}
+	}
+
+	sub in_scope_variables { return; }
+	sub tree_attributes { return; }
+	sub algebra_as_string {
+		my $self	= shift;
+		return $self->drop ? 'Drop' : 'Clear';
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+
+		my @tokens;
+		push(@tokens, AtteanX::SPARQL::Token->keyword($self->drop ? 'DROP' : 'CLEAR'));
+		if ($self->silent) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('SILENT'));
+		}
+		
+		if ($self->target =~ /^(DEFAULT|NAMED|ALL)$/) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword($self->target));
+		} else {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+			push(@tokens, $self->graph->sparql_tokens->elements);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
+=item * L<Attean::Algebra::Create>
+
+=cut
+
+package Attean::Algebra::Create 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(Bool ConsumerOf);
+	use namespace::clean;
+	
+	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::Term'], required => 1);
+
+	sub in_scope_variables { return; }
+	sub tree_attributes { return; }
+	sub algebra_as_string { return 'Create' }
+
+	sub sparql_tokens {
+		my $self	= shift;
+
+		my @tokens;
+		push(@tokens, AtteanX::SPARQL::Token->keyword('CREATE'));
+		if ($self->silent) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('SILENT'));
+		}
+		push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+		push(@tokens, $self->graph->sparql_tokens->elements);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
+=item * L<Attean::Algebra::Add>
+
+=cut
+
+package Attean::Algebra::Add 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(Enum Bool ConsumerOf);
+	use namespace::clean;
+	
+	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'drop_source' => (is => 'ro', isa => Bool, default => 0);
+	has 'drop_destination' => (is => 'ro', isa => Bool, default => 0);
+	
+	has 'source' => (is => 'ro', isa => ConsumerOf['Attean::API::Term'], predicate => 'has_source');
+	has 'destination' => (is => 'ro', isa => ConsumerOf['Attean::API::Term'], predicate => 'has_destination');
+
+	sub in_scope_variables { return; }
+	sub tree_attributes { return; }
+	sub algebra_as_string {
+		my $self	= shift;
+		return ($self->drop_source and $self->drop_destination) ? 'Move' : ($self->drop_destination) ? 'Copy' : 'Add';
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+
+		my @tokens;
+		my $op	= ($self->drop_source and $self->drop_destination) ? 'MOVE' : ($self->drop_destination) ? 'COPY' : 'ADD';
+		push(@tokens, AtteanX::SPARQL::Token->keyword($op));
+		if ($self->silent) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('SILENT'));
+		}
+		
+		if ($self->has_source) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+			push(@tokens, $self->source->sparql_tokens->elements);
+		} else {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('DEFAULT'));
+		}
+
+		push(@tokens, AtteanX::SPARQL::Token->keyword('TO'));
+		
+		if ($self->has_destination) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+			push(@tokens, $self->destination->sparql_tokens->elements);
+		} else {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('DEFAULT'));
+		}
+		
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
+# INSERT/DELETE DATA
+# DELETE WHERE
+# USING DELETE INSERT WHERE
 
 1;
 
