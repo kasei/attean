@@ -98,6 +98,14 @@ L<IO::Handle> object C<< $fh >>.
 				$indent--;
 			}
 			
+			if ($semicolon and $type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ADD|COPY|MOVE|USING|LOAD|DELETE|INSERT|WITH|CLEAR|DROP|CREATE)$/) {
+				# SPARQL Update use of a semicolon is different from its use in a Query;
+				# In queries, semicolon affects indentation. In updates, it's just a separator.
+				# So back out the indentation if it's being used as a separator here.
+				$semicolon	= 0;
+				$indent--;
+			}
+			
 			if ($newline) {
 				$io->print('    ' x $indent);
 				$newline	= 0;
