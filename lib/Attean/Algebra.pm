@@ -585,6 +585,9 @@ package Attean::Algebra::Service 0.012 {
 		
 		my @tokens;
 		push(@tokens, $service);
+		if ($self->silent) {
+			push(@tokens, AtteanX::SPARQL::Token->keyword('SILENT'));
+		}
 		push(@tokens, $self->endpoint->sparql_tokens->elements);
 		push(@tokens, $l);
 		push(@tokens, $child->sparql_subtokens->elements);
