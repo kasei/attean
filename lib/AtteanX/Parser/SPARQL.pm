@@ -120,6 +120,14 @@ sub parse {
 	return $algebra;
 }
 
+sub parse_update {
+	my $self	= shift;
+	my $parser	= ref($self) ? $self : $self->new();
+	$parser->update(1);
+	my ($algebra) = $parser->parse_list_from_bytes(@_);
+	return $algebra;
+}
+
 =item C<< parse_list_from_io( $fh ) >>
 
 =cut
@@ -154,7 +162,7 @@ sub parse_list_from_bytes {
 	return $a;
 }
 
-=item C<< parse ( $update_flag ) >>
+=item C<< parse() >>
 
 If C<< $update_flag >> is true, the query will be parsed allowing
 SPARQL 1.1 Update statements.
@@ -169,12 +177,9 @@ sub _parse {
 		die "No query string found to parse";
 	}
 
-	my $update	= shift || 0;
-
 	$self->_stack([]);
 	$self->filters([]);
 	$self->_pattern_container_stack([]);
-	$self->update($update);
 	my $triples								= $self->_push_pattern_container();
 	my $build								= { sources => [], triples => $triples };
 	$self->build($build);
@@ -212,27 +217,27 @@ sub _RW_Query {
 			$self->_AskQuery();
 			$read_query++;
 		} elsif ($self->_test_token(KEYWORD, 'CREATE')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "CREATE GRAPH update forbidden in read-only queries";
 			}
 			$self->_CreateGraph();
 		} elsif ($self->_test_token(KEYWORD, 'DROP')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "DROP GRAPH update forbidden in read-only queries";
 			}
 			$self->_DropGraph();
 		} elsif ($self->_test_token(KEYWORD, 'LOAD')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "LOAD update forbidden in read-only queries"
 			}
 			$self->_LoadUpdate();
 		} elsif ($self->_test_token(KEYWORD, 'CLEAR')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "CLEAR GRAPH update forbidden in read-only queries";
 			}
 			$self->_ClearGraphUpdate();
 		} elsif ($self->_test_token(KEYWORD, qr/^(WITH|INSERT|DELETE)/)) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "INSERT/DELETE update forbidden in read-only queries";
 			}
 			my ($graph);
@@ -243,7 +248,7 @@ sub _RW_Query {
 			}
 			if ($self->_optional_token(KEYWORD, 'INSERT')) {
 				if ($self->_optional_token(KEYWORD, 'DATA')) {
-					unless ($self->{update}) {
+					unless ($self->update) {
 						die "INSERT DATA update forbidden in read-only queries";
 					}
 					$self->_InsertDataUpdate();
@@ -252,7 +257,7 @@ sub _RW_Query {
 				}
 			} elsif ($self->_optional_token(KEYWORD, 'DELETE')) {
 				if ($self->_optional_token(KEYWORD, 'DATA')) {
-					unless ($self->{update}) {
+					unless ($self->update) {
 						die "DELETE DATA update forbidden in read-only queries";
 					}
 					$self->_DeleteDataUpdate();
@@ -261,11 +266,11 @@ sub _RW_Query {
 				}
 			}
 		} elsif ($self->_test_token(KEYWORD, 'COPY')) {
-			$self->_CopyUpdate();
+			$self->_AddCopyMoveUpdate('COPY');
 		} elsif ($self->_test_token(KEYWORD, 'MOVE')) {
-			$self->_MoveUpdate();
+			$self->_AddCopyMoveUpdate('MOVE');
 		} elsif ($self->_test_token(KEYWORD, 'ADD')) {
-			$self->_AddUpdate();
+			$self->_AddCopyMoveUpdate('ADD');
 		} elsif ($self->_test_token(SEMICOLON)) {
 			$self->_expected_token(SEMICOLON);
 			next if ($self->_Query_test);
@@ -560,20 +565,18 @@ sub __ModifyTemplate {
 
 sub _LoadUpdate {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD< 'LOAD');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	$self->_expected_token(KEYWORD, 'LOAD');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	$self->_IRIref;
 	my ($iri)	= splice( @{ $self->{_stack} } );
 	if ($self->_optional_token(KEYWORD, 'INTO')) {
 		$self->_expected_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Load->new( $iri, $graph, $silent );
+		my $pat	= Attean::Algebra::Load->new( silent => $silent, url => $iri, graph => $graph );
 		$self->_add_patterns( $pat );
 	} else {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Load->new( $iri, undef, $silent );
+		my $pat	= Attean::Algebra::Load->new( silent => $silent, url => $iri );
 		$self->_add_patterns( $pat );
 	}
 	$self->{build}{method}		= 'LOAD';
@@ -582,7 +585,7 @@ sub _LoadUpdate {
 sub _CreateGraph {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD< 'CREATE');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	$self->_expected_token(KEYWORD< 'GRAPH');
 	$self->_IRIref;
 	my ($graph)	= splice( @{ $self->{_stack} } );
@@ -595,7 +598,7 @@ sub _CreateGraph {
 sub _ClearGraphUpdate {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD< 'CLEAR');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
@@ -621,7 +624,7 @@ sub _ClearGraphUpdate {
 sub _DropGraph {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD, 'DROP');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
@@ -647,7 +650,7 @@ sub _DropGraph {
 sub __graph {
 	my $self	= shift;
 	if ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-		return RDF::Trine::Node::Nil->new();
+		return;
 	} else {
 		$self->_optional_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
@@ -656,94 +659,27 @@ sub __graph {
 	}
 }
 
-sub _CopyUpdate {
-	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'COPY');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	my $from	= $self->__graph();
-	$self->_expected_token(KEYWORD, 'TO');
-	my $to	= $self->__graph();
-	die "unimplemented";
-	my $pattern	= RDF::Query::Algebra::Copy->new( $from, $to, $silent );
-	$self->_add_patterns( $pattern );
-	$self->{build}{method}		= 'UPDATE';
-}
-
-sub _MoveUpdate {
-	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'MOVE');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	my $from	= $self->__graph();
-	$self->_expected_token(KEYWORD, 'TO');
-	my $to	= $self->__graph();
-	die "unimplemented";
-	my $pattern	= RDF::Query::Algebra::Move->new( $from, $to, $silent );
-	$self->_add_patterns( $pattern );
-	$self->{build}{method}		= 'UPDATE';
-}
-
-sub _AddUpdate {
-	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'ADD');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	return $self->__UpdateShortcuts( 'ADD', $silent );
-}
-
-sub __UpdateShortcuts {
+sub _AddCopyMoveUpdate {
 	my $self	= shift;
 	my $op		= shift;
-	my $silent	= shift;
-	my ($from, $to);
-	if ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-	} else {
-		$self->_optional_token(KEYWORD, 'GRAPH');
-		$self->_IRIref;
-		($from)	= splice( @{ $self->{_stack} } );
+	$self->_expected_token(KEYWORD, $op);
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
+	
+	my %args	= (silent => $silent);
+	if ($op eq 'COPY') {
+		$args{drop_destination}	=1;
+	} elsif ($op eq 'MOVE') {
+		$args{drop_destination}	= 1;
+		$args{drop_source}		= 1;
+	}
+	if (my $from = $self->__graph()) {
+		$args{source}	= $from;
 	}
 	$self->_expected_token(KEYWORD, 'TO');
-	if ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-	} else {
-		$self->_optional_token(KEYWORD, 'GRAPH');
-		$self->_IRIref;
-		($to)	= splice( @{ $self->{_stack} } );
+	if (my $to = $self->__graph()) {
+		$args{destination}	= $to;
 	}
-	
-	die "unimplemented";
-	my $from_pattern	= RDF::Query::Algebra::GroupGraphPattern->new(
-							RDF::Query::Algebra::BasicGraphPattern->new(
-								RDF::Query::Algebra::Triple->new(
-									map { Attean::Variable->new( $_ ) } qw(s p o)
-								)
-							)
-						);
-	if (defined($from)) {
-		$from_pattern	= RDF::Query::Algebra::NamedGraph->new( $from, $from_pattern );
-	}
-
-	my $to_pattern	= RDF::Query::Algebra::GroupGraphPattern->new(
-							RDF::Query::Algebra::BasicGraphPattern->new(
-								RDF::Query::Algebra::Triple->new(
-									map { Attean::Variable->new( $_ ) } qw(s p o)
-								)
-							)
-						);
-	if (defined($to)) {
-		$to_pattern	= RDF::Query::Algebra::NamedGraph->new( $to, $to_pattern );
-	}
-	
-	my $to_graph	= $to || RDF::Trine::Node::Nil->new;
-	my $from_graph	= $from || RDF::Trine::Node::Nil->new;
-	my $drop_to		= RDF::Query::Algebra::Clear->new( $to_graph, $silent );
-	my $update		= RDF::Query::Algebra::Update->new( undef, $to_pattern, $from_pattern, undef, 0 );
-	my $drop_from	= RDF::Query::Algebra::Clear->new( $from_graph );
-	my $pattern;
-	if ($op eq 'MOVE') {
-		$pattern		= Attean::Algebra::Sequence->new( children => [$drop_to, $update, $drop_from] );
-	} elsif ($op eq 'COPY') {
-		$pattern		= Attean::Algebra::Sequence->new( children => [$drop_to, $update] );
-	} else {
-		$pattern		= $update;
-	}
+	my $pattern	= Attean::Algebra::Add->new( %args );
 	$self->_add_patterns( $pattern );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -1789,7 +1725,7 @@ sub _Bind {
 sub _ServiceGraphPattern {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD, 'SERVICE');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	$self->__close_bgp_with_filters;
 	if ($self->_test_token(VAR)) {
 		$self->_Var;
