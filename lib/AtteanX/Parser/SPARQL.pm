@@ -113,12 +113,26 @@ sub _configure_lexer {
 	return $l;
 }
 
+=item C<< parse ( $sparql ) >>
+
+Parse the C<< $sparql >> query string and return the resulting
+L<Attean::API::Algebra> object.
+
+=cut
+
 sub parse {
 	my $self	= shift;
 	my $parser	= ref($self) ? $self : $self->new();
 	my ($algebra) = $parser->parse_list_from_bytes(@_);
 	return $algebra;
 }
+
+=item C<< parse_update ( $sparql ) >>
+
+Parse the C<< $sparql >> update string and return the resulting
+L<Attean::API::Algebra> object.
+
+=cut
 
 sub parse_update {
 	my $self	= shift;
@@ -161,13 +175,6 @@ sub parse_list_from_bytes {
 	return unless (ref($a));
 	return $a;
 }
-
-=item C<< parse() >>
-
-If C<< $update_flag >> is true, the query will be parsed allowing
-SPARQL 1.1 Update statements.
-
-=cut
 
 sub _parse {
 	my $self	= shift;
