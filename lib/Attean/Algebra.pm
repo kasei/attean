@@ -1305,9 +1305,125 @@ package Attean::Algebra::Add 0.012 {
 	}
 }
 
-# INSERT/DELETE DATA
+=item * L<Attean::Algebra::Update>
+
+=cut
+
+package Attean::Algebra::Update 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use List::MoreUtils qw(all any);
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+	
+	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
+
+	has 'insert' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
+	has 'delete' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
+
+	sub in_scope_variables { return; }
+	sub tree_attributes { return; }
+
+	sub _op_type {
+		my $self	= shift;
+		my $i		= scalar(@{ $self->insert });
+		my $d		= scalar(@{ $self->delete });
+		my $w		= scalar(@{ $self->children });
+		my $ig		= all { $_->is_ground } @{ $self->insert };
+		my $dg		= all { $_->is_ground } @{ $self->delete };
+		if ($i and not $d) {
+			# INSERT
+			return ($ig and not $w) ? 'ID' : 'I';
+		} elsif ($d and not $i) {
+			# DELETE
+			return ($dg and not $w) ? 'DD' : 'D';
+		} else {
+			# INSERT + DELETE
+			return 'U'
+		}
+	}
+	
+	sub algebra_as_string {
+		my $self	= shift;
+		state $S	= {
+			'ID'	=> 'Insert Data',
+			'I'		=> 'Insert',
+			'DD'	=> 'Delete Data',
+			'D'		=> 'Delete',
+			'U'		=> 'Update',
+		};
+		my $op	= $self->_op_type();
+		return $S->{ $op };
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $op		= $self->_op_type();
+		my $l		= AtteanX::SPARQL::Token->lbrace;
+		my $r		= AtteanX::SPARQL::Token->rbrace;
+		my $dot		= AtteanX::SPARQL::Token->dot;
+		my $data	= AtteanX::SPARQL::Token->keyword('DATA');
+		my $insert	= AtteanX::SPARQL::Token->keyword('INSERT');
+		my $delete	= AtteanX::SPARQL::Token->keyword('DELETE');
+		my $where	= AtteanX::SPARQL::Token->keyword('WHERE');
+		
+		# TODO: Support WITH
+		# TODO: Support USING
+		
+		my @tokens;
+		if ($op eq 'ID' or $op eq 'DD') {
+			my $statements	= ($op eq 'ID') ? $self->insert : $self->delete;
+			my $kw	= ($op eq 'ID') ? $insert : $delete;
+			push(@tokens, $kw);
+			push(@tokens, $data);
+			push(@tokens, $l);
+			foreach my $t (@{ $statements }) {
+				push(@tokens, $t->sparql_tokens->elements);
+				push(@tokens, $dot);
+			}
+			push(@tokens, $r);
+		} elsif ($op eq 'I' or $op eq 'D') {
+			my $statements	= ($op eq 'I') ? $self->insert : $self->delete;
+			my $kw	= ($op eq 'I') ? $insert : $delete;
+			push(@tokens, $kw);
+			push(@tokens, $l);
+			foreach my $t (@{ $statements }) {
+				push(@tokens, $t->sparql_tokens->elements);
+				push(@tokens, $dot);
+			}
+			push(@tokens, $r);
+			push(@tokens, $where);
+			push(@tokens, $l);
+			foreach my $c (@{ $self->children }) {
+				push(@tokens, $c->sparql_tokens->elements);
+			}
+			push(@tokens, $r);
+		} else {
+			foreach my $x ([$delete, $self->delete], [$insert, $self->insert]) {
+				my ($kw, $statements)	= @$x;
+				push(@tokens, $kw);
+				push(@tokens, $l);
+				foreach my $t (@{ $statements }) {
+					push(@tokens, $t->sparql_tokens->elements);
+					push(@tokens, $dot);
+				}
+				push(@tokens, $r);
+			}
+			push(@tokens, $where);
+			push(@tokens, $l);
+			foreach my $c (@{ $self->children }) {
+				push(@tokens, $c->sparql_tokens->elements);
+			}
+			push(@tokens, $r);
+		}
+		
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
 # DELETE WHERE
-# USING DELETE INSERT WHERE
 
 1;
 
