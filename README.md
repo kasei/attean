@@ -1,9 +1,32 @@
-PerlRDF-NG Development Repository
-=================================
+Attean Semantic Web Framework
+=============================
 
-This repo contains in-development work on the next-generation PerlRDF APIs.
-We're trying to focus on simplifying the APIs at the same time as we move to
-a moose-based implementation. This code is in a *very* early stage of
-development, so don't rely on any of the APIs being stable. If you have
-comments, suggestions, or want to help out, feel free to file issues,
-fork the code, submit pull requests, or drop by [our irc channel](irc://irc.perl.org/perlrdf).
+Attean is a Perl framework for working with RDF data and SPARQL queries.
+It features parsers and serializers for many different RDF formats including
+RDF/XML, Turtle, N-Triples and N-Quads, as well as SPARQL formats like
+SPARQL-XML, SPARQL-JSON, SPARQL-CSV and SPARQL-TSV.
+
+Attean features support for SPARQL 1.1 queries, and a set of APIs and command
+line tools to parse, transform, query, and serialize RDF data.
+
+Getting Attean
+--------------
+
+Attean is available from:
+
+* [GitHub](https://github.com/kasei/attean/)
+* [CPAN](https://metacpan.org/release/Attean)
+
+And is also available as [Debian packages](https://packages.qa.debian.org/liba/libattean-perl.html).
+
+Getting Help
+------------
+
+A group of perl-rdf developers are usually available in the
+[perlrdf IRC channel](irc://irc.perl.org/perlrdf) where we're happy to answer
+questions.
+
+You can also:
+
+* Email our [mailing list](http://lists.perlrdf.org/listinfo/dev)
+* Create a new [GitHub Issue](https://github.com/kasei/attean/issues) or submit a pull request
