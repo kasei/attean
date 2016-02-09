@@ -182,15 +182,6 @@ package Attean::API::TripleOrQuadPattern 0.012 {
 
 	with 'Attean::API::SPARQLSerializable';
 	
-	sub sparql_tokens {
-		my $self	= shift;
-		my @tokens;
-		foreach my $t ($self->values) {
-			push(@tokens, $t->sparql_tokens->elements);
-		}
-		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
-	}
-	
 	around BUILDARGS => sub {
 		my $orig 	= shift;
 		my $class	= shift;
@@ -312,6 +303,15 @@ package Attean::API::TriplePattern 0.012 {
 		return $self->apply_statement(@_);
 	}
 
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		foreach my $t ($self->values) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
@@ -379,6 +379,20 @@ package Attean::API::QuadPattern 0.012 {
 		return $self->apply_statement(@_);
 	}
 
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+		push(@tokens, $self->graph->sparql_tokens->elements);
+		push(@tokens, AtteanX::SPARQL::Token->lbrace());
+		my @values	= ($self->values)[0..2];
+		foreach my $t (@values) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		push(@tokens, AtteanX::SPARQL::Token->rbrace());
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
