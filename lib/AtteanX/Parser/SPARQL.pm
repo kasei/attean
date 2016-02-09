@@ -367,13 +367,10 @@ sub _InsertDataUpdate {
 	my $self	= shift;
 	$self->_expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
-	$self->_ModifyTemplate();
-	my $data	= $self->_remove_pattern;
+	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
-	
-	my $empty	= Attean::Algebra::BGP->new();
-	die "unimplemented";
-	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $empty, undef, 1);
+
+	my $insert	= Attean::Algebra::Update->new(insert => \@triples);
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -383,13 +380,10 @@ sub _DeleteDataUpdate {
 	$self->_expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
 	local($self->{__no_bnodes})		= "DELETE DATA block";
-	$self->_ModifyTemplate();
-	my $data	= $self->_remove_pattern;
+	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
 	
-	my $empty	= Attean::Algebra::BGP->new();
-	die "unimplemented";
-	my $delete	= RDF::Query::Algebra::Update->new($data, undef, $empty, undef, 1);
+	my $delete	= Attean::Algebra::Update->new(delete => \@triples);
 	$self->_add_patterns( $delete );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -398,13 +392,12 @@ sub _InsertUpdate {
 	my $self	= shift;
 	my $graph	= shift;
 	$self->_expected_token(LBRACE);
-	$self->_ModifyTemplate();
-	my $data	= $self->_remove_pattern;
+	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
+	
 	if ($graph) {
-		$data	= Attean::Algebra::Graph->new( children => [$data], graph => $graph );
+		@triples	= map { $_->as_quad_pattern($graph) } @triples;
 	}
-
 
 	my %dataset;
 	while ($self->_optional_token(KEYWORD, 'USING')) {
@@ -439,8 +432,7 @@ sub _InsertUpdate {
 		$dataset{ default }	= [$graph || ()];
 	}
 	
-	die "unimplemented";
-	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $ggp, \%dataset, 0);
+	my $insert	= Attean::Algebra::Update->new( children => [$ggp], insert => \@triples );
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -448,31 +440,53 @@ sub _InsertUpdate {
 sub _DeleteUpdate {
 	my $self	= shift;
 	my $graph	= shift;
-	my ($delete_data, $insert_data);
 	
 	my %dataset;
-	my $delete_where	= 0;
 	if ($self->_optional_token(KEYWORD, 'WHERE')) {
 		if ($graph) {
 			die "Syntax error: WITH clause cannot be used with DELETE WHERE operations";
 		}
-		$delete_where	= 1;
+		$self->_expected_token(LBRACE);
+		my @st	= $self->_ModifyTemplate();
+		$self->_expected_token(RBRACE);
+		my @patterns;
+		my @triples;
+		my @quads;
+		foreach my $s (@st) {
+			if ($s->does('Attean::API::QuadPattern')) {
+				push(@quads, $s);
+				push(@patterns, Attean::Algebra::Graph->new( graph => $s->graph, children => [$s] ));
+			} else {
+				push(@triples, $s);
+			}
+		}
+		push(@patterns, Attean::Algebra::BGP->new( triples => \@triples ));
+		my $ggp	= Attean::Algebra::Join->new( children => \@patterns );
+		my $update	= Attean::Algebra::Update->new( children => [$ggp], delete => [@st]);
+		$self->_add_patterns( $update );
+		$self->{build}{method}		= 'UPDATE';
+		return;
 	} else {
+		my @delete_triples;
 		{
 			local($self->{__no_bnodes})		= "DELETE block";
 			$self->_expected_token(LBRACE);
-			$self->_ModifyTemplate( $graph );
+			@delete_triples	= $self->_ModifyTemplate( $graph );
 			$self->_expected_token(RBRACE);
 		}
-		$delete_data	= $self->_remove_pattern;
 		
+		my @insert_triples;
 		if ($self->_optional_token(KEYWORD, 'INSERT')) {
 			$self->_expected_token(LBRACE);
-			$self->_ModifyTemplate( $graph );
+			@insert_triples	= $self->_ModifyTemplate( $graph );
 			$self->_expected_token(RBRACE);
-			$insert_data	= $self->_remove_pattern;
 		}
 		
+		if ($graph) {
+			@insert_triples	= map { $_->as_quad_pattern($graph) } @insert_triples;
+			@delete_triples	= map { $_->as_quad_pattern($graph) } @delete_triples;
+		}
+
 		while ($self->_optional_token(KEYWORD, 'USING')) {
 			$self->{build}{custom_update_dataset}	= 1;
 			my $named	= 0;
@@ -487,37 +501,38 @@ sub _DeleteUpdate {
 				push(@{ $dataset{default} }, $iri );
 			}
 		}
-	}
+		
+		$self->_expected_token(KEYWORD, 'WHERE');
 	
-	$self->_expected_token(KEYWORD, 'WHERE');
-	if ($graph) {
-		$self->{__no_bnodes}	= "DELETE WHERE block" if ($delete_where);
-		$self->_GroupGraphPattern;
-		delete $self->{__no_bnodes};
+		if ($graph) {
+			$self->_GroupGraphPattern;
+			delete $self->{__no_bnodes};
+			my $ggp	= $self->_remove_pattern;
+			$ggp	= Attean::Algebra::Graph->new( children => [$ggp], graph => $graph );
+			$self->_add_patterns( $ggp );
+		} else {
+			$self->_GroupGraphPattern;
+			delete $self->{__no_bnodes};
+		}
+
 		my $ggp	= $self->_remove_pattern;
-		$ggp	= Attean::Algebra::Graph->new( children => [$ggp], graph => $graph );
-		$self->_add_patterns( $ggp );
-	} else {
-		$self->{__no_bnodes}	= "DELETE WHERE block" if ($delete_where);
-		$self->_GroupGraphPattern;
-		delete $self->{__no_bnodes};
-	}
 
-	my $ggp	= $self->_remove_pattern;
-
-	if ($delete_where) {
-		$delete_data	= $ggp;
+		my @ds_keys	= keys %dataset;
+		if ($graph and not(scalar(@ds_keys))) {
+			$dataset{ default }	= [$graph || ()];
+		}
+		
+		my %args	= (children => [$ggp]);
+		if (scalar(@insert_triples)) {
+			$args{insert}	= \@insert_triples;
+		}
+		if (scalar(@delete_triples)) {
+			$args{delete}	= \@delete_triples;
+		}
+		my $update	= Attean::Algebra::Update->new( %args );
+		$self->_add_patterns( $update );
+		$self->{build}{method}		= 'UPDATE';
 	}
-	
-	my @ds_keys	= keys %dataset;
-	if ($graph and not(scalar(@ds_keys))) {
-		$dataset{ default }	= [$graph || ()];
-	}
-	
-	die "unimplemented";
-	my $insert	= RDF::Query::Algebra::Update->new($delete_data, $insert_data, $ggp, \%dataset, 0);
-	$self->_add_patterns( $insert );
-	$self->{build}{method}		= 'UPDATE';
 }
 
 sub _ModifyTemplate_test {
@@ -531,20 +546,12 @@ sub _ModifyTemplate {
 	my $self	= shift;
 	my $graph	= shift;
 	
-	local($self->{named_graph});
-	if ($graph) {
-		$self->{named_graph}	= $graph;
+	my @triples;
+	while ($self->_ModifyTemplate_test) {
+		push(@triples, $self->__ModifyTemplate( $graph ));
 	}
 	
-	my $data;
-	while ($self->_ModifyTemplate_test) {
-		$self->__ModifyTemplate( $graph );
-		my $d			= $self->_remove_pattern;
-		my @patterns	= blessed($data) ? $data->patterns : ();
-		$data			= $self->_new_join(@patterns, $d);
-	}
-	$data	= Attean::Algebra::BGP->new() unless (blessed($data));
-	$self->_add_patterns( $data );
+	return @triples;
 }
 
 sub __ModifyTemplate {
@@ -552,14 +559,15 @@ sub __ModifyTemplate {
 	my $graph	= shift;
 	local($self->{_modify_template})	= 1;
 	if ($self->_TriplesBlock_test) {
-		my $data;
 		$self->_push_pattern_container;
 		$self->_TriplesBlock;
-		($data)	= @{ $self->_pop_pattern_container };
+		my ($bgp)	= @{ $self->_pop_pattern_container };
+		my @triples	= @{ $bgp->triples };
 		if ($graph) {
-			$data	= Attean::Algebra::Graph->new( children => $data, graph => $graph );
+			@triples	= map { $_->as_quad_pattern($graph) } @triples;
 		}
-		$self->_add_patterns( $data );
+		
+		return @triples;
 	} else {
 		$self->_GraphGraphPattern;
 		
@@ -567,6 +575,12 @@ sub __ModifyTemplate {
 			my (@d)	= splice(@{ $self->{_stack} });
 			$self->__handle_GraphPatternNotTriples( @d );
 		}
+		
+		my $data	= $self->_remove_pattern;
+		my $graph	= $data->graph;
+		my @bgps	= $data->subpatterns_of_type('Attean::Algebra::BGP');
+		my @triples	= map { $_->as_quad_pattern($graph) } map { @{ $_->triples } } @bgps;
+		return @triples;
 	}
 }
 
@@ -1806,7 +1820,6 @@ sub _GraphGraphPattern {
 	$self->_VarOrIRIref;
 	my ($graph)	= splice(@{ $self->{_stack} });
 	if ($graph->does('Attean::API::IRI')) {
-		local($self->{named_graph})	= $graph;
 		$self->_GroupGraphPattern;
 	} else {
 		$self->_GroupGraphPattern;
@@ -3353,11 +3366,7 @@ sub __base {
 sub __new_statement {
 	my $self	= shift;
 	my @nodes	= @_;
-	if ($self->{_modify_template} and my $graph = $self->{named_graph} and $self->{named_graph}->does('Attean::API::IRI')) {
-		return Attean::QuadPattern->new(@nodes, $graph);
-	} else {
-		return Attean::TriplePattern->new(@nodes);
-	}
+	return Attean::TriplePattern->new(@nodes);
 }
 
 sub __new_path {
