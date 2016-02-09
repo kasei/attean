@@ -147,7 +147,7 @@ package Attean::API::Model 0.012 {
 			return unless blessed($q);
 			my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
 			return Attean::Result->new( bindings => \%bindings );
-		}, 'Attean::API::Result');
+		}, 'Attean::API::Result', variables => [values %vars]);
 	}
 	
 	requires 'count_quads';

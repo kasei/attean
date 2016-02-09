@@ -189,7 +189,7 @@ package Attean::API::Iterator 0.012 {
 		}
 		
 		# copy variables into new iterator if $self does ::ResultIterator or ::ResultOrTermIterator
-		my %args;
+		my %args	= @_;
 		if ($self->can('variables')) {
 			$args{variables}	= $self->variables;
 		}

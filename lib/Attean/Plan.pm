@@ -1445,7 +1445,7 @@ package Attean::Plan::Project 0.012 {
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			}, $iter->item_type, $iter_variables);
+			}, $iter->item_type, variables => $iter_variables);
 		};
 	}
 	
@@ -1462,7 +1462,7 @@ package Attean::Plan::Project 0.012 {
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			}, $iter->item_type, $iter_variables);
+			}, $iter->item_type, variables => $iter_variables);
 		};
 	}
 }
