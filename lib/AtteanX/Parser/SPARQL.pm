@@ -312,7 +312,9 @@ sub _RW_Query {
 		$self->_check_duplicate_blanks($pattern);
 		$self->{build}{triples}	= [ $pattern ];
 	}
-
+	
+	my $algebra	= $self->{build}{triples}[0];
+	$self->{build}{triples}[0]	= Attean::Algebra::Query->new( children => [$algebra] );
 # 	my %query	= (%p, %body);
 # 	return \%query;
 }
@@ -1591,6 +1593,7 @@ sub _SubSelect {
 		delete $self->{build}{options};
 		my $data	= delete $self->{build};
 		$pattern	= $data->{triples}[0];
+		$pattern	= Attean::Algebra::Query->new( children => [$pattern] );
 	}
 	
 	$self->_add_patterns( $pattern );

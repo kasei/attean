@@ -39,9 +39,11 @@ subtest 'parser construction and metadata' => sub {
 
 {
 	my $parser	= Attean->get_parser('SPARQL')->new();
-	my $a		= $parser->parse("SELECT * { ?s <p> '''hello!''' OPTIONAL { ?s <q> ?x } FILTER(!BOUND(?x)) } LIMIT 5 OFFSET 5");
-	does_ok($a, 'Attean::API::Algebra');
-	isa_ok($a, 'Attean::Algebra::Slice');
+	my $q		= $parser->parse("SELECT * { ?s <p> '''hello!''' OPTIONAL { ?s <q> ?x } FILTER(!BOUND(?x)) } LIMIT 5 OFFSET 5");
+	does_ok($q, 'Attean::API::Algebra');
+	isa_ok($q, 'Attean::Algebra::Query');
+	my $s		= $q->child;
+	isa_ok($s, 'Attean::Algebra::Slice');
 }
 
 {
@@ -50,8 +52,9 @@ subtest 'parser construction and metadata' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $iter	= $parser->parse_iter_from_io($fh);
 	does_ok($iter, 'Attean::API::Iterator');
-	my $a		= $iter->next;
-	does_ok($a, 'Attean::API::Algebra');
+	my $q		= $iter->next;
+	does_ok($q, 'Attean::API::Algebra');
+	my $a		= $q->child;
 	isa_ok($a, 'Attean::Algebra::Ask');
 }
 
@@ -66,11 +69,12 @@ SELECT * WHERE {
 }
 OFFSET 10
 END
-	my ($a)	= $parser->parse_list_from_bytes($content);
+	my ($q)	= $parser->parse_list_from_bytes($content);
 	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);
 	my $foaf	= $map->namespace_uri('foaf');
 	isa_ok($foaf, 'URI::Namespace');
 	is($foaf->as_string, 'http://xmlns.com/foaf/0.1/');
+	my $a	= $q->child;
 	isa_ok($a, 'Attean::Algebra::Slice')
 }
 

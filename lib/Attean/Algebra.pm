@@ -25,6 +25,42 @@ in the Attean::Algebra namespace:
 
 use Attean::API::Query;
 
+package Attean::Algebra::Query 0.012 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Moo;
+	use namespace::clean;
+
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+
+	sub algebra_as_string { return 'Query' }
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $child	= $self->child;
+		if ($child->does('Attean::API::SPARQLQuerySerializable')) {
+			return $child->sparql_tokens;
+		} else {
+			my @tokens;
+			my $sel		= AtteanX::SPARQL::Token->keyword('SELECT');
+			my $star	= AtteanX::SPARQL::Token->star;
+			my $where	= AtteanX::SPARQL::Token->keyword('WHERE');
+			my $l		= AtteanX::SPARQL::Token->lbrace;
+			my $r		= AtteanX::SPARQL::Token->rbrace;
+			
+			push(@tokens, $sel, $star, $where);
+			push(@tokens, $l);
+			push(@tokens, $child->sparql_tokens->elements);
+			push(@tokens, $r);
+			return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+		}
+	}
+}
+
+=item * L<Attean::Algebra::Sequence>
+
+=cut
+
 package Attean::Algebra::Sequence 0.012 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1369,6 +1405,7 @@ package Attean::Algebra::Update 0.012 {
 		my $delete	= AtteanX::SPARQL::Token->keyword('DELETE');
 		my $where	= AtteanX::SPARQL::Token->keyword('WHERE');
 		
+		# TODO: Support 'DELETE WHERE' shortcut syntax
 		# TODO: Support WITH
 		# TODO: Support USING
 		
