@@ -28,30 +28,50 @@ use Attean::API::Query;
 package Attean::Algebra::Query 0.012 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(Bool);
 	use Moo;
 	use namespace::clean;
 
+	has 'subquery' => (is => 'ro', isa => Bool, default => 0);
+
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
-	sub algebra_as_string { return 'Query' }
+	sub algebra_as_string {
+		my $self	= shift;
+		return $self->subquery ? 'SubQuery' : 'Query';
+	}
 
 	sub sparql_tokens {
 		my $self	= shift;
 		my $child	= $self->child;
+		my $l		= AtteanX::SPARQL::Token->lbrace;
+		my $r		= AtteanX::SPARQL::Token->rbrace;
 		if ($child->does('Attean::API::SPARQLQuerySerializable')) {
-			return $child->sparql_tokens;
+			if ($self->subquery) {
+				my @tokens;
+				push(@tokens, $l);
+				push(@tokens, $child->sparql_tokens->elements);
+				push(@tokens, $r);
+				return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+			} else {
+				return $child->sparql_tokens;
+			}
 		} else {
-			my @tokens;
 			my $sel		= AtteanX::SPARQL::Token->keyword('SELECT');
 			my $star	= AtteanX::SPARQL::Token->star;
 			my $where	= AtteanX::SPARQL::Token->keyword('WHERE');
-			my $l		= AtteanX::SPARQL::Token->lbrace;
-			my $r		= AtteanX::SPARQL::Token->rbrace;
 			
+			my @tokens;
+			if ($self->subquery) {
+				push(@tokens, $l);
+			}
 			push(@tokens, $sel, $star, $where);
 			push(@tokens, $l);
 			push(@tokens, $child->sparql_tokens->elements);
 			push(@tokens, $r);
+			if ($self->subquery) {
+				push(@tokens, $r);
+			}
 			return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 		}
 	}
@@ -607,7 +627,9 @@ package Attean::Algebra::Service 0.012 {
 	
 	sub algebra_as_string {
 		my $self	= shift;
-		return sprintf('Service %s', $self->endpoint->as_string);
+		my $endpoint	= $self->endpoint->as_sparql;
+		chomp($endpoint);
+		return sprintf('Service %s', $endpoint);
 	}
 
 	sub tree_attributes { return qw(endpoint) };
