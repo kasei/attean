@@ -484,6 +484,11 @@ package Attean::API::UnaryQueryTree 0.012 {
 	use Moo::Role;
 	sub arity { return 1 }
 	with 'Attean::API::QueryTree';
+	
+	sub child {
+		my $self	= shift;
+		return $self->children->[0];
+	}
 }
 
 =item * L<Attean::API::BinaryQueryTree>
