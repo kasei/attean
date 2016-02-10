@@ -1593,7 +1593,7 @@ sub _SubSelect {
 		delete $self->{build}{options};
 		my $data	= delete $self->{build};
 		$pattern	= $data->{triples}[0];
-		$pattern	= Attean::Algebra::Query->new( children => [$pattern] );
+		$pattern	= Attean::Algebra::Query->new( children => [$pattern], subquery => 1 );
 	}
 	
 	$self->_add_patterns( $pattern );
@@ -3478,11 +3478,13 @@ sub new_function_expression {
 sub _new_join {
 	my $self	= shift;
 	my @parts	= @_;
-	unless (scalar(@parts)) {
+	if (0 == scalar(@parts)) {
 		return Attean::Algebra::BGP->new();
+	} elsif (1 == scalar(@parts)) {
+		return shift(@parts);
+	} else {
+		return Attean::Algebra::Join->new( children => \@parts );
 	}
-	
-	return Attean::Algebra::Join->new( children => \@parts );
 }
 
 sub _peek_token {
