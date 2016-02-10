@@ -80,7 +80,7 @@ try {
 
 	warn "Parsing query...\n" if ($verbose);
 	my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
-	my $s 		= AtteanX::Parser::SPARQL->new(base => $base, namespaces => $map);
+	my $s 		= Attean->get_parser('SPARQL')->new(base => $base, namespaces => $map);
 	open(my $fh, '<:utf8', $qfile) or die $!;
 	my $algebra;
 	eval {
