@@ -617,12 +617,7 @@ END
 	} 'as_sparql returns a string on blank';
 };
 
-done_testing();
-exit;
-
-
-{
-	note('BGP canonicalization');
+subtest 'BGP canonicalization' => sub {
 	my $b		= blank('person');
 	my $rdf_type	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 	my $foaf_name	= iri('http://xmlns.com/foaf/0.1/name');
@@ -652,7 +647,7 @@ exit;
 	
 	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 'v003', 'type' => 'variable' }, '?knows' => { 'id' => 'v002', 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 'v001', 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
 	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
-}
+};
 
 {
 	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
@@ -730,6 +725,13 @@ exit;
 	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 }
 
+subtest 'Regressions' => sub {
+	{
+	my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
+	ws_is($s, 'SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }', 'missing projection in serialization of some SPARQL queries #67');
+	}
+};
+
 done_testing();
 
 sub warn_token_stream {
@@ -771,9 +773,10 @@ sub is_token_of_type {
 sub ws_is {
 	my $got		= shift;
 	my $expect	= shift;
+	my $name	= shift;
 	for ($got, $expect) {
 		chomp;
 		s/\s+//sg;
 	}
-	is($got, $expect);
+	is($got, $expect, $name);
 }
