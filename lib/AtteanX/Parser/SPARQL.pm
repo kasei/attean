@@ -283,11 +283,7 @@ sub _RW_Query {
 			next if ($self->_Query_test);
 			last;
 		} else {
-			my $l		= Log::Log4perl->get_logger("rdf.query");
-			if ($l->is_debug) {
-				$l->logcluck("Syntax error: Expected query type with input <<$self->{tokens}>>");
-			}
-			die 'Syntax error: Expected query type';
+			die "Syntax error: Expected query type with input <<$self->{tokens}>>";
 		}
 
 		last if ($read_query);
@@ -3324,34 +3320,6 @@ sub _add_filter {
 	my $self	= shift;
 	my @filters	= shift;
 	push( @{ $self->{filters} }, @filters );
-}
-
-sub _syntax_error {
-	my $self	= shift;
-	my $thing	= shift;
-	my $expect	= $thing;
-
-	my $level	= 2;
-	while (my $sub = (caller($level++))[3]) {
-		if ($sub =~ m/::_([A-Z]\w*)$/) {
-			$expect	= $1;
-			last;
-		}
-	}
-
-	my $l		= Log::Log4perl->get_logger("rdf.query.parser.sparql");
-	if ($l->is_debug) {
-		$l->logcluck("Syntax error eating $thing with input <<$self->{tokens}>>");
-	}
-
-	my $near	= "'" . substr($self->{tokens}, 0, 20) . "...'";
-	$near		=~ s/[\r\n ]+/ /g;
-	if ($thing) {
-# 		Carp::cluck Dumper($self->{tokens});	# XXX
-		die "Syntax error: $thing in $expect near $near";
-	} else {
-		die "Syntax error: Expected $expect near $near";
-	}
 }
 
 sub __base {
