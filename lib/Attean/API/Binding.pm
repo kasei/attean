@@ -356,7 +356,9 @@ package Attean::API::Triple 0.012 {
 
 package Attean::API::QuadPattern 0.012 {
 	use Scalar::Util qw(blessed);
+	use List::MoreUtils qw(zip);
 	use Moo::Role;
+	use namespace::clean;
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -377,6 +379,14 @@ package Attean::API::QuadPattern 0.012 {
 	sub apply_quad {
 		my $self	= shift;
 		return $self->apply_statement(@_);
+	}
+
+	sub as_triple_pattern {
+		my $self	= shift;
+		my @keys	= Attean::API::Triple->variables;
+		my @values	= $self->values;
+		@values		= @values[0 .. scalar(@keys)-1];
+		return Attean::TriplePattern->new(zip @keys, @values);
 	}
 
 	sub sparql_tokens {
