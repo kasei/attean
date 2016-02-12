@@ -1403,6 +1403,19 @@ package Attean::Algebra::Update 0.012 {
 		}
 	}
 	
+	around 'blank_nodes' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my @blanks	= $orig->($self, @_);
+		my %seen	= map { $_->value => 1 } @blanks;
+		foreach my $data ($self->insert, $self->delete) {
+			my @triples	= @{ $data };
+			my @b	= grep { $_->does('Attean::API::Blank') } map { $_->values } @triples;
+			push(@blanks, grep { not $seen{$_->value}++ } @b);
+		}
+		return @blanks;
+	};
+	
 	sub algebra_as_string {
 		my $self	= shift;
 		state $S	= {
@@ -1481,8 +1494,6 @@ package Attean::Algebra::Update 0.012 {
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 }
-
-# DELETE WHERE
 
 1;
 
