@@ -283,6 +283,9 @@ sub _RW_Query {
 			next if ($self->_Query_test);
 			last;
 		} else {
+			if ($self->update and not $self->_peek_token) {
+				last;
+			}
 			die "Syntax error: Expected query type with input <<$self->{tokens}>>";
 		}
 
@@ -453,7 +456,9 @@ sub _DeleteUpdate {
 		foreach my $s (@st) {
 			if ($s->does('Attean::API::QuadPattern')) {
 				push(@quads, $s);
-				push(@patterns, Attean::Algebra::Graph->new( graph => $s->graph, children => [$s] ));
+				my $tp	= $s->as_triple_pattern;
+				my $bgp	= Attean::Algebra::BGP->new( triples => [$tp] );
+				push(@patterns, Attean::Algebra::Graph->new( graph => $s->graph, children => [$bgp] ));
 			} else {
 				push(@triples, $s);
 			}
@@ -603,38 +608,33 @@ sub _LoadUpdate {
 
 sub _CreateGraph {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD< 'CREATE');
+	$self->_expected_token(KEYWORD, 'CREATE');
 	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
-	$self->_expected_token(KEYWORD< 'GRAPH');
+	$self->_expected_token(KEYWORD, 'GRAPH');
 	$self->_IRIref;
 	my ($graph)	= splice( @{ $self->{_stack} } );
-	die "unimplemented";
-	my $pat	= RDF::Query::Algebra::Create->new( $graph );
+	my $pat	= Attean::Algebra::Create->new( silent => $silent, graph => $graph );
 	$self->_add_patterns( $pat );
 	$self->{build}{method}		= 'CREATE';
 }
 
 sub _ClearGraphUpdate {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD< 'CLEAR');
+	$self->_expected_token(KEYWORD, 'CLEAR');
 	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'GRAPH', graph => $graph);
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'DEFAULT');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'NAMED')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'NAMED');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'ALL')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'ALL');
 		$self->_add_patterns( $pat );
 	}
 	$self->{build}{method}		= 'CLEAR';
@@ -647,20 +647,16 @@ sub _DropGraph {
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'GRAPH', graph => $graph);
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'DEFAULT');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'NAMED')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'NAMED');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'ALL')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'ALL');
 		$self->_add_patterns( $pat );
 	}
 	$self->{build}{method}		= 'CLEAR';
