@@ -47,7 +47,7 @@ use HTTP::Request;
 use HTTP::Response;
 use HTTP::Message::PSGI;
 
-our $RUN_UPDATE_TESTS	= 0;
+our $RUN_UPDATE_TESTS	= 1;
 our $RUN_QUERY_TESTS	= 1;
 our $debug				= 0;
 our $STRICT_APPROVAL	= 0;
@@ -219,13 +219,17 @@ my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 				if ($RUN_UPDATE_TESTS) {
 					{
 						# Evaluation Tests
-						if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_statements($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
+						if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_quads($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
 							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 							unless ($test->value =~ /$PATTERN/) {
 								next;
 							}
-	# 						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-	# 						update_eval_test( $model, $test );
+							TODO: {
+								local $TODO	= 'implement update eval testing';
+								fail($test->as_string);
+# 								warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
+# 								update_eval_test( $model, $test );
+							}
 						}
 					}
 					
@@ -295,6 +299,9 @@ sub syntax_test {
 	
 	my $pclass	= Attean->get_parser('SPARQL');
 	my $parser	= $pclass->new();
+	if ($test_type eq 'update') {
+		$parser->update(1);
+	}
 	if ($is_pos_query or $is_pos_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
 		my $ok	= blessed($query);
