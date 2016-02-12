@@ -179,9 +179,11 @@ sub parse_list_from_bytes {
 sub _parse {
 	my $self	= shift;
 	
-	my $t		= $self->lexer->peek;
-	unless (defined($t)) {
-		die "No query string found to parse";
+	unless ($self->update) {
+		my $t		= $self->lexer->peek;
+		unless (defined($t)) {
+			die "No query string found to parse";
+		}
 	}
 
 	$self->_stack([]);
@@ -307,6 +309,15 @@ sub _RW_Query {
 
 	if ($count == 0 or $count > 1) {
 		my @patterns	= splice(@{ $self->{build}{triples} });
+		my %seen;
+		foreach my $p (@patterns) {
+			my @blanks	= $p->blank_nodes;
+			foreach my $b (@blanks) {
+				if ($seen{$b->value}++) {
+					die "Cannot re-use a blank node label in multiple update operations in a single request";
+				}
+			}
+		}
 		my $pattern		= Attean::Algebra::Sequence->new( children => \@patterns );
 		$self->_check_duplicate_blanks($pattern);
 		$self->{build}{triples}	= [ $pattern ];
@@ -410,7 +421,7 @@ sub _InsertUpdate {
 		$self->_IRIref;
 		my ($iri)	= splice( @{ $self->{_stack} } );
 		if ($named) {
-			$dataset{named}{$iri->uri_value}	= $iri;
+			$dataset{named}{$iri->value}	= $iri;
 		} else {
 			push(@{ $dataset{default} }, $iri );
 		}
@@ -453,6 +464,10 @@ sub _DeleteUpdate {
 		my @patterns;
 		my @triples;
 		my @quads;
+		my @blanks	= grep { $_->does('Attean::API::Blank') } map { $_->values } @st;
+		if (scalar(@blanks) > 0) {
+			die "Cannot use blank nodes in a DELETE pattern";
+		}
 		foreach my $s (@st) {
 			if ($s->does('Attean::API::QuadPattern')) {
 				push(@quads, $s);
@@ -486,8 +501,8 @@ sub _DeleteUpdate {
 		}
 		
 		if ($graph) {
-			@insert_triples	= map { $_->as_quad_pattern($graph) } @insert_triples;
-			@delete_triples	= map { $_->as_quad_pattern($graph) } @delete_triples;
+			@insert_triples	= map { $_->does('Attean::API::QuadPattern') ? $_ : $_->as_quad_pattern($graph) } @insert_triples;
+			@delete_triples	= map { $_->does('Attean::API::QuadPattern') ? $_ : $_->as_quad_pattern($graph) } @delete_triples;
 		}
 
 		while ($self->_optional_token(KEYWORD, 'USING')) {
@@ -499,7 +514,7 @@ sub _DeleteUpdate {
 			$self->_IRIref;
 			my ($iri)	= splice( @{ $self->{_stack} } );
 			if ($named) {
-				$dataset{named}{$iri->uri_value}	= $iri;
+				$dataset{named}{$iri->value}	= $iri;
 			} else {
 				push(@{ $dataset{default} }, $iri );
 			}
@@ -531,6 +546,10 @@ sub _DeleteUpdate {
 		}
 		if (scalar(@delete_triples)) {
 			$args{delete}	= \@delete_triples;
+			my @blanks	= grep { $_->does('Attean::API::Blank') } map { $_->values } @delete_triples;
+			if (scalar(@blanks) > 0) {
+				die "Cannot use blank nodes in a DELETE pattern";
+			}
 		}
 		my $update	= Attean::Algebra::Update->new( %args );
 		$self->_add_patterns( $update );
