@@ -36,11 +36,13 @@ my $benchmark		= 0;
 my $print_sparql	= 0;
 my $print_plan		= 0;
 my $print_algebra	= 0;
+my $update			= 0;
 my $out_format		= '';
 my $short			= 0;
 my $result			= GetOptions(
 	"verbose"	=> \$verbose,
 	"debug"		=> \$debug,
+	"update"	=> \$update,
 	"benchmark"	=> \$benchmark,
 	'algebra'	=> \$print_algebra,
 	'plan'		=> \$print_plan,
@@ -81,6 +83,9 @@ try {
 	warn "Parsing query...\n" if ($verbose);
 	my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
 	my $s 		= Attean->get_parser('SPARQL')->new(base => $base, namespaces => $map);
+	if ($update) {
+		$s->update(1);
+	}
 	open(my $fh, '<:utf8', $qfile) or die $!;
 	my $algebra;
 	eval {
@@ -131,6 +136,5 @@ try {
 } catch {
 	my $exception	= $_;
 	warn "Caught error: $exception";
-	warn $exception->stack_trace;
 	exit(1);
 };
