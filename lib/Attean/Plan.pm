@@ -2143,232 +2143,75 @@ package Attean::Plan::Aggregate 0.012 {
 	}
 }
 
-# =item * L<Attean::Algebra::Ask>
-# 
-# =cut
-# 
-# package Attean::Algebra::Ask 0.012 {
-# 	use Moo;
-# 	sub in_scope_variables { return; }
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub algebra_as_string { return 'Ask' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}ASK {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Construct>
-# 
-# =cut
-# 
-# package Attean::Algebra::Construct 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
-# 	sub in_scope_variables { return qw(subject predicate object); }
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub tree_attributes { return qw(triples) };
-# 	sub algebra_as_string { return 'Construct' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}CONSTRUCT {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->triples })
-# 			. "${indent}} WHERE {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Path>
-# 
-# =cut
-# 
-# package Attean::Algebra::Path 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	sub in_scope_variables {
-# 		my $self	= shift;
-# 		my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } ($self->subject, $self->object);
-# 		return Set::Scalar->new(@vars)->elements;
-# 	}
-# 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
-# 	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
-# 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
-# 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
-# 	sub tree_attributes { return qw(subject path object) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}"
-# 			. $self->subject->as_sparql
-# 			. ' '
-# 			. $self->path->as_sparql
-# 			. ' '
-# 			. $self->object->as_sparql
-# 			. "\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Group>
-# 
-# =cut
-# 
-# =item * L<Attean::Algebra::NegatedPropertySet>
-# 
-# =cut
-# 
-# package Attean::Algebra::NegatedPropertySet 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	with 'Attean::API::PropertyPath';
-# 	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
-# 	sub as_string {
-# 		my $self	= shift;
-# 		return sprintf("!(%s)", join('|', map { $_->ntriples_string } @{ $self->predicates }));
-# 	}
-# 	sub algebra_as_string { return 'NPS' }
-# 	sub tree_attributes { return qw(predicates) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		return "!(" . join('|', map { $_->as_sparql } @{$self->predicates}) . ")";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::PredicatePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::PredicatePath 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::PropertyPath';
-# 	has 'predicate' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
-# 	sub as_string {
-# 		my $self	= shift;
-# 		return $self->predicate->ntriples_string;
-# 	}
-# 	sub algebra_as_string {
-# 		my $self	= shift;
-# 		return 'Property Path ' . $self->as_string;
-# 	}
-# 	sub tree_attributes { return qw(predicate) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		return $self->predicate->as_sparql;
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::InversePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::InversePath 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub prefix_name { return "^" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return '^' . $self->path->as_sparql;
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::SequencePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::SequencePath 0.012 {
-# 	use Moo;
-# 	with 'Attean::API::NaryPropertyPath';
-# 	sub separator { return "/" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my @paths	= @{ $self->children };
-# 		return '(' . join('/', map { $_->as_sparql } @paths) . ')';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::AlternativePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::AlternativePath 0.012 {
-# 	use Moo;
-# 	with 'Attean::API::NaryPropertyPath';
-# 	sub separator { return "|" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my @paths	= @{ $self->children };
-# 		return '(' . join('|', map { $_->as_sparql } @paths) . ')';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::ZeroOrMorePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::ZeroOrMorePath 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub postfix_name { return "*" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return $self->path->as_sparql . '*';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::OneOrMorePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::OneOrMorePath 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub postfix_name { return "+" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return $self->path->as_sparql . '+';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::ZeroOrOnePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::ZeroOrOnePath 0.012 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub postfix_name { return "?" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return $self->path->as_sparql . '?';
-# 	}
-# }
-# 
+package Attean::Plan::Clear 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Term']]);
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x (1+$level);
+		my $s		= sprintf("Clear { %d graphs }\n", scalar(@{ $self->graphs }));
+		foreach my $g (@{ $self->graphs }) {
+			$s	.= "${indent}" . $g->as_sparql . "\n";
+		}
+		return $s;
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $graphs	= $self->graphs;
+		return sub {
+			foreach my $g (@$graphs) {
+				$model->clear_graph($g);
+			}
+			return Attean::ListIterator->new(values => [$Attean::Literal->true], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+package Attean::Plan::Drop 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Term']]);
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x (1+$level);
+		my $s		= sprintf("Drop { %d graphs }\n", scalar(@{ $self->graphs }));
+		foreach my $g (@{ $self->graphs }) {
+			$s	.= "${indent}" . $g->as_sparql . "\n";
+		}
+		return $s;
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $graphs	= $self->graphs;
+		return sub {
+			foreach my $g (@$graphs) {
+				$model->drop_graph($g);
+			}
+			return Attean::ListIterator->new(values => [$Attean::Literal->true], item_type => 'Attean::API::Term');
+		};
+	}
+}
 
 
 1;
