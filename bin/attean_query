@@ -105,8 +105,9 @@ try {
 	}
 	
 	if ($print_sparql) {
-		print "# $qfile\n";
+		print "# SPARQL:\n";
 		print $algebra->as_sparql;
+		print "\n";
 	}
 	
 	my $default_graphs	= [$graph];
