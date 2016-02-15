@@ -224,12 +224,9 @@ my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 							unless ($test->value =~ /$PATTERN/) {
 								next;
 							}
-							TODO: {
-								local $TODO	= 'implement update eval testing';
-								fail($test->as_string);
-# 								warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-# 								update_eval_test( $model, $test );
-							}
+							warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
+							my $count	= $args{ stress } || 1;
+							update_eval_test( $model, $test, $count );
 						}
 					}
 					
@@ -323,6 +320,17 @@ sub syntax_test {
 			}
 			fail("syntax $namevalue; $filename (unexpected successful parse)");
 		}
+	}
+}
+
+sub update_eval_test {
+	my $model		= shift;
+	my $test		= shift;
+	my $count		= shift || 1;
+	
+	TODO: {
+		local $TODO	= 'implement update eval testing';
+		fail($test->as_string);
 	}
 }
 
