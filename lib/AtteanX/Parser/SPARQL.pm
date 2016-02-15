@@ -212,6 +212,7 @@ sub _RW_Query {
 	$self->_Prologue;
 
 	my $read_query	= 0;
+	my $update		= 0;
 	while (1) {
 		if ($self->_optional_token(KEYWORD, 'SELECT')) {
 			$self->_SelectQuery();
@@ -229,26 +230,31 @@ sub _RW_Query {
 			unless ($self->update) {
 				die "CREATE GRAPH update forbidden in read-only queries";
 			}
+			$update++;
 			$self->_CreateGraph();
 		} elsif ($self->_test_token(KEYWORD, 'DROP')) {
 			unless ($self->update) {
 				die "DROP GRAPH update forbidden in read-only queries";
 			}
+			$update++;
 			$self->_DropGraph();
 		} elsif ($self->_test_token(KEYWORD, 'LOAD')) {
 			unless ($self->update) {
 				die "LOAD update forbidden in read-only queries"
 			}
+			$update++;
 			$self->_LoadUpdate();
 		} elsif ($self->_test_token(KEYWORD, 'CLEAR')) {
 			unless ($self->update) {
 				die "CLEAR GRAPH update forbidden in read-only queries";
 			}
+			$update++;
 			$self->_ClearGraphUpdate();
 		} elsif ($self->_test_token(KEYWORD, qr/^(WITH|INSERT|DELETE)/)) {
 			unless ($self->update) {
 				die "INSERT/DELETE update forbidden in read-only queries";
 			}
+			$update++;
 			my ($graph);
 			if ($self->_optional_token(KEYWORD, 'WITH')) {
 				$self->{build}{custom_update_dataset}	= 1;
@@ -275,10 +281,13 @@ sub _RW_Query {
 				}
 			}
 		} elsif ($self->_test_token(KEYWORD, 'COPY')) {
+			$update++;
 			$self->_AddCopyMoveUpdate('COPY');
 		} elsif ($self->_test_token(KEYWORD, 'MOVE')) {
+			$update++;
 			$self->_AddCopyMoveUpdate('MOVE');
 		} elsif ($self->_test_token(KEYWORD, 'ADD')) {
+			$update++;
 			$self->_AddCopyMoveUpdate('ADD');
 		} elsif ($self->_test_token(SEMICOLON)) {
 			$self->_expected_token(SEMICOLON);
@@ -324,7 +333,8 @@ sub _RW_Query {
 	}
 	
 	my $algebra	= $self->{build}{triples}[0];
-	$self->{build}{triples}[0]	= Attean::Algebra::Query->new( children => [$algebra] );
+	my $top_class	= $update ? 'Attean::Algebra::Update' : 'Attean::Algebra::Query';
+	$self->{build}{triples}[0]	= $top_class->new( children => [$algebra] );
 # 	my %query	= (%p, %body);
 # 	return \%query;
 }
@@ -382,7 +392,7 @@ sub _InsertDataUpdate {
 	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
 
-	my $insert	= Attean::Algebra::Update->new(insert => \@triples);
+	my $insert	= Attean::Algebra::Modify->new(insert => \@triples);
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -395,7 +405,7 @@ sub _DeleteDataUpdate {
 	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
 	
-	my $delete	= Attean::Algebra::Update->new(delete => \@triples);
+	my $delete	= Attean::Algebra::Modify->new(delete => \@triples);
 	$self->_add_patterns( $delete );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -444,7 +454,7 @@ sub _InsertUpdate {
 		$dataset{ default }	= [$graph || ()];
 	}
 	
-	my $insert	= Attean::Algebra::Update->new( children => [$ggp], insert => \@triples );
+	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples );
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -480,7 +490,7 @@ sub _DeleteUpdate {
 		}
 		push(@patterns, Attean::Algebra::BGP->new( triples => \@triples ));
 		my $ggp	= Attean::Algebra::Join->new( children => \@patterns );
-		my $update	= Attean::Algebra::Update->new( children => [$ggp], delete => [@st]);
+		my $update	= Attean::Algebra::Modify->new( children => [$ggp], delete => [@st]);
 		$self->_add_patterns( $update );
 		$self->{build}{method}		= 'UPDATE';
 		return;
@@ -551,7 +561,7 @@ sub _DeleteUpdate {
 				die "Cannot use blank nodes in a DELETE pattern";
 			}
 		}
-		my $update	= Attean::Algebra::Update->new( %args );
+		my $update	= Attean::Algebra::Modify->new( %args );
 		$self->_add_patterns( $update );
 		$self->{build}{method}		= 'UPDATE';
 	}

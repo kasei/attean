@@ -77,6 +77,24 @@ package Attean::Algebra::Query 0.012 {
 	}
 }
 
+package Attean::Algebra::Update 0.012 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Types::Standard qw(Bool);
+	use Moo;
+	use namespace::clean;
+
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+
+	sub algebra_as_string { return 'Update' }
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my $child	= $self->child;
+		return $child->sparql_tokens;
+	}
+}
+
 =item * L<Attean::Algebra::Sequence>
 
 =cut
@@ -1363,11 +1381,11 @@ package Attean::Algebra::Add 0.012 {
 	}
 }
 
-=item * L<Attean::Algebra::Update>
+=item * L<Attean::Algebra::Modify>
 
 =cut
 
-package Attean::Algebra::Update 0.012 {
+package Attean::Algebra::Modify 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;

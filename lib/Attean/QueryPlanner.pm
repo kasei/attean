@@ -118,7 +118,7 @@ the supplied C<< $active_graph >>.
 		
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
-		if ($algebra->isa('Attean::Algebra::Query')) {
+		if ($algebra->isa('Attean::Algebra::Query') or $algebra->isa('Attean::Algebra::Update')) {
 			return $self->plans_for_algebra($algebra->child, $model, $active_graphs, $default_graphs, @_);
 		} elsif ($algebra->isa('Attean::Algebra::BGP')) {
 			my $triples	= $algebra->triples;
