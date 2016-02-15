@@ -461,6 +461,28 @@ the supplied C<< $active_graph >>.
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
+		} elsif ($algebra->isa('Attean::Algebra::Clear') or $algebra->isa('Attean::Algebra::Drop')) {
+			my $plan_class	= $algebra->isa('Attean::Algebra::Clear') ? 'Attean::Plan::Clear' : 'Attean::Plan::Drop';
+			my $target	= $algebra->target;
+			if ($target eq 'GRAPH') {
+				return Attean::Plan::Clear->new(graphs => [$algebra->graph]);
+			} else {
+				my %default	= map { $_->value => 1 } @$active_graphs;
+				my $graphs	= $model->get_graphs;
+				my @graphs;
+				while (my $graph = $graphs->next) {
+					if ($target eq 'ALL') {
+						push(@graphs, $graph);
+					} else {
+						if ($target eq 'DEFAULT' and $default{ $graph->value }) {
+							push(@graphs, $graph);
+						} elsif ($target eq 'NAMED' and not $default{ $graph->value }) {
+							push(@graphs, $graph);
+						}
+					}
+				}
+				return $plan_class->new(graphs => \@graphs);
+			}
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
 	}
