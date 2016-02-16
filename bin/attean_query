@@ -110,27 +110,29 @@ try {
 		print "\n";
 	}
 	
-	my $default_graphs	= [$graph];
-	my $planner	= Attean::IDPQueryPlanner->new();
-	my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
-	if ($print_plan) {
-		print "# Plan:\n" . $plan->as_string . "\n";
-	}
-	unless ($dryrun) {
-		my $mapper	= $short ? Attean::TermMap->short_blank_map : undef;
-		my $bmapper	= $short ? $mapper->binding_mapper : undef;
-		my $iter	= $plan->evaluate($model);
-		if ($bmapper) {
-			$iter	= $iter->map($bmapper);
+	if (not($dryrun) or $print_plan) {
+		my $default_graphs	= [$graph];
+		my $planner	= Attean::IDPQueryPlanner->new();
+		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
+		if ($print_plan) {
+			print "# Plan:\n" . $plan->as_string . "\n";
 		}
-		my $count	= 1;
-		my $class	= Attean->get_serializer($out_format);
-		if ($out_format and $class) {
-			my $s	= $class->new(namespaces => $map);
-			$s->serialize_iter_to_io(\*STDOUT, $iter);
-		} else {
-			while (my $r = $iter->next) {
-				printf("%3d %s\n", $count++, $r->as_string);
+		unless ($dryrun) {
+			my $mapper	= $short ? Attean::TermMap->short_blank_map : undef;
+			my $bmapper	= $short ? $mapper->binding_mapper : undef;
+			my $iter	= $plan->evaluate($model);
+			if ($bmapper) {
+				$iter	= $iter->map($bmapper);
+			}
+			my $count	= 1;
+			my $class	= Attean->get_serializer($out_format);
+			if ($out_format and $class) {
+				my $s	= $class->new(namespaces => $map);
+				$s->serialize_iter_to_io(\*STDOUT, $iter);
+			} else {
+				while (my $r = $iter->next) {
+					printf("%3d %s\n", $count++, $r->as_string);
+				}
 			}
 		}
 	}
