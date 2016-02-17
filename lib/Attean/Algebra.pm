@@ -1436,6 +1436,8 @@ package Attean::Algebra::Modify 0.012 {
 	
 	sub algebra_as_string {
 		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x ($level + 1);
 		state $S	= {
 			'ID'	=> 'Insert Data',
 			'I'		=> 'Insert',
@@ -1444,7 +1446,26 @@ package Attean::Algebra::Modify 0.012 {
 			'U'		=> 'Update',
 		};
 		my $op	= $self->_op_type();
-		return $S->{ $op };
+		my $s	= $S->{ $op };
+		my @data;
+		my $ic	= scalar(@{ $self->insert });
+		my $dc	= scalar(@{ $self->delete });
+		if ($ic) {
+			my $name	= $dc ? 'Insert Data' : 'Data';
+			push(@data, [$name, $self->insert]);
+		}
+		if ($dc) {
+			my $name	= $ic ? 'Delete Data' : 'Data';
+			push(@data, [$name, $self->delete]);
+		}
+		foreach my $data (@data) {
+			my ($name, $quads)	= @$data;
+			$s	.= "\n-${indent} $name";
+			foreach my $q (@$quads) {
+				$s	.= "\n-${indent}   " . $q->as_string;
+			}
+		}
+		return $s;
 	}
 
 	sub sparql_tokens {
