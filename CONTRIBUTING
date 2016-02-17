@@ -1,0 +1,22 @@
+# How to contribute
+
+## Reporting Issues
+
+* [Create an issue](https://github.com/kasei/attean/issues), assuming one does not already exist.
+  * Add relevant labels
+
+## Submitting Changes
+
+* Try to follow the existing whitespace and brace style
+  * [1TBS](https://en.wikipedia.org/wiki/Indent_style#Variant:_1TBS)
+  * Tabs used for indentation and aligning of comments (with a tabstop width of 4-characters)
+* Ensure the test suite passes (`perl Makefile.PL && make && prove -l t xt`)
+  * Consider using the [pre-push hook](https://gist.github.com/kasei/0819f25cee79b3597576) to prevent pushing if the test suite is failing
+* Submit a Pull Request
+
+## Getting Help
+
+* [IRC in the #perlrdf channel on irc.perl.org](irc://irc.perl.org/perlrdf)
+* [Mailing list](http://lists.perlrdf.org/listinfo/dev)
+* [Website](http://www.perlrdf.org)
+* [@kasei](http://twitter.com/kasei/) or [@perlrdf](http://twitter.com/perlrdf/) on Twitter
