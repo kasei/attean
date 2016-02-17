@@ -12,14 +12,29 @@ This document describes AtteanX::Parser::SPARQL version 0.012.
 =head1 SYNOPSIS
 
  use AtteanX::Parser::SPARQL;
- my $parser	= AtteanX::Parser::SPARQL->new();
- my $algbrea = $parser->parse($sparql, $base_uri);
+ my $algbrea = AtteanX::Parser::SPARQL->parse($sparql, $base_uri);
  # or:
+ my $parser	= AtteanX::Parser::SPARQL->new();
  my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
-
+ 
+ # or to allow parsing of SPARQL 1.1 Updates:
+ 
+ my $algbrea = AtteanX::Parser::SPARQL->parse_update($sparql, $base_uri);
+ # or:
+ my $parser = AtteanX::Parser::SPARQL->new(update => 1);
+ my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
+ 
 =head1 DESCRIPTION
 
-...
+This module implements a recursive-descent parser for SPARQL 1.1 using the
+L<AtteanX::Parser::SPARQLLex> tokenizer. Successful parsing results in an
+object whose type is one of: L<Attean::Algebra::Query>,
+L<Attean::Algebra::Update>, or L<Attean::Algebra::Sequence>.
+
+=head1 ROLES
+
+This class consumes L<Attean::API::Parser>, L<Attean::API::AtOnceParser>, and
+L<Attean::API::AbbreviatingParser>.
 
 =head1 ATTRIBUTES
 
@@ -454,6 +469,8 @@ sub _InsertUpdate {
 		$dataset{ default }	= [$graph || ()];
 	}
 	
+	### TODO: use %dataset
+	
 	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples );
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
@@ -550,6 +567,8 @@ sub _DeleteUpdate {
 			$dataset{ default }	= [$graph || ()];
 		}
 		
+		### TODO: use %dataset
+	
 		my %args	= (children => [$ggp]);
 		if (scalar(@insert_triples)) {
 			$args{insert}	= \@insert_triples;
