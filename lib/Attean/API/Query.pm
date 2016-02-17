@@ -411,7 +411,7 @@ package Attean::API::Algebra 0.012 {
 			my $level	= shift;
 			my $parent	= shift;
 			my $indent	= '  ' x $level;
-			$string	.= "-$indent " .  $a->algebra_as_string . "\n";
+			$string	.= "-$indent " .  $a->algebra_as_string($level) . "\n";
 		});
 		return $string;
 	}
