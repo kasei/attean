@@ -328,10 +328,173 @@ sub update_eval_test {
 	my $test		= shift;
 	my $count		= shift || 1;
 	
-	TODO: {
-		local $TODO	= 'implement update eval testing';
-		fail($test->as_string);
+	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
+	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
+	my ($req)		= $model->objects( $test, iri("${MF}requires") )->elements;
+	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
+	my ($queryd)	= $model->objects( $action, iri("${UT}request") )->elements;
+	my ($data)		= $model->objects( $action, iri("${UT}data") )->elements;
+	my @gdata		= $model->objects( $action, iri("${UT}graphData") )->elements;
+	
+	if ($STRICT_APPROVAL) {
+		unless ($approved) {
+			warn "- skipping test because it isn't approved\n" if ($debug);
+			return;
+		}
+		if ($approved->equal(iri("${DAWGT}NotClassified"))) {
+			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
+			return;
+		}
 	}
+	
+	my $uri					= URI->new( $queryd->value );
+	my $filename			= $uri->file;
+	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
+	$base					= "file://${base}";
+	warn "Loading SPARQL query from file $filename" if ($debug);
+	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { fail("$!: $filename; " . $test->as_string); return }; binmode($fh, ':utf8'); <$fh> };
+
+	my $q			= $sparql;
+	$q				=~ s/\s+/ /g;
+	if ($debug) {
+		warn "### test     : " . $test->value . "\n";
+		warn "# sparql     : $q\n";
+		warn "# data       : " . $data->value . "\n" if (blessed($data));
+		warn "# graph data : " . $_->value . "\n" for (@gdata);
+		warn "# result     : " . $result->value . "\n";
+		warn "# requires   : " . $req->value . "\n" if (blessed($req));
+	}
+	
+	# TODO: set up remote endpoint mock
+
+	warn "constructing model...\n" if ($debug);
+	my $test_model	= memory_model();
+	eval {
+		if (blessed($data)) {
+			my $datauri		= URI->new( $data->value );
+			my $datafilename	= $datauri->file;
+			add_to_model( $test_model, $default_graph, $datafilename );
+		}
+	};
+	if ($@) {
+		fail($test->value);
+		print "# died: " . $test->value . ": $@\n";
+		return;
+	}
+	foreach my $gdata (@gdata) {
+		my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
+		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
+		my $uri		= $graph->value;
+		eval {
+			my $datauri		= URI->new( $data->value );
+			my $datafilename	= $datauri->file;
+			warn "test data file: $datafilename\n" if ($debug);
+			add_to_model($test_model, iri($uri), $datafilename);
+		};
+		if ($@) {
+			fail($test->as_string);
+			print "# died: " . $test->value . ": $@\n";
+			return;
+		};
+	}
+	
+	my ($result_status)	= $model->objects( $result, iri("${UT}result") )->elements;
+	my @resgdata		= $model->objects( $result, iri("${UT}graphData") )->elements;
+	my ($resdata)		= $model->objects( $result, iri("${UT}data") )->elements;
+	my $expected_model	= memory_model;
+	eval {
+		if (blessed($resdata)) {
+			my $datauri		= URI->new( $resdata->value );
+			my $datafilename	= $datauri->file;
+			add_to_model($expected_model, $default_graph, $datafilename);
+		}
+	};
+	if ($@) {
+		fail($test->as_string);
+		print "# died: " . $test->value . ": $@\n";
+		return;
+	};
+	foreach my $gdata (@resgdata) {
+		my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
+		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
+		my $uri		= $graph->value;
+		my $return	= 0;
+		if ($data) {
+			eval {
+				my $datauri		= URI->new( $data->value );
+				my $datafilename	= $datauri->file;
+				warn "expected result data file: $datafilename\n" if ($debug);
+				add_to_model($expected_model, iri($uri), $datafilename);
+			};
+			if ($@) {
+				fail($test->as_string);
+				print "# died: " . $test->value . ": $@\n";
+				$return	= 1;
+			};
+			return if ($return);
+		}
+	}
+
+	if ($debug) {
+		warn "Dataset before update operation:\n";
+		warn model_as_string($test_model);
+	}
+	my $ok	= 0;
+	eval {
+		my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
+		if ($@) {
+			warn "Failed to parse query $filename: $@";
+			die $@;
+		}
+		unless ($algebra) {
+			warn "No algebra generated for update\n";
+			fail($test->value);
+			return;
+		}
+		if ($debug) {
+			warn "# Algebra:\n" . $algebra->as_string . "\n";
+		}
+		
+		my $default_graphs	= [$default_graph];
+		my $planner	= Attean::IDPQueryPlanner->new();
+		my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
+		if ($debug) {
+			warn "# Plan:\n" . $plan->as_string . "\n";
+		}
+
+		if ($debug) {
+			warn "Running update...\n";
+		}
+		my $iter	= $plan->evaluate($test_model);
+		$iter->elements;
+		if ($debug) {
+			warn "done.\n";
+		}
+		
+		if ($debug) {
+			warn "Comparing results...\n";
+		}
+		my $eqtest	= Attean::BindingEqualityTest->new();
+		my $eq		= $eqtest->equals($test_model, $expected_model);
+		if ($debug) {
+			warn "done.\n";
+		}
+		$ok			= is( $eq, 1, $test->value );
+		unless ($ok) {
+			warn $eqtest->error;
+			warn "Got model:\n" . model_as_string($test_model);
+			warn "Expected model:\n" . model_as_string($expected_model);
+		}
+	};
+	if ($@) {
+		warn "Failed to execute update: $@";
+		fail($test->value);
+	}
+	if (not($ok)) {
+		print "# failed: " . $test->value . "\n";
+	}
+	
+	warn "ok\n" if ($debug);
 }
 
 sub query_eval_test {
@@ -364,17 +527,17 @@ sub query_eval_test {
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
 	warn "Loading SPARQL query from file $filename" if ($debug);
-	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; binmode($fh, ':utf8'); <$fh> };
+	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->value); return }; binmode($fh, ':utf8'); <$fh> };
 	
 	my $q			= $sparql;
 	$q				=~ s/\s+/ /g;
 	if ($debug) {
-		warn "### test     : " . $test->as_string . "\n";
+		warn "### test     : " . $test->value . "\n";
 		warn "# sparql     : $q\n";
-		warn "# data       : " . ($data->as_string =~ s#file://##r) if (blessed($data));
-		warn "# graph data : " . ($_->as_string =~ s#file://##r) for (@gdata);
-		warn "# result     : " . ($result->as_string =~ s#file://##r);
-		warn "# requires   : " . ($req->as_string =~ s#file://##r) if (blessed($req));
+		warn "# data       : " . ($data->value =~ s#file://##r) if (blessed($data));
+		warn "# graph data : " . ($_->value =~ s#file://##r) for (@gdata);
+		warn "# result     : " . ($result->value =~ s#file://##r);
+		warn "# requires   : " . ($req->value =~ s#file://##r) if (blessed($req));
 	}
 	
 STRESS:	foreach (1 .. $count) {
@@ -382,15 +545,19 @@ STRESS:	foreach (1 .. $count) {
 		my $test_model	= memory_model();
 		try {
 			if (blessed($data)) {
-				add_to_model( $test_model, $default_graph, $data->value );
+				my $datauri		= URI->new( $data->value );
+				my $datafilename	= $datauri->file;
+				add_to_model( $test_model, $default_graph, $datafilename );
 			}
 			foreach my $g (@gdata) {
-				add_to_model( $test_model, $g, $g->value );
+				my $datauri		= URI->new( $g->value );
+				my $datafilename	= $datauri->file;
+				add_to_model( $test_model, $g, $datafilename );
 			}
 		} catch {
-			fail($test->as_string);
-			record_result('evaluation', 0, $test->as_string);
-			print "# died: " . $test->as_string . ": $_\n";
+			fail($test->value);
+			record_result('evaluation', 0, $test->value);
+			print "# died: " . $test->value . ": $_\n";
 			next STRESS;
 		};
 		print STDERR "ok\n" if ($debug);
@@ -399,7 +566,7 @@ STRESS:	foreach (1 .. $count) {
 		my $resfilename	= $resuri->file;
 	
 		TODO: {
-			local($TODO)	= (blessed($req)) ? "requires " . $req->as_string : '';
+			local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
 			my $comment;
 			my $ok	= try {
 				if ($debug) {
@@ -421,7 +588,7 @@ STRESS:	foreach (1 .. $count) {
 				print STDERR "ok\n" if ($debug);
 			
 			#	warn "comparing results...";
-				compare_results( $expected, $actual, $test->as_string, \$comment );
+				compare_results( $expected, $actual, $test->value, \$comment );
 			} catch {
 				if (ref($_)) {
 					warn $_->message;
@@ -429,12 +596,12 @@ STRESS:	foreach (1 .. $count) {
 				} else {
 					warn $_;
 				}
-				fail($test->as_string);
-				record_result('evaluation', 0, $test->as_string);
+				fail($test->value);
+				record_result('evaluation', 0, $test->value);
 			};
 			if ($ok) {
 			} else {
-				print "# failed: " . $test->as_string . "\n";
+				print "# failed: " . $test->value . "\n";
 			}
 		}
 	}
@@ -736,4 +903,13 @@ sub compare_results {
 			}
 		}
 	}
+}
+
+sub model_as_string {
+	my $model	= shift;
+	my $ser		= Attean->get_serializer('nquads');
+	my $sep		= ('####' x 25) . "\n";
+	my $s		= sprintf("Model with %d quads:\n", $model->size);
+	$s			.= $ser->serialize_iter_to_bytes($model->get_quads);
+	return $sep . $s . $sep;
 }
