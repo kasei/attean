@@ -422,7 +422,7 @@ package Attean::API::Quad 0.012 {
 			my $class	= ref($self);
 			my $term	= $self->$orig(@_);
 			my $err		= $type->validate($term);
-			die "${class}'s graph failed conformance check for role Attean::API::BlankOrIRI" if ($err);
+			die "${class}'s graph failed conformance check for role Attean::API::BlankOrIRI: $term" if ($err);
 			return $term;
 		};
 	}
