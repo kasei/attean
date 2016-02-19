@@ -2173,7 +2173,7 @@ package Attean::Plan::Clear 0.012 {
 			foreach my $g (@$graphs) {
 				$model->clear_graph($g);
 			}
-			return Attean::ListIterator->new(values => [$Attean::Literal->true], item_type => 'Attean::API::Term');
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
 		};
 	}
 }
@@ -2208,7 +2208,7 @@ package Attean::Plan::Drop 0.012 {
 			foreach my $g (@$graphs) {
 				$model->drop_graph($g);
 			}
-			return Attean::ListIterator->new(values => [$Attean::Literal->true], item_type => 'Attean::API::Term');
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
 		};
 	}
 }
