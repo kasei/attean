@@ -461,8 +461,8 @@ the supplied C<< $active_graph >>.
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
-		} elsif ($algebra->isa('Attean::Algebra::Clear') or $algebra->isa('Attean::Algebra::Drop')) {
-			my $plan_class	= $algebra->isa('Attean::Algebra::Clear') ? 'Attean::Plan::Clear' : 'Attean::Plan::Drop';
+		} elsif ($algebra->isa('Attean::Algebra::Clear')) {
+			my $plan_class	= $algebra->drop ? 'Attean::Plan::Drop' : 'Attean::Plan::Clear';
 			my $target	= $algebra->target;
 			if ($target eq 'GRAPH') {
 				return Attean::Plan::Clear->new(graphs => [$algebra->graph]);
@@ -483,6 +483,34 @@ the supplied C<< $active_graph >>.
 				}
 				return $plan_class->new(graphs => \@graphs);
 			}
+		} elsif ($algebra->isa('Attean::Algebra::Add')) {
+			die "Unimplemented algebra evaluation for ADD/MOVE/COPY";
+		} elsif ($algebra->isa('Attean::Algebra::Modify')) {
+			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			my $i	= $algebra->insert;
+			my $d	= $algebra->delete;
+			my %patterns;
+			my @order;
+			if (scalar(@$d)) {
+				push(@order, 'remove_quad');
+				$patterns{ 'remove_quad' }	= $d;
+			}
+			if (scalar(@$i)) {
+				push(@order, 'add_quad');
+				$patterns{ 'add_quad' }	= $i;
+			}
+			return Attean::Plan::TripleTemplateToModelQuadMethod->new(
+				graph		=> $default_graphs->[0],
+				order		=> \@order,
+				patterns	=> \%patterns,
+				children 	=> \@children,
+			);
+		} elsif ($algebra->isa('Attean::Algebra::Load')) {
+			die "Unimplemented algebra evaluation for LOAD";
+		} elsif ($algebra->isa('Attean::Algebra::Create')) {
+			die "Unimplemented algebra evaluation for CREATE";
+		} elsif ($algebra->isa('Attean::Algebra::Sequence')) {
+			die "Unimplemented algebra evaluation for Sequence";
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
 	}
