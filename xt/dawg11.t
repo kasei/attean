@@ -866,7 +866,8 @@ sub compare_results {
 	} elsif ($actual->does('Attean::API::TermIterator')) {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
-		my $ok		= ok( $a->equals($e), sprintf("$test: %s == %s", $a->as_string, $e->as_string) );
+		my $name	= $debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
+		my $ok		= ok( $a->equals($e), $name );
 		record_result('evaluation', $ok, $test);
 		return $ok;
 	} else {
