@@ -84,7 +84,7 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		}
 		my $role	= $self->item_type;
 		if (Role::Tiny->is_role($role)) {
-			die "CodeIterator item is not a $role" unless (blessed($item) and $item->does($role));
+			die "CodeIterator item is not a $role: $item" unless (blessed($item) and $item->does($role));
 		}
 		return $item;
 	}
