@@ -2158,9 +2158,9 @@ package Attean::Plan::Clear 0.012 {
 		my $self	= shift;
 		my $level	= shift;
 		my $indent	= '  ' x (1+$level);
-		my $s		= sprintf("Clear { %d graphs }\n", scalar(@{ $self->graphs }));
+		my $s		= sprintf("Clear { %d graphs }", scalar(@{ $self->graphs }));
 		foreach my $g (@{ $self->graphs }) {
-			$s	.= "${indent}" . $g->as_sparql . "\n";
+			$s	.= "\n${indent}" . $g->as_sparql;
 		}
 		return $s;
 	}
@@ -2193,9 +2193,9 @@ package Attean::Plan::Drop 0.012 {
 		my $self	= shift;
 		my $level	= shift;
 		my $indent	= '  ' x (1+$level);
-		my $s		= sprintf("Drop { %d graphs }\n", scalar(@{ $self->graphs }));
+		my $s		= sprintf("Drop { %d graphs }", scalar(@{ $self->graphs }));
 		foreach my $g (@{ $self->graphs }) {
-			$s	.= "${indent}" . $g->as_sparql . "\n";
+			$s	.= "\n-${indent} " . $g->as_sparql;
 		}
 		return $s;
 	}
@@ -2213,6 +2213,85 @@ package Attean::Plan::Drop 0.012 {
 	}
 }
 
+package Attean::Plan::TripleTemplateToModelQuadMethod 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf Str ArrayRef HashRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'order' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	has 'patterns' => (is => 'ro', isa => HashRef[ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']]], required => 1);
+	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::Term']);
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x (1+$level);
+		my $s		= sprintf("Template-to-Model { Default graph: %s }", $self->graph->as_string);
+		foreach my $method (@{ $self->order }) {
+			my $pattern	= $self->patterns->{ $method };
+			$s	.= "\n-${indent} Method: ${method}";
+			foreach my $p (@$pattern) {
+				$s	.= "\n-${indent}   " . $p->as_string;
+			}
+		}
+		return $s;
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $child	= $self->children->[0]->impl($model);
+		
+		my $graph	= $self->graph;
+		my @order	= @{ $self->order };
+		my $method	= shift(@order);
+		my $pattern	= $self->patterns->{ $method };
+
+		return sub {
+			my $iter	= $child->();
+			my @results;
+			while (my $t = $iter->next) {
+				if (scalar(@order)) {
+					push(@results, $t);
+				}
+				foreach my $p (@$pattern) {
+					my $q		= $p->apply_bindings($t);
+					my $quad	= $q->as_quad_pattern($graph);
+					if ($quad->is_ground) {
+						warn "# $method: " . $quad->as_string . "\n";
+						$model->$method($quad);
+					} else {
+						# warn "not ground: " . $quad->as_string;
+					}
+				}
+			}
+			foreach my $method (@order) {
+				my $pattern	= $self->patterns->{ $method };
+				foreach my $t (@results) {
+					foreach my $p (@$pattern) {
+						my $q		= $p->apply_bindings($t);
+						my $quad	= $q->as_quad_pattern($graph);
+						if ($quad->is_ground) {
+							warn "# $method: " . $quad->as_string . "\n";
+							$model->$method($quad);
+						} else {
+							# warn "not ground: " . $quad->as_string;
+						}
+					}
+				}
+			}
+			return Attean::ListIterator->new(values => [Attean::Literal->integer($model->size)], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+
+# Insert(src-pat, dst-iri)
+# Create(iri)
 
 1;
 
