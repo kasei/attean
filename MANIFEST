@@ -2,6 +2,7 @@ bin/attean_parse
 bin/attean_query
 bin/canonicalize_bgp.pl
 Changes
+CONTRIBUTING
 inc/Module/Install.pm
 inc/Module/Install/AuthorTests.pm
 inc/Module/Install/Base.pm
