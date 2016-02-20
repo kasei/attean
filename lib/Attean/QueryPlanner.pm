@@ -571,9 +571,14 @@ the supplied C<< $active_graph >>.
 			);
 			return $plan;
 		} elsif ($algebra->isa('Attean::Algebra::Create')) {
-			die "Unimplemented algebra evaluation for CREATE";
+			return Attean::Plan::Sequence->new( children => [] );
 		} elsif ($algebra->isa('Attean::Algebra::Sequence')) {
-			die "Unimplemented algebra evaluation for Sequence";
+			my @plans;
+			foreach my $child (@{ $algebra->children }) {
+				my ($plan)	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+				push(@plans, $plan);
+			}
+			return Attean::Plan::Sequence->new( children => \@plans );
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
 	}
