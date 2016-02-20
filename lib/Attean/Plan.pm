@@ -2185,7 +2185,9 @@ package Attean::Plan::Clear 0.012 {
 		my $indent	= '  ' x (1+$level);
 		my $s		= sprintf("Clear { %d graphs }", scalar(@{ $self->graphs }));
 		foreach my $g (@{ $self->graphs }) {
-			$s	.= "\n${indent}" . $g->as_sparql;
+			my $name	= $g->as_sparql;
+			chomp($name);
+			$s	.= "\n-${indent} $name";
 		}
 		return $s;
 	}
@@ -2310,6 +2312,54 @@ package Attean::Plan::TripleTemplateToModelQuadMethod 0.012 {
 				}
 			}
 			return Attean::ListIterator->new(values => [Attean::Literal->integer($model->size)], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+package Attean::Plan::Load 0.012 {
+	use Moo;
+	use Encode;
+	use LWP::UserAgent;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Bool Str);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'url' => (is => 'ro', isa => Str);
+
+	sub plan_as_string {
+		my $self	= shift;
+		return sprintf("Load { %s }", $self->url);
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $url		= $self->url;
+		my $ua		= LWP::UserAgent->new();
+		my $silent	= $self->silent;
+		my $accept	= Attean->acceptable_parsers( handles => 'Attean::API::Triple' );
+		$ua->default_headers->push_header( 'Accept' => $accept );
+		return sub {
+			my $resp	= $ua->get( $url );
+			if ($resp->is_success) {
+				my $ct		= $resp->header('Content-Type');
+				if (my $pclass = Attean->get_parser( media_type => $ct )) {
+					my $p		= $pclass->new();
+					my $str		= $resp->decoded_content;
+					my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
+					my $iter	= $p->parse_iter_from_bytes( $bytes );
+					return $iter;
+				}
+			}
+			
+			if ($silent) {
+				return Attean::ListIterator->new(values => [], item_type => 'Attean::API::Triple');
+			} else {
+				die "Failed to load url: " . $resp->status_line;
+			}
 		};
 	}
 }
