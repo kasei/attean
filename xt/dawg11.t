@@ -439,62 +439,66 @@ sub update_eval_test {
 		warn "Dataset before update operation:\n";
 		warn model_as_string($test_model);
 	}
-	my $ok	= 0;
-	eval {
-		my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
-		if ($@) {
-			warn "Failed to parse query $filename: $@";
-			die $@;
-		}
-		unless ($algebra) {
-			warn "No algebra generated for update\n";
-			fail($test->value);
-			return;
-		}
-		if ($debug) {
-			warn "# Algebra:\n" . $algebra->as_string . "\n";
-		}
-		
-		my $default_graphs	= [$default_graph];
-		my $planner	= Attean::IDPQueryPlanner->new();
-		my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
-		if ($debug) {
-			warn "# Plan:\n" . $plan->as_string . "\n";
-		}
-
-		if ($debug) {
-			warn "Running update...\n";
-		}
-		my $iter	= $plan->evaluate($test_model);
-		$iter->elements;
-		if ($debug) {
-			warn "done.\n";
-		}
-		
-		if ($debug) {
-			warn "Comparing results...\n";
-		}
-		my $eqtest	= Attean::BindingEqualityTest->new();
-		my $eq		= $eqtest->equals($test_model, $expected_model);
-		if ($debug) {
-			warn "done.\n";
-		}
-		$ok			= is( $eq, 1, $test->value );
-		unless ($ok) {
-			warn $eqtest->error;
-			warn "Got model:\n" . model_as_string($test_model);
-			warn "Expected model:\n" . model_as_string($expected_model);
-		}
-	};
-	if ($@) {
-		warn "Failed to execute update: $@";
-		fail($test->value);
-	}
-	if (not($ok)) {
-		print "# failed: " . $test->value . "\n";
-	}
 	
-	warn "ok\n" if ($debug);
+	TODO: {
+		local($TODO)	= "Update evaluation is not fully implemented";
+		my $ok	= 0;
+		eval {
+			my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
+			if ($@) {
+				warn "Failed to parse query $filename: $@";
+				die $@;
+			}
+			unless ($algebra) {
+				warn "No algebra generated for update\n";
+				fail($test->value);
+				return;
+			}
+			if ($debug) {
+				warn "# Algebra:\n" . $algebra->as_string . "\n";
+			}
+		
+			my $default_graphs	= [$default_graph];
+			my $planner	= Attean::IDPQueryPlanner->new();
+			my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
+			if ($debug) {
+				warn "# Plan:\n" . $plan->as_string . "\n";
+			}
+
+			if ($debug) {
+				warn "Running update...\n";
+			}
+			my $iter	= $plan->evaluate($test_model);
+			$iter->elements;
+			if ($debug) {
+				warn "done.\n";
+			}
+		
+			if ($debug) {
+				warn "Comparing results...\n";
+			}
+			my $eqtest	= Attean::BindingEqualityTest->new();
+			my $eq		= $eqtest->equals($test_model, $expected_model);
+			if ($debug) {
+				warn "done.\n";
+			}
+			$ok			= is( $eq, 1, $test->value );
+			unless ($ok) {
+				warn $eqtest->error;
+				warn "Got model:\n" . model_as_string($test_model);
+				warn "Expected model:\n" . model_as_string($expected_model);
+			}
+		};
+		if ($@) {
+			warn "Failed to execute update: $@";
+			fail($test->value);
+		}
+		if (not($ok)) {
+			print "# failed: " . $test->value . "\n";
+		}
+	
+		warn "ok\n" if ($debug);
+	}
 }
 
 sub query_eval_test {
@@ -712,7 +716,6 @@ sub get_actual_results {
 	print_results("Actual results", \$results) if ($args{ results });
 	return ($results, $type);
 	
-	# TODO:
 	if ($results->is_bindings) {
 		return ($results, 'bindings');
 	} elsif ($results->is_boolean) {
