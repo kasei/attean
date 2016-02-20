@@ -2143,6 +2143,31 @@ package Attean::Plan::Aggregate 0.012 {
 	}
 }
 
+package Attean::Plan::Sequence 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::QueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	sub plan_as_string { return 'Sequence'; }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			foreach my $child (@children) {
+				my $iter	= $child->();
+				$iter->elements;
+			}
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
 package Attean::Plan::Clear 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
