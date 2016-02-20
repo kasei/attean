@@ -484,8 +484,62 @@ the supplied C<< $active_graph >>.
 				return $plan_class->new(graphs => \@graphs);
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Add')) {
-			die "Unimplemented algebra evaluation for ADD/MOVE/COPY";
+			my $triple	= triplepattern(variable('s'), variable('p'), variable('o'));
+			my $child;
+			my $default_source	= 0;
+			if (my $from = $algebra->source) {
+				($child)	= $self->access_plans( $model, $active_graphs, $triple->as_quad_pattern($from) );
+			} else {
+				$default_source++;
+				my $bgp		= Attean::Algebra::BGP->new( triples => [$triple] );
+				($child)	= $self->plans_for_algebra($bgp, $model, $active_graphs, $default_graphs, @_);
+			}
+			
+			my $dest;
+			my $default_dest	= 0;
+			if (my $g = $algebra->destination) {
+				$dest		= $triple->as_quad_pattern($g);
+			} else {
+				$default_dest++;
+				$dest		= $triple->as_quad_pattern($default_graphs->[0]);
+			}
+
+
+			my @plans;
+			my $run_update	= 1;
+			if ($default_dest and $default_source) {
+				$run_update	= 0;
+			} elsif ($default_dest or $default_source) {
+				#
+			} elsif ($algebra->source->equals($algebra->destination)) {
+				$run_update	= 0;
+			}
+			
+			if ($run_update) {
+				if ($algebra->drop_destination) {
+					my @graphs	= $algebra->has_destination ? $algebra->destination : @$default_graphs;
+					unshift(@plans, Attean::Plan::Clear->new(graphs => [@graphs]));
+				}
+			
+				push(@plans, Attean::Plan::TripleTemplateToModelQuadMethod->new(
+					graph		=> $default_graphs->[0],
+					order		=> ['add_quad'],
+					patterns	=> {'add_quad' => [$dest]},
+					children 	=> [$child],
+				));
+			
+				if ($algebra->drop_source) {
+					my @graphs	= $algebra->has_source ? $algebra->source : @$default_graphs;
+					push(@plans, Attean::Plan::Clear->new(graphs => [@graphs]));
+				}
+			}
+			my $plan	= (scalar(@plans) == 1) ? shift(@plans) : Attean::Plan::Sequence->new( children => \@plans );
+			return $plan;
 		} elsif ($algebra->isa('Attean::Algebra::Modify')) {
+			unless ($child) {
+				# This is an INSERT/DELETE DATA algebra with ground data and no pattern
+				$child	= Attean::Algebra::BGP->new( triples => [] );
+			}
 			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
 			my $i	= $algebra->insert;
 			my $d	= $algebra->delete;
@@ -506,7 +560,16 @@ the supplied C<< $active_graph >>.
 				children 	=> \@children,
 			);
 		} elsif ($algebra->isa('Attean::Algebra::Load')) {
-			die "Unimplemented algebra evaluation for LOAD";
+			my $pattern		= triplepattern(variable('subject'), variable('predicate'), variable('object'));
+			my $load		= Attean::Plan::Load->new( url => $algebra->url->value, silent => $algebra->silent );
+			my $graph		= $algebra->has_graph ? $algebra->graph : $default_graphs->[0];
+			my $plan		= Attean::Plan::TripleTemplateToModelQuadMethod->new(
+				graph		=> $graph,
+				order		=> ['add_quad'],
+				patterns	=> {'add_quad' => [$pattern]},
+				children 	=> [$load],
+			);
+			return $plan;
 		} elsif ($algebra->isa('Attean::Algebra::Create')) {
 			die "Unimplemented algebra evaluation for CREATE";
 		} elsif ($algebra->isa('Attean::Algebra::Sequence')) {
