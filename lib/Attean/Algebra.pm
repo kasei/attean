@@ -1213,7 +1213,10 @@ package Attean::Algebra::Load 0.012 {
 
 	sub in_scope_variables { return; }
 	sub tree_attributes { return; }
-	sub algebra_as_string { return 'Load' }
+	sub algebra_as_string {
+		my $self	= shift;
+		return 'Load ' . $self->url->as_string;
+	}
 
 	sub sparql_tokens {
 		my $self	= shift;
