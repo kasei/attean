@@ -2285,10 +2285,10 @@ package Attean::Plan::TripleTemplateToModelQuadMethod 0.012 {
 				}
 				foreach my $p (@$pattern) {
 					my $q		= $p->apply_bindings($t);
-					my $quad	= $q->as_quad_pattern($graph);
+					my $quad	= $q->does('Attean::API::QuadPattern') ? $q : $q->as_quad_pattern($graph);
 					if ($quad->is_ground) {
-						warn "# $method: " . $quad->as_string . "\n";
-						$model->$method($quad);
+						# warn "# $method: " . $quad->as_string . "\n";
+						$model->$method($quad->as_quad);
 					} else {
 						# warn "not ground: " . $quad->as_string;
 					}
@@ -2299,10 +2299,10 @@ package Attean::Plan::TripleTemplateToModelQuadMethod 0.012 {
 				foreach my $t (@results) {
 					foreach my $p (@$pattern) {
 						my $q		= $p->apply_bindings($t);
-						my $quad	= $q->as_quad_pattern($graph);
+						my $quad	= $q->does('Attean::API::QuadPattern') ? $q : $q->as_quad_pattern($graph);
 						if ($quad->is_ground) {
-							warn "# $method: " . $quad->as_string . "\n";
-							$model->$method($quad);
+							# warn "# $method: " . $quad->as_string . "\n";
+							$model->$method($quad->as_quad);
 						} else {
 							# warn "not ground: " . $quad->as_string;
 						}
