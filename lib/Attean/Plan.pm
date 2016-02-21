@@ -667,27 +667,30 @@ package Attean::Plan::Union 0.012 {
 		my $iter_variables	= $self->in_scope_variables;
 
 		return sub {
-			my $current	= shift(@children);
-			my $iter	= $current->();
-			return Attean::CodeIterator->new(
-				item_type => 'Attean::API::Result',
-				variables => $iter_variables,
-				generator => sub {
-					while (blessed($iter)) {
-						my $row	= $iter->next();
-						if ($row) {
-							return $row;
-						} else {
-							$current	= shift(@children);
-							if ($current) {
-								$iter	= $current->();
+			if (my $current	= shift(@children)) {
+				my $iter	= $current->();
+				return Attean::CodeIterator->new(
+					item_type => 'Attean::API::Result',
+					variables => $iter_variables,
+					generator => sub {
+						while (blessed($iter)) {
+							my $row	= $iter->next();
+							if ($row) {
+								return $row;
 							} else {
-								undef $iter;
+								$current	= shift(@children);
+								if ($current) {
+									$iter	= $current->();
+								} else {
+									undef $iter;
+								}
 							}
 						}
-					}
-				},
-			);
+					},
+				);
+			} else {
+				return Attean::ListIterator->new( item_type => 'Attean::API::Result', variables => [], values => [], );
+			}
 		};
 	}
 }
@@ -2364,8 +2367,6 @@ package Attean::Plan::Load 0.012 {
 	}
 }
 
-
-# Insert(src-pat, dst-iri)
 # Create(iri)
 
 1;
