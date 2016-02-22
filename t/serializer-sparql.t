@@ -725,6 +725,33 @@ subtest 'BGP canonicalization' => sub {
 	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 }
 
+subtest 'expected tokens: modify update' => sub {
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } WHERE { ?s ?p ?o . }', 'DELETE');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g3> WHERE { ?s ?p ?o . }', 'DELETE + USING');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> USING <g4> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g3> USING <g4> WHERE { ?s ?p ?o . }', 'DELETE + Multiple USING');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> USING NAMED <g4> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g3> USING NAMED <g4> WHERE { ?s ?p ?o . }', 'DELETE + USING + USING NAMED');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> USING NAMED <g4> USING <g1> USING NAMED <g3> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g1> USING <g3> USING NAMED <g3> USING NAMED <g4> WHERE { ?s ?p ?o . }', 'DELETE + Multiple USING + Multiple USING NAMED');
+	}
+};
+
 subtest 'Regressions' => sub {
 	{
 	my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;

@@ -464,14 +464,7 @@ sub _InsertUpdate {
 
 	my $ggp	= $self->_remove_pattern;
 
-	my @ds_keys	= keys %dataset;
-	unless (@ds_keys) {
-		$dataset{ default }	= [$graph || ()];
-	}
-	
-	### TODO: use %dataset
-	
-	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples );
+	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples, dataset => \%dataset );
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -562,14 +555,7 @@ sub _DeleteUpdate {
 
 		my $ggp	= $self->_remove_pattern;
 
-		my @ds_keys	= keys %dataset;
-		if ($graph and not(scalar(@ds_keys))) {
-			$dataset{ default }	= [$graph || ()];
-		}
-		
-		### TODO: use %dataset
-	
-		my %args	= (children => [$ggp]);
+		my %args	= (children => [$ggp], dataset => \%dataset);
 		if (scalar(@insert_triples)) {
 			$args{insert}	= \@insert_triples;
 		}

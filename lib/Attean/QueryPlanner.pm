@@ -103,7 +103,7 @@ the supplied C<< $active_graph >>.
 		my %args			= @_;
 		
 		if ($model->does('Attean::API::CostPlanner')) {
-			my @plans	= $model->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs, @_);
+			my @plans	= $model->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs, %args);
 			if (@plans) {
 				return @plans; # trust that the model knows better than us what plans are best
 			} else {
@@ -119,7 +119,7 @@ the supplied C<< $active_graph >>.
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::Query') or $algebra->isa('Attean::Algebra::Update')) {
-			return $self->plans_for_algebra($algebra->child, $model, $active_graphs, $default_graphs, @_);
+			return $self->plans_for_algebra($algebra->child, $model, $active_graphs, $default_graphs, %args);
 		} elsif ($algebra->isa('Attean::Algebra::BGP')) {
 			my $triples	= $algebra->triples;
 			my @triples	= @$triples;
@@ -151,10 +151,10 @@ the supplied C<< $active_graph >>.
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
 			return $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
-				[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
+				[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, %args)]
 			} @children);
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
-			my @plans	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			my @plans	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args);
 			my @dist;
 			foreach my $p (@plans) {
 				if ($p->distinct) {
@@ -200,7 +200,7 @@ the supplied C<< $active_graph >>.
 			my %exprs	= ($var => $expr);
 		
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
 				my $distinct	= $plan->distinct;
 				my $ordered		= $plan->ordered;
 				if ($expr->isa('Attean::ValueExpression') and $expr->value->does('Attean::API::Variable')) {
@@ -222,7 +222,7 @@ the supplied C<< $active_graph >>.
 			my @cmps	= @{ $algebra->comparators };
 			my ($exprs, $ascending, $svars)	= $self->_order_by($algebra);
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, interesting_order => $algebra->comparators, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, interesting_order => $algebra->comparators, %args)) {
 				my $distinct	= $plan->distinct;
 
 				if (scalar(@cmps) == 1 and $cmps[0]->expression->isa('Attean::ValueExpression') and $cmps[0]->expression->value->does('Attean::API::Variable')) {
@@ -246,12 +246,12 @@ the supplied C<< $active_graph >>.
 			
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::LeftJoin')) {
-			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, @_)];
-			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, @_)];
+			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, %args)];
+			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, %args)];
 			return $self->join_plans($model, $active_graphs, $default_graphs, $l, $r, 'left', $algebra->expression);
 		} elsif ($algebra->isa('Attean::Algebra::Minus')) {
-			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, @_)];
-			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, @_)];
+			my $l	= [$self->plans_for_algebra($children[0], $model, $active_graphs, $default_graphs, %args)];
+			my $r	= [$self->plans_for_algebra($children[1], $model, $active_graphs, $default_graphs, %args)];
 			return $self->join_plans($model, $active_graphs, $default_graphs, $l, $r, 'minus');
 		} elsif ($algebra->isa('Attean::Algebra::Project')) {
 			my $vars	= $algebra->variables;
@@ -262,15 +262,26 @@ the supplied C<< $active_graph >>.
 				($vars_key eq join(' ', sort @{ $_->in_scope_variables }))
 					? $_ # no-op if plan is already properly-projected
 					: $self->new_projection($_, $distinct, @vars)
-			} $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			} $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args);
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
 			my $graph	= $algebra->graph;
 			if ($graph->does('Attean::API::Term')) {
-				return $self->plans_for_algebra($child, $model, $graph, @_);
+				if (my $available = $args{available_graphs}) {
+					# the list of available graphs has been restricted, and this
+					# graph is not available so return an empty table plan.
+					unless (any { $_->equals($graph) } @$available) {
+						my $plan	= Attean::Plan::Table->new( variables => [], rows => [], distinct => 0, ordered => [] );
+						return $plan;
+					}
+				}
+				return $self->plans_for_algebra($child, $model, $graph, $default_graphs, %args);
 			} else {
 				my $gvar	= $graph->value;
 				my $graphs	= $model->get_graphs;
+				if (my $available = $args{available_graphs}) {
+					$graphs	= Attean::ListIterator->new( item_type => 'Attean::API::Term', values => $available );
+				}
 				my @plans;
 				my %vars		= map { $_ => 1 } $child->in_scope_variables;
 				$vars{ $gvar }++;
@@ -284,7 +295,7 @@ the supplied C<< $active_graph >>.
 					# TODO: rewrite $child pattern here to replace any occurrences of the variable $gvar to $graph
 					my @plans	= map {
 						Attean::Plan::Extend->new(children => [$_], expressions => \%exprs, distinct => 0, ordered => $_->ordered);
-					} $self->plans_for_algebra($child, $model, [$graph], $default_graphs, @_);
+					} $self->plans_for_algebra($child, $model, [$graph], $default_graphs, %args);
 					push(@branches, \@plans);
 				}
 				
@@ -312,7 +323,7 @@ the supplied C<< $active_graph >>.
 			my $limit	= $algebra->limit;
 			my $offset	= $algebra->offset;
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
 				my $vars	= $plan->in_scope_variables;
 				push(@plans, Attean::Plan::Slice->new(children => [$plan], limit => $limit, offset => $offset, distinct => $plan->distinct, ordered => $plan->ordered));
 			}
@@ -320,7 +331,7 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
 			# TODO: if both branches are similarly ordered, we can use Attean::Plan::Merge to keep the resulting plan ordered
 			my @vars		= keys %{ { map { map { $_ => 1 } $_->in_scope_variables } @children } };
-			my @plansets	= map { [$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)] } @children;
+			my @plansets	= map { [$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, %args)] } @children;
 
 			my @plans;
 			cartesian {
@@ -334,7 +345,7 @@ the supplied C<< $active_graph >>.
 			my @vars		= $algebra->in_scope_variables;
 
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
 				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $plan->ordered);
 				push(@plans, $extend);
 			}
@@ -348,14 +359,14 @@ the supplied C<< $active_graph >>.
 				$exprs{$var}	= $expr;
 			}
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
 				my $extend		= Attean::Plan::Aggregate->new(children => [$plan], aggregates => \%exprs, groups => $groups, distinct => 0, ordered => []);
 				push(@plans, $extend);
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my @plans;
-			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_)) {
+			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
 				return Attean::Plan::Exists->new(children => [$plan], distinct => 1, ordered => []);
 			}
 			return @plans;
@@ -387,7 +398,7 @@ the supplied C<< $active_graph >>.
 				my @vars	= $algebra->in_scope_variables;
 				
 				my @joins	= $self->group_join_plans($model, $active_graphs, $default_graphs, $interesting, map {
-					[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, @_)]
+					[$self->plans_for_algebra($_, $model, $active_graphs, $default_graphs, %args)]
 				} @join);
 				
 				my @plans;
@@ -411,7 +422,7 @@ the supplied C<< $active_graph >>.
 				} else {
 					$a		= Attean::Algebra::Path->new( subject => $begin, path => $child, object => $end );
 				}
-				my @cplans	= $self->plans_for_algebra($a, $model, $active_graphs, $default_graphs, @_);
+				my @cplans	= $self->plans_for_algebra($a, $model, $active_graphs, $default_graphs, %args);
 				my @plans;
 				foreach my $cplan (@cplans) {
 					my $plan	= Attean::Plan::ALPPath->new(
@@ -430,7 +441,7 @@ the supplied C<< $active_graph >>.
 				return @plans;
 			} elsif ($path->isa('Attean::Algebra::ZeroOrOnePath')) {
 				my $a		= Attean::Algebra::Path->new( subject => $s, path => $path->children->[0], object => $o );
-				my @children	= $self->plans_for_algebra($a, $model, $active_graphs, $default_graphs, @_);
+				my @children	= $self->plans_for_algebra($a, $model, $active_graphs, $default_graphs, %args);
 				my @plans;
 				foreach my $plan (@children) {
 					push(@plans, Attean::Plan::ZeroOrOnePath->new(
@@ -447,14 +458,14 @@ the supplied C<< $active_graph >>.
 				die "Cannot simplify property path $path: " . $algebra->as_string;
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
-			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args);
 			my @plans;
 			foreach my $plan (@children) {
 				push(@plans, Attean::Plan::Construct->new(triples => $algebra->triples, children => [$plan], distinct => 0, ordered => []));
 			}
 			return @plans;
 		} elsif ($algebra->isa('Attean::Algebra::Describe')) {
-			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args);
 			my @plans;
 			foreach my $plan (@children) {
 				push(@plans, Attean::Plan::Describe->new(terms => $algebra->terms, graph => $active_graphs, children => [$plan], distinct => 0, ordered => []));
@@ -492,7 +503,7 @@ the supplied C<< $active_graph >>.
 			} else {
 				$default_source++;
 				my $bgp		= Attean::Algebra::BGP->new( triples => [$triple] );
-				($child)	= $self->plans_for_algebra($bgp, $model, $active_graphs, $default_graphs, @_);
+				($child)	= $self->plans_for_algebra($bgp, $model, $active_graphs, $default_graphs, %args);
 			}
 			
 			my $dest;
@@ -540,7 +551,25 @@ the supplied C<< $active_graph >>.
 				# This is an INSERT/DELETE DATA algebra with ground data and no pattern
 				$child	= Attean::Algebra::BGP->new( triples => [] );
 			}
-			my @children	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+			
+			my $dataset	= $algebra->dataset;
+			my @default	= @{ $dataset->{default} || [] };
+			my @named	= values %{ $dataset->{named} || {} };
+			
+			my @active_graphs	= @$active_graphs;
+			my @default_graphs	= @$default_graphs;
+			
+			if (scalar(@default) or scalar(@named)) {
+				# change the available named graphs
+				# change the active graph(s)
+				@active_graphs	= @default;
+				@default_graphs	= @default;
+				$args{ available_graphs }	= [@named];
+			} else {
+				# no custom dataset
+			}
+			
+			my @children	= $self->plans_for_algebra($child, $model, \@active_graphs, \@default_graphs, %args);
 			my $i	= $algebra->insert;
 			my $d	= $algebra->delete;
 			my %patterns;
@@ -553,12 +582,14 @@ the supplied C<< $active_graph >>.
 				push(@order, 'add_quad');
 				$patterns{ 'add_quad' }	= $i;
 			}
-			return Attean::Plan::TripleTemplateToModelQuadMethod->new(
-				graph		=> $default_graphs->[0],
-				order		=> \@order,
-				patterns	=> \%patterns,
-				children 	=> \@children,
-			);
+			return map {
+				Attean::Plan::TripleTemplateToModelQuadMethod->new(
+					graph		=> $default_graphs->[0],
+					order		=> \@order,
+					patterns	=> \%patterns,
+					children 	=> [$_],
+				)
+			} @children;
 		} elsif ($algebra->isa('Attean::Algebra::Load')) {
 			my $pattern		= triplepattern(variable('subject'), variable('predicate'), variable('object'));
 			my $load		= Attean::Plan::Load->new( url => $algebra->url->value, silent => $algebra->silent );
@@ -575,7 +606,7 @@ the supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Sequence')) {
 			my @plans;
 			foreach my $child (@{ $algebra->children }) {
-				my ($plan)	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, @_);
+				my ($plan)	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args);
 				push(@plans, $plan);
 			}
 			return Attean::Plan::Sequence->new( children => \@plans );

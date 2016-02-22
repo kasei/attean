@@ -1394,11 +1394,12 @@ package Attean::Algebra::Modify 0.012 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use List::MoreUtils qw(all any);
-	use Types::Standard qw(ArrayRef ConsumerOf);
+	use Types::Standard qw(HashRef ArrayRef ConsumerOf);
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
 
+	has 'dataset' => (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'insert' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
 	has 'delete' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
 
@@ -1481,10 +1482,24 @@ package Attean::Algebra::Modify 0.012 {
 		my $insert	= AtteanX::SPARQL::Token->keyword('INSERT');
 		my $delete	= AtteanX::SPARQL::Token->keyword('DELETE');
 		my $where	= AtteanX::SPARQL::Token->keyword('WHERE');
+		my $using	= AtteanX::SPARQL::Token->keyword('USING');
+		my $named	= AtteanX::SPARQL::Token->keyword('NAMED');
 		
 		# TODO: Support 'DELETE WHERE' shortcut syntax
 		# TODO: Support WITH
-		# TODO: Support USING
+		
+		my @dataset;
+		my $dataset	= $self->dataset;
+		my @default	= @{ $dataset->{default} || [] };
+		my @named	= values %{ $dataset->{named} || {} };
+		if (scalar(@default) or scalar(@named)) {
+			foreach my $g (sort { $a->as_string cmp $b->as_string } @default) {
+				push(@dataset, $using, $g->sparql_tokens->elements);
+			}
+			foreach my $g (sort { $a->as_string cmp $b->as_string } @named) {
+				push(@dataset, $using, $named, $g->sparql_tokens->elements);
+			}
+		}
 		
 		my @tokens;
 		if ($op eq 'ID' or $op eq 'DD') {
@@ -1508,6 +1523,7 @@ package Attean::Algebra::Modify 0.012 {
 				push(@tokens, $dot);
 			}
 			push(@tokens, $r);
+			push(@tokens, @dataset);
 			push(@tokens, $where);
 			push(@tokens, $l);
 			foreach my $c (@{ $self->children }) {
@@ -1525,6 +1541,7 @@ package Attean::Algebra::Modify 0.012 {
 				}
 				push(@tokens, $r);
 			}
+			push(@tokens, @dataset);
 			push(@tokens, $where);
 			push(@tokens, $l);
 			foreach my $c (@{ $self->children }) {
