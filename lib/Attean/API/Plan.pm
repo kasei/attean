@@ -102,6 +102,9 @@ Returns a tree-structured string representation of this plan, including children
 				}
 				push(@flags, "order: " . join('; ', @orders));
 			}
+			if (defined(my $cost = $a->cost)) {
+				push(@flags, "cost: $cost");
+			}
 			$string	.= "-$indent " .  $a->plan_as_string($level);
 			if (scalar(@flags)) {
 				$string .= ' (' . join(' ', @flags) . ")";
