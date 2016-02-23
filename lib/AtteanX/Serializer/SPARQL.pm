@@ -44,6 +44,7 @@ package AtteanX::Serializer::SPARQL 0.012 {
 	use Data::Dumper;
 	use Encode qw(encode);
 	use Attean::ListIterator;
+	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(any);
 	use AtteanX::SPARQL::Constants;
 	use namespace::clean;
@@ -77,6 +78,7 @@ L<IO::Handle> object C<< $fh >>.
 		my $newline		= 1;
 		my $semicolon	= 0;
 		my $need_space	= 0;
+		my $last;
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
 			
@@ -88,7 +90,11 @@ L<IO::Handle> object C<< $fh >>.
 				if ($type == RBRACE) {
 					$io->print("\n");
 					$newline	= 1;
-				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE)$/) {
+				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE|USING)$/) {
+					$io->print("\n");
+					$newline	= 1;
+				} elsif ($type == KEYWORD and $t->value eq 'WHERE' and blessed($last) and ($last->type == PREFIXNAME or $last->type == IRI)) {
+					# this captures "USING <g> WHERE" and "USING NAMED <g> WHERE", forcing a newline before the "WHERE"
 					$io->print("\n");
 					$newline	= 1;
 				}
@@ -117,6 +123,12 @@ L<IO::Handle> object C<< $fh >>.
 			if ($type == KEYWORD) {
 				$io->print($t->value);
 				$need_space++;
+			} elsif ($type == IRI) {
+				# TODO: escape
+				$io->print('<');
+				$io->print($t->value);
+				$io->print('>');
+				$need_space++;
 			} elsif ($type == PREFIXNAME) {
 				my $args	= $t->args;
 				$io->print(join('', @$args));
@@ -124,12 +136,6 @@ L<IO::Handle> object C<< $fh >>.
 			} elsif ($type == BNODE) {
 				$io->print('_:');
 				$io->print($t->value);
-				$need_space++;
-			} elsif ($type == IRI) {
-				# TODO: escape
-				$io->print('<');
-				$io->print($t->value);
-				$io->print('>');
 				$need_space++;
 			} elsif ($type == LANG) {
 				$io->print('@');
@@ -204,6 +210,7 @@ L<IO::Handle> object C<< $fh >>.
 				}
 				$semicolon	= 1;
 			}
+			$last	= $t;
 		}
 		unless ($newline) {
 			$io->print("\n");
