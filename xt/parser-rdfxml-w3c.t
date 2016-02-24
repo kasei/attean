@@ -10,16 +10,6 @@ use File::Find qw(find);
 use Attean;
 use Attean::BindingEqualityTest;
 
-################################################################################
-# Log::Log4perl::init( \q[
-# 	log4perl.category.rdf.trine.parser.rdfxml          = TRACE, Screen
-# 	
-# 	log4perl.appender.Screen         = Log::Log4perl::Appender::Screen
-# 	log4perl.appender.Screen.stderr  = 0
-# 	log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
-# ] );
-################################################################################
-
 my $ok_regex	= (@ARGV) ? shift : '';
 
 my %XML_EXEMPTIONS	= map { $_ => 1 } qw(
