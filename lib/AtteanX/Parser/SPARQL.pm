@@ -347,11 +347,23 @@ sub _RW_Query {
 		$self->{build}{triples}	= [ $pattern ];
 	}
 	
+	my %dataset;
+	foreach my $s (@{ $self->{build}{sources} }) {
+		my ($iri, $group)	= @$s;
+		if ($group eq 'NAMED') {
+			push(@{ $dataset{named} }, $iri );
+		} else {
+			push(@{ $dataset{default} }, $iri );
+		}
+	}
+
 	my $algebra	= $self->{build}{triples}[0];
-	my $top_class	= $update ? 'Attean::Algebra::Update' : 'Attean::Algebra::Query';
-	$self->{build}{triples}[0]	= $top_class->new( children => [$algebra] );
-# 	my %query	= (%p, %body);
-# 	return \%query;
+	
+	if ($update) {
+		$self->{build}{triples}[0]	= Attean::Algebra::Update->new( children => [$algebra] );
+	} else {
+		$self->{build}{triples}[0]	= Attean::Algebra::Query->new( children => [$algebra], dataset => \%dataset );
+	}
 }
 
 sub _Query_test {
@@ -1007,7 +1019,7 @@ sub _DefaultGraphClause {
 	my $self	= shift;
 	$self->_SourceSelector;
 	my ($source)	= splice(@{ $self->{_stack} });
-	push( @{ $self->{build}{sources} }, [$source] );
+	push( @{ $self->{build}{sources} }, [$source, 'DEFAULT'] );
 }
 
 # [11] NamedGraphClause ::= 'NAMED' SourceSelector

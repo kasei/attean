@@ -28,17 +28,36 @@ use Attean::API::Query;
 package Attean::Algebra::Query 0.012 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
-	use Types::Standard qw(Bool);
+	use Types::Standard qw(Bool ArrayRef HashRef ConsumerOf);
 	use Moo;
 	use namespace::clean;
 
+	has 'dataset' => (is => 'ro', isa => HashRef[ArrayRef[ConsumerOf['Attean::API::Term']]], default => sub { +{} });
 	has 'subquery' => (is => 'ro', isa => Bool, default => 0);
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	sub algebra_as_string {
 		my $self	= shift;
-		return $self->subquery ? 'SubQuery' : 'Query';
+		my $name	= $self->subquery ? 'SubQuery' : 'Query';
+		
+		my %dataset	= %{ $self->dataset };
+		my @default	= @{ $dataset{ default } || [] };
+		my @named	= @{ $dataset{ named } || [] };
+		my $has_dataset	= (scalar(@default) + scalar(@named));
+		
+		my $s	= $name;
+		if ($has_dataset) {
+			my @parts;
+			if (scalar(@default)) {
+				push(@parts, 'Default graph(s): ' . join(', ', map { chomp; $_ } map { $_->as_sparql } @default));
+			}
+			if (scalar(@named)) {
+				push(@parts, 'Named graph(s): ' . join(', ', map { chomp; $_ } map { $_->as_sparql } @named));
+			}
+			$s	.= ' { ' . join('; ', @parts) . ' }';
+		}
+		return $s;
 	}
 
 	sub sparql_tokens {
@@ -46,6 +65,13 @@ package Attean::Algebra::Query 0.012 {
 		my $child	= $self->child;
 		my $l		= AtteanX::SPARQL::Token->lbrace;
 		my $r		= AtteanX::SPARQL::Token->rbrace;
+		my $from		= AtteanX::SPARQL::Token->keyword('FROM');
+		my $named		= AtteanX::SPARQL::Token->keyword('NAMED');
+
+		my %dataset	= %{ $self->dataset };
+		my @default	= @{ $dataset{ default } || [] };
+		my @named	= @{ $dataset{ named } || [] };
+		my $has_dataset	= (scalar(@default) + scalar(@named));
 		if ($child->does('Attean::API::SPARQLQuerySerializable')) {
 			if ($self->subquery) {
 				my @tokens;
@@ -54,7 +80,11 @@ package Attean::Algebra::Query 0.012 {
 				push(@tokens, $r);
 				return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 			} else {
-				return $child->sparql_tokens;
+				my %args;
+				if ($has_dataset) {
+					$args{dataset}	= $self->dataset;
+				}
+				return $child->query_tokens(%args);
 			}
 		} else {
 			my $sel		= AtteanX::SPARQL::Token->keyword('SELECT');
@@ -65,7 +95,19 @@ package Attean::Algebra::Query 0.012 {
 			if ($self->subquery) {
 				push(@tokens, $l);
 			}
-			push(@tokens, $sel, $star, $where);
+			push(@tokens, $sel, $star);
+			if ($has_dataset) {
+				foreach my $i (@default) {
+					push(@tokens, $from);
+					push(@tokens, $i->sparql_tokens->elements);
+				}
+				foreach my $i (@named) {
+					push(@tokens, $from);
+					push(@tokens, $named);
+					push(@tokens, $i->sparql_tokens->elements);
+				}
+			}
+			push(@tokens, $where);
 			push(@tokens, $l);
 			push(@tokens, $child->sparql_tokens->elements);
 			push(@tokens, $r);
