@@ -87,10 +87,10 @@ package MyTestStore {
 	my $store	= MyTestStore->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= iri('http://example.org/');
-# 	my $t		= triple(variable('s'), iri('p'), literal('1'));
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
-	my $v		= triple(variable('s'), iri('q'), literal('xyz'));
-	my $w		= triple(variable('o'), iri('b'), iri('c'));
+# 	my $t		= triplepattern(variable('s'), iri('p'), literal('1'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
+	my $v		= triplepattern(variable('s'), iri('q'), literal('xyz'));
+	my $w		= triplepattern(variable('o'), iri('b'), iri('c'));
 
 	my $bgp1	= Attean::Algebra::BGP->new(triples => [$t]);
 	my $bgp2	= Attean::Algebra::BGP->new(triples => [$w]);

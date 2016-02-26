@@ -7,7 +7,7 @@ Attean::IteratorSequence - Iterator implementation backed by zero or more sub-it
 
 =head1 VERSION
 
-This document describes Attean::IteratorSequence version 0.011
+This document describes Attean::IteratorSequence version 0.012
 
 =head1 SYNOPSIS
 
@@ -43,14 +43,14 @@ iterator.
 
 =cut
 
-package Attean::IteratorSequence 0.011 {
+package Attean::IteratorSequence 0.012 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 	
 	with 'Attean::API::Iterator';
 	
-	has iterators => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Iterator']], required => 1);
+	has iterators => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Iterator']], default => sub { [] });
 	
 =item C<< next >>
 

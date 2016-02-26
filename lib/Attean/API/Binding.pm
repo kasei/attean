@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.011
+This document describes Attean::API::Binding version 0.012
 
 =head1 DESCRIPTION
 
@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.011 {
+package Attean::API::Binding 0.012 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
@@ -173,7 +173,7 @@ C<< $binding >>.
 	}
 }
 
-package Attean::API::TripleOrQuadPattern 0.011 {
+package Attean::API::TripleOrQuadPattern 0.012 {
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
 	use Attean::API::Query;
@@ -181,15 +181,6 @@ package Attean::API::TripleOrQuadPattern 0.011 {
 	use namespace::clean;
 
 	with 'Attean::API::SPARQLSerializable';
-	
-	sub sparql_tokens {
-		my $self	= shift;
-		my @tokens;
-		foreach my $t ($self->values) {
-			push(@tokens, $t->sparql_tokens->elements);
-		}
-		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
-	}
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;
@@ -262,12 +253,21 @@ package Attean::API::TripleOrQuadPattern 0.011 {
 	}
 }
 
-package Attean::API::TripleOrQuad 0.011 {
+package Attean::API::TripleOrQuad 0.012 {
 	use Moo::Role;
+	use List::MoreUtils qw(any);
+	use Carp;
 	with 'Attean::API::TripleOrQuadPattern';
+
+	sub BUILD {
+		my $self = shift;
+		if (any { $_->does('Attean::API::Variable') } $self->values) {
+			croak 'Use a Pattern class to construct when using variables';
+		}
+	}
 }
 
-package Attean::API::TriplePattern 0.011 {
+package Attean::API::TriplePattern 0.012 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
@@ -303,6 +303,15 @@ package Attean::API::TriplePattern 0.011 {
 		return $self->apply_statement(@_);
 	}
 
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		foreach my $t ($self->values) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
@@ -310,7 +319,7 @@ package Attean::API::TriplePattern 0.011 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Triple 0.011 {
+package Attean::API::Triple 0.012 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -345,9 +354,11 @@ package Attean::API::Triple 0.011 {
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
 }
 
-package Attean::API::QuadPattern 0.011 {
+package Attean::API::QuadPattern 0.012 {
 	use Scalar::Util qw(blessed);
+	use List::MoreUtils qw(zip);
 	use Moo::Role;
+	use namespace::clean;
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -370,6 +381,28 @@ package Attean::API::QuadPattern 0.011 {
 		return $self->apply_statement(@_);
 	}
 
+	sub as_triple_pattern {
+		my $self	= shift;
+		my @keys	= Attean::API::Triple->variables;
+		my @values	= $self->values;
+		@values		= @values[0 .. scalar(@keys)-1];
+		return Attean::TriplePattern->new(zip @keys, @values);
+	}
+
+	sub sparql_tokens {
+		my $self	= shift;
+		my @tokens;
+		push(@tokens, AtteanX::SPARQL::Token->keyword('GRAPH'));
+		push(@tokens, $self->graph->sparql_tokens->elements);
+		push(@tokens, AtteanX::SPARQL::Token->lbrace());
+		my @values	= ($self->values)[0..2];
+		foreach my $t (@values) {
+			push(@tokens, $t->sparql_tokens->elements);
+		}
+		push(@tokens, AtteanX::SPARQL::Token->rbrace());
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	requires 'subject';
 	requires 'predicate';
 	requires 'object';
@@ -378,7 +411,7 @@ package Attean::API::QuadPattern 0.011 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.011 {
+package Attean::API::Quad 0.012 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -389,7 +422,7 @@ package Attean::API::Quad 0.011 {
 			my $class	= ref($self);
 			my $term	= $self->$orig(@_);
 			my $err		= $type->validate($term);
-			die "${class}'s graph failed conformance check for role Attean::API::BlankOrIRI" if ($err);
+			die "${class}'s graph failed conformance check for role Attean::API::BlankOrIRI: $term" if ($err);
 			return $term;
 		};
 	}
@@ -405,7 +438,7 @@ package Attean::API::Quad 0.011 {
 }
 
 
-package Attean::API::Result 0.011 {
+package Attean::API::Result 0.012 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(HashRef);

@@ -8,7 +8,6 @@ use File::Slurp;
 use Scalar::Util qw(blessed);
 use Attean;
 use Attean::RDF;
-use Attean::SimpleQueryEvaluator;
 use RDF::Query;
 use Data::Dumper;
 use Getopt::Long;
@@ -21,9 +20,9 @@ if (scalar(@ARGV) < 1) {
 	print STDERR <<"END";
 Usage: $0 query.rq [data.ttl ...]
 
-Uses RDF::Query to parse the supplied SPARQL query, translates the parsed query
-form to an Attean::Algebra object, and executes it against a model containing
-the RDF data parsed from the data file using Attean::SimpleQueryEvaluator.
+Parses the supplied SPARQL query to an Attean::Algebra object,
+and executes it against a model containing the RDF data parsed
+from the data file(s) using Attean::SimpleQueryEvaluator.
 
 END
 	exit(0);
@@ -37,16 +36,20 @@ my $benchmark		= 0;
 my $print_sparql	= 0;
 my $print_plan		= 0;
 my $print_algebra	= 0;
+my $update			= 0;
 my $out_format		= '';
+my $short			= 0;
 my $result			= GetOptions(
 	"verbose"	=> \$verbose,
 	"debug"		=> \$debug,
+	"update"	=> \$update,
 	"benchmark"	=> \$benchmark,
 	'algebra'	=> \$print_algebra,
 	'plan'		=> \$print_plan,
-	"sparql"	=> \$print_sparql,
+	"q"			=> \$print_sparql,
 	'n'			=> \$dryrun,
 	'c'			=> \$check_syntax,
+	'short'		=> \$short,
 	'output=s'	=> \$out_format,
 );
 
@@ -56,7 +59,7 @@ try {
 	warn "Constructing model...\n" if ($verbose);
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
-	my $graph	= Attean::IRI->new('http://example.org/graph');
+	my $graph	= Attean::IRI->new('http://default-graph/');
 
 	my $map		= URI::NamespaceMap->new();
 	while (my $data = shift(@ARGV)) {
@@ -79,7 +82,10 @@ try {
 
 	warn "Parsing query...\n" if ($verbose);
 	my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
-	my $s 		= AtteanX::Parser::SPARQL->new(base => $base, namespaces => $map);
+	my $s 		= Attean->get_parser('SPARQL')->new(base => $base, namespaces => $map);
+	if ($update) {
+		$s->update(1);
+	}
 	open(my $fh, '<:utf8', $qfile) or die $!;
 	my $algebra;
 	eval {
@@ -90,7 +96,7 @@ try {
 	}
 
 	if ($print_algebra) {
-		print "# Algebra:\n" . $algebra->as_string;
+		print "# Algebra:\n" . $algebra->as_string . "\n";
 	}
 	
 	if ($check_syntax) {
@@ -99,32 +105,39 @@ try {
 	}
 	
 	if ($print_sparql) {
-		print "# $qfile\n";
+		print "# SPARQL:\n";
 		print $algebra->as_sparql;
+		print "\n";
 	}
 	
-	unless ($dryrun) {
+	if (not($dryrun) or $print_plan) {
 		my $default_graphs	= [$graph];
 		my $planner	= Attean::IDPQueryPlanner->new();
 		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
 		if ($print_plan) {
-			print "# Plan:\n" . $plan->as_string;
+			print "# Plan:\n" . $plan->as_string . "\n";
 		}
-		my $iter	= $plan->evaluate($model);
-		my $count	= 1;
-		my $class	= Attean->get_serializer($out_format);
-		if ($out_format and $class) {
-			my $s	= $class->new(namespaces => $map);
-			$s->serialize_iter_to_io(\*STDOUT, $iter);
-		} else {
-			while (my $r = $iter->next) {
-				printf("%3d %s\n", $count++, $r->as_string);
+		unless ($dryrun) {
+			my $mapper	= $short ? Attean::TermMap->short_blank_map : undef;
+			my $bmapper	= $short ? $mapper->binding_mapper : undef;
+			my $iter	= $plan->evaluate($model);
+			if ($bmapper) {
+				$iter	= $iter->map($bmapper);
+			}
+			my $count	= 1;
+			my $class	= Attean->get_serializer($out_format);
+			if ($out_format and $class) {
+				my $s	= $class->new(namespaces => $map);
+				$s->serialize_iter_to_io(\*STDOUT, $iter);
+			} else {
+				while (my $r = $iter->next) {
+					printf("%3d %s\n", $count++, $r->as_string);
+				}
 			}
 		}
 	}
 } catch {
 	my $exception	= $_;
 	warn "Caught error: $exception";
-	warn $exception->stack_trace;
 	exit(1);
 };

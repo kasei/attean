@@ -26,6 +26,11 @@ subtest 'serializer construction and metadata' => sub {
 	ok(exists $extensions{'rq'}, 'file_extensions');
 };
 
+subtest 'sparql token as_string' => sub {
+	my $t	= AtteanX::SPARQL::Token->fast_constructor(IRI, -1, -1, -1, -1, ['http://example.org/hello']);
+	is($t->as_string, 'IRI(http://example.org/hello)');
+};
+
 my $ser	= Attean->get_serializer('SPARQL')->new();
 subtest 'expected tokens: empty BGP tokens' => sub {
 	my $a	= Attean::Algebra::BGP->new(triples => []);
@@ -45,7 +50,7 @@ subtest 'expected tokens: 1-triple BGP tokens' => sub {
 };
 
 subtest 'expected tokens: 2-BGP join tokens' => sub {
-	my $t	= triple(variable('s'), iri('p'), literal('1'));
+	my $t	= triplepattern(variable('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
 	my $a	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
 	my $i	= $a->sparql_tokens;
@@ -57,8 +62,8 @@ subtest 'expected tokens: 2-BGP join tokens' => sub {
 };
 
 subtest 'expected tokens: 2-triple BGP tokens with language and datatype' => sub {
-	my $t	= triple(variable('s'), iri('p'), Attean::Literal->new(value => '1', datatype => iri('http://example.org/type')));
-	my $u	= triple(variable('s'), iri('q'), Attean::Literal->new(value => 'hello', language => 'en-US'));
+	my $t	= triplepattern(variable('s'), iri('p'), Attean::Literal->new(value => '1', datatype => iri('http://example.org/type')));
+	my $u	= triplepattern(variable('s'), iri('q'), Attean::Literal->new(value => 'hello', language => 'en-US'));
 	
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t, $u]);
 	my $a	= Attean::Algebra::Join->new( children => [$bgp] );
@@ -344,8 +349,8 @@ subtest 'expected tokens: union tokens' => sub {
 };
 
 subtest 'expected tokens: minus tokens' => sub {
-	my $lhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
-	my $rhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('2'))]);
+	my $lhs	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
+	my $rhs	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('2'))]);
 	my $a	= Attean::Algebra::Minus->new( children => [$lhs, $rhs] );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
@@ -355,8 +360,8 @@ subtest 'expected tokens: minus tokens' => sub {
 };
 
 subtest 'expected tokens: optional tokens' => sub {
-	my $lhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
-	my $rhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('2'))]);
+	my $lhs	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
+	my $rhs	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('2'))]);
 	my $a	= Attean::Algebra::LeftJoin->new( children => [$lhs, $rhs] );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
@@ -379,8 +384,8 @@ subtest 'expected tokens: table tokens' => sub {
 };
 
 subtest 'expected tokens: optional+filter tokens' => sub {
-	my $lhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
-	my $rhs	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('2'))]);
+	my $lhs	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
+	my $rhs	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('2'))]);
 	my $e		= Attean::ValueExpression->new( value => variable('s') );
 	my $expr	= Attean::FunctionExpression->new( operator => 'ISIRI', children => [$e] );
 	my $a	= Attean::Algebra::LeftJoin->new( children => [$lhs, $rhs], expression => $expr );
@@ -392,7 +397,7 @@ subtest 'expected tokens: optional+filter tokens' => sub {
 };
 
 subtest 'expected tokens: project' => sub {
-	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $bgp		= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
 	my $a		= Attean::Algebra::Project->new( children => [$bgp], variables => [variable('p')] );
 	my $i		= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
@@ -403,7 +408,7 @@ subtest 'expected tokens: project' => sub {
 };
 
 subtest 'expected tokens: comparator tokens' => sub {
-	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $bgp		= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
 	my $expr	= Attean::ValueExpression->new( value => variable('s') );
 	my $a		= Attean::Algebra::Comparator->new(ascending => 0, expression => $expr);
 	my $i		= $a->sparql_tokens;
@@ -414,7 +419,7 @@ subtest 'expected tokens: comparator tokens' => sub {
 };
 
 subtest 'expected tokens: comparator tokens' => sub {
-	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $bgp		= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
 	my $expr	= Attean::ValueExpression->new( value => variable('s') );
 	my $cmp		= Attean::Algebra::Comparator->new(ascending => 0, expression => $expr);
 	my $a		= Attean::Algebra::OrderBy->new( children => [$bgp], comparators => [$cmp] );
@@ -426,7 +431,7 @@ subtest 'expected tokens: comparator tokens' => sub {
 };
 
 subtest 'expected tokens: ASK tokens' => sub {
-	my $bgp		= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $bgp		= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
 	my $a		= Attean::Algebra::Ask->new( children => [$bgp] );
 	my $i		= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
@@ -437,8 +442,8 @@ subtest 'expected tokens: ASK tokens' => sub {
 };
 
 subtest 'expected tokens: CONSTRUCT tokens' => sub {
-	my $bgp	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
-	my $t	= triple(variable('s'), iri('q'), literal('2'));
+	my $bgp	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
+	my $t	= triplepattern(variable('s'), iri('q'), literal('2'));
 	my $a	= Attean::Algebra::Construct->new( children => [$bgp], triples => [$t] );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
@@ -449,7 +454,7 @@ subtest 'expected tokens: CONSTRUCT tokens' => sub {
 };
 
 subtest 'expected tokens: DESCRIBE tokens' => sub {
-	my $bgp	= Attean::Algebra::BGP->new(triples => [triple(variable('s'), iri('p'), literal('1'))]);
+	my $bgp	= Attean::Algebra::BGP->new(triples => [triplepattern(variable('s'), iri('p'), literal('1'))]);
 	my $a	= Attean::Algebra::Describe->new( children => [$bgp], terms => [variable('s'), iri('q')] );
 	my $i	= $a->sparql_tokens;
 	does_ok($i, 'Attean::API::Iterator');
@@ -460,8 +465,8 @@ subtest 'expected tokens: DESCRIBE tokens' => sub {
 };
 
 subtest 'expected tokens: project expressions tokens' => sub {
-	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
-	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
+	my $t1		= triplepattern(variable('s'), iri('p'), variable('o1'));
+	my $t2		= triplepattern(variable('s'), iri('q'), variable('o2'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
 	my $e1		= Attean::ValueExpression->new( value => variable('o1') );
 	my $e2		= Attean::ValueExpression->new( value => variable('o2') );
@@ -486,8 +491,8 @@ subtest 'expected tokens: project expressions tokens' => sub {
 };
 
 subtest 'expected tokens: binary filter tokens' => sub {
-	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
-	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
+	my $t1		= triplepattern(variable('s'), iri('p'), variable('o1'));
+	my $t2		= triplepattern(variable('s'), iri('q'), variable('o2'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
 	my $e1		= Attean::ValueExpression->new( value => variable('o1') );
 	my $e2		= Attean::ValueExpression->new( value => variable('o2') );
@@ -500,7 +505,7 @@ subtest 'expected tokens: binary filter tokens' => sub {
 };
 
 subtest 'expected tokens: function filter tokens' => sub {
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my $e		= Attean::ValueExpression->new( value => variable('o') );
 	my $expr	= Attean::FunctionExpression->new( operator => 'ISIRI', children => [$e] );
@@ -512,7 +517,7 @@ subtest 'expected tokens: function filter tokens' => sub {
 };
 
 subtest 'expected tokens: cast filter tokens' => sub {
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my $e		= Attean::ValueExpression->new( value => variable('o') );
 	my $expr	= Attean::CastExpression->new( datatype => iri('http://www.w3.org/2001/XMLSchema#integer'), children => [$e] );
@@ -524,9 +529,9 @@ subtest 'expected tokens: cast filter tokens' => sub {
 };
 
 subtest 'expected tokens: exists filter tokens' => sub {
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
-	my $u		= triple(variable('s'), iri('q'), literal('1'));
+	my $u		= triplepattern(variable('s'), iri('q'), literal('1'));
 	my $expr	= Attean::ExistsExpression->new( pattern => Attean::Algebra::BGP->new(triples => [$u]) );
 	my $a		= Attean::Algebra::Filter->new(children => [$bgp], expression => $expr);
 	my $i		= $a->sparql_tokens;
@@ -536,8 +541,8 @@ subtest 'expected tokens: exists filter tokens' => sub {
 };
 
 subtest 'expected tokens: non-projected extend tokens' => sub {
-	my $t1		= triple(variable('s'), iri('p'), variable('o1'));
-	my $t2		= triple(variable('s'), iri('q'), variable('o2'));
+	my $t1		= triplepattern(variable('s'), iri('p'), variable('o1'));
+	my $t2		= triplepattern(variable('s'), iri('q'), variable('o2'));
 	my $bgp1	= Attean::Algebra::BGP->new(triples => [$t1, $t2]);
 	my $e1		= Attean::ValueExpression->new( value => variable('o1') );
 	my $e2		= Attean::ValueExpression->new( value => variable('o2') );
@@ -552,7 +557,7 @@ subtest 'expected tokens: non-projected extend tokens' => sub {
 	};
 	
 	subtest 'extend within projection' => sub {
-		my $t3		= triple(variable('s'), iri('r'), variable('o3'));
+		my $t3		= triplepattern(variable('s'), iri('r'), variable('o3'));
 		my $bgp2		= Attean::Algebra::BGP->new(triples => [$t3]);
 
 		my $join	= Attean::Algebra::Join->new( children => [$extend, $bgp2] );
@@ -566,7 +571,7 @@ subtest 'expected tokens: non-projected extend tokens' => sub {
 };
 
 subtest 'expected tokens: aggregation' => sub {
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
 	my @aggs	= Attean::AggregateExpression->new(
@@ -612,12 +617,7 @@ END
 	} 'as_sparql returns a string on blank';
 };
 
-done_testing();
-exit;
-
-
-{
-	note('BGP canonicalization');
+subtest 'BGP canonicalization' => sub {
 	my $b		= blank('person');
 	my $rdf_type	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 	my $foaf_name	= iri('http://xmlns.com/foaf/0.1/name');
@@ -647,10 +647,10 @@ exit;
 	
 	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 'v003', 'type' => 'variable' }, '?knows' => { 'id' => 'v002', 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 'v001', 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
 	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
-}
+};
 
 {
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
 	my @aggs	= Attean::AggregateExpression->new(
@@ -671,7 +671,7 @@ exit;
 
 {
 	note('Aggregation');
-	my $t		= triple(variable('s'), iri('p'), variable('o'));
+	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
 	my @aggs	= Attean::AggregateExpression->new(
@@ -694,9 +694,9 @@ exit;
 	note('Ranking');
 	# RANKing example for 2 youngest students per school
 	my $bgp		= Attean::Algebra::BGP->new(triples => [
-		triple(variable('p'), iri('ex:name'), variable('name')),
-		triple(variable('p'), iri('ex:school'), variable('school')),
-		triple(variable('p'), iri('ex:age'), variable('age')),
+		triplepattern(variable('p'), iri('ex:name'), variable('name')),
+		triplepattern(variable('p'), iri('ex:school'), variable('school')),
+		triplepattern(variable('p'), iri('ex:age'), variable('age')),
 	]);
 	my @groups	= Attean::ValueExpression->new( value => variable('school') );
 	my $r_agg	= Attean::AggregateExpression->new(
@@ -724,6 +724,40 @@ exit;
 	my $s	= $rank->as_string;
 	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 }
+
+subtest 'expected tokens: modify update' => sub {
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } WHERE { ?s ?p ?o . }', 'DELETE');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g3> WHERE { ?s ?p ?o . }', 'DELETE + USING');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> USING <g4> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g3> USING <g4> WHERE { ?s ?p ?o . }', 'DELETE + Multiple USING');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> USING NAMED <g4> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g3> USING NAMED <g4> WHERE { ?s ?p ?o . }', 'DELETE + USING + USING NAMED');
+	}
+
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE { ?s ?p ?o . } USING <g3> USING NAMED <g4> USING <g1> USING NAMED <g3> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DELETE { ?s ?p ?o . } USING <g1> USING <g3> USING NAMED <g3> USING NAMED <g4> WHERE { ?s ?p ?o . }', 'DELETE + Multiple USING + Multiple USING NAMED');
+	}
+};
+
+subtest 'Regressions' => sub {
+	{
+	my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
+	ws_is($s, 'SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }', 'missing projection in serialization of some SPARQL queries #67');
+	}
+};
 
 done_testing();
 
@@ -766,9 +800,10 @@ sub is_token_of_type {
 sub ws_is {
 	my $got		= shift;
 	my $expect	= shift;
+	my $name	= shift;
 	for ($got, $expect) {
 		chomp;
 		s/\s+//sg;
 	}
-	is($got, $expect);
+	is($got, $expect, $name);
 }

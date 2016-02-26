@@ -28,8 +28,51 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010, my:v_0-011 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010, my:v_0-011, my:v_0-012 ;
 	.
+
+my:v_0-012
+	a					:Version ;
+	dc:issued			"2016-02-04"^^xsd:date ;
+	:revision			"0.012" ;
+	dcterms:replaces	my:v_0-011 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added AtteanX::Store::SimpleTripleStore." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::TermOrVariable->apply_binding method." ],
+			[ a dcs:Update ; rdfs:label "Add type checking to store get_triples and get_quads methods (#61)." ],
+			[ a dcs:Update ; rdfs:label "Improved triple model classes to allow adding and droping triple store graphs." ],
+			[ a dcs:Update ; rdfs:label "Update SPARQL/HTML serializer to implement AbbreviatingSerializer (#54, #63 from Zoran Varadinsky)." ],
+			[ a dcs:Update ; rdfs:label "Merge code paths for canonical NTriples serializer." ],
+			[ a dcs:Update ; rdfs:label "Update SPARQL parser to die on unimplemented Update syntax." ],
+			[ a dcs:Update ; rdfs:label "Serialize SPARQL/XML bindings in a stable order." ],
+			[ a dcs:Update ; rdfs:label "Improve use of SPARQL and Turtle token objects." ],
+			[ a dcs:Update ; rdfs:label "Update turtle serializer to consume Attean::API::AppendableSerializer." ],
+			[ a dcs:Update ; rdfs:label "Simplify cost estimation code for hash joins in Attean::API::QueryPlanner (#59 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Add planning support for DESCRIBE queries (#45)." ],
+			[ a dcs:Update ; rdfs:label "Added logging in QueryPlanner and TreeRewriter (#64 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Preserve in-scope variables in result iterators." ],
+			[ a dcs:Update ; rdfs:label "Improve attean_parse and attean_parse including preservation of prefix declarations where possible." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in Attean::Plan::Aggregate handling of COUNT(*) queries." ],
+			[ a dcs:Update ; rdfs:label "Fix bugs in SPARQL CSV and TSV serializers." ],
+			[ a dcs:Update ; rdfs:label "Fix AtteanX::Parser::RDFXML to properly use caller-supplied base IRI." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean::CodeIterator type checking to handle non-blessed items properly." ],
+			[ a dcs:Update ; rdfs:label "Fix sparql_tokens generation for integer and datatyped literals." ],
+			[ a dcs:Update ; rdfs:label "Fixed AtteanX::Parser::SPARQL to maintain its URI::NamespaceMap on prefix declarations." ],
+			[ a dcs:Update ; rdfs:label "Fix algebra generation for describe queries in SPARQL parser." ],
+			[ a dcs:Update ; rdfs:label "Avoid attempting to parse empty XML documents when passed in as a scalar (#60)." ],
+			[ a dcs:Update ; rdfs:label "Updated prerequisites in Makefile.PL and .travis.yml." ],
+			[ a dcs:Update ; rdfs:label "Improve POD and test coverage (#55; #61 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Improve regex escaping in t/algebra.t to silence warnings in perl 5.22." ],
+			[ a dcs:Update ; rdfs:label "Use Test::Modern." ],
+			[ a dcs:Update ; rdfs:label "    Fixed Attean::Algebra::Table to consume Attean::API::NullaryQueryTree instead of Attean::API::UnaryQueryTree." ],
+			[ a dcs:Update ; rdfs:label "    Die on attempts to add non-ground triples/quads to stores (#66)." ],
+			[ a dcs:Update ; rdfs:label "    Fixed type checks performed when ATTEAN_TYPECHECK is set." ],
+			[ a dcs:Update ; rdfs:label "    Throwing an error when Triple or Quad objects gets passed a variable (#65 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "    Improve error reporting for unexpected EOF in AtteanX::Parser::SPARQL." ]
+	]
+	.
+
 
 my:v_0-011
 	a					:Version ;

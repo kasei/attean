@@ -13,13 +13,16 @@ use AtteanX::Parser::Turtle;
 use AtteanX::Parser::Turtle::Constants;
 use Type::Tiny::Role;
 
-{
+subtest 'parser construction and metadata' => sub {
 	my $parser	= Attean->get_parser('Turtle')->new();
 	isa_ok($parser, 'AtteanX::Parser::Turtle');
+	is($parser->canonical_media_type, 'text/turtle', 'canonical_media_type');
+	my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
+	ok(exists $extensions{'ttl'}, 'file_extensions');
 	my $type	= $parser->handled_type;
 	can_ok($type, 'role');
 	is($type->role, 'Attean::API::Triple');
-}
+};
 
 {
 	my $turtle	= "<s> <p> 1, 2 .\n";
@@ -61,6 +64,14 @@ subtest 'escaping' => sub {
 	expect($l->get_token, STRING1S, ["火星"], 'unicode \\u and \\U escapes');
 };
 
+subtest 'parse_term_from_bytes' => sub {
+	my $parser	= Attean->get_parser('Turtle')->new();
+	my $turtle	= '"""hello"""@en';
+	my $term	= $parser->parse_term_from_bytes($turtle);
+	does_ok($term, 'Attean::API::Literal');
+	is($term->value, 'hello');
+	is($term->language, 'en');
+};
 
 done_testing();
 

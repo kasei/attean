@@ -23,10 +23,10 @@ does_ok($p, 'Attean::API::QueryPlanner');
 my $store	= AtteanX::Store::Memory->new();
 my $model	= Attean::MutableQuadModel->new( store => $store );
 my $graph	= iri('http://example.org/');
-my $t		= triple(variable('s'), iri('p'), literal('1'));
-my $u		= triple(variable('s'), iri('p'), variable('o'));
-my $v		= triple(variable('s'), iri('q'), blank('xyz'));
-my $w		= triple(variable('a'), iri('b'), iri('c'));
+my $t		= triplepattern(variable('s'), iri('p'), literal('1'));
+my $u		= triplepattern(variable('s'), iri('p'), variable('o'));
+my $v		= triplepattern(variable('s'), iri('q'), blank('xyz'));
+my $w		= triplepattern(variable('a'), iri('b'), iri('c'));
 
 subtest 'Empty BGP' => sub {
 	note("An empty BGP should produce the join identity table plan");
@@ -172,9 +172,9 @@ subtest 'Variable named graph (model with 0 named graphs)' => sub {
 };
 
 subtest 'Naive join planning should leave cartesian products intact' => sub {
-	my $t1		= triple(variable('s'), iri('p'), literal('1'));	# ?s
-	my $t2		= triple(variable('a'), iri('b'), variable('o'));	# ?a ?o
-	my $t3		= triple(variable('s'), iri('p'), variable('o'));	# ?s ?o
+	my $t1		= triplepattern(variable('s'), iri('p'), literal('1'));	# ?s
+	my $t2		= triplepattern(variable('a'), iri('b'), variable('o'));	# ?a ?o
+	my $t3		= triplepattern(variable('s'), iri('p'), variable('o'));	# ?s ?o
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t1, $t2, $t3]);
 	my $plan	= $p->plan_for_algebra($bgp, $model, [$graph]);
 	does_ok($plan, 'Attean::API::Plan::Join');

@@ -19,10 +19,16 @@ sub literal {
 	}
 }
 
-{
+subtest 'parser construction and metadata' => sub {
 	my $parser	= Attean->get_parser('SPARQLXML')->new();
-	isa_ok( $parser, 'AtteanX::Parser::SPARQLXML' );
-}
+	isa_ok($parser, 'AtteanX::Parser::SPARQLXML');
+	is($parser->canonical_media_type, 'application/sparql-results+xml', 'canonical_media_type');
+	my %extensions	= map { $_ => 1 } @{ $parser->file_extensions };
+	ok(exists $extensions{'srx'}, 'file_extensions');
+	my $type	= $parser->handled_type;
+	can_ok($type, 'role');
+	is($type->role, 'Attean::API::ResultOrTerm');
+};
 
 {
 	my $xml	= <<'END';

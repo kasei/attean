@@ -7,7 +7,7 @@ AtteanX::SPARQL::Token - Token objects used for parsing and serializing SPARQL
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Token version 0.011
+This document describes AtteanX::SPARQL::Token version 0.012
 
 =head1 SYNOPSIS
 
@@ -55,7 +55,7 @@ An array of values associated with the token (e.g. the integer value of an INT t
 
 =cut
 
-package AtteanX::SPARQL::Token;
+package AtteanX::SPARQL::Token 0.012;
 
 use Moo;
 use Types::Standard qw(ArrayRef Str);
@@ -70,6 +70,8 @@ has start_column => ( is => 'ro', );
 has line => ( is => 'ro', );
 has column => ( is => 'ro', );
 has args => ( is => 'ro', isa => ArrayRef[Str]);
+
+extends 'AtteanX::Parser::Turtle::Token';
 
 =item C<< value >>
 

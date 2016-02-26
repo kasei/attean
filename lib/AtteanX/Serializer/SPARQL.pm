@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQL - SPARQL Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQL version 0.011
+This document describes AtteanX::Serializer::SPARQL version 0.012
 
 =head1 SYNOPSIS
 
@@ -39,11 +39,12 @@ This document describes AtteanX::Serializer::SPARQL version 0.011
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQL 0.011 {
+package AtteanX::Serializer::SPARQL 0.012 {
 	use Moo;
 	use Data::Dumper;
 	use Encode qw(encode);
 	use Attean::ListIterator;
+	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(any);
 	use AtteanX::SPARQL::Constants;
 	use namespace::clean;
@@ -77,6 +78,7 @@ L<IO::Handle> object C<< $fh >>.
 		my $newline		= 1;
 		my $semicolon	= 0;
 		my $need_space	= 0;
+		my $last;
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
 			
@@ -88,13 +90,25 @@ L<IO::Handle> object C<< $fh >>.
 				if ($type == RBRACE) {
 					$io->print("\n");
 					$newline	= 1;
-				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE)$/) {
+				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE|USING)$/) {
+					$io->print("\n");
+					$newline	= 1;
+				} elsif ($type == KEYWORD and $t->value eq 'WHERE' and blessed($last) and ($last->type == PREFIXNAME or $last->type == IRI)) {
+					# this captures "USING <g> WHERE" and "USING NAMED <g> WHERE", forcing a newline before the "WHERE"
 					$io->print("\n");
 					$newline	= 1;
 				}
 			}
 			
 			if ($type == RBRACE) {
+				$indent--;
+			}
+			
+			if ($semicolon and $type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ADD|COPY|MOVE|USING|LOAD|DELETE|INSERT|WITH|CLEAR|DROP|CREATE)$/) {
+				# SPARQL Update use of a semicolon is different from its use in a Query;
+				# In queries, semicolon affects indentation. In updates, it's just a separator.
+				# So back out the indentation if it's being used as a separator here.
+				$semicolon	= 0;
 				$indent--;
 			}
 			
@@ -109,6 +123,12 @@ L<IO::Handle> object C<< $fh >>.
 			if ($type == KEYWORD) {
 				$io->print($t->value);
 				$need_space++;
+			} elsif ($type == IRI) {
+				# TODO: escape
+				$io->print('<');
+				$io->print($t->value);
+				$io->print('>');
+				$need_space++;
 			} elsif ($type == PREFIXNAME) {
 				my $args	= $t->args;
 				$io->print(join('', @$args));
@@ -116,12 +136,6 @@ L<IO::Handle> object C<< $fh >>.
 			} elsif ($type == BNODE) {
 				$io->print('_:');
 				$io->print($t->value);
-				$need_space++;
-			} elsif ($type == IRI) {
-				# TODO: escape
-				$io->print('<');
-				$io->print($t->value);
-				$io->print('>');
 				$need_space++;
 			} elsif ($type == LANG) {
 				$io->print('@');
@@ -196,6 +210,7 @@ L<IO::Handle> object C<< $fh >>.
 				}
 				$semicolon	= 1;
 			}
+			$last	= $t;
 		}
 		unless ($newline) {
 			$io->print("\n");

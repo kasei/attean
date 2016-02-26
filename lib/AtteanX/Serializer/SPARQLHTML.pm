@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLHTML - SPARQL Results HTML Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLHTML version 0.011
+This document describes AtteanX::Serializer::SPARQLHTML version 0.012
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::SPARQLHTML version 0.011
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLHTML 0.011 {
+package AtteanX::Serializer::SPARQLHTML 0.012 {
 	use Moo;
 	use Types::Standard qw(Str Bool ArrayRef);
 	use Encode qw(encode);
@@ -140,11 +140,26 @@ Serializes the L<Attean::API::Term> object as HTML.
 				s/&/&amp;/g;
 				s/</&lt;/g;
 			}
-			my $html	= $uri;
+			my $html = qq[<a href="${uri}">$uri</a>];
+
+			if (my $map = $self->namespaces) {
+				my $abr = $map->abbreviate($uri);
+
+				if ($abr) {
+					return qq[<a href="${uri}">$abr</a>];
+				} else {
+					return $html;
+				}
+
+			} else {
+			
+				return $html;
+			}
+
+
 # 			if ($link) {
 # 				$html	= qq[<a href="${uri}">$html</a>];
 # 			}
-			return $html;
 		} elsif ($node->does('Attean::API::Literal')) {
 			my $html	= $node->value;
 			for ($html) {
@@ -162,6 +177,7 @@ Serializes the L<Attean::API::Term> object as HTML.
 		}
 	}
 	with 'Attean::API::ResultSerializer';
+	with 'Attean::API::AbbreviatingSerializer';
 }
 
 1;

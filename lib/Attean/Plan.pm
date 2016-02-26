@@ -7,7 +7,7 @@ Attean::Plan - Representation of SPARQL query plan operators
 
 =head1 VERSION
 
-This document describes Attean::Plan version 0.011
+This document describes Attean::Plan version 0.012
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ Evaluates a quad pattern against the model.
 
 =cut
 
-package Attean::Plan::Quad 0.011 {
+package Attean::Plan::Quad 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf ArrayRef);
@@ -136,7 +136,7 @@ Evaluates a join (natural-, anti-, or left-) using a nested loop.
 
 =cut
 
-package Attean::Plan::NestedLoopJoin 0.011 {
+package Attean::Plan::NestedLoopJoin 0.012 {
 	use Moo;
 	use List::MoreUtils qw(all);
 	use namespace::clean;
@@ -225,7 +225,7 @@ Evaluates a join (natural-, anti-, or left-) using a hash join.
 
 =cut
 
-package Attean::Plan::HashJoin 0.011 {
+package Attean::Plan::HashJoin 0.012 {
 	use Moo;
 	use List::MoreUtils qw(all);
 	use namespace::clean;
@@ -366,7 +366,7 @@ package Attean::Plan::HashJoin 0.011 {
 
 =cut
 
-package Attean::Plan::Construct 0.011 {
+package Attean::Plan::Construct 0.012 {
 	use Moo;
 	use List::MoreUtils qw(all);
 	use Types::Standard qw(Str ArrayRef ConsumerOf InstanceOf);
@@ -457,7 +457,7 @@ package Attean::Plan::Construct 0.011 {
 
 =cut
 
-package Attean::Plan::Describe 0.011 {
+package Attean::Plan::Describe 0.012 {
 	use Moo;
 	use Attean::RDF;
 	use List::MoreUtils qw(all);
@@ -543,7 +543,7 @@ named variable binding.
 
 =cut
 
-package Attean::Plan::EBVFilter 0.011 {
+package Attean::Plan::EBVFilter 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ConsumerOf);
@@ -602,7 +602,7 @@ ordering.
 
 =cut
 
-package Attean::Plan::Merge 0.011 {
+package Attean::Plan::Merge 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str ArrayRef ConsumerOf);
@@ -631,7 +631,7 @@ Evaluates a set of sub-plans, returning the union of results.
 
 =cut
 
-package Attean::Plan::Union 0.011 {
+package Attean::Plan::Union 0.012 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
@@ -667,27 +667,30 @@ package Attean::Plan::Union 0.011 {
 		my $iter_variables	= $self->in_scope_variables;
 
 		return sub {
-			my $current	= shift(@children);
-			my $iter	= $current->();
-			return Attean::CodeIterator->new(
-				item_type => 'Attean::API::Result',
-				variables => $iter_variables,
-				generator => sub {
-					while (blessed($iter)) {
-						my $row	= $iter->next();
-						if ($row) {
-							return $row;
-						} else {
-							$current	= shift(@children);
-							if ($current) {
-								$iter	= $current->();
+			if (my $current	= shift(@children)) {
+				my $iter	= $current->();
+				return Attean::CodeIterator->new(
+					item_type => 'Attean::API::Result',
+					variables => $iter_variables,
+					generator => sub {
+						while (blessed($iter)) {
+							my $row	= $iter->next();
+							if ($row) {
+								return $row;
 							} else {
-								undef $iter;
+								$current	= shift(@children);
+								if ($current) {
+									$iter	= $current->();
+								} else {
+									undef $iter;
+								}
 							}
 						}
-					}
-				},
-			);
+					},
+				);
+			} else {
+				return Attean::ListIterator->new( item_type => 'Attean::API::Result', variables => [], values => [], );
+			}
 		};
 	}
 }
@@ -699,7 +702,7 @@ expressions, binding the produced values to new variables.
 
 =cut
 
-package Attean::Plan::Extend 0.011 {
+package Attean::Plan::Extend 0.012 {
 	use Moo;
 	use Encode;
 	use Data::UUID;
@@ -1293,7 +1296,7 @@ hash of already-seen results.
 
 =cut
 
-package Attean::Plan::HashDistinct 0.011 {
+package Attean::Plan::HashDistinct 0.012 {
 	use Moo;
 	use namespace::clean;
 	
@@ -1321,7 +1324,7 @@ filtering out sequential duplicates.
 
 =cut
 
-package Attean::Plan::Unique 0.011 {
+package Attean::Plan::Unique 0.012 {
 	use Moo;
 	use namespace::clean;
 	
@@ -1356,7 +1359,7 @@ number of results ("offset") and limiting the total number of returned results
 
 =cut
 
-package Attean::Plan::Slice 0.011 {
+package Attean::Plan::Slice 0.012 {
 	use Moo;
 	use Types::Standard qw(Int);
 	use namespace::clean;
@@ -1397,7 +1400,7 @@ of variable bindings in each result.
 
 =cut
 
-package Attean::Plan::Project 0.011 {
+package Attean::Plan::Project 0.012 {
 	use Moo;
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -1445,7 +1448,7 @@ package Attean::Plan::Project 0.011 {
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			}, $iter->item_type, $iter_variables);
+			}, $iter->item_type, variables => $iter_variables);
 		};
 	}
 	
@@ -1462,7 +1465,7 @@ package Attean::Plan::Project 0.011 {
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			}, $iter->item_type, $iter_variables);
+			}, $iter->item_type, variables => $iter_variables);
 		};
 	}
 }
@@ -1474,7 +1477,7 @@ sorting is applied.
 
 =cut
 
-package Attean::Plan::OrderBy 0.011 {
+package Attean::Plan::OrderBy 0.012 {
 	use Moo;
 	use Types::Standard qw(HashRef ArrayRef InstanceOf Bool Str);
 	use namespace::clean;
@@ -1544,7 +1547,7 @@ Evaluates a SPARQL query against a remove endpoint.
 
 =cut
 
-package Attean::Plan::Service 0.011 {
+package Attean::Plan::Service 0.012 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf Bool Str);
 	use namespace::clean;
@@ -1576,7 +1579,7 @@ Returns a constant set of results.
 
 =cut
 
-package Attean::Plan::Table 0.011 {
+package Attean::Plan::Table 0.012 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -1632,7 +1635,7 @@ package Attean::Plan::Table 0.011 {
 
 =cut
 
-package Attean::Plan::ALPPath 0.011 {
+package Attean::Plan::ALPPath 0.012 {
 	use Moo;
 	use Attean::TreeRewriter;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -1784,7 +1787,7 @@ package Attean::Plan::ALPPath 0.011 {
 	}
 }
 
-package Attean::Plan::ZeroOrOnePath 0.011 {
+package Attean::Plan::ZeroOrOnePath 0.012 {
 	use Moo;
 	use Attean::TreeRewriter;
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -1883,7 +1886,7 @@ results were produced by evaluating the sub-plan.
 
 =cut
 
-package Attean::Plan::Exists 0.011 {
+package Attean::Plan::Exists 0.012 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -1913,7 +1916,7 @@ package Attean::Plan::Exists 0.011 {
 
 =cut
 
-package Attean::Plan::Aggregate 0.011 {
+package Attean::Plan::Aggregate 0.012 {
 	use Moo;
 	use Encode;
 	use Data::UUID;
@@ -1965,7 +1968,15 @@ package Attean::Plan::Aggregate 0.011 {
 		if ($op eq 'COUNT') {
 			my $count	= 0;
 			foreach my $r (@$rows) {
-				$count++;
+				if ($e) {
+					my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+					if ($term) {
+						$count++;
+					}
+				} else {
+					# This is the special-case branch for COUNT(*)
+					$count++;
+				}
 			}
 			return Attean::Literal->new(value => $count, datatype => 'http://www.w3.org/2001/XMLSchema#integer');
 		} elsif ($op eq 'SUM') {
@@ -2135,233 +2146,228 @@ package Attean::Plan::Aggregate 0.011 {
 	}
 }
 
-# =item * L<Attean::Algebra::Ask>
-# 
-# =cut
-# 
-# package Attean::Algebra::Ask 0.011 {
-# 	use Moo;
-# 	sub in_scope_variables { return; }
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub algebra_as_string { return 'Ask' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}ASK {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Construct>
-# 
-# =cut
-# 
-# package Attean::Algebra::Construct 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
-# 	sub in_scope_variables { return qw(subject predicate object); }
-# 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-# 	sub tree_attributes { return qw(triples) };
-# 	sub algebra_as_string { return 'Construct' }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}CONSTRUCT {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->triples })
-# 			. "${indent}} WHERE {\n"
-# 			. join('', map { $_->as_sparql( %args, level => $level+1 ) } @{ $self->children })
-# 			. "${indent}}\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Path>
-# 
-# =cut
-# 
-# package Attean::Algebra::Path 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	sub in_scope_variables {
-# 		my $self	= shift;
-# 		my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } ($self->subject, $self->object);
-# 		return Set::Scalar->new(@vars)->elements;
-# 	}
-# 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
-# 	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
-# 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
-# 	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
-# 	sub tree_attributes { return qw(subject path object) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my %args	= @_;
-# 		my $level	= $args{level} // 0;
-# 		my $sp		= $args{indent} // '    ';
-# 		my $indent	= $sp x $level;
-# 		
-# 		return "${indent}"
-# 			. $self->subject->as_sparql
-# 			. ' '
-# 			. $self->path->as_sparql
-# 			. ' '
-# 			. $self->object->as_sparql
-# 			. "\n";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::Group>
-# 
-# =cut
-# 
-# =item * L<Attean::Algebra::NegatedPropertySet>
-# 
-# =cut
-# 
-# package Attean::Algebra::NegatedPropertySet 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ArrayRef ConsumerOf);
-# 	with 'Attean::API::PropertyPath';
-# 	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
-# 	sub as_string {
-# 		my $self	= shift;
-# 		return sprintf("!(%s)", join('|', map { $_->ntriples_string } @{ $self->predicates }));
-# 	}
-# 	sub algebra_as_string { return 'NPS' }
-# 	sub tree_attributes { return qw(predicates) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		return "!(" . join('|', map { $_->as_sparql } @{$self->predicates}) . ")";
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::PredicatePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::PredicatePath 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::PropertyPath';
-# 	has 'predicate' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
-# 	sub as_string {
-# 		my $self	= shift;
-# 		return $self->predicate->ntriples_string;
-# 	}
-# 	sub algebra_as_string {
-# 		my $self	= shift;
-# 		return 'Property Path ' . $self->as_string;
-# 	}
-# 	sub tree_attributes { return qw(predicate) };
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		return $self->predicate->as_sparql;
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::InversePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::InversePath 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub prefix_name { return "^" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return '^' . $self->path->as_sparql;
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::SequencePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::SequencePath 0.011 {
-# 	use Moo;
-# 	with 'Attean::API::NaryPropertyPath';
-# 	sub separator { return "/" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my @paths	= @{ $self->children };
-# 		return '(' . join('/', map { $_->as_sparql } @paths) . ')';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::AlternativePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::AlternativePath 0.011 {
-# 	use Moo;
-# 	with 'Attean::API::NaryPropertyPath';
-# 	sub separator { return "|" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my @paths	= @{ $self->children };
-# 		return '(' . join('|', map { $_->as_sparql } @paths) . ')';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::ZeroOrMorePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::ZeroOrMorePath 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub postfix_name { return "*" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return $self->path->as_sparql . '*';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::OneOrMorePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::OneOrMorePath 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub postfix_name { return "+" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return $self->path->as_sparql . '+';
-# 	}
-# }
-# 
-# =item * L<Attean::Algebra::ZeroOrOnePath>
-# 
-# =cut
-# 
-# package Attean::Algebra::ZeroOrOnePath 0.011 {
-# 	use Moo;
-# 	use Types::Standard qw(ConsumerOf);
-# 	with 'Attean::API::UnaryPropertyPath';
-# 	sub postfix_name { return "?" }
-# 	sub as_sparql {
-# 		my $self	= shift;
-# 		my ($path)	= @{ $self->children };
-# 		return $self->path->as_sparql . '?';
-# 	}
-# }
-# 
+package Attean::Plan::Sequence 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::QueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
 
+	sub plan_as_string { return 'Sequence'; }
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my @children	= map { $_->impl($model) } @{ $self->children };
+		return sub {
+			foreach my $child (@children) {
+				my $iter	= $child->();
+				$iter->elements;
+			}
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+package Attean::Plan::Clear 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Term']]);
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x (1+$level);
+		my $s		= sprintf("Clear { %d graphs }", scalar(@{ $self->graphs }));
+		foreach my $g (@{ $self->graphs }) {
+			my $name	= $g->as_sparql;
+			chomp($name);
+			$s	.= "\n-${indent} $name";
+		}
+		return $s;
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $graphs	= $self->graphs;
+		return sub {
+			foreach my $g (@$graphs) {
+				$model->clear_graph($g);
+			}
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+package Attean::Plan::Drop 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf ArrayRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Term']]);
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x (1+$level);
+		my $s		= sprintf("Drop { %d graphs }", scalar(@{ $self->graphs }));
+		foreach my $g (@{ $self->graphs }) {
+			$s	.= "\n-${indent} " . $g->as_sparql;
+		}
+		return $s;
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $graphs	= $self->graphs;
+		return sub {
+			foreach my $g (@$graphs) {
+				$model->drop_graph($g);
+			}
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+package Attean::Plan::TripleTemplateToModelQuadMethod 0.012 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ConsumerOf Str ArrayRef HashRef);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'order' => (is => 'ro', isa => ArrayRef[Str], required => 1);
+	has 'patterns' => (is => 'ro', isa => HashRef[ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']]], required => 1);
+	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::Term']);
+
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x (1+$level);
+		my $s		= sprintf("Template-to-Model { Default graph: %s }", $self->graph->as_string);
+		foreach my $method (@{ $self->order }) {
+			my $pattern	= $self->patterns->{ $method };
+			$s	.= "\n-${indent} Method: ${method}";
+			foreach my $p (@$pattern) {
+				$s	.= "\n-${indent}   " . $p->as_string;
+			}
+		}
+		return $s;
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $child	= $self->children->[0]->impl($model);
+		
+		my $graph	= $self->graph;
+		my @order	= @{ $self->order };
+		my $method	= shift(@order);
+		my $pattern	= $self->patterns->{ $method };
+
+		return sub {
+			my $iter	= $child->();
+			my @results;
+			while (my $t = $iter->next) {
+				if (scalar(@order)) {
+					push(@results, $t);
+				}
+				foreach my $p (@$pattern) {
+					my $q		= $p->apply_bindings($t);
+					my $quad	= $q->does('Attean::API::QuadPattern') ? $q : $q->as_quad_pattern($graph);
+					if ($quad->is_ground) {
+						# warn "# $method: " . $quad->as_string . "\n";
+						$model->$method($quad->as_quad);
+					} else {
+						# warn "not ground: " . $quad->as_string;
+					}
+				}
+			}
+			foreach my $method (@order) {
+				my $pattern	= $self->patterns->{ $method };
+				foreach my $t (@results) {
+					foreach my $p (@$pattern) {
+						my $q		= $p->apply_bindings($t);
+						my $quad	= $q->does('Attean::API::QuadPattern') ? $q : $q->as_quad_pattern($graph);
+						if ($quad->is_ground) {
+							# warn "# $method: " . $quad->as_string . "\n";
+							$model->$method($quad->as_quad);
+						} else {
+							# warn "not ground: " . $quad->as_string;
+						}
+					}
+				}
+			}
+			return Attean::ListIterator->new(values => [Attean::Literal->integer($model->size)], item_type => 'Attean::API::Term');
+		};
+	}
+}
+
+package Attean::Plan::Load 0.012 {
+	use Moo;
+	use Encode;
+	use LWP::UserAgent;
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(Bool Str);
+	use namespace::clean;
+	
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::UnionScopeVariablesPlan';
+
+	has 'silent' => (is => 'ro', isa => Bool, default => 0);
+	has 'url' => (is => 'ro', isa => Str);
+
+	sub plan_as_string {
+		my $self	= shift;
+		return sprintf("Load { %s }", $self->url);
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $url		= $self->url;
+		my $ua		= LWP::UserAgent->new();
+		my $silent	= $self->silent;
+		my $accept	= Attean->acceptable_parsers( handles => 'Attean::API::Triple' );
+		$ua->default_headers->push_header( 'Accept' => $accept );
+		return sub {
+			my $resp	= $ua->get( $url );
+			if ($resp->is_success) {
+				my $ct		= $resp->header('Content-Type');
+				if (my $pclass = Attean->get_parser( media_type => $ct )) {
+					my $p		= $pclass->new();
+					my $str		= $resp->decoded_content;
+					my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
+					my $iter	= $p->parse_iter_from_bytes( $bytes );
+					return $iter;
+				}
+			}
+			
+			if ($silent) {
+				return Attean::ListIterator->new(values => [], item_type => 'Attean::API::Triple');
+			} else {
+				die "Failed to load url: " . $resp->status_line;
+			}
+		};
+	}
+}
+
+# Create(iri)
 
 1;
 

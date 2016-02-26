@@ -4,7 +4,7 @@ AtteanX::Parser::RDFXML - RDF/XML Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::RDFXML version 0.011
+This document describes AtteanX::Parser::RDFXML version 0.012
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ A string prefix for identifiers generated for blank nodes.
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::RDFXML 0.011 {
+package AtteanX::Parser::RDFXML 0.012 {
 	use Moo;
 	use Types::Standard qw(Str Object);
 	use Attean;
@@ -129,7 +129,9 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 			if (ref($data)) {
 				$p->parse_file($data);
 			} else {
-				$p->parse_string($data);
+				if (length($data) > 0) {
+					$p->parse_string($data);
+				}
 			}
 		};
 		

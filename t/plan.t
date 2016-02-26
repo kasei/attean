@@ -21,11 +21,11 @@ my $store	= AtteanX::Store::Memory->new();
 my $model	= Attean::MutableQuadModel->new( store => $store );
 
 my $graph	= iri('http://example.org/');
-my $t		= triple(variable('s'), iri('p'), literal('1'));
-my $u		= triple(variable('s'), iri('p'), variable('o'));
-my $v		= triple(variable('s'), iri('q'), blank('xyz'));
-my $w		= triple(variable('a'), iri('b'), iri('c'));
-my $x		= triple(variable('a'), variable('b'), iri('c'));
+my $t		= triplepattern(variable('s'), iri('p'), literal('1'));
+my $u		= triplepattern(variable('s'), iri('p'), variable('o'));
+my $v		= triplepattern(variable('s'), iri('q'), blank('xyz'));
+my $w		= triplepattern(variable('a'), iri('b'), iri('c'));
+my $x		= triplepattern(variable('a'), variable('b'), iri('c'));
 
 sub test_triples_for_connected_plan {
 	my $triples		= shift;

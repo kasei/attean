@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLLex - SPARQL Lexer
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLLex version 0.011
+This document describes AtteanX::Parser::SPARQLLex version 0.012
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ This document describes AtteanX::Parser::SPARQLLex version 0.011
 
 =cut
 
-package AtteanX::Parser::SPARQLLex 0.011 {
+package AtteanX::Parser::SPARQLLex 0.012 {
 	use utf8;
 	use Moo;
 	use Attean;
@@ -104,7 +104,7 @@ the SPARQL query/update read from the L<IO::Handle> object C<< $fh >>.
 	}
 }
 
-package AtteanX::Parser::SPARQLLex::Iterator 0.011 {
+package AtteanX::Parser::SPARQLLex::Iterator 0.012 {
 	use utf8;
 	use Moo;
 	use Attean;
@@ -244,14 +244,15 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.011 {
 		my $self	= shift;
 		my $r		= shift;
 		my $ttype	= shift;
-		my $convert	= shift // sub { shift };
+		my $convert	= shift;
 		my $extend	= $self->extend;
 		push(@$extend, sub {
 			my $l	= shift;
 			
 			if ($l->buffer =~ /^$r\b/) {
 				my $value	= $self->read_length($+[0]);
-				return $l->new_token($ttype, $l->start_line, $l->start_column, $convert->($value));
+				my $c		= $convert ? $convert->($value) : $value;
+				return $l->new_token($ttype, $l->start_line, $l->start_column, $c);
 			}
 		});
 	}

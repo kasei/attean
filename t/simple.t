@@ -75,6 +75,16 @@ use Attean;
 }
 
 {
+	note('Attean::Triple with pattern');
+	my $s	= Attean::Variable->new('x');
+	my $p	= Attean::IRI->new('http://example.org/p');
+	my $o	= Attean::Literal->new(value => 'foo', language => 'en-US');
+	my $s2 = Attean::IRI->new('http://example.org/o');
+	dies_ok { my $t1 = Attean::Triple->new($s, $p, $o); } 'croaks on a variable';
+	dies_ok { my $t2 = Attean::Triple->new($s2, $p, $s); } 'croaks on a variable shuffled';
+}
+
+{
 	note('Attean::Result');
 	my $iri	= Attean::IRI->new('http://example.org/p');
 	my $literal	= Attean::Literal->integer(123);

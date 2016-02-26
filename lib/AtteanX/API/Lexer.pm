@@ -7,7 +7,7 @@ AtteanX::API::Lexer - Role defining common functionality for lexers.
 
 =head1 VERSION
 
-This document describes AtteanX::API::Lexer version 0.011
+This document describes AtteanX::API::Lexer version 0.012
 
 =head1 DESCRIPTION
 
@@ -41,7 +41,7 @@ of characters, constant strings, and fixed-length buffers.
 
 =cut
 
-package AtteanX::API::Lexer 0.011 {
+package AtteanX::API::Lexer 0.012 {
 	use strict;
 	use Moo::Role;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
@@ -100,29 +100,6 @@ Throw an error if C<< $char >> is not at the start of the buffer.
 		my $char	= shift;
 		my $c		= $self->get_char;
 		$self->_throw_error("Expected '$char' but got '$c'") if ($c ne $char);
-		return $c;
-	}
-
-=item C<< get_char_fill_buffer >>
-
-Consume and return a single character from the buffer.
-If the buffer is empty, fill it first.
-
-=cut
-
-	sub get_char_fill_buffer {
-		my $self	= shift;
-		if (length($self->{buffer}) == 0) {
-			$self->fill_buffer;
-			return if (length($self->{buffer}) == 0);
-		}
-		my $c		= substr($self->{buffer}, 0, 1, '');
-		if ($c eq "\n") {
-			$self->{line}	= 1+$self->{line};
-			$self->{column}	= 1;
-		} else {
-			$self->{column}	= 1+$self->{column};
-		}
 		return $c;
 	}
 

@@ -7,19 +7,34 @@ AtteanX::Parser::SPARQL - SPARQL 1.1 Parser.
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQL version 0.011.
+This document describes AtteanX::Parser::SPARQL version 0.012.
 
 =head1 SYNOPSIS
 
  use AtteanX::Parser::SPARQL;
- my $parser	= AtteanX::Parser::SPARQL->new();
- my $algbrea = $parser->parse($sparql, $base_uri);
+ my $algbrea = AtteanX::Parser::SPARQL->parse($sparql, $base_uri);
  # or:
+ my $parser	= AtteanX::Parser::SPARQL->new();
  my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
-
+ 
+ # or to allow parsing of SPARQL 1.1 Updates:
+ 
+ my $algbrea = AtteanX::Parser::SPARQL->parse_update($sparql, $base_uri);
+ # or:
+ my $parser = AtteanX::Parser::SPARQL->new(update => 1);
+ my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
+ 
 =head1 DESCRIPTION
 
-...
+This module implements a recursive-descent parser for SPARQL 1.1 using the
+L<AtteanX::Parser::SPARQLLex> tokenizer. Successful parsing results in an
+object whose type is one of: L<Attean::Algebra::Query>,
+L<Attean::Algebra::Update>, or L<Attean::Algebra::Sequence>.
+
+=head1 ROLES
+
+This class consumes L<Attean::API::Parser>, L<Attean::API::AtOnceParser>, and
+L<Attean::API::AbbreviatingParser>.
 
 =head1 ATTRIBUTES
 
@@ -55,7 +70,7 @@ This document describes AtteanX::Parser::SPARQL version 0.011.
 
 =cut
 
-package AtteanX::Parser::SPARQL 0.011;
+package AtteanX::Parser::SPARQL 0.012;
 
 use strict;
 use warnings;
@@ -91,7 +106,7 @@ sub media_types {
 }
 
 sub handled_type {
-	state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::Algebra');
+	state $ITEM_TYPE = Type::Tiny::Role->new(role => 'Attean::API::Algebra');
 	return $ITEM_TYPE;
 }
 
@@ -113,9 +128,31 @@ sub _configure_lexer {
 	return $l;
 }
 
+=item C<< parse ( $sparql ) >>
+
+Parse the C<< $sparql >> query string and return the resulting
+L<Attean::API::Algebra> object.
+
+=cut
+
 sub parse {
 	my $self	= shift;
 	my $parser	= ref($self) ? $self : $self->new();
+	my ($algebra) = $parser->parse_list_from_bytes(@_);
+	return $algebra;
+}
+
+=item C<< parse_update ( $sparql ) >>
+
+Parse the C<< $sparql >> update string and return the resulting
+L<Attean::API::Algebra> object.
+
+=cut
+
+sub parse_update {
+	my $self	= shift;
+	my $parser	= ref($self) ? $self : $self->new();
+	$parser->update(1);
 	my ($algebra) = $parser->parse_list_from_bytes(@_);
 	return $algebra;
 }
@@ -154,27 +191,19 @@ sub parse_list_from_bytes {
 	return $a;
 }
 
-=item C<< parse ( $update_flag ) >>
-
-If C<< $update_flag >> is true, the query will be parsed allowing
-SPARQL 1.1 Update statements.
-
-=cut
-
 sub _parse {
 	my $self	= shift;
 	
-	my $t		= $self->lexer->peek;
-	unless (defined($t)) {
-		die "No query string found to parse";
+	unless ($self->update) {
+		my $t		= $self->lexer->peek;
+		unless (defined($t)) {
+			die "No query string found to parse";
+		}
 	}
-
-	my $update	= shift || 0;
 
 	$self->_stack([]);
 	$self->filters([]);
 	$self->_pattern_container_stack([]);
-	$self->update($update);
 	my $triples								= $self->_push_pattern_container();
 	my $build								= { sources => [], triples => $triples };
 	$self->build($build);
@@ -198,6 +227,7 @@ sub _RW_Query {
 	$self->_Prologue;
 
 	my $read_query	= 0;
+	my $update		= 0;
 	while (1) {
 		if ($self->_optional_token(KEYWORD, 'SELECT')) {
 			$self->_SelectQuery();
@@ -212,29 +242,34 @@ sub _RW_Query {
 			$self->_AskQuery();
 			$read_query++;
 		} elsif ($self->_test_token(KEYWORD, 'CREATE')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "CREATE GRAPH update forbidden in read-only queries";
 			}
+			$update++;
 			$self->_CreateGraph();
 		} elsif ($self->_test_token(KEYWORD, 'DROP')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "DROP GRAPH update forbidden in read-only queries";
 			}
+			$update++;
 			$self->_DropGraph();
 		} elsif ($self->_test_token(KEYWORD, 'LOAD')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "LOAD update forbidden in read-only queries"
 			}
+			$update++;
 			$self->_LoadUpdate();
 		} elsif ($self->_test_token(KEYWORD, 'CLEAR')) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "CLEAR GRAPH update forbidden in read-only queries";
 			}
+			$update++;
 			$self->_ClearGraphUpdate();
 		} elsif ($self->_test_token(KEYWORD, qr/^(WITH|INSERT|DELETE)/)) {
-			unless ($self->{update}) {
+			unless ($self->update) {
 				die "INSERT/DELETE update forbidden in read-only queries";
 			}
+			$update++;
 			my ($graph);
 			if ($self->_optional_token(KEYWORD, 'WITH')) {
 				$self->{build}{custom_update_dataset}	= 1;
@@ -243,7 +278,7 @@ sub _RW_Query {
 			}
 			if ($self->_optional_token(KEYWORD, 'INSERT')) {
 				if ($self->_optional_token(KEYWORD, 'DATA')) {
-					unless ($self->{update}) {
+					unless ($self->update) {
 						die "INSERT DATA update forbidden in read-only queries";
 					}
 					$self->_InsertDataUpdate();
@@ -252,7 +287,7 @@ sub _RW_Query {
 				}
 			} elsif ($self->_optional_token(KEYWORD, 'DELETE')) {
 				if ($self->_optional_token(KEYWORD, 'DATA')) {
-					unless ($self->{update}) {
+					unless ($self->update) {
 						die "DELETE DATA update forbidden in read-only queries";
 					}
 					$self->_DeleteDataUpdate();
@@ -261,21 +296,23 @@ sub _RW_Query {
 				}
 			}
 		} elsif ($self->_test_token(KEYWORD, 'COPY')) {
-			$self->_CopyUpdate();
+			$update++;
+			$self->_AddCopyMoveUpdate('COPY');
 		} elsif ($self->_test_token(KEYWORD, 'MOVE')) {
-			$self->_MoveUpdate();
+			$update++;
+			$self->_AddCopyMoveUpdate('MOVE');
 		} elsif ($self->_test_token(KEYWORD, 'ADD')) {
-			$self->_AddUpdate();
+			$update++;
+			$self->_AddCopyMoveUpdate('ADD');
 		} elsif ($self->_test_token(SEMICOLON)) {
 			$self->_expected_token(SEMICOLON);
 			next if ($self->_Query_test);
 			last;
 		} else {
-			my $l		= Log::Log4perl->get_logger("rdf.query");
-			if ($l->is_debug) {
-				$l->logcluck("Syntax error: Expected query type with input <<$self->{tokens}>>");
+			if ($self->update and not $self->_peek_token) {
+				last;
 			}
-			die 'Syntax error: Expected query type';
+			die "Syntax error: Expected query type with input <<$self->{tokens}>>";
 		}
 
 		last if ($read_query);
@@ -296,11 +333,23 @@ sub _RW_Query {
 
 	if ($count == 0 or $count > 1) {
 		my @patterns	= splice(@{ $self->{build}{triples} });
+		my %seen;
+		foreach my $p (@patterns) {
+			my @blanks	= $p->blank_nodes;
+			foreach my $b (@blanks) {
+				if ($seen{$b->value}++) {
+					die "Cannot re-use a blank node label in multiple update operations in a single request";
+				}
+			}
+		}
 		my $pattern		= Attean::Algebra::Sequence->new( children => \@patterns );
 		$self->_check_duplicate_blanks($pattern);
 		$self->{build}{triples}	= [ $pattern ];
 	}
-
+	
+	my $algebra	= $self->{build}{triples}[0];
+	my $top_class	= $update ? 'Attean::Algebra::Update' : 'Attean::Algebra::Query';
+	$self->{build}{triples}[0]	= $top_class->new( children => [$algebra] );
 # 	my %query	= (%p, %body);
 # 	return \%query;
 }
@@ -355,13 +404,10 @@ sub _InsertDataUpdate {
 	my $self	= shift;
 	$self->_expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
-	$self->_ModifyTemplate();
-	my $data	= $self->_remove_pattern;
+	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
-	
-	my $empty	= Attean::Algebra::BGP->new();
-	die "unimplemented";
-	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $empty, undef, 1);
+
+	my $insert	= Attean::Algebra::Modify->new(insert => \@triples);
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -371,13 +417,10 @@ sub _DeleteDataUpdate {
 	$self->_expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
 	local($self->{__no_bnodes})		= "DELETE DATA block";
-	$self->_ModifyTemplate();
-	my $data	= $self->_remove_pattern;
+	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
 	
-	my $empty	= Attean::Algebra::BGP->new();
-	die "unimplemented";
-	my $delete	= RDF::Query::Algebra::Update->new($data, undef, $empty, undef, 1);
+	my $delete	= Attean::Algebra::Modify->new(delete => \@triples);
 	$self->_add_patterns( $delete );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -386,13 +429,12 @@ sub _InsertUpdate {
 	my $self	= shift;
 	my $graph	= shift;
 	$self->_expected_token(LBRACE);
-	$self->_ModifyTemplate();
-	my $data	= $self->_remove_pattern;
+	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
+	
 	if ($graph) {
-		$data	= Attean::Algebra::Graph->new( children => [$data], graph => $graph );
+		@triples	= map { $_->as_quad_pattern($graph) } @triples;
 	}
-
 
 	my %dataset;
 	while ($self->_optional_token(KEYWORD, 'USING')) {
@@ -404,7 +446,7 @@ sub _InsertUpdate {
 		$self->_IRIref;
 		my ($iri)	= splice( @{ $self->{_stack} } );
 		if ($named) {
-			$dataset{named}{$iri->uri_value}	= $iri;
+			$dataset{named}{$iri->value}	= $iri;
 		} else {
 			push(@{ $dataset{default} }, $iri );
 		}
@@ -422,13 +464,7 @@ sub _InsertUpdate {
 
 	my $ggp	= $self->_remove_pattern;
 
-	my @ds_keys	= keys %dataset;
-	unless (@ds_keys) {
-		$dataset{ default }	= [$graph || ()];
-	}
-	
-	die "unimplemented";
-	my $insert	= RDF::Query::Algebra::Update->new(undef, $data, $ggp, \%dataset, 0);
+	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples, dataset => \%dataset );
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -436,31 +472,59 @@ sub _InsertUpdate {
 sub _DeleteUpdate {
 	my $self	= shift;
 	my $graph	= shift;
-	my ($delete_data, $insert_data);
 	
 	my %dataset;
-	my $delete_where	= 0;
 	if ($self->_optional_token(KEYWORD, 'WHERE')) {
 		if ($graph) {
 			die "Syntax error: WITH clause cannot be used with DELETE WHERE operations";
 		}
-		$delete_where	= 1;
+		$self->_expected_token(LBRACE);
+		my @st	= $self->_ModifyTemplate();
+		$self->_expected_token(RBRACE);
+		my @patterns;
+		my @triples;
+		my @quads;
+		my @blanks	= grep { $_->does('Attean::API::Blank') } map { $_->values } @st;
+		if (scalar(@blanks) > 0) {
+			die "Cannot use blank nodes in a DELETE pattern";
+		}
+		foreach my $s (@st) {
+			if ($s->does('Attean::API::QuadPattern')) {
+				push(@quads, $s);
+				my $tp	= $s->as_triple_pattern;
+				my $bgp	= Attean::Algebra::BGP->new( triples => [$tp] );
+				push(@patterns, Attean::Algebra::Graph->new( graph => $s->graph, children => [$bgp] ));
+			} else {
+				push(@triples, $s);
+			}
+		}
+		push(@patterns, Attean::Algebra::BGP->new( triples => \@triples ));
+		my $ggp	= Attean::Algebra::Join->new( children => \@patterns );
+		my $update	= Attean::Algebra::Modify->new( children => [$ggp], delete => [@st]);
+		$self->_add_patterns( $update );
+		$self->{build}{method}		= 'UPDATE';
+		return;
 	} else {
+		my @delete_triples;
 		{
 			local($self->{__no_bnodes})		= "DELETE block";
 			$self->_expected_token(LBRACE);
-			$self->_ModifyTemplate( $graph );
+			@delete_triples	= $self->_ModifyTemplate( $graph );
 			$self->_expected_token(RBRACE);
 		}
-		$delete_data	= $self->_remove_pattern;
 		
+		my @insert_triples;
 		if ($self->_optional_token(KEYWORD, 'INSERT')) {
 			$self->_expected_token(LBRACE);
-			$self->_ModifyTemplate( $graph );
+			@insert_triples	= $self->_ModifyTemplate( $graph );
 			$self->_expected_token(RBRACE);
-			$insert_data	= $self->_remove_pattern;
 		}
 		
+		if ($graph) {
+			@insert_triples	= map { $_->does('Attean::API::QuadPattern') ? $_ : $_->as_quad_pattern($graph) } @insert_triples;
+			@delete_triples	= map { $_->does('Attean::API::QuadPattern') ? $_ : $_->as_quad_pattern($graph) } @delete_triples;
+		}
+
 		while ($self->_optional_token(KEYWORD, 'USING')) {
 			$self->{build}{custom_update_dataset}	= 1;
 			my $named	= 0;
@@ -470,42 +534,42 @@ sub _DeleteUpdate {
 			$self->_IRIref;
 			my ($iri)	= splice( @{ $self->{_stack} } );
 			if ($named) {
-				$dataset{named}{$iri->uri_value}	= $iri;
+				$dataset{named}{$iri->value}	= $iri;
 			} else {
 				push(@{ $dataset{default} }, $iri );
 			}
 		}
-	}
+		
+		$self->_expected_token(KEYWORD, 'WHERE');
 	
-	$self->_expected_token(KEYWORD, 'WHERE');
-	if ($graph) {
-		$self->{__no_bnodes}	= "DELETE WHERE block" if ($delete_where);
-		$self->_GroupGraphPattern;
-		delete $self->{__no_bnodes};
+		if ($graph) {
+			$self->_GroupGraphPattern;
+			delete $self->{__no_bnodes};
+			my $ggp	= $self->_remove_pattern;
+			$ggp	= Attean::Algebra::Graph->new( children => [$ggp], graph => $graph );
+			$self->_add_patterns( $ggp );
+		} else {
+			$self->_GroupGraphPattern;
+			delete $self->{__no_bnodes};
+		}
+
 		my $ggp	= $self->_remove_pattern;
-		$ggp	= Attean::Algebra::Graph->new( children => [$ggp], graph => $graph );
-		$self->_add_patterns( $ggp );
-	} else {
-		$self->{__no_bnodes}	= "DELETE WHERE block" if ($delete_where);
-		$self->_GroupGraphPattern;
-		delete $self->{__no_bnodes};
-	}
 
-	my $ggp	= $self->_remove_pattern;
-
-	if ($delete_where) {
-		$delete_data	= $ggp;
+		my %args	= (children => [$ggp], dataset => \%dataset);
+		if (scalar(@insert_triples)) {
+			$args{insert}	= \@insert_triples;
+		}
+		if (scalar(@delete_triples)) {
+			$args{delete}	= \@delete_triples;
+			my @blanks	= grep { $_->does('Attean::API::Blank') } map { $_->values } @delete_triples;
+			if (scalar(@blanks) > 0) {
+				die "Cannot use blank nodes in a DELETE pattern";
+			}
+		}
+		my $update	= Attean::Algebra::Modify->new( %args );
+		$self->_add_patterns( $update );
+		$self->{build}{method}		= 'UPDATE';
 	}
-	
-	my @ds_keys	= keys %dataset;
-	if ($graph and not(scalar(@ds_keys))) {
-		$dataset{ default }	= [$graph || ()];
-	}
-	
-	die "unimplemented";
-	my $insert	= RDF::Query::Algebra::Update->new($delete_data, $insert_data, $ggp, \%dataset, 0);
-	$self->_add_patterns( $insert );
-	$self->{build}{method}		= 'UPDATE';
 }
 
 sub _ModifyTemplate_test {
@@ -519,20 +583,12 @@ sub _ModifyTemplate {
 	my $self	= shift;
 	my $graph	= shift;
 	
-	local($self->{named_graph});
-	if ($graph) {
-		$self->{named_graph}	= $graph;
+	my @triples;
+	while ($self->_ModifyTemplate_test) {
+		push(@triples, $self->__ModifyTemplate( $graph ));
 	}
 	
-	my $data;
-	while ($self->_ModifyTemplate_test) {
-		$self->__ModifyTemplate( $graph );
-		my $d			= $self->_remove_pattern;
-		my @patterns	= blessed($data) ? $data->patterns : ();
-		$data			= $self->_new_join(@patterns, $d);
-	}
-	$data	= Attean::Algebra::BGP->new() unless (blessed($data));
-	$self->_add_patterns( $data );
+	return @triples;
 }
 
 sub __ModifyTemplate {
@@ -540,14 +596,15 @@ sub __ModifyTemplate {
 	my $graph	= shift;
 	local($self->{_modify_template})	= 1;
 	if ($self->_TriplesBlock_test) {
-		my $data;
 		$self->_push_pattern_container;
 		$self->_TriplesBlock;
-		($data)	= @{ $self->_pop_pattern_container };
+		my ($bgp)	= @{ $self->_pop_pattern_container };
+		my @triples	= @{ $bgp->triples };
 		if ($graph) {
-			$data	= Attean::Algebra::Graph->new( children => $data, graph => $graph );
+			@triples	= map { $_->as_quad_pattern($graph) } @triples;
 		}
-		$self->_add_patterns( $data );
+		
+		return @triples;
 	} else {
 		$self->_GraphGraphPattern;
 		
@@ -555,25 +612,29 @@ sub __ModifyTemplate {
 			my (@d)	= splice(@{ $self->{_stack} });
 			$self->__handle_GraphPatternNotTriples( @d );
 		}
+		
+		my $data	= $self->_remove_pattern;
+		my $graph	= $data->graph;
+		my @bgps	= $data->subpatterns_of_type('Attean::Algebra::BGP');
+		my @triples	= map { $_->as_quad_pattern($graph) } map { @{ $_->triples } } @bgps;
+		return @triples;
 	}
 }
 
 sub _LoadUpdate {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD< 'LOAD');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	$self->_expected_token(KEYWORD, 'LOAD');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	$self->_IRIref;
 	my ($iri)	= splice( @{ $self->{_stack} } );
 	if ($self->_optional_token(KEYWORD, 'INTO')) {
 		$self->_expected_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Load->new( $iri, $graph, $silent );
+		my $pat	= Attean::Algebra::Load->new( silent => $silent, url => $iri, graph => $graph );
 		$self->_add_patterns( $pat );
 	} else {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Load->new( $iri, undef, $silent );
+		my $pat	= Attean::Algebra::Load->new( silent => $silent, url => $iri );
 		$self->_add_patterns( $pat );
 	}
 	$self->{build}{method}		= 'LOAD';
@@ -581,38 +642,33 @@ sub _LoadUpdate {
 
 sub _CreateGraph {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD< 'CREATE');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	$self->_expected_token(KEYWORD< 'GRAPH');
+	$self->_expected_token(KEYWORD, 'CREATE');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
+	$self->_expected_token(KEYWORD, 'GRAPH');
 	$self->_IRIref;
 	my ($graph)	= splice( @{ $self->{_stack} } );
-	die "unimplemented";
-	my $pat	= RDF::Query::Algebra::Create->new( $graph );
+	my $pat	= Attean::Algebra::Create->new( silent => $silent, graph => $graph );
 	$self->_add_patterns( $pat );
 	$self->{build}{method}		= 'CREATE';
 }
 
 sub _ClearGraphUpdate {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD< 'CLEAR');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	$self->_expected_token(KEYWORD, 'CLEAR');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'GRAPH', graph => $graph);
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'DEFAULT');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'NAMED')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'NAMED');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'ALL')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
+		my $pat	= Attean::Algebra::Clear->new(silent => $silent, target => 'ALL');
 		$self->_add_patterns( $pat );
 	}
 	$self->{build}{method}		= 'CLEAR';
@@ -621,24 +677,20 @@ sub _ClearGraphUpdate {
 sub _DropGraph {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD, 'DROP');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	if ($self->_optional_token(KEYWORD, 'GRAPH')) {
 		$self->_IRIref;
 		my ($graph)	= splice( @{ $self->{_stack} } );
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( $graph );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'GRAPH', graph => $graph);
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( RDF::Trine::Node::Nil->new );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'DEFAULT');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'NAMED')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:NAMED') );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'NAMED');
 		$self->_add_patterns( $pat );
 	} elsif ($self->_optional_token(KEYWORD, 'ALL')) {
-		die "unimplemented";
-		my $pat	= RDF::Query::Algebra::Clear->new( Attean::IRI->new(value => 'tag:gwilliams@cpan.org,2010-01-01:RT:ALL') );
+		my $pat	= Attean::Algebra::Clear->new(drop => 1, silent => $silent, target => 'ALL');
 		$self->_add_patterns( $pat );
 	}
 	$self->{build}{method}		= 'CLEAR';
@@ -647,7 +699,7 @@ sub _DropGraph {
 sub __graph {
 	my $self	= shift;
 	if ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-		return RDF::Trine::Node::Nil->new();
+		return;
 	} else {
 		$self->_optional_token(KEYWORD, 'GRAPH');
 		$self->_IRIref;
@@ -656,94 +708,27 @@ sub __graph {
 	}
 }
 
-sub _CopyUpdate {
-	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'COPY');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	my $from	= $self->__graph();
-	$self->_expected_token(KEYWORD, 'TO');
-	my $to	= $self->__graph();
-	die "unimplemented";
-	my $pattern	= RDF::Query::Algebra::Copy->new( $from, $to, $silent );
-	$self->_add_patterns( $pattern );
-	$self->{build}{method}		= 'UPDATE';
-}
-
-sub _MoveUpdate {
-	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'MOVE');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	my $from	= $self->__graph();
-	$self->_expected_token(KEYWORD, 'TO');
-	my $to	= $self->__graph();
-	die "unimplemented";
-	my $pattern	= RDF::Query::Algebra::Move->new( $from, $to, $silent );
-	$self->_add_patterns( $pattern );
-	$self->{build}{method}		= 'UPDATE';
-}
-
-sub _AddUpdate {
-	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'ADD');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
-	return $self->__UpdateShortcuts( 'ADD', $silent );
-}
-
-sub __UpdateShortcuts {
+sub _AddCopyMoveUpdate {
 	my $self	= shift;
 	my $op		= shift;
-	my $silent	= shift;
-	my ($from, $to);
-	if ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-	} else {
-		$self->_optional_token(KEYWORD, 'GRAPH');
-		$self->_IRIref;
-		($from)	= splice( @{ $self->{_stack} } );
+	$self->_expected_token(KEYWORD, $op);
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
+	
+	my %args	= (silent => $silent);
+	if ($op eq 'COPY') {
+		$args{drop_destination}	=1;
+	} elsif ($op eq 'MOVE') {
+		$args{drop_destination}	= 1;
+		$args{drop_source}		= 1;
+	}
+	if (my $from = $self->__graph()) {
+		$args{source}	= $from;
 	}
 	$self->_expected_token(KEYWORD, 'TO');
-	if ($self->_optional_token(KEYWORD, 'DEFAULT')) {
-	} else {
-		$self->_optional_token(KEYWORD, 'GRAPH');
-		$self->_IRIref;
-		($to)	= splice( @{ $self->{_stack} } );
+	if (my $to = $self->__graph()) {
+		$args{destination}	= $to;
 	}
-	
-	die "unimplemented";
-	my $from_pattern	= RDF::Query::Algebra::GroupGraphPattern->new(
-							RDF::Query::Algebra::BasicGraphPattern->new(
-								RDF::Query::Algebra::Triple->new(
-									map { Attean::Variable->new( $_ ) } qw(s p o)
-								)
-							)
-						);
-	if (defined($from)) {
-		$from_pattern	= RDF::Query::Algebra::NamedGraph->new( $from, $from_pattern );
-	}
-
-	my $to_pattern	= RDF::Query::Algebra::GroupGraphPattern->new(
-							RDF::Query::Algebra::BasicGraphPattern->new(
-								RDF::Query::Algebra::Triple->new(
-									map { Attean::Variable->new( $_ ) } qw(s p o)
-								)
-							)
-						);
-	if (defined($to)) {
-		$to_pattern	= RDF::Query::Algebra::NamedGraph->new( $to, $to_pattern );
-	}
-	
-	my $to_graph	= $to || RDF::Trine::Node::Nil->new;
-	my $from_graph	= $from || RDF::Trine::Node::Nil->new;
-	my $drop_to		= RDF::Query::Algebra::Clear->new( $to_graph, $silent );
-	my $update		= RDF::Query::Algebra::Update->new( undef, $to_pattern, $from_pattern, undef, 0 );
-	my $drop_from	= RDF::Query::Algebra::Clear->new( $from_graph );
-	my $pattern;
-	if ($op eq 'MOVE') {
-		$pattern		= Attean::Algebra::Sequence->new( children => [$drop_to, $update, $drop_from] );
-	} elsif ($op eq 'COPY') {
-		$pattern		= Attean::Algebra::Sequence->new( children => [$drop_to, $update] );
-	} else {
-		$pattern		= $update;
-	}
+	my $pattern	= Attean::Algebra::Add->new( %args );
 	$self->_add_patterns( $pattern );
 	$self->{build}{method}		= 'UPDATE';
 }
@@ -1634,6 +1619,7 @@ sub _SubSelect {
 		delete $self->{build}{options};
 		my $data	= delete $self->{build};
 		$pattern	= $data->{triples}[0];
+		$pattern	= Attean::Algebra::Query->new( children => [$pattern], subquery => 1 );
 	}
 	
 	$self->_add_patterns( $pattern );
@@ -1789,7 +1775,7 @@ sub _Bind {
 sub _ServiceGraphPattern {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD, 'SERVICE');
-	my $silent	= $self->_optional_token(KEYWORD, 'SILENT');
+	my $silent	= $self->_optional_token(KEYWORD, 'SILENT') ? 1 : 0;
 	$self->__close_bgp_with_filters;
 	if ($self->_test_token(VAR)) {
 		$self->_Var;
@@ -1863,7 +1849,6 @@ sub _GraphGraphPattern {
 	$self->_VarOrIRIref;
 	my ($graph)	= splice(@{ $self->{_stack} });
 	if ($graph->does('Attean::API::IRI')) {
-		local($self->{named_graph})	= $graph;
 		$self->_GroupGraphPattern;
 	} else {
 		$self->_GroupGraphPattern;
@@ -3367,34 +3352,6 @@ sub _add_filter {
 	push( @{ $self->{filters} }, @filters );
 }
 
-sub _syntax_error {
-	my $self	= shift;
-	my $thing	= shift;
-	my $expect	= $thing;
-
-	my $level	= 2;
-	while (my $sub = (caller($level++))[3]) {
-		if ($sub =~ m/::_([A-Z]\w*)$/) {
-			$expect	= $1;
-			last;
-		}
-	}
-
-	my $l		= Log::Log4perl->get_logger("rdf.query.parser.sparql");
-	if ($l->is_debug) {
-		$l->logcluck("Syntax error eating $thing with input <<$self->{tokens}>>");
-	}
-
-	my $near	= "'" . substr($self->{tokens}, 0, 20) . "...'";
-	$near		=~ s/[\r\n ]+/ /g;
-	if ($thing) {
-# 		Carp::cluck Dumper($self->{tokens});	# XXX
-		die "Syntax error: $thing in $expect near $near";
-	} else {
-		die "Syntax error: Expected $expect near $near";
-	}
-}
-
 sub __base {
 	my $self	= shift;
 	my $build	= $self->{build};
@@ -3410,11 +3367,7 @@ sub __base {
 sub __new_statement {
 	my $self	= shift;
 	my @nodes	= @_;
-	if ($self->{_modify_template} and my $graph = $self->{named_graph} and $self->{named_graph}->does('Attean::API::IRI')) {
-		return Attean::QuadPattern->new(@nodes, $graph);
-	} else {
-		return Attean::TriplePattern->new(@nodes);
-	}
+	return Attean::TriplePattern->new(@nodes);
 }
 
 sub __new_path {
@@ -3523,11 +3476,13 @@ sub new_function_expression {
 sub _new_join {
 	my $self	= shift;
 	my @parts	= @_;
-	unless (scalar(@parts)) {
+	if (0 == scalar(@parts)) {
 		return Attean::Algebra::BGP->new();
+	} elsif (1 == scalar(@parts)) {
+		return shift(@parts);
+	} else {
+		return Attean::Algebra::Join->new( children => \@parts );
 	}
-	
-	return Attean::Algebra::Join->new( children => \@parts );
 }
 
 sub _peek_token {
@@ -3586,7 +3541,7 @@ sub _expected_token {
 	} else {
 		my $t			= $self->_peek_token;
 		my $expecting	= AtteanX::SPARQL::Constants::decrypt_constant($type);
-		my $got			= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
+		my $got			= blessed($t) ? AtteanX::SPARQL::Constants::decrypt_constant($t->type) : '(undef)';
 		if (@_) {
 			my $value	= shift;
 			my $value2	= $t->value;

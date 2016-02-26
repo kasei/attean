@@ -7,7 +7,7 @@ Attean::CodeIterator - Iterator implementation backed by a generator function
 
 =head1 VERSION
 
-This document describes Attean::CodeIterator version 0.011
+This document describes Attean::CodeIterator version 0.012
 
 =head1 SYNOPSIS
 
@@ -52,7 +52,7 @@ that will be returned from the iterator.
 
 =cut
 
-package Attean::CodeIterator 0.011 {
+package Attean::CodeIterator 0.012 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Scalar::Util qw(blessed);
@@ -84,7 +84,7 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		}
 		my $role	= $self->item_type;
 		if (Role::Tiny->is_role($role)) {
-			die "CodeIterator item is not a $role" unless (blessed($item) and $item->does($role));
+			die "CodeIterator item is not a $role: $item" unless (blessed($item) and $item->does($role));
 		}
 		return $item;
 	}

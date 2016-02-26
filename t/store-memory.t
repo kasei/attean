@@ -76,6 +76,12 @@ run_me; # run these Test::Attean tests
 	$store->remove_quad($q);
 	is($store->size, 3);
 	is($store->count_quads(undef, $p), 1);
+	
+	$store->remove_quads(undef, iri('http://example.org/p2'));
+	is($store->size, 2);
+
+	$store->remove_quads(undef, [map { iri("http://example.org/p$_") } (1,3) ]);
+	is($store->size, 0);
 }
 
 done_testing();

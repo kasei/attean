@@ -38,6 +38,10 @@ test 'count_triples' => sub {
 	is($store->count_triples(undef, undef, literal('7')), 1, 'expected object');
 	is($store->count_triples(undef, undef, literal('10')), 2, 'expected object (2)');
 	is($store->count_triples(iri('http://example.org/z'), undef, literal('10')), 1, 'expected subject/object');
+	is($store->count_triples(variable('s'), iri('http://example.org/q')), 20, 'expected predicate with variable');
+	is($store->count_triples(variable('s'), variable('p'), literal('7')), 1, 'expected object with variable');
+	is($store->count_triples(variable('s'), variable('p'), literal('10')), 2, 'expected object (2) with variable');
+	is($store->count_triples(iri('http://example.org/z'), variable('o'), literal('10')), 1, 'expected subject/object with variable');
 };
 
 

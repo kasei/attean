@@ -10,16 +10,6 @@ use File::Find qw(find);
 use Attean;
 use Attean::BindingEqualityTest;
 
-################################################################################
-# Log::Log4perl::init( \q[
-# 	log4perl.category.rdf.trine.parser.rdfxml          = TRACE, Screen
-# 	
-# 	log4perl.appender.Screen         = Log::Log4perl::Appender::Screen
-# 	log4perl.appender.Screen.stderr  = 0
-# 	log4perl.appender.Screen.layout = Log::Log4perl::Layout::SimpleLayout
-# ] );
-################################################################################
-
 my $ok_regex	= (@ARGV) ? shift : '';
 
 my %XML_EXEMPTIONS	= map { $_ => 1 } qw(
@@ -216,7 +206,7 @@ foreach my $file (@good) {
 			note($name);
 			my (undef, undef, $test)	= File::Spec->splitpath( $file );
 			{
-				open( my $fh, '<:encoding(UTF-8)', $file ) or die $!;
+				open( my $fh, '<:', $file ) or die $!;
 				my $iter;
 				lives_ok {
 					my ($filename)	= $file	=~ m/rdfxml-w3c(.*)$/;

@@ -172,4 +172,12 @@ use Types::Standard qw(Int);
 	dies_ok { $iter->next } 'expected failure';
 }
 
+{
+	my $iter	= Attean::IteratorSequence->new( item_type => 'Int' );
+	$iter->push(Attean::ListIterator->new(values => [1, 2], item_type => 'Int'));
+	$iter->push(Attean::ListIterator->new(values => [3, 4], item_type => 'Int'));
+	my @ints	= $iter->elements;
+	is_deeply(\@ints, [1..4], 'IteratorSequence push');
+}
+
 done_testing();
