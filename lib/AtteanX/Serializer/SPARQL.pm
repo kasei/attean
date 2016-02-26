@@ -90,7 +90,7 @@ L<IO::Handle> object C<< $fh >>.
 				if ($type == RBRACE) {
 					$io->print("\n");
 					$newline	= 1;
-				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE|USING)$/) {
+				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE|USING|FROM)$/) {
 					$io->print("\n");
 					$newline	= 1;
 				} elsif ($type == KEYWORD and $t->value eq 'WHERE' and blessed($last) and ($last->type == PREFIXNAME or $last->type == IRI)) {
