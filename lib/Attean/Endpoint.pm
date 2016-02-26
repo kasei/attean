@@ -103,7 +103,6 @@ package Attean::Endpoint 0.010 {
 	use TryCatch;
 	use JSON;
 	use Encode;
-	use RDF::Query;
 	use Plack::Request;
 	use Plack::Response;
 	use Scalar::Util qw(blessed refaddr);
@@ -123,6 +122,14 @@ package Attean::Endpoint 0.010 {
 # 	use Fcntl qw(:flock SEEK_END);
 	use namespace::clean;
 
+	has 'planner' => (
+		is => 'ro',
+		isa => ConsumerOf['Attean::API::QueryPlanner'],
+		required => 1,
+		default => sub {
+			Attean::IDPQueryPlanner->new();
+		}
+	);
 	has 'model' => (is => 'ro', isa => ConsumerOf['Attean::API::Model'], required => 1);
 	has 'conf'	=> (is => 'ro', isa => HashRef, required => 1);
 	has 'graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
@@ -214,7 +221,7 @@ package Attean::Endpoint 0.010 {
 		my $response	= Plack::Response->new;
 
 		our $VERSION;
-		my $server = "RDF::Endpoint/$VERSION";
+		my $server = "Attean::Endpoint/$VERSION";
 		$server .= " " . $response->headers->header('Server') if defined($response->headers->header('Server'));
 		$response->headers->header('Server' => $server);
 
@@ -298,29 +305,33 @@ END
 			$args{ update }		= 1 if ($config->{endpoint}{update} and $req->method eq 'POST');
 			$args{ load_data }	= 1 if ($config->{endpoint}{load_data});
 		
+			my $protocol_specifies_update_dataset	= 0;
 			{
 				my @default	= $req->param('default-graph-uri');
 				my @named	= $req->param('named-graph-uri');
 				if (scalar(@default) or scalar(@named)) {
 					delete $args{ load_data };
-					$model	= Attean::MutableQuadModel->new( store => Attean->get_store('Memory')->new() );
-					foreach my $url (@named) {
-						RDF::Trine::Parser->parse_url_into_model( $url, $model, context => iri($url) );
-					}
-					foreach my $url (@default) {
-						RDF::Trine::Parser->parse_url_into_model( $url, $model );
-					}
+					# TODO: handle custom-dataset
+					warn 'custom query datasets not supported yet';
+# 					$model	= Attean::MutableQuadModel->new( store => Attean->get_store('Memory')->new() );
+# 					foreach my $url (@named) {
+# 						RDF::Trine::Parser->parse_url_into_model( $url, $model, context => iri($url) );
+# 					}
+# 					foreach my $url (@default) {
+# 						RDF::Trine::Parser->parse_url_into_model( $url, $model );
+# 					}
 				}
 			}
 		
-			my $protocol_specifies_update_dataset	= 0;
 			{
 				my @default	= $req->param('using-graph-uri');
 				my @named	= $req->param('using-named-graph-uri');
 				if (scalar(@named) or scalar(@default)) {
 					$protocol_specifies_update_dataset	= 1;
-					$model	= RDF::Trine::Model::Dataset->new( $model );
-					$model->push_dataset( default => \@default, named => \@named );
+					# TODO: handle custom-dataset
+					warn 'custom update datasets not supported yet';
+# 					$model	= RDF::Trine::Model::Dataset->new( $model );
+# 					$model->push_dataset( default => \@default, named => \@named );
 				}
 			}
 		
@@ -334,38 +345,11 @@ END
 # 			}
 		
 			my $base	= $req->base;
-			my $query	= RDF::Query->new( $sparql, { lang => 'sparql11', base => $base, %args } );
-			$self->log_query( $req, $sparql );
-			if ($query) {
-				if ($protocol_specifies_update_dataset and $query->specifies_update_dataset) {
-					my $method	= $req->method;
-					$content	= "Update operations cannot specify a dataset in both the query and with protocol parameters";
-					$self->log_error( $req, $content );
-					die Attean::Endpoint::ClientError->new(code => 400, message => 'Multiple datasets specified for update', uri => 'http://id.kasei.us/rdf-endpoint/error/update_specifies_multiple_datasets');
-				}
-
-				my $t	= AtteanX::RDFQueryTranslator->new();
-				my $a	= $t->translate_query($query);
-				warn "Algebra:\n" . $a->as_string;
-				my $graph	= $self->graph;
-				my $default_graphs	= [$graph];
-				my $planner	= Attean::IDPQueryPlanner->new();
-				my $plan	= $planner->plan_for_algebra($a, $model, $default_graphs);
-				warn "Plan:\n" . $plan->as_string;
-				my $iter	= $plan->evaluate($model);
-				if ($iter) {
-					$response->status(200);
-					my $sclass	= Attean->negotiate_serializer(request_headers => $headers) // Attean->get_serializer('sparqlxml');
-					my $s		= $sclass->new();
-					$content	= $s->serialize_iter_to_bytes($iter);
-					my $stype	= $s->canonical_media_type;
-					$response->headers->content_type($stype);
-				} else {
-					my $error	= $query->error;
-					die Attean::Endpoint::ServerError->new(code => 500, message => 'SPARQL query/update execution error', uri => 'http://id.kasei.us/rdf-endpoint/error/execution_error', details => { error => $error, sparql => $sparql });
-				}
-			} else {
-				my $error	= RDF::Query->error;
+			my $parser	= Attean->get_parser('SPARQL')->new(base => $base);
+			$parser->update(1) if ($args{update});
+			my ($algebra)	= eval { $args{update} ? $parser->parse_update($sparql, base => $base) : $parser->parse($sparql, base => $base) };
+			if ($@ or not($algebra)) {
+				my $error	= $@ || 'Internal error';
 				$self->log_error( $req, $error );
 				my $eclass	= ($error =~ /Syntax/) ? 'Attean::Endpoint::ClientError' : 'Attean::Endpoint::ServerError';
 				if ($req->method ne 'POST' and $error =~ /read-only queries/sm) {
@@ -373,6 +357,41 @@ END
 					die $eclass->new(message => 'Updates must use a HTTP POST request', uri => 'http://id.kasei.us/rdf-endpoint/error/bad_http_method_update');
 				} else {
 					die $eclass->new(message => 'SPARQL query/update parse error', uri => 'http://id.kasei.us/rdf-endpoint/error/parse_error', details => { error => $error, sparql => $sparql });
+				}
+			} else {
+				$self->log_query( $req, $sparql );
+				# TODO: handle case where query specifies update dataset
+# 				if ($protocol_specifies_update_dataset and $query->specifies_update_dataset) {
+# 					my $method	= $req->method;
+# 					$content	= "Update operations cannot specify a dataset in both the query and with protocol parameters";
+# 					$self->log_error( $req, $content );
+# 					die Attean::Endpoint::ClientError->new(code => 400, message => 'Multiple datasets specified for update', uri => 'http://id.kasei.us/rdf-endpoint/error/update_specifies_multiple_datasets');
+# 				}
+
+# 				warn "Algebra:\n" . $algebra->as_string;
+				my $graph	= $self->graph;
+				my $default_graphs	= [$graph];
+				my $planner	= $self->planner;
+# 				warn "Planning with default graphs:\n";
+				foreach my $g (@$default_graphs) {
+					warn $g->as_string . "\n";
+				}
+				my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
+# 				warn "Plan:\n" . $plan->as_string;
+				eval {
+					my $iter	= $plan->evaluate($model);
+					$response->status(200);
+					my $sclass	= Attean->negotiate_serializer(request_headers => $headers) // Attean->get_serializer('sparqlxml');
+					warn $sclass;
+					my $s		= $sclass->new();
+					$content	= $s->serialize_iter_to_bytes($iter);
+					my $stype	= $s->canonical_media_type;
+					$response->headers->content_type($stype);
+				};
+				if ($@) {
+					my $error	= $@;
+					warn $@;
+					die Attean::Endpoint::ServerError->new(code => 500, message => 'SPARQL query/update execution error', uri => 'http://id.kasei.us/rdf-endpoint/error/execution_error', details => { error => $@, sparql => $sparql });
 				}
 			}
 		} elsif ($req->method eq 'POST') {
