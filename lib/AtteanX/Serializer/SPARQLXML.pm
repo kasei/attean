@@ -36,7 +36,7 @@ use warnings;
 package AtteanX::Serializer::SPARQLXML 0.012 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
-	use Encode qw(encode);
+	use Encode qw(encode encode_utf8);
 	use Scalar::Util qw(blessed);
 	use Attean::ListIterator;
 	use List::MoreUtils qw(any);
@@ -92,12 +92,14 @@ END
 						$label	=~ s/&/&amp;/g;
 						$label	=~ s/</&lt;/g;
 						$label	=~ s/"/&quot;/g;
+						$label	= encode_utf8($label);
 						print $fh qq(\t\t\t<binding name="${name}"><uri>${label}</uri></binding>\n);
 					} elsif ($term->does('Attean::API::Literal')) {
 						my $label	= $term->value;
 						$label	=~ s/&/&amp;/g;
 						$label	=~ s/</&lt;/g;
 						$label	=~ s/"/&quot;/g;
+						$label	= encode_utf8($label);
 						if (my $lang = $term->language) {
 							$label	= qq(<literal xml:lang="${lang}">${label}</literal>);
 						} elsif (my $dt = $term->datatype) {
@@ -111,6 +113,7 @@ END
 						$label	=~ s/&/&amp;/g;
 						$label	=~ s/</&lt;/g;
 						$label	=~ s/"/&quot;/g;
+						$label	= encode_utf8($label);
 						print $fh qq(\t\t\t<binding name="${name}"><bnode>${label}</bnode></binding>\n);
 					} else {
 						die "Term object has an unrecognized type: " . ref($term);
