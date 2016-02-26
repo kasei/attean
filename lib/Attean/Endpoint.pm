@@ -170,6 +170,13 @@ package Attean::Endpoint 0.010 {
 		
 		return $class->SUPER::BUILDARGS(%args);
 	}
+
+=item C<< run ( $request ) >>
+
+Run the SPARQL request contained in the given C<< $request >> object and return
+a response object.
+
+=cut
 	
 	sub run {
 		my $self	= shift;
