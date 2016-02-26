@@ -160,6 +160,19 @@ sub keyword {
 	return $class->fast_constructor(KEYWORD, -1, -1, -1, -1, [uc($kw)]);
 }
 
+=item C<< integer( $value ) >>
+
+Returns a new L<AtteanX::SPARQL::Token> object with the C<INTEGER> type and
+the given C<$value>.
+
+=cut
+
+sub integer {
+	my $class	= shift;
+	my $value	= shift;
+	return $class->fast_constructor(INTEGER, -1, -1, -1, -1, [+$value] );
+}
+
 =item C<< as_string >>
 
 Returns a string description of the token including the token type and any
