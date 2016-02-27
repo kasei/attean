@@ -128,7 +128,7 @@ package Attean::API::SimpleCostPlanner 0.012 {
 		my $self	= shift;
 		my $plan	= shift;
 		my $model	= shift;
-		Carp::confess "No model given" unless blessed($model) && $model->does('Attean::API::Model');
+		Carp::confess "No model given" unless (blessed($model) and $model->does('Attean::API::Model'));
 		
 		if ($plan->has_cost) {
 			return $plan->cost;
@@ -337,7 +337,7 @@ package Attean::API::IDPJoinPlanner 0.012 {
 		my $self	= shift;
 		my $plan	= shift;
 		my $model	= shift;
-		Carp::confess "No model given" unless ref($model);
+		Carp::confess "No model given" unless (blessed($model) and $model->does('Attean::API::Model'));
 		
 		if ($plan->has_cost) {
 			return $plan->cost;
