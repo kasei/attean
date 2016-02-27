@@ -97,11 +97,11 @@ package Attean::Algebra::Query 0.012 {
 			}
 			push(@tokens, $sel, $star);
 			if ($has_dataset) {
-				foreach my $i (@default) {
+				foreach my $i (sort { $a->as_string cmp $b->as_string } @default) {
 					push(@tokens, $from);
 					push(@tokens, $i->sparql_tokens->elements);
 				}
-				foreach my $i (@named) {
+				foreach my $i (sort { $a->as_string cmp $b->as_string } @named) {
 					push(@tokens, $from);
 					push(@tokens, $named);
 					push(@tokens, $i->sparql_tokens->elements);
