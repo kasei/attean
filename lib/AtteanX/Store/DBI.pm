@@ -78,18 +78,21 @@ Returns a new memory-backed storage object.
 		if (my $term = $self->_i2t_cache->get($id)) {
 			return $term;
 		}
-		my $sth		= $self->dbh->prepare('SELECT type, iri.value AS iri_value, blank.value AS blank_value, literal.value AS literal_value, dtiri.value AS datatype, language FROM term LEFT JOIN iri USING (iri_id) LEFT JOIN literal USING (literal_id) LEFT JOIN iri dtiri ON (datatype_id = dtiri.iri_id) LEFT JOIN blank USING (blank_id) WHERE term_id = ?');
+		my $sth		= $self->dbh->prepare('SELECT term.type, term.value, dtterm.value AS datatype, term.language FROM term LEFT JOIN term dtterm ON (term.datatype_id = dtterm.term_id) WHERE term.term_id = ?');
 		$sth->execute($id);
 		my $row		= $sth->fetchrow_hashref;
 		my $type	= $row->{type};
 		my $term;
+		my $value		= $row->{value};
+		my $datatype	= $row->{datatype};
+		my $lang		= $row->{language};
 		if ($type eq 'iri') {
-			$term	= Attean::IRI->new( value => $row->{iri_value} );
+			$term	= Attean::IRI->new( value => $value );
 		} elsif ($type eq 'blank') {
-			$term	= Attean::Blank->new( value => $row->{blank_value} );
+			$term	= Attean::Blank->new( value => $value );
 		} elsif ($type eq 'literal') {
-			my %args	= (value => $row->{literal_value}, datatype => Attean::IRI->new(value => $row->{datatype}));
-			if (my $lang = $args{language}) {
+			my %args	= (value => $value, datatype => Attean::IRI->new(value => $datatype));
+			if ($lang) {
 				$args{language} = $lang;
 			}
 			$term	= Attean::Literal->new( %args );
@@ -110,37 +113,22 @@ Returns a new memory-backed storage object.
 		my $dbh			= $self->dbh;
 		my $tid;
 		if ($term->does('Attean::API::IRI')) {
-			my $sth	= $dbh->prepare('SELECT iri_id FROM iri WHERE value = ?');
+			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ?');
 			my $value	= $term->value;
-			$sth->execute($value);
-			my ($id) = $sth->fetchrow_array;
-			if (defined($id)) {
-				my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE iri_id = ?');
-				$sth->execute($id);
-				($tid)	= $sth->fetchrow_array;
-			}
+			$sth->execute('iri', $value);
+			($tid) = $sth->fetchrow_array;
 		} elsif ($term->does('Attean::API::Blank')) {
-			my $sth	= $dbh->prepare('SELECT blank_id FROM blank WHERE value = ?');
+			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ?');
 			my $value	= $term->value;
-			$sth->execute($value);
-			my ($id) = $sth->fetchrow_array;
-			if (defined($id)) {
-				my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE blank_id = ?');
-				$sth->execute($id);
-				($tid)	= $sth->fetchrow_array;
-			}
+			$sth->execute('blank', $value);
+			($tid) = $sth->fetchrow_array;
 		} elsif ($term->does('Attean::API::Literal')) {
 			my $dtid	= $self->_get_or_create_term_id($term->datatype);
-			my $sth	= $dbh->prepare('SELECT literal_id FROM literal WHERE value = ? AND datatype_id = ? AND language = ?');
+			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ? AND datatype_id = ? AND language = ?');
 			my $value	= $term->value;
 			my $lang	= $term->language;
-			$sth->execute($value, $dtid, $lang);
-			my ($id) = $sth->fetchrow_array;
-			if (defined($id)) {
-				my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE literal_id = ?');
-				$sth->execute($id);
-				($tid)	= $sth->fetchrow_array;
-			}
+			$sth->execute('literal', $value, $dtid, $lang);
+			($tid) = $sth->fetchrow_array;
 		}
 		if (defined($tid)) {
 			$self->_t2i_cache->set($term->as_string => $tid);
@@ -157,47 +145,30 @@ Returns a new memory-backed storage object.
 		}
 		my $dbh			= $self->dbh;
 		my $tid;
-		my $insert_term_sth	= $dbh->prepare('INSERT INTO term (type, iri_id, literal_id, blank_id) VALUES (?, ?, ?, ?)');
+		my $insert_term_sth	= $dbh->prepare('INSERT INTO term (type, value, datatype_id, language) VALUES (?, ?, ?, ?)');
 		if ($term->does('Attean::API::IRI')) {
-			my $sth	= $dbh->prepare('SELECT iri_id FROM iri WHERE value = ?');
+			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ?');
 			my $value	= $term->value;
-			$sth->execute($value);
-			my ($id) = $sth->fetchrow_array;
-			if (defined($id)) {
-				my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE iri_id = ?');
-				$sth->execute($id);
-				($tid)	= $sth->fetchrow_array;
-			} else {
-				my $sth	= $dbh->prepare('INSERT INTO iri (value) VALUES (?)');
-				$sth->execute($value);
-				$id	= $self->_last_insert_id('iri');
-				$insert_term_sth->execute('iri', $id, undef, undef);
+			$sth->execute('iri', $value);
+			($tid) = $sth->fetchrow_array;
+			unless (defined($tid)) {
+				$insert_term_sth->execute('iri', $value, undef, undef);
 				$tid	= $self->_last_insert_id('term');
 			}
 		} elsif ($term->does('Attean::API::Blank')) {
-			my $sth	= $dbh->prepare('SELECT blank_id FROM blank WHERE value = ?');
+			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ?');
 			my $value	= $term->value;
-			$sth->execute($value);
-			my ($id) = $sth->fetchrow_array;
-			if (defined($id)) {
-				my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE blank_id = ?');
-				$sth->execute($id);
-				($tid)	= $sth->fetchrow_array;
-			} else {
-				my $sth	= $dbh->prepare('INSERT INTO blank (value) VALUES (?)');
-				$sth->execute($value);
-				$id	= $self->_last_insert_id('blank');
-				$insert_term_sth->execute('blank', undef, undef, $id);
+			$sth->execute('blank', $value);
+			($tid) = $sth->fetchrow_array;
+			unless (defined($tid)) {
+				$insert_term_sth->execute('blank', $value, undef, undef);
 				$tid	= $self->_last_insert_id('term');
 			}
 		} elsif ($term->does('Attean::API::Literal')) {
-			my $dttid	= $self->_get_or_create_term_id($term->datatype);
-			my $tsth	= $dbh->prepare('SELECT iri_id FROM term WHERE term_id = ?');
-			$tsth->execute($dttid);
-			my ($dtid)	= $tsth->fetchrow_array;
-			my $sql		= 'SELECT literal_id FROM literal WHERE value = ? AND datatype_id = ?';
+			my $dtid	= $self->_get_or_create_term_id($term->datatype);
+			my $sql		= 'SELECT term_id FROM term WHERE type = ? AND value = ? AND datatype_id = ?';
 			my $value	= $term->value;
-			my @bind	= ($value, $dtid);
+			my @bind	= ('literal', $value, $dtid);
 			my $lang	= $term->language;
 			if ($lang) {
 				$sql	.= ' AND language = ?';
@@ -205,19 +176,9 @@ Returns a new memory-backed storage object.
 			}
 			my $sth	= $dbh->prepare($sql);
 			$sth->execute(@bind);
-			my ($id) = $sth->fetchrow_array;
-			if (defined($id)) {
-				my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE literal_id = ?');
-				$sth->execute($id);
-				($tid)	= $sth->fetchrow_array;
-			} else {
-				my $sth	= $dbh->prepare('INSERT INTO literal (value, datatype_id, language) VALUES (?, ?, ?)');
-# 				use Data::Dumper;
-# 				warn Dumper([$value, $dtid, $lang]);
-				$sth->execute($value, $dtid, $lang);
-# 				warn "<<<\n";
-				$id	= $self->_last_insert_id('literal');
-				$insert_term_sth->execute('literal', undef, $id, undef);
+			($tid) = $sth->fetchrow_array;
+			unless (defined($tid)) {
+				$insert_term_sth->execute('literal', $value, $dtid, $lang);
 				$tid	= $self->_last_insert_id('term');
 			}
 		} else {
@@ -296,7 +257,7 @@ the set of graphs of the stored quads.
 
 	sub get_graphs {
 		my $self	= shift;
-		my $sth		= $self->dbh->prepare('SELECT DISTINCT value FROM quad JOIN term ON (quad.graph = term.term_id) JOIN iri ON (term.iri_id = iri.iri_id)');
+		my $sth		= $self->dbh->prepare('SELECT DISTINCT value FROM quad JOIN term ON (quad.graph = term.term_id)');
 		$sth->execute;
 		my $sub	= sub {
 			my $row	= $sth->fetchrow_arrayref;
