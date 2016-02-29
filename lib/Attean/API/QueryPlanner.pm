@@ -50,8 +50,7 @@ package Attean::API::CostPlanner 0.012 {
 	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, \@active_graphs, \@default_graphs)
 	requires 'cost_for_plan'; # cost_for_plan($plan, $model)
 	
-	around 'cost_for_plan' => sub {
-		my $orig	= shift;
+	before 'cost_for_plan' => sub {
 		my $self	= shift;
 		my $plan	= shift;
 		my $model	= shift;
@@ -61,8 +60,6 @@ package Attean::API::CostPlanner 0.012 {
 		} elsif ($self->does('Attean::API::Model') and $model->does('Attean::API::Model')) {
 			Carp::confess "Model and planner objects cannot both consume Attean::API::Model in call to cost_for_plan";
 		}
-		
-		return $orig->($self, $plan, $model, @_);
 	};
 	
 	sub plan_for_algebra {
