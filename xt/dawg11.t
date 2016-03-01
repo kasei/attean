@@ -14,28 +14,15 @@ use warnings;
 no warnings 'once';
 use autodie;
 use AtteanX::Parser::SPARQL;
-use Algorithm::Combinatorics qw(permutations);
-use Benchmark qw(timethese);
 use Data::Dumper;
 use Encode qw(encode);
-use File::Slurp;
-use File::Temp qw(tempfile);
 use Getopt::Long;
-use LWP::MediaTypes qw(add_type);
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
-use Storable qw(dclone);
 use Test::More;
 use Text::CSV;
 use Try::Tiny;
 use URI::file;
-
-add_type( 'application/rdf+xml' => qw(rdf xrdf rdfx) );
-add_type( 'text/turtle' => qw(ttl) );
-add_type( 'text/plain' => qw(nt) );
-add_type( 'text/x-nquads' => qw(nq) );
-add_type( 'text/json' => qw(json) );
-add_type( 'text/html' => qw(html xhtml htm) );
 
 use Attean;
 use Attean::RDF;
@@ -94,7 +81,6 @@ sub memory_model {
 	return $model;
 }
 
-my $model	= memory_model();
 my @files;
 if ($RUN_QUERY_TESTS) {
 	push(@files, qw(
@@ -147,18 +133,13 @@ if (scalar(@manifests)) {
 	exit(0);
 }
 
+my $model	= memory_model();
 my $class	= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
 my $default_graph	= iri('http://graph/');
-foreach my $file (@manifests) {
-	my $path	= File::Spec->rel2abs($file);
-	my $base	= iri("file://$path");
-	my $parser	= $class->new( base => $base ) || die "Failed to construct parser for 'turtle'";
-# 	warn "Parsing manifest $file\n" if $debug;
-	open(my $fh, '<:utf8', $file);
-	my $iter	= $parser->parse_iter_from_io($fh);
-	my $quads	= $iter->as_quads($default_graph);
-	$model->add_iter($quads);
-}
+
+my @load	= map { iri("file://" . File::Spec->rel2abs($_)) } @manifests;
+$model->load_urls_into_graph($default_graph, @load);
+
 warn "done parsing manifests" if $debug;
 
 my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
@@ -371,9 +352,7 @@ sub update_eval_test {
 	my $test_model	= memory_model();
 	eval {
 		if (blessed($data)) {
-			my $datauri		= URI->new( $data->value );
-			my $datafilename	= $datauri->file;
-			add_to_model( $test_model, $default_graph, $datafilename );
+			$test_model->load_urls_into_graph($default_graph, $data);
 		}
 	};
 	if ($@) {
@@ -386,10 +365,7 @@ sub update_eval_test {
 		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
 		my $uri		= $graph->value;
 		eval {
-			my $datauri		= URI->new( $data->value );
-			my $datafilename	= $datauri->file;
-			warn "test data file: $datafilename\n" if ($debug);
-			add_to_model($test_model, iri($uri), $datafilename);
+			$test_model->load_urls_into_graph(iri($uri), $data);
 		};
 		if ($@) {
 			fail($test->as_string);
@@ -404,9 +380,7 @@ sub update_eval_test {
 	my $expected_model	= memory_model;
 	eval {
 		if (blessed($resdata)) {
-			my $datauri		= URI->new( $resdata->value );
-			my $datafilename	= $datauri->file;
-			add_to_model($expected_model, $default_graph, $datafilename);
+			$expected_model->load_urls_into_graph($default_graph, $resdata);
 		}
 	};
 	if ($@) {
@@ -421,10 +395,7 @@ sub update_eval_test {
 		my $return	= 0;
 		if ($data) {
 			eval {
-				my $datauri		= URI->new( $data->value );
-				my $datafilename	= $datauri->file;
-				warn "expected result data file: $datafilename\n" if ($debug);
-				add_to_model($expected_model, iri($uri), $datafilename);
+				$expected_model->load_urls_into_graph(iri($uri), $data);
 			};
 			if ($@) {
 				fail($test->as_string);
@@ -546,14 +517,10 @@ STRESS:	foreach (1 .. $count) {
 		my $test_model	= memory_model();
 		try {
 			if (blessed($data)) {
-				my $datauri		= URI->new( $data->value );
-				my $datafilename	= $datauri->file;
-				add_to_model( $test_model, $default_graph, $datafilename );
+				$test_model->load_urls_into_graph($default_graph, $data);
 			}
 			foreach my $g (@gdata) {
-				my $datauri		= URI->new( $g->value );
-				my $datafilename	= $datauri->file;
-				add_to_model( $test_model, $g, $datafilename );
+				$test_model->load_urls_into_graph($g, $g);
 			}
 		} catch {
 			fail($test->value);
@@ -612,42 +579,6 @@ STRESS:	foreach (1 .. $count) {
 exit;
 
 ######################################################################
-
-
-sub add_to_model {
-	my $model	= shift;
-	my $graph	= shift;
-	my @files	= @_;
-	
-	foreach my $file (@files) {
-		$file	=~ s#^file://##;
-		try {
-			my $path	= File::Spec->rel2abs($file);
-			my $base	= iri("file://$path");
-			my $iter;
-			open(my $fh, '<:utf8', $file) or die $!;
-			my $format;
-			$format	= 'turtle' if ($file =~ /[.]ttl$/);
-			$format	= 'rdfxml' if ($file =~ /[.]rdf$/);
-			$format	= 'ntriples' if ($file =~ /[.]nt$/);
-			if ($format) {
-				my $format	= ($file =~ /[.]ttl/) ? "turtle" : "rdfxml";
-				my $class	= Attean->get_parser($format) || die "Failed to load parser for '$format'";
-				my $parser	= $class->new( base => $base ) || die "Failed to construct parser for '$format'";
-				$iter	= $parser->parse_iter_from_io($fh);
-			} else {
-				die "Unrecognized file extension: $file";
-			}
-			my $quads	= $iter->as_quads($graph);
-			$model->add_iter($quads);
-		} catch {
-			warn "Failed to load $file into model: $_";
-			if (ref($_)) {
-				warn $_->stack_trace;
-			}
-		};
-	}
-}
 
 sub get_actual_results {
 	my $filename	= shift;
@@ -743,7 +674,7 @@ sub get_expected_results {
 	
 	if ($type eq 'graph') {
 		my $model	= memory_model();
-		add_to_model($model, $default_graph, $file);
+		$model->load_urls_into_graph($default_graph, iri("file://$file"));
 		my $results	= $model->get_quads->map(sub { shift->as_triple }, 'Attean::API::Triple');
 		print_results("Expected results", \$results) if ($args{ results });
 		return $results;
@@ -806,7 +737,7 @@ sub get_expected_results {
 		return $iter;
 	} elsif ($file =~ /[.](ttl|rdf|nt)/) {
 		my $model	= memory_model();
-		add_to_model($model, $default_graph, $file);
+		$model->load_urls_into_graph($default_graph, iri("file://$file"));
 		my ($res)	= $model->subjects( iri("${RDF}type"), iri("${RS}ResultSet") )->elements;
 		if (my($b) = $model->objects( $res, iri("${RS}boolean") )->elements) {
 			my $bool	= $b->value;
