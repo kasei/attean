@@ -79,9 +79,10 @@ no warnings 'redefine';
 use Attean;
 use Data::Dumper;
 use URI::NamespaceMap;
+use List::MoreUtils qw(zip);
 use AtteanX::Parser::SPARQLLex;
 use AtteanX::SPARQL::Constants;
-use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
+use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str Int);
 use Scalar::Util qw(blessed looks_like_number reftype refaddr);
 
 ######################################################################
@@ -93,8 +94,9 @@ has 'args'			=> (is => 'ro', isa => HashRef);
 has 'build'			=> (is => 'rw', isa => HashRef);
 has 'update'		=> (is => 'rw', isa => Bool);
 has 'baseURI'		=> (is => 'rw');
-has '_stack'			=> (is => 'rw', isa => ArrayRef);
+has '_stack'		=> (is => 'rw', isa => ArrayRef);
 has 'filters'		=> (is => 'rw', isa => ArrayRef);
+has 'counter'		=> (is => 'rw', isa => Int, default => 0);
 has '_pattern_container_stack'	=> (is => 'rw', isa => ArrayRef);
 
 sub file_extensions { return [qw(rq ru)] }
@@ -476,9 +478,44 @@ sub _InsertUpdate {
 
 	my $ggp	= $self->_remove_pattern;
 
-	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples, dataset => \%dataset );
+	my @triples_with_fresh_bnodes	= $self->_statements_with_fresh_bnodes(@triples);
+	my $insert	= Attean::Algebra::Modify->new( children => [$ggp], insert => \@triples_with_fresh_bnodes, dataset => \%dataset );
 	$self->_add_patterns( $insert );
 	$self->{build}{method}		= 'UPDATE';
+}
+
+sub _statements_with_fresh_bnodes {
+	my $self	= shift;
+	my @triples	= @_;
+	
+	my %fresh_blank_map;
+	my @triples_with_fresh_bnodes;
+	foreach my $t (@triples) {
+		my @pos		= ref($t)->variables;
+		if ($t->has_blanks) {
+			my @terms;
+			foreach my $term ($t->values) {
+				if ($term->does('Attean::API::Blank')) {
+					if (my $b = $fresh_blank_map{$term->value}) {
+						push(@terms, $b);
+					} else {
+						my $id		= $self->counter;
+						$self->counter($id+1);
+						my $name	= ".b-$id";
+						my $b		= Attean::Blank->new($name);
+						push(@terms, $b);
+						$fresh_blank_map{$term->value}	= $b;
+					}
+				} else {
+					push(@terms, $term);
+				}
+			}
+			push(@triples_with_fresh_bnodes, ref($t)->new(zip @pos, @terms));
+		} else {
+			push(@triples_with_fresh_bnodes, $t);
+		}
+	}
+	return @triples_with_fresh_bnodes;
 }
 
 sub _DeleteUpdate {
@@ -529,6 +566,7 @@ sub _DeleteUpdate {
 		if ($self->_optional_token(KEYWORD, 'INSERT')) {
 			$self->_expected_token(LBRACE);
 			@insert_triples	= $self->_ModifyTemplate( $graph );
+			@insert_triples	= $self->_statements_with_fresh_bnodes(@insert_triples);
 			$self->_expected_token(RBRACE);
 		}
 		
