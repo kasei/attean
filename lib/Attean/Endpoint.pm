@@ -236,7 +236,7 @@ a response object.
 			my $content;
 			my $path	= $req->path_info;
 			$path		=~ s#^/##;
-			my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('RDF-Endpoint') } || 'share';
+			my $dir		= $ENV{ATTEAN_ENDPOINT_SHAREDIR} || File::Spec->catdir((eval { dist_dir('Attean-Endpoint') } || 'share'), 'endpoint');
 			my $abs		= File::Spec->rel2abs($dir);
 			my $file	= File::Spec->catfile($abs, 'www', $path);
 			if (-r $file) {
@@ -406,8 +406,8 @@ END
 			$self->log_error( $req, $content );
 			die Attean::Endpoint::ClientError->new(message => 'Missing SPARQL Query/Update String', uri => 'http://id.kasei.us/rdf-endpoint/error/missing_sparql_string');
 		} else {
-			my $stype	= 'text/html';
-			my $dir			= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('RDF-Endpoint') } || 'share';
+			my $stype		= 'text/html';
+			my $dir			= $ENV{ATTEAN_ENDPOINT_SHAREDIR} || File::Spec->catdir((eval { dist_dir('Attean-Endpoint') } || 'share'), 'endpoint');
 			my $template	= File::Spec->catfile($dir, 'index.html');
 			my $parser		= HTML::HTML5::Parser->new;
 			my $doc			= $parser->parse_file( $template );
