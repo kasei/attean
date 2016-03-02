@@ -1,6 +1,6 @@
-DROP TABLE quad;
-DROP TABLE term;
-DROP TYPE TERM_TYPE;
+-- DROP TABLE quad;
+-- DROP TABLE term;
+-- DROP TYPE TERM_TYPE;
 
 CREATE TYPE TERM_TYPE AS ENUM ('iri', 'literal', 'blank');
 CREATE TABLE IF NOT EXISTS term (
@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS quad (
 	PRIMARY KEY (subject, predicate, object, graph)
 );
 
-CREATE INDEX ON quad (graph);
-CREATE INDEX ON quad (predicate,object,graph,subject);
+CREATE INDEX IF NOT EXISTS quad_graph_idx ON quad (graph);
+CREATE INDEX IF NOT EXISTS quad_pogs_idx ON quad (predicate,object,graph,subject);
