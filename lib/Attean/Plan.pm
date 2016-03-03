@@ -1946,9 +1946,8 @@ package Attean::Plan::Aggregate 0.012 {
 		my $class		= shift;
 		my %args		= @_;
 		my $aggs		= $args{ aggregates };
-		my @vars		= map { @{ $_->in_scope_variables } } @{ $args{ children } };
+		my @vars		= map { $_->value } grep { $_->does('Attean::API::Variable') } map { $_->value } @{ $args{groups} // [] };
 		my @evars		= (@vars, keys %$aggs);
-		
 		if (exists $args{in_scope_variables}) {
 			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
 		}

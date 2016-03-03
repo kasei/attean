@@ -471,7 +471,6 @@ the supplied C<< $active_graph >>.
 				push(@plans, Attean::Plan::Describe->new(terms => $algebra->terms, graph => $active_graphs, children => [$plan], distinct => 0, ordered => []));
 			}
 			return @plans;
-		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Clear')) {
 			my $plan_class	= $algebra->drop ? 'Attean::Plan::Drop' : 'Attean::Plan::Clear';
 			my $target	= $algebra->target;

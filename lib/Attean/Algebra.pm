@@ -788,11 +788,21 @@ package Attean::Algebra::Group 0.012 {
 	sub in_scope_variables {
 		my $self	= shift;
 		my $aggs	= $self->aggregates // [];
-		my @vars;
+		my $groups	= $self->groupby // [];
+		my %vars;
 		foreach my $a (@$aggs) {
-			push(@vars, $a->variable->value);
+			$vars{ $a->variable->value }++;
 		}
-		return @vars;
+		foreach my $e (@$groups) {
+			if ($e->isa('Attean::ValueExpression')) {
+				my $value	= $e->value;
+				if ($value->does('Attean::API::Variable')) {
+					$vars{ $value->value }++;
+				}
+			}
+		}
+		
+		return keys %vars;
 	}
 	
 	sub algebra_as_string {
