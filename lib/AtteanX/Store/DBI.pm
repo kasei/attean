@@ -41,42 +41,30 @@ package AtteanX::Store::DBI 0.012 {
 
 	my @pos_names	= Attean::API::Quad->variables;
 
-=head1 ATTRIBUTES
+=head1 ROLES
 
-=over 4
-
-=item C<< subject >>
-
-=item C<< predicate >>
-
-=item C<< object >>
-
-=item C<< graph >>
-
-=back
+This class consumes L<Attean::API::QuadStore>,
+L<Attean::API::MutableQuadStore>, and L<Attean::API::BulkUpdatableStore>.
 
 =head1 METHODS
 
-Beyond the methods documented below, this class inherits methods from the
-L<Attean::API::QuadStore> class.
-
 =over 4
 
-=item C<< new () >>
+=item C<< new ( dbh => $dbh ) >>
 
-Returns a new memory-backed storage object.
+Returns a new quad-store object backed by the database referenced by the
+supplied database handle.
 
 =cut
 
-	has dbh => (is => 'ro', isa => InstanceOf['DBI::db'], required => 1);
-	has quads_table => (is => 'ro', isa => Str, default => 'quads');
+	has _dbh => (is => 'ro', isa => InstanceOf['DBI::db'], required => 1);
 	has _i2t_cache => (is => 'ro', default => sub { Cache::LRU->new( size => 256 ) });
 	has _t2i_cache => (is => 'ro', default => sub { Cache::LRU->new( size => 256 ) });
 
 	sub _last_insert_id {
 		my $self	= shift;
 		my $table	= shift;
-		my $dbh		= $self->dbh;
+		my $dbh		= $self->_dbh;
 		return $dbh->last_insert_id(undef, undef, $table, undef);
 	}
 
@@ -86,7 +74,7 @@ Returns a new memory-backed storage object.
 		if (my $term = $self->_i2t_cache->get($id)) {
 			return $term;
 		}
-		my $sth		= $self->dbh->prepare('SELECT term.type, term.value, dtterm.value AS datatype, term.language FROM term LEFT JOIN term dtterm ON (term.datatype_id = dtterm.term_id) WHERE term.term_id = ?');
+		my $sth		= $self->_dbh->prepare('SELECT term.type, term.value, dtterm.value AS datatype, term.language FROM term LEFT JOIN term dtterm ON (term.datatype_id = dtterm.term_id) WHERE term.term_id = ?');
 		$sth->execute($id);
 		my $row		= $sth->fetchrow_hashref;
 		my $type	= $row->{type};
@@ -118,7 +106,7 @@ Returns a new memory-backed storage object.
 		if (my $id = $self->_t2i_cache->get($term->as_string)) {
 			return $id;
 		}
-		my $dbh			= $self->dbh;
+		my $dbh			= $self->_dbh;
 		my $tid;
 		if ($term->does('Attean::API::IRI')) {
 			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ?');
@@ -151,7 +139,7 @@ Returns a new memory-backed storage object.
 		if (my $id = $self->_t2i_cache->get($term->as_string)) {
 			return $id;
 		}
-		my $dbh			= $self->dbh;
+		my $dbh			= $self->_dbh;
 		my $tid;
 		my $insert_term_sth	= $dbh->prepare('INSERT INTO term (type, value, datatype_id, language) VALUES (?, ?, ?, ?)');
 		if ($term->does('Attean::API::IRI')) {
@@ -236,7 +224,7 @@ predicate and objects. Any of the arguments may be undef to match any value.
 			if (scalar(@where)) {
 				$sql	.= ' WHERE ' . join(' AND ', @where);
 			}
-			my $sth	= $self->dbh->prepare($sql);
+			my $sth	= $self->_dbh->prepare($sql);
 			$sth->execute(@bind);
 			my $sub	= sub {
 				my $row	= $sth->fetchrow_arrayref;
@@ -265,7 +253,7 @@ the set of graphs of the stored quads.
 
 	sub get_graphs {
 		my $self	= shift;
-		my $sth		= $self->dbh->prepare('SELECT DISTINCT value FROM quad JOIN term ON (quad.graph = term.term_id)');
+		my $sth		= $self->_dbh->prepare('SELECT DISTINCT value FROM quad JOIN term ON (quad.graph = term.term_id)');
 		$sth->execute;
 		my $sub	= sub {
 			my $row	= $sth->fetchrow_arrayref;
@@ -303,7 +291,7 @@ Adds the specified C<$quad> to the underlying model.
 			$sql	= 'INSERT INTO quad (subject, predicate, object, graph) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?)';
 			push(@bind, @ids);
 		}
-		my $sth		= $self->dbh->prepare($sql);
+		my $sth		= $self->_dbh->prepare($sql);
 		$sth->execute(@bind);
 		return;
 	}
@@ -321,7 +309,7 @@ Removes the specified C<$statement> from the underlying model.
 		if (any { not defined($_) } @ids) {
 			return;
 		}
-		my $sth		= $self->dbh->prepare('DELETE FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?');
+		my $sth		= $self->_dbh->prepare('DELETE FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?');
 		$sth->execute(@ids);
 		return;
 	}
@@ -358,28 +346,53 @@ Removes all quads with the given C<< $graph >>.
 		my $graph	= shift;
 		my $gid		= $self->_get_term_id($graph);
 		return unless defined($gid);
-		my $sth		= $self->dbh->prepare('DELETE FROM quad WHERE graph = ?');
+		my $sth		= $self->_dbh->prepare('DELETE FROM quad WHERE graph = ?');
 		$sth->execute($gid);
 		return;
 	}
 	
+=item C<< begin_bulk_updates >>
+
+Begin a database transaction.
+
+=cut
+
 	sub begin_bulk_updates {
 		my $self	= shift;
-		$self->dbh->begin_work;
+		$self->_dbh->begin_work;
 	}
 	
+=item C<< end_bulk_updates >>
+
+Commit the current database transaction.
+
+=cut
+
 	sub end_bulk_updates {
 		my $self	= shift;
-		$self->dbh->commit;
+		$self->_dbh->commit;
 	}
 	
+=item C<< database_type >>
+
+Returns the database type name as a string (e.g. 'mysql', 'sqlite', or 'postgresql').
+
+=cut
+
 	sub database_type {
 		my $self	= shift;
-		my $dbh		= $self->dbh;
+		my $dbh		= $self->_dbh;
 		my $type	= lc($dbh->get_info($GetInfoType{SQL_DBMS_NAME}));
 		return $type;
 	}
 	
+=item C<< schema_file >>
+
+Returns the path to the file containing the database schema DDL for the current
+database type if available, undef otherwise.
+
+=cut
+
 	sub schema_file {
 		my $self	= shift;
 		my $type	= $self->database_type;
