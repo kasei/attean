@@ -19,25 +19,26 @@ AtteanX::Store::DBI provides a quad-store backed by a relational database.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::API::DBI 0.012 {
-	use Moo::Role;
+package AtteanX::Store::DBI 0.012 {
+	use Moo;
+	use DBI;
+	use DBI::Const::GetInfoType;
 	use Type::Tiny::Role;
 	use Types::Standard qw(Int Str ArrayRef HashRef ConsumerOf InstanceOf);
 	use Encode;
 	use Cache::LRU;
 	use Set::Scalar;
 	use Digest::SHA;
-	use List::Util qw(any first);
 	use List::MoreUtils qw(zip);
+	use List::Util qw(any first);
+	use File::ShareDir qw(dist_dir dist_file);
 	use Scalar::Util qw(refaddr reftype blessed);
 	use Math::Cartesian::Product;
 	use namespace::clean;
 
-	with 'Attean::API::MutableQuadStore';
+	with 'Attean::API::MutableQuadStore', 'Attean::API::BulkUpdatableStore';
 	with 'Attean::API::QuadStore';
 
-	requires '_last_insert_id';
-	
 	my @pos_names	= Attean::API::Quad->variables;
 
 =head1 ATTRIBUTES
@@ -71,6 +72,13 @@ Returns a new memory-backed storage object.
 	has quads_table => (is => 'ro', isa => Str, default => 'quads');
 	has _i2t_cache => (is => 'ro', default => sub { Cache::LRU->new( size => 256 ) });
 	has _t2i_cache => (is => 'ro', default => sub { Cache::LRU->new( size => 256 ) });
+
+	sub _last_insert_id {
+		my $self	= shift;
+		my $table	= shift;
+		my $dbh		= $self->dbh;
+		return $dbh->last_insert_id(undef, undef, $table, undef);
+	}
 
 	sub _get_term {
 		my $self	= shift;
@@ -283,8 +291,20 @@ Adds the specified C<$quad> to the underlying model.
 		if (any { not defined($_) } @ids) {
 			return;
 		}
-		my $sth		= $self->dbh->prepare('INSERT INTO quad (subject, predicate, object, graph) VALUES (?, ?, ?, ?)');
-		$sth->execute(@ids);
+		
+		my $type	= $self->database_type;
+		my @bind	= @ids;
+		my $sql		= 'INSERT INTO quad (subject, predicate, object, graph) VALUES (?, ?, ?, ?)';
+		if ($type eq 'sqlite') {
+			$sql	= 'INSERT OR IGNORE INTO quad (subject, predicate, object, graph) VALUES (?, ?, ?, ?)';
+		} elsif ($type eq 'mysql') {
+			$sql	= 'INSERT IGNORE INTO quad (subject, predicate, object, graph) VALUES (?, ?, ?, ?)';
+		} elsif ($type eq 'postgresql') {
+			$sql	= 'INSERT INTO quad (subject, predicate, object, graph) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?)';
+			push(@bind, @ids);
+		}
+		my $sth		= $self->dbh->prepare($sql);
+		$sth->execute(@bind);
 		return;
 	}
 
@@ -342,62 +362,31 @@ Removes all quads with the given C<< $graph >>.
 		$sth->execute($gid);
 		return;
 	}
-}
-
-package AtteanX::Store::DBI::mysql 0.012 {
-	use Moo;
-	use List::Util qw(any);
-	use namespace::clean;
 	
-	with 'AtteanX::Store::API::DBI';
-	
-	sub _last_insert_id {
+	sub begin_bulk_updates {
 		my $self	= shift;
-		my $table	= shift;
+		$self->dbh->begin_work;
+	}
+	
+	sub end_bulk_updates {
+		my $self	= shift;
+		$self->dbh->commit;
+	}
+	
+	sub database_type {
+		my $self	= shift;
 		my $dbh		= $self->dbh;
-		return $dbh->{'mysql_insertid'};
+		my $type	= lc($dbh->get_info($GetInfoType{SQL_DBMS_NAME}));
+		return $type;
 	}
-
-	sub add_quad {
-		my $self	= shift;
-		my $st		= shift;
-		my @ids		= map { $self->_get_or_create_term_id($_) } $st->values;
-		if (any { not defined($_) } @ids) {
-			return;
-		}
-		my $sth		= $self->dbh->prepare('INSERT IGNORE INTO quad (subject, predicate, object, graph) VALUES (?, ?, ?, ?)');
-		$sth->execute(@ids);
-		return;
-	}
-}
-
-package AtteanX::Store::DBI::Pg 0.012 {
-	use Moo;
-	use List::Util qw(any);
-	use namespace::clean;
 	
-	with 'AtteanX::Store::API::DBI';
-	
-	sub _last_insert_id {
+	sub schema_file {
 		my $self	= shift;
-		my $table	= shift;
-		my $dbh		= $self->dbh;
-		return $dbh->last_insert_id(undef, undef, $table, undef);
-	}
-
-	sub add_quad {
-		my $self	= shift;
-		my $st		= shift;
-		my @ids		= map { $self->_get_or_create_term_id($_) } $st->values;
-		if (any { not defined($_) } @ids) {
-			return;
-		}
-		my $check	= $self->dbh->prepare('SELECT COUNT(*) FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?');
-		$check->execute(@ids);
-		my ($count)	= $check->fetchrow_array;
-		unless ($count) {
-			my $sth		= $self->dbh->prepare('INSERT INTO quad (subject, predicate, object, graph) VALUES (?, ?, ?, ?)');
-			$sth->execute(@ids);
+		my $type	= $self->database_type;
+		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
+		my $file	= File::Spec->catfile($dir, 'database-schema', sprintf('dbi-schema-%s.sql', $type));
+		if (-r $file) {
+			return $file;
 		}
 		return;
 	}
