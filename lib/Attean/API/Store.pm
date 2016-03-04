@@ -187,6 +187,7 @@ package Attean::API::MutableQuadStore 0.012 {
 
 package Attean::API::ETagCacheableQuadStore 0.012 {
 	use Moo::Role;
+
 	with 'Attean::API::QuadStore';
 	
 	requires 'etag_value_for_quads';
@@ -194,9 +195,17 @@ package Attean::API::ETagCacheableQuadStore 0.012 {
 
 package Attean::API::TimeCacheableQuadStore 0.012 {
 	use Moo::Role;
+
 	with 'Attean::API::QuadStore';
 	
 	requires 'mtime_for_quads';
+}
+
+package Attean::API::BulkUpdatableStore 0.012 {
+	use Moo::Role;
+	
+	requires 'begin_bulk_updates';
+	requires 'end_bulk_updates';
 }
 
 1;
