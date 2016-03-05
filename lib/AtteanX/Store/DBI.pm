@@ -417,6 +417,7 @@ Returns the database type name as a string (e.g. 'mysql', 'sqlite', or 'postgres
 	sub database_type {
 		my $self	= shift;
 		my $dbh		= $self->dbh;
+# 		warn $dbh->get_info($GetInfoType{SQL_DRIVER_NAME});
 		my $type	= lc($dbh->get_info($GetInfoType{SQL_DBMS_NAME}));
 		return $type;
 	}
@@ -455,6 +456,76 @@ for the current database type if available, undef otherwise.
 			return $file;
 		}
 		return;
+	}
+	
+=item C<< available_database_types >>
+
+Returns the names of the database types for which the system has schemas
+available to create and drop quadstore tables.
+
+=cut
+
+	sub available_database_types {
+		my $self	= shift;
+		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
+		my $pat		= File::Spec->catfile($dir, 'database-schema', '*-create.sql');
+		my @files	= glob($pat);
+		my @types	= map { /(\w+)-create.sql/ } @files;
+		return @types;
+	}
+	
+=item C<< dbi_connect_args ( $type, %args ) >>
+
+=item C<< dbi_connect_args ( %args ) >>
+
+Returns a triple C<< $dsn, $user, $password >> suitable for passing to
+C<< DBI->connect >> to obtain a database handle to be used in constructing
+a C<< AtteanX::Store::DBI >> quadstore.
+
+C<< %args >> must contain a value for the C<< database >> key. It may also
+contain values for the optional keys: C<< user >>, C<< password >>,
+C<< host >>, and C<< port >>.
+
+If invoked as a class method, the C<< $type >> parameter is required, and must
+be one of the database types returned by C<< available_database_types >>.
+
+If invoked as an object method, the C<< $type >> parameter must not be
+included; this information will be obtained directly from the
+C<< AtteanX::Store::DBI >> object.
+
+=cut
+
+	sub dbi_connect_args {
+		my $self		= shift;
+		my $type		= blessed($self) ? $self->database_type : shift;
+		my %args		= @_;
+		my $database	= $args{database};
+		my $user		= $args{user};
+		my $password	= $args{password};
+		my $host		= $args{host};
+		my $port		= $args{port};
+		my $dsn;
+		if ($type eq 'mysql') {
+			$dsn		= "DBI:mysql:database=${database}";
+			if (defined($host)) {
+				$dsn	.= ";host=$host";
+			}
+			if (defined($port)) {
+				$dsn	.= ";port=$port";
+			}
+		} elsif ($type eq 'postgresql') {
+			$dsn		= "DBI:Pg:dbname=${database}";
+			if (defined($host)) {
+				$dsn	.= ";host=$host";
+			}
+			if (defined($port)) {
+				$dsn	.= ";port=$port";
+			}
+		} elsif ($type eq 'sqlite') {
+			$dsn		= "DBI:SQLite:dbname=${database}";
+		}
+		
+		return ($dsn, $user, $password);
 	}
 }
 
