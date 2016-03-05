@@ -1,7 +1,3 @@
--- DROP TABLE quad;
--- DROP TABLE term;
--- DROP TYPE TERM_TYPE;
-
 CREATE TYPE TERM_TYPE AS ENUM ('iri', 'literal', 'blank');
 CREATE TABLE IF NOT EXISTS term (
 	term_id SERIAL PRIMARY KEY,

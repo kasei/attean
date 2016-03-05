@@ -1,6 +1,3 @@
--- DROP TABLE quad;
--- DROP TABLE term;
-
 CREATE TABLE IF NOT EXISTS term (
 	term_id INTEGER PRIMARY KEY,
 	type CHAR(7),

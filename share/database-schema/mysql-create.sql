@@ -1,6 +1,3 @@
--- DROP TABLE quad;
--- DROP TABLE term;
-
 CREATE TABLE IF NOT EXISTS term (
 	term_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	type ENUM('iri', 'literal', 'blank'),
