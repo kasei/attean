@@ -14,6 +14,14 @@ This document describes AtteanX::Store::DBI version 0.012
 
 AtteanX::Store::DBI provides a quad-store backed by a relational database.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< dbh >>
+
+=back
+
 =cut
 
 use v5.14;
@@ -33,7 +41,6 @@ package AtteanX::Store::DBI 0.012 {
 	use List::Util qw(any first);
 	use File::ShareDir qw(dist_dir dist_file);
 	use Scalar::Util qw(refaddr reftype blessed);
-	use Math::Cartesian::Product;
 	use namespace::clean;
 
 	with 'Attean::API::MutableQuadStore', 'Attean::API::BulkUpdatableStore';
@@ -57,14 +64,14 @@ supplied database handle.
 
 =cut
 
-	has _dbh => (is => 'ro', isa => InstanceOf['DBI::db'], required => 1);
+	has dbh => (is => 'ro', isa => InstanceOf['DBI::db'], required => 1);
 	has _i2t_cache => (is => 'ro', default => sub { Cache::LRU->new( size => 256 ) });
 	has _t2i_cache => (is => 'ro', default => sub { Cache::LRU->new( size => 256 ) });
 
 	sub _last_insert_id {
 		my $self	= shift;
 		my $table	= shift;
-		my $dbh		= $self->_dbh;
+		my $dbh		= $self->dbh;
 		return $dbh->last_insert_id(undef, undef, $table, undef);
 	}
 
@@ -74,7 +81,7 @@ supplied database handle.
 		if (my $term = $self->_i2t_cache->get($id)) {
 			return $term;
 		}
-		my $sth		= $self->_dbh->prepare('SELECT term.type, term.value, dtterm.value AS datatype, term.language FROM term LEFT JOIN term dtterm ON (term.datatype_id = dtterm.term_id) WHERE term.term_id = ?');
+		my $sth		= $self->dbh->prepare('SELECT term.type, term.value, dtterm.value AS datatype, term.language FROM term LEFT JOIN term dtterm ON (term.datatype_id = dtterm.term_id) WHERE term.term_id = ?');
 		$sth->execute($id);
 		my $row		= $sth->fetchrow_hashref;
 		my $type	= $row->{type};
@@ -97,7 +104,7 @@ supplied database handle.
 			$self->_i2t_cache->set($id => $term);
 			return $term;
 		}
-		die;
+		Carp::confess "Failed to load term values for bad ID " . Dumper($id);
 	}
 	
 	sub _get_term_id {
@@ -106,7 +113,7 @@ supplied database handle.
 		if (my $id = $self->_t2i_cache->get($term->as_string)) {
 			return $id;
 		}
-		my $dbh			= $self->_dbh;
+		my $dbh			= $self->dbh;
 		my $tid;
 		if ($term->does('Attean::API::IRI')) {
 			my $sth	= $dbh->prepare('SELECT term_id FROM term WHERE type = ? AND value = ?');
@@ -139,7 +146,7 @@ supplied database handle.
 		if (my $id = $self->_t2i_cache->get($term->as_string)) {
 			return $id;
 		}
-		my $dbh			= $self->_dbh;
+		my $dbh			= $self->dbh;
 		my $tid;
 		my $insert_term_sth	= $dbh->prepare('INSERT INTO term (type, value, datatype_id, language) VALUES (?, ?, ?, ?)');
 		if ($term->does('Attean::API::IRI')) {
@@ -188,61 +195,89 @@ supplied database handle.
 		die;
 	}
 
-	# =item C<< size >>
-	# 
-	# Returns the number of quads in the store.
-	# 
-	# =cut
-	# 
-	# sub size {
-	# 	die;
-	# }
-
 =item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
 
 Returns a stream object of all statements matching the specified subject,
-predicate and objects. Any of the arguments may be undef to match any value.
+predicate and objects. Any of the arguments may be undef to match any value,
+or an ARRAY reference of terms that are allowable in the respective quad
+position.
 
 =cut
 
 	sub get_quads {
 		my $self	= shift;
 		my @nodes	= map { ref($_) eq 'ARRAY' ? $_ : [$_] } @_;
-		my @iters;
-		cartesian {
-			my @where;
-			my @bind;
-			foreach my $i (0 .. 3) {
-				my $name	= $pos_names[$i];
-				if (defined(my $term = $_[$i])) {
-					my $id	= $self->_get_term_id($term);
-					push(@where, "$name = ?");
-					push(@bind, $id);
+		my @where;
+		my @bind;
+		foreach my $i (0 .. 3) {
+			my $name	= $pos_names[$i];
+			my $terms = $_[$i];
+			if (defined($terms)) {
+				unless (scalar(@$terms) == 1 and not defined($terms->[0])) {
+					my @ids	= map { $self->_get_term_id($_) } @$terms;
+					unless (scalar(@ids)) {
+						return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
+					}
+					push(@where, "$name IN (" . join(', ', ('?') x scalar(@ids)) . ")");
+					push(@bind, @ids);
 				}
 			}
-			my $sql		= 'SELECT subject, predicate, object, graph FROM quad';
-			if (scalar(@where)) {
-				$sql	.= ' WHERE ' . join(' AND ', @where);
-			}
-			my $sth	= $self->_dbh->prepare($sql);
-			$sth->execute(@bind);
-			my $sub	= sub {
-				my $row	= $sth->fetchrow_arrayref;
-				return unless $row;
+		}
+		my $sql		= 'SELECT subject, predicate, object, graph FROM quad';
+		if (scalar(@where)) {
+			$sql	.= ' WHERE ' . join(' AND ', @where);
+		}
+		my $sth	= $self->dbh->prepare($sql);
+		$sth->execute(@bind);
+		my $ok	= 1;
+		my $sub	= sub {
+			return unless ($ok);
+			if (my $row	= $sth->fetchrow_arrayref) {
 				my @terms	= map { $self->_get_term($_) } @$row;
 				return Attean::Quad->new(zip @pos_names, @terms);
-			};
-			my $iter	= Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' );
-			push(@iters, $iter);
-		} @nodes;
-		return Attean::IteratorSequence->new( iterators => \@iters, item_type => 'Attean::API::Quad' );
+			}
+			$ok	= 0;
+			return;
+		};
+		my $iter	= Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' );
+		return $iter;
 	}
 
-	# sub count_quads {
-	# 	my $self	= shift;
-	# 	my @nodes	= map { ref($_) eq 'ARRAY' ? $_ : [$_] } @_;
-	# 	die;
-	# }
+=item C<< count_quads ( $subject, $predicate, $object, $graph ) >>
+
+Returns the count of all statements matching the specified subject,
+predicate and objects. Any of the arguments may be undef to match any value,
+or an ARRAY reference of terms that are allowable in the respective quad
+position.
+
+=cut
+
+	sub count_quads {
+		my $self	= shift;
+		my @nodes	= map { ref($_) eq 'ARRAY' ? $_ : [$_] } @_;
+		my @where;
+		my @bind;
+		foreach my $i (0 .. 3) {
+			my $name	= $pos_names[$i];
+			my $terms = $_[$i];
+			if (defined($terms)) {
+				unless (scalar(@$terms) == 1 and not defined($terms->[0])) {
+					my @ids	= map { $self->_get_term_id($_) } @$terms;
+					return 0 unless scalar(@ids);
+					push(@where, "$name IN (" . join(', ', ('?') x scalar(@ids)) . ")");
+					push(@bind, @ids);
+				}
+			}
+		}
+		my $sql		= 'SELECT COUNT(*) FROM quad';
+		if (scalar(@where)) {
+			$sql	.= ' WHERE ' . join(' AND ', @where);
+		}
+		my $sth	= $self->dbh->prepare($sql);
+		$sth->execute(@bind);
+		my ($count)	= $sth->fetchrow_array;
+		return $count;
+	}
 
 =item C<< get_graphs >>
 
@@ -253,7 +288,7 @@ the set of graphs of the stored quads.
 
 	sub get_graphs {
 		my $self	= shift;
-		my $sth		= $self->_dbh->prepare('SELECT DISTINCT value FROM quad JOIN term ON (quad.graph = term.term_id)');
+		my $sth		= $self->dbh->prepare('SELECT DISTINCT value FROM quad JOIN term ON (quad.graph = term.term_id)');
 		$sth->execute;
 		my $sub	= sub {
 			my $row	= $sth->fetchrow_arrayref;
@@ -291,7 +326,7 @@ Adds the specified C<$quad> to the underlying model.
 			$sql	= 'INSERT INTO quad (subject, predicate, object, graph) SELECT ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?)';
 			push(@bind, @ids);
 		}
-		my $sth		= $self->_dbh->prepare($sql);
+		my $sth		= $self->dbh->prepare($sql);
 		$sth->execute(@bind);
 		return;
 	}
@@ -309,7 +344,7 @@ Removes the specified C<$statement> from the underlying model.
 		if (any { not defined($_) } @ids) {
 			return;
 		}
-		my $sth		= $self->_dbh->prepare('DELETE FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?');
+		my $sth		= $self->dbh->prepare('DELETE FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?');
 		$sth->execute(@ids);
 		return;
 	}
@@ -346,7 +381,7 @@ Removes all quads with the given C<< $graph >>.
 		my $graph	= shift;
 		my $gid		= $self->_get_term_id($graph);
 		return unless defined($gid);
-		my $sth		= $self->_dbh->prepare('DELETE FROM quad WHERE graph = ?');
+		my $sth		= $self->dbh->prepare('DELETE FROM quad WHERE graph = ?');
 		$sth->execute($gid);
 		return;
 	}
@@ -359,7 +394,7 @@ Begin a database transaction.
 
 	sub begin_bulk_updates {
 		my $self	= shift;
-		$self->_dbh->begin_work;
+		$self->dbh->begin_work;
 	}
 	
 =item C<< end_bulk_updates >>
@@ -370,7 +405,7 @@ Commit the current database transaction.
 
 	sub end_bulk_updates {
 		my $self	= shift;
-		$self->_dbh->commit;
+		$self->dbh->commit;
 	}
 	
 =item C<< database_type >>
@@ -381,7 +416,7 @@ Returns the database type name as a string (e.g. 'mysql', 'sqlite', or 'postgres
 
 	sub database_type {
 		my $self	= shift;
-		my $dbh		= $self->_dbh;
+		my $dbh		= $self->dbh;
 		my $type	= lc($dbh->get_info($GetInfoType{SQL_DBMS_NAME}));
 		return $type;
 	}
