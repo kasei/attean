@@ -421,18 +421,36 @@ Returns the database type name as a string (e.g. 'mysql', 'sqlite', or 'postgres
 		return $type;
 	}
 	
-=item C<< schema_file >>
+=item C<< create_schema_file >>
 
-Returns the path to the file containing the database schema DDL for the current
-database type if available, undef otherwise.
+Returns the path to the file containing the database DDL for quadstore creation
+for the current database type if available, undef otherwise.
 
 =cut
 
-	sub schema_file {
+	sub create_schema_file {
 		my $self	= shift;
 		my $type	= $self->database_type;
 		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
-		my $file	= File::Spec->catfile($dir, 'database-schema', sprintf('dbi-schema-%s.sql', $type));
+		my $file	= File::Spec->catfile($dir, 'database-schema', sprintf('%s-create.sql', $type));
+		if (-r $file) {
+			return $file;
+		}
+		return;
+	}
+
+=item C<< drop_schema_file >>
+
+Returns the path to the file containing the database DDL for quadstore deletion
+for the current database type if available, undef otherwise.
+
+=cut
+
+	sub drop_schema_file {
+		my $self	= shift;
+		my $type	= $self->database_type;
+		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
+		my $file	= File::Spec->catfile($dir, 'database-schema', sprintf('%s-drop.sql', $type));
 		if (-r $file) {
 			return $file;
 		}
