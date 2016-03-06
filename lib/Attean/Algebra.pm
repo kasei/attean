@@ -1,5 +1,6 @@
 use v5.14;
 use warnings;
+use utf8;
 
 =head1 NAME
 
@@ -815,7 +816,8 @@ package Attean::Algebra::Group 0.012 {
 			my $op	= $a->operator;
 			my $d	= $a->distinct ? "DISTINCT " : '';
 			my ($e)	= ((map { $_->as_string } @{ $a->children }), '');
-			push(@aggs, "$v ← ${op}($d$e)");
+			my $s	= "$v ← ${op}($d$e)";
+			push(@aggs, $s);
 		}
 		return sprintf('Group { %s } aggregate { %s }', join(', ', map { $_->as_string() } @$groups), join(', ', @aggs));
 	}
