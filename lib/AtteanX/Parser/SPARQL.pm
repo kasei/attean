@@ -1312,6 +1312,7 @@ sub _RankClause {
 		},
 		variable	=> $var,
 	);
+	
 	$self->{build}{__aggregate}{ $var->value }	= [ $var, $r ];
 }
 
@@ -2871,7 +2872,7 @@ sub _Aggregate {
 			}
 		}
 	}
-	my $arg	= join(',', map { blessed($_) ? $_->as_sparql : $_ } @expr);
+	my $arg	= join(',', map { blessed($_) ? $_->as_string : $_ } @expr);
 	if ($distinct) {
 		$arg	= 'DISTINCT ' . $arg;
 	}
