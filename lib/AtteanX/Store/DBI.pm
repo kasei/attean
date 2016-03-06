@@ -36,7 +36,6 @@ package AtteanX::Store::DBI 0.012 {
 	use Encode;
 	use Cache::LRU;
 	use Set::Scalar;
-	use Digest::SHA;
 	use List::MoreUtils qw(zip);
 	use List::Util qw(any first);
 	use File::ShareDir qw(dist_dir dist_file);

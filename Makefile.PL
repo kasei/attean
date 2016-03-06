@@ -48,6 +48,11 @@ requires		'File::Slurp'				=> 0;
 requires		'File::ShareDir'			=> 0;
 requires		'RDF::Query'				=> 2.910;
 
+requires		'DBI'						=> 0;
+requires		'Cache::LRU'				=> 0;
+requires		'DBI'						=> 0;
+requires		'DBIx::MultiStatementDo'	=> 0;
+
 resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",
 	'repository' => "http://github.com/kasei/attean/",
@@ -58,8 +63,7 @@ resources(
 author_tests('xt');
 
 install_share;
-install_script glob('bin/attean_parse');
-install_script glob('bin/attean_query');
+install_script glob('bin/attean_*');
 
 write_doap_changes "meta/changes.ttl", "Changes", "turtle";
 
