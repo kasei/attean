@@ -210,15 +210,17 @@ position.
 		my @bind;
 		foreach my $i (0 .. 3) {
 			my $name	= $pos_names[$i];
-			my $terms = $_[$i];
+			my $terms = $nodes[$i];
 			if (defined($terms)) {
 				unless (scalar(@$terms) == 1 and not defined($terms->[0])) {
-					my @ids	= map { $self->_get_term_id($_) } @$terms;
-					unless (scalar(@ids)) {
-						return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
+					unless (any { $_->does('Attean::API::Variable') } @$terms) {
+						my @ids	= map { $self->_get_term_id($_) } @$terms;
+						unless (scalar(@ids)) {
+							return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
+						}
+						push(@where, "$name IN (" . join(', ', ('?') x scalar(@ids)) . ")");
+						push(@bind, @ids);
 					}
-					push(@where, "$name IN (" . join(', ', ('?') x scalar(@ids)) . ")");
-					push(@bind, @ids);
 				}
 			}
 		}
@@ -258,13 +260,15 @@ position.
 		my @bind;
 		foreach my $i (0 .. 3) {
 			my $name	= $pos_names[$i];
-			my $terms = $_[$i];
+			my $terms = $nodes[$i];
 			if (defined($terms)) {
 				unless (scalar(@$terms) == 1 and not defined($terms->[0])) {
-					my @ids	= map { $self->_get_term_id($_) } @$terms;
-					return 0 unless scalar(@ids);
-					push(@where, "$name IN (" . join(', ', ('?') x scalar(@ids)) . ")");
-					push(@bind, @ids);
+					unless (any { $_->does('Attean::API::Variable') } @$terms) {
+						my @ids	= map { $self->_get_term_id($_) } @$terms;
+						return 0 unless scalar(@ids);
+						push(@where, "$name IN (" . join(', ', ('?') x scalar(@ids)) . ")");
+						push(@bind, @ids);
+					}
 				}
 			}
 		}
