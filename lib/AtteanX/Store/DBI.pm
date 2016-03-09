@@ -482,9 +482,9 @@ available to create and drop quadstore tables.
 
 =item C<< dbi_connect_args ( %args ) >>
 
-Returns a triple C<< $dsn, $user, $password >> suitable for passing to
-C<< DBI->connect >> to obtain a database handle to be used in constructing
-a C<< AtteanX::Store::DBI >> quadstore.
+Returns a quad C<< $dsn, $user, $password, \%connect_args >> suitable for
+passing to C<< DBI->connect >> to obtain a database handle to be used in
+constructing a C<< AtteanX::Store::DBI >> quadstore.
 
 C<< %args >> must contain a value for the C<< database >> key. It may also
 contain values for the optional keys: C<< user >>, C<< password >>,
@@ -509,6 +509,7 @@ C<< AtteanX::Store::DBI >> object.
 		my $host		= $args{host};
 		my $port		= $args{port};
 		my $dsn;
+		my %connect_args;
 		if ($type eq 'mysql') {
 			$dsn		= "DBI:mysql:database=${database}";
 			if (defined($host)) {
@@ -517,6 +518,7 @@ C<< AtteanX::Store::DBI >> object.
 			if (defined($port)) {
 				$dsn	.= ";port=$port";
 			}
+			$connect_args{mysql_enable_utf8}	= 1;
 		} elsif ($type eq 'postgresql') {
 			$dsn		= "DBI:Pg:dbname=${database}";
 			if (defined($host)) {
@@ -529,7 +531,7 @@ C<< AtteanX::Store::DBI >> object.
 			$dsn		= "DBI:SQLite:dbname=${database}";
 		}
 		
-		return ($dsn, $user, $password);
+		return ($dsn, $user, $password, \%connect_args);
 	}
 
 =item C<< plans_for_algebra( $algebra, $model, $active_graphs, $default_graphs ) >>
