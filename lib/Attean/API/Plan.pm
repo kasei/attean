@@ -1,5 +1,6 @@
 use v5.14;
 use warnings;
+use utf8;
 
 =head1 NAME
 
