@@ -44,6 +44,7 @@ package AtteanX::Store::DBI 0.012 {
 
 	with 'Attean::API::MutableQuadStore', 'Attean::API::BulkUpdatableStore';
 	with 'Attean::API::QuadStore';
+	with 'Attean::API::CostPlanner';
 
 	my @pos_names	= Attean::API::Quad->variables;
 
@@ -435,7 +436,7 @@ for the current database type if available, undef otherwise.
 	sub create_schema_file {
 		my $self	= shift;
 		my $type	= $self->database_type;
-		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
+		my $dir		= $ENV{ATTEAN_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
 		my $file	= File::Spec->catfile($dir, 'database-schema', sprintf('%s-create.sql', $type));
 		if (-r $file) {
 			return $file;
@@ -453,7 +454,7 @@ for the current database type if available, undef otherwise.
 	sub drop_schema_file {
 		my $self	= shift;
 		my $type	= $self->database_type;
-		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
+		my $dir		= $ENV{ATTEAN_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
 		my $file	= File::Spec->catfile($dir, 'database-schema', sprintf('%s-drop.sql', $type));
 		if (-r $file) {
 			return $file;
@@ -470,7 +471,7 @@ available to create and drop quadstore tables.
 
 	sub available_database_types {
 		my $self	= shift;
-		my $dir		= $ENV{RDF_ENDPOINT_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
+		my $dir		= $ENV{ATTEAN_SHAREDIR} || eval { dist_dir('Attean') } || 'share';
 		my $pat		= File::Spec->catfile($dir, 'database-schema', '*-create.sql');
 		my @files	= glob($pat);
 		my @types	= map { /(\w+)-create.sql/ } @files;
@@ -530,6 +531,92 @@ C<< AtteanX::Store::DBI >> object.
 		
 		return ($dsn, $user, $password);
 	}
+
+=item C<< plans_for_algebra( $algebra, $model, $active_graphs, $default_graphs ) >>
+
+For BGP algebras, returns a DBI-specific L<Attean::API::Plan> object, otherwise
+returns undef.
+
+=cut
+
+	sub plans_for_algebra {
+		my $self			= shift;
+		my $algebra			= shift;
+		my $model			= shift;
+		my $active_graphs	= shift;
+		my $default_graphs	= shift;
+		my %args			= @_;
+		return unless ($algebra);
+
+		if ($algebra->isa('Attean::Algebra::BGP') and scalar(@{ $algebra->triples }) == 1) {
+			my @vars	= $algebra->in_scope_variables;
+			warn "TODO: generate SQL for BGP";
+			return;
+			my $sql		= 'SELECT subject AS s, predicate AS p, object AS o, graph AS g FROM quad';
+			return AtteanX::Store::DBI::Plan->new(
+				store => $self,
+				sql => $sql,
+				in_scope_variables => [@vars]
+			);
+		}
+
+		return;
+	}
+
+=item C<< cost_for_plan( $plan ) >>
+
+Returns the estimated cost for a DBI-specific query plan, undef otherwise.
+
+=cut
+
+	sub cost_for_plan {
+		my $self	= shift;
+		my $plan	= shift;
+		if ($plan->isa('AtteanX::Store::DBI::Plan')) {
+			return 1; # TODO: actually estimate cost here
+		}
+		return;
+	}
+
+}
+
+package AtteanX::Store::DBI::Plan 0.012 {
+	use Moo;
+	use Type::Tiny::Role;
+	use Types::Standard qw(InstanceOf Str);
+	use namespace::clean;
+	
+	has store	=> (is => 'ro', isa => InstanceOf['AtteanX::Store::DBI'], required => 1);
+	has sql	=> (is => 'ro', isa => Str, required => 1);
+
+	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	
+	sub plan_as_string { 'DBI BGP { 1 triple }' }
+	
+	sub impl {
+		my $self	= shift;
+		my @bind;
+		my $store	= $self->store;
+		my $sth		= $store->dbh->prepare($self->sql);
+		my $vars	= $self->in_scope_variables;
+		return sub {
+			$sth->execute(@bind);
+			my $sub	= sub {
+				if (my $row = $sth->fetchrow_hashref) {
+					my %bindings;
+					foreach my $k (@$vars) {
+						my $term		= $store->_get_term($row->{$k});
+						$bindings{$k}	= $term;
+					}
+					my $r	= Attean::Result->new( bindings => \%bindings );
+					return $r;
+				}
+				return;
+			};
+			return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Result', variables => $vars );
+		};
+	}
+	
 }
 
 1;
