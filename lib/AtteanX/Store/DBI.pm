@@ -236,7 +236,8 @@ position.
 			return unless ($ok);
 			if (my $row	= $sth->fetchrow_arrayref) {
 				my @terms	= map { $self->_get_term($_) } @$row;
-				return Attean::Quad->new(zip @pos_names, @terms);
+				my $quad	= Attean::Quad->new(zip @pos_names, @terms);
+				return $quad;
 			}
 			$ok	= 0;
 			return;
@@ -510,6 +511,8 @@ C<< AtteanX::Store::DBI >> object.
 		my $port		= $args{port};
 		my $dsn;
 		my %connect_args;
+		$connect_args{RaiseError}	= 1;
+
 		if ($type eq 'mysql') {
 			$dsn		= "DBI:mysql:database=${database}";
 			if (defined($host)) {
@@ -552,8 +555,8 @@ returns undef.
 
 		if ($algebra->isa('Attean::Algebra::BGP') and scalar(@{ $algebra->triples }) == 1) {
 			my @vars	= $algebra->in_scope_variables;
-			warn "TODO: generate SQL for BGP";
 			return;
+			warn "TODO: generate SQL for BGP";
 			my $sql		= 'SELECT subject AS s, predicate AS p, object AS o, graph AS g FROM quad';
 			return AtteanX::Store::DBI::Plan->new(
 				store => $self,
