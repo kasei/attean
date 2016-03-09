@@ -113,6 +113,7 @@ lib/AtteanX/Serializer/Turtle.pm
 lib/AtteanX/Serializer/TurtleTokens.pm
 lib/AtteanX/SPARQL/Constants.pm
 lib/AtteanX/SPARQL/Token.pm
+lib/AtteanX/Store/DBI.pm
 lib/AtteanX/Store/Memory.pm
 lib/AtteanX/Store/Simple.pm
 lib/AtteanX/Store/SimpleTripleStore.pm
