@@ -62,7 +62,7 @@ $args{database}	= shift || die "No database name given.\n";
 
 
 my @connect	= AtteanX::Store::DBI->dbi_connect_args($type, %args);
-my $dbh		= DBI->connect(@connect, { RaiseError => 1 });
+my $dbh		= DBI->connect(@connect);
 my $store	= AtteanX::Store::DBI->new( dbh => $dbh );
 my $batch	= DBIx::MultiStatementDo->new( dbh => $dbh );
 
