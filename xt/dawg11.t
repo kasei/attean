@@ -19,6 +19,7 @@ use Encode qw(encode);
 use Getopt::Long;
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
+use List::MoreUtils qw(all);
 use Test::More;
 use Text::CSV;
 use Try::Tiny;
@@ -26,8 +27,8 @@ use URI::file;
 
 use Attean;
 use Attean::RDF;
+use AtteanX::Store::DBI;
 use Attean::SimpleQueryEvaluator;
-use AtteanX::RDFQueryTranslator;
 
 use Carp;
 use HTTP::Request;
@@ -41,6 +42,9 @@ our $STRICT_APPROVAL	= 0;
 our $USE_IDP_PLANNER	= 1;
 
 require XML::Simple;
+
+binmode(\*STDOUT, ':encoding(UTF-8)');
+binmode(\*STDERR, ':encoding(UTF-8)');
 
 my $PATTERN	= '';
 my %args;
@@ -74,6 +78,29 @@ if ($PATTERN) {
 }
 
 warn "PATTERN: ${PATTERN}\n" if ($PATTERN and $debug);
+
+sub test_model {
+	if (all { exists $ENV{$_} } qw(ATTEAN_STORE_MYSQL_DATABASE ATTEAN_STORE_MYSQL_HOST ATTEAN_STORE_MYSQL_USER ATTEAN_STORE_MYSQL_PASSWORD)) {
+		my @connect		= AtteanX::Store::DBI->dbi_connect_args(
+			'mysql',
+			database	=> $ENV{ATTEAN_STORE_MYSQL_DATABASE},
+			host		=> $ENV{ATTEAN_STORE_MYSQL_HOST},
+			user		=> $ENV{ATTEAN_STORE_MYSQL_USER},
+			password	=> $ENV{ATTEAN_STORE_MYSQL_PASSWORD},
+		);
+		my $dbh			= DBI->connect(@connect);
+		my $store		= Attean->get_store('DBI')->new( dbh => $dbh );
+		foreach my $g ($store->get_graphs->elements) {
+			$store->drop_graph($g);
+		}
+		my $model	= Attean::MutableQuadModel->new( store => $store );
+		return $model;
+	} else {
+		my $store	= Attean->get_store('Memory')->new();
+		my $model	= Attean::MutableQuadModel->new( store => $store );
+		return $model;
+	}
+}
 
 sub memory_model {
 	my $store	= Attean->get_store('Memory')->new();
@@ -349,7 +376,7 @@ sub update_eval_test {
 	# TODO: set up remote endpoint mock
 
 	warn "constructing model...\n" if ($debug);
-	my $test_model	= memory_model();
+	my $test_model	= test_model();
 	eval {
 		if (blessed($data)) {
 			$test_model->load_urls_into_graph($default_graph, $data);
@@ -514,7 +541,7 @@ sub query_eval_test {
 	
 STRESS:	foreach (1 .. $count) {
 		print STDERR "constructing model... " if ($debug);
-		my $test_model	= memory_model();
+		my $test_model	= test_model();
 		try {
 			if (blessed($data)) {
 				$test_model->load_urls_into_graph($default_graph, $data);
