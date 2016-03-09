@@ -92,7 +92,7 @@ package Attean::Literal 0.012 {
 		my $orig	= shift;
 		my $self	= shift;
 		if ($self->has_language) {
-			return Attean::IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
+			return Attean::IRI->new(value => 'http://www.w3.org/2001/XMLSchema#langString');
 		} else {
 			return $self->$orig(@_);
 		}
