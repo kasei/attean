@@ -1,173 +1,32 @@
-#!/usr/bin/perl
-
-use strict;
-use warnings;
-no warnings 'redefine';
-
-BEGIN {
-	no warnings 'once';
-	$Error::TypeTiny::StackTrace	= 1;
-}
+package Test::Attean::SPARQLSuite;
 
 use v5.14;
 use warnings;
-no warnings 'once';
-use autodie;
-use AtteanX::Parser::SPARQL;
-use Data::Dumper;
-use Encode qw(encode);
-use Getopt::Long;
-use Regexp::Common qw /URI/;
-use Scalar::Util qw(blessed reftype);
-use List::MoreUtils qw(all);
-use Test::More;
-use Text::CSV;
-use Try::Tiny;
-use URI::file;
+use Test::Roo::Role;
 
 use Attean;
 use Attean::RDF;
 use AtteanX::Store::DBI;
+use AtteanX::Parser::SPARQL;
 use Attean::SimpleQueryEvaluator;
 
 use Carp;
 use HTTP::Request;
 use HTTP::Response;
 use HTTP::Message::PSGI;
-
-our $RUN_UPDATE_TESTS	= 1;
-our $RUN_QUERY_TESTS	= 1;
-our $debug				= 0;
-our $STRICT_APPROVAL	= 0;
-our $USE_IDP_PLANNER	= 1;
-
+use Data::Dumper;
+use Encode qw(encode);
+use Getopt::Long;
+use Regexp::Common qw /URI/;
+use Scalar::Util qw(blessed reftype);
+use List::MoreUtils qw(all);
+use Test::Modern;
+use Text::CSV;
+use Try::Tiny;
+use URI::file;
+use File::Spec;
+use Types::Standard qw(Str Bool ArrayRef HashRef InstanceOf ConsumerOf);
 require XML::Simple;
-
-binmode(\*STDOUT, ':encoding(UTF-8)');
-binmode(\*STDERR, ':encoding(UTF-8)');
-
-my $PATTERN	= '';
-my %args;
-
-our $RUN_TESTS	= 1;
-our $LIST_TESTS	= 0;
-
-while (defined(my $opt = shift)) {
-	if ($opt eq '-v') {
-		$debug++;
-	} elsif ($opt =~ /^-(.*)$/) {
-		if ($1 eq 'list') {
-			$RUN_TESTS	= 0;
-			$LIST_TESTS	= 1;
-		} elsif ($1 =~ 'stress=(\d+)') {
-			$args{ 'stress' }	= $1;
-		} else {
-			$args{ $1 }	= 1;
-		}
-	} else {
-		$PATTERN	= $opt;
-	}
-}
-
-$ENV{RDFQUERY_THROW_ON_SERVICE}	= 1;
-
-no warnings 'once';
-
-if ($PATTERN) {
-# 	$debug			= 1;
-}
-
-warn "PATTERN: ${PATTERN}\n" if ($PATTERN and $debug);
-
-sub test_model {
-	if (all { exists $ENV{$_} } qw(ATTEAN_STORE_MYSQL_DATABASE ATTEAN_STORE_MYSQL_HOST ATTEAN_STORE_MYSQL_USER ATTEAN_STORE_MYSQL_PASSWORD)) {
-		my @connect		= AtteanX::Store::DBI->dbi_connect_args(
-			'mysql',
-			database	=> $ENV{ATTEAN_STORE_MYSQL_DATABASE},
-			host		=> $ENV{ATTEAN_STORE_MYSQL_HOST},
-			user		=> $ENV{ATTEAN_STORE_MYSQL_USER},
-			password	=> $ENV{ATTEAN_STORE_MYSQL_PASSWORD},
-		);
-		my $dbh			= DBI->connect(@connect);
-		my $store		= Attean->get_store('DBI')->new( dbh => $dbh );
-		foreach my $g ($store->get_graphs->elements) {
-			$store->drop_graph($g);
-		}
-		my $model	= Attean::MutableQuadModel->new( store => $store );
-		return $model;
-	} else {
-		my $store	= Attean->get_store('Memory')->new();
-		my $model	= Attean::MutableQuadModel->new( store => $store );
-		return $model;
-	}
-}
-
-sub memory_model {
-	my $store	= Attean->get_store('Memory')->new();
-	my $model	= Attean::MutableQuadModel->new( store => $store );
-	return $model;
-}
-
-my @files;
-if ($RUN_QUERY_TESTS) {
-	push(@files, qw(
-		aggregates
-		bind
-		bindings
-		construct
-		csv-tsv-res
-		exists
-		functions
-		grouping
-		json-res
-		negation
-		project-expression
-		property-path
-		subquery
-	));
-
-	push(@files, qw(
-		aggregates
-		construct
-		delete-insert
-		grouping
-		syntax-query
-		syntax-fed
-		syntax-update-1
-		syntax-update-2
-	));
-}
-if ($RUN_UPDATE_TESTS) {
-	push(@files, qw(
-		add
-		basic-update
-		clear
-		copy
-		delete
-		delete-data
-		delete-insert
-		delete-where
-		drop
-		move
-		update-silent
-	));
-}
-my @manifests	= grep { -r $_ } map { glob( "xt/dawg11/$_/manifest.ttl" ) } @files;
-if (scalar(@manifests)) {
-	plan qw(no_plan);
-} else {
-	plan skip_all => 'No manifest files found in xt/dawg11';
-	exit(0);
-}
-
-my $model	= memory_model();
-my $class	= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
-my $default_graph	= iri('http://graph/');
-
-my @load	= map { iri("file://" . File::Spec->rel2abs($_)) } @manifests;
-$model->load_urls_into_graph($default_graph, @load);
-
-warn "done parsing manifests" if $debug;
 
 my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
 my $RDF		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
@@ -178,91 +37,114 @@ my $UT		= 'http://www.w3.org/2009/sparql/tests/test-update#';
 my $RQ		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-query#';
 my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 
-{
-	my @manifests	= $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") )->elements;
-	foreach my $m (@manifests) {
-# 		warn "Manifest: " . $m->as_string . "\n" if ($debug);
-		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
-		unless (blessed($list)) {
-			warn "No mf:entries found for manifest " . $m->as_string . "\n";
-		}
-		my @tests	= $model->get_list( $default_graph, $list )->elements;
-		foreach my $test (@tests) {
-			unless ($test->value =~ /$PATTERN/) {
-				next;
-			}
-			if ($LIST_TESTS) {
-				say $test->value;
-			}
-			if ($RUN_TESTS) {
-				if ($RUN_QUERY_TESTS) {
-					{
-						# Evaluation Tests
-						my $et	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}QueryEvaluationTest"));
-						my $ct	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}CSVResultFormatTest"));
-						if ($et + $ct) {
-							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-							warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-							my $count	= $args{ stress } || 1;
-							query_eval_test( $model, $test, $count );
-						}
-					}
-					
-					{
-						# Syntax Tests
-						my $total	= 0;
-						foreach my $type (qw(PositiveSyntaxTest11 NegativeSyntaxTest11)) {
-							$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
-						}
+requires 'test_model';
 
-						if ($total) {
-							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-							warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-							my $count	= $args{ stress } || 1;
-							syntax_test( 'query', $model, $test, $count );
-						}
-					}
-				}
-				
-				if ($RUN_UPDATE_TESTS) {
-					{
-						# Evaluation Tests
-						if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_quads($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
-							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-							unless ($test->value =~ /$PATTERN/) {
-								next;
-							}
-							warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-							my $count	= $args{ stress } || 1;
-							update_eval_test( $model, $test, $count );
-						}
-					}
-					
-					{
-						# Syntax Tests
-						my $total	= 0;
-						foreach my $type (qw(PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest11)) {
-							$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
-						}
+has run_update_tests	=> (is => 'rw', isa => Bool, default => 1);
+has run_query_tests		=> (is => 'rw', isa => Bool, default => 1);
 
-						if ($total) {
-							my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-							warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($debug);
-							my $count	= $args{ stress } || 1;
-							syntax_test( 'update', $model, $test, $count );
-						}
-					}
-				}
-			}
-		}
+has debug				=> (is => 'rw', isa => Bool, default => 0);
+has results				=> (is => 'rw', isa => Bool, default => 0);
+has strict_approval		=> (is => 'rw', isa => Bool, default => 0);
+has use_idp_planner		=> (is => 'rw', isa => Bool, default => 1);
+has pattern				=> (is => 'rw', isa => Str, default => '');
+
+has tests_dir			=> (is => 'rw', required => 1, default => sub { $ENV{ATTEAN_SPARQL_TESTS_DIR} });
+has model				=> (is => 'rw', isa => ConsumerOf['Attean::API::Model'], init_arg => undef);
+has manifests			=> (is => 'rw', isa => ArrayRef, init_arg => undef);
+has default_graph		=> (is => 'rw');
+has failures			=> (is => 'rw', isa => HashRef, default => sub { +{} });
+
+sub memory_model {
+	my $self	= shift;
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	return $model;
+}
+
+sub setup {
+	my $self	= shift;
+	$self->default_graph(iri('http://graph/'));
+
+	warn 'setting up sparql test harness' if ($self->debug);
+	my @files;
+	if ($self->run_query_tests) {
+		push(@files, qw(
+			aggregates
+			bind
+			bindings
+			construct
+			csv-tsv-res
+			exists
+			functions
+			grouping
+			json-res
+			negation
+			project-expression
+			property-path
+			subquery
+		));
+
+		push(@files, qw(
+			aggregates
+			construct
+			delete-insert
+			grouping
+			syntax-query
+			syntax-fed
+			syntax-update-1
+			syntax-update-2
+		));
 	}
+	if ($self->run_update_tests) {
+		push(@files, qw(
+			add
+			basic-update
+			clear
+			copy
+			delete
+			delete-data
+			delete-insert
+			delete-where
+			drop
+			move
+			update-silent
+		));
+	}
+	
+	my $dir		= $self->tests_dir;
+	unless (defined($dir)) {
+		plan skip_all => "No manifest directory given";
+		exit(0);
+	}
+	
+	unless (-d $dir and -r $dir) {
+		plan skip_all => "Manifest directory not readable: $dir";
+		exit(0);
+	}
+	
+	my @manifests	= grep { -r $_ } map { File::Spec->catfile($dir, $_, 'manifest.ttl') } @files;
+	unless (scalar(@manifests)) {
+		plan skip_all => "No manifest files found in $dir";
+		exit(0);
+	}
+
+	my $model	= $self->memory_model();
+	my $class	= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
+
+	my @load	= map { iri("file://" . File::Spec->rel2abs($_)) } @manifests;
+	$model->load_urls_into_graph($self->default_graph, @load);
+
+	warn "done parsing manifests" if $self->debug;
+	$self->model($model);
+	$self->manifests([$model->subjects( iri("${RDF}type"), iri("${MF}Manifest") )->elements]);
 }
 
 sub syntax_test {
+	my $self		= shift;
 	my $test_type	= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift || 1;
+	my $count		= shift // 1;
 	
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
@@ -271,13 +153,13 @@ sub syntax_test {
 	my ($name)		= $model->objects( $test, $mfname )->elements;
 	my $namevalue	= $name->value;
 	
-	if ($STRICT_APPROVAL) {
+	if ($self->strict_approval) {
 		unless ($approved) {
-			warn "- skipping test because it isn't approved\n" if ($debug);
+			warn "- skipping test because it isn't approved\n" if ($self->debug);
 			return;
 		}
 		if ($approved->equal("${DAWGT}NotClassified")) {
-			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
+			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($self->debug);
 			return;
 		}
 	}
@@ -291,10 +173,10 @@ sub syntax_test {
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($debug);
+	warn "Loading SPARQL query from file $filename" if ($self->debug);
 	my $sparql				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
 
-	if ($debug) {
+	if ($self->debug) {
 		my $q			= $sparql;
 		$q				=~ s/\s+/ /g;
 		warn "### test     : " . $test->as_string . "\n";
@@ -310,7 +192,7 @@ sub syntax_test {
 	if ($is_pos_query or $is_pos_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
 		my $ok	= blessed($query);
-		record_result('syntax', $ok, $test->as_string);
+		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
 			pass("syntax $namevalue: $filename");
 		} else {
@@ -319,11 +201,11 @@ sub syntax_test {
 	} elsif ($is_neg_query or $is_neg_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
 		my $ok	= $@ ? 1 : 0;
-		record_result('syntax', $ok, $test->as_string);
+		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
 			pass("syntax $namevalue: $filename");
 		} else {
-			if ($debug) {
+			if ($self->debug) {
 				warn $query->as_string;
 			}
 			fail("syntax $namevalue; $filename (unexpected successful parse)");
@@ -332,9 +214,10 @@ sub syntax_test {
 }
 
 sub update_eval_test {
+	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift || 1;
+	my $count		= shift // 1;
 	
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
@@ -344,13 +227,13 @@ sub update_eval_test {
 	my ($data)		= $model->objects( $action, iri("${UT}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${UT}graphData") )->elements;
 	
-	if ($STRICT_APPROVAL) {
+	if ($self->strict_approval) {
 		unless ($approved) {
-			warn "- skipping test because it isn't approved\n" if ($debug);
+			warn "- skipping test because it isn't approved\n" if ($self->debug);
 			return;
 		}
 		if ($approved->equal(iri("${DAWGT}NotClassified"))) {
-			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
+			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($self->debug);
 			return;
 		}
 	}
@@ -359,12 +242,12 @@ sub update_eval_test {
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($debug);
+	warn "Loading SPARQL query from file $filename" if ($self->debug);
 	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { fail("$!: $filename; " . $test->as_string); return }; binmode($fh, ':utf8'); <$fh> };
 
 	my $q			= $sparql;
 	$q				=~ s/\s+/ /g;
-	if ($debug) {
+	if ($self->debug) {
 		warn "### test     : " . $test->value . "\n";
 		warn "# sparql     : $q\n";
 		warn "# data       : " . $data->value . "\n" if (blessed($data));
@@ -375,11 +258,11 @@ sub update_eval_test {
 	
 	# TODO: set up remote endpoint mock
 
-	warn "constructing model...\n" if ($debug);
-	my $test_model	= test_model();
+	warn "constructing model...\n" if ($self->debug);
+	my $test_model	= $self->test_model();
 	eval {
 		if (blessed($data)) {
-			$test_model->load_urls_into_graph($default_graph, $data);
+			$test_model->load_urls_into_graph($self->default_graph, $data);
 		}
 	};
 	if ($@) {
@@ -407,7 +290,7 @@ sub update_eval_test {
 	my $expected_model	= memory_model;
 	eval {
 		if (blessed($resdata)) {
-			$expected_model->load_urls_into_graph($default_graph, $resdata);
+			$expected_model->load_urls_into_graph($self->default_graph, $resdata);
 		}
 	};
 	if ($@) {
@@ -433,7 +316,7 @@ sub update_eval_test {
 		}
 	}
 
-	if ($debug) {
+	if ($self->debug) {
 		warn "Dataset before update operation:\n";
 		warn model_as_string($test_model);
 	}
@@ -450,32 +333,32 @@ sub update_eval_test {
 			fail($test->value);
 			return;
 		}
-		if ($debug) {
+		if ($self->debug) {
 			warn "# Algebra:\n" . $algebra->as_string . "\n";
 		}
 	
-		my $default_graphs	= [$default_graph];
+		my $default_graphs	= [$self->default_graph];
 		my $planner	= Attean::IDPQueryPlanner->new();
 		my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
-		if ($debug) {
+		if ($self->debug) {
 			warn "# Plan:\n" . $plan->as_string . "\n";
 		}
 
-		if ($debug) {
+		if ($self->debug) {
 			warn "Running update...\n";
 		}
 		my $iter	= $plan->evaluate($test_model);
 		$iter->elements;
-		if ($debug) {
+		if ($self->debug) {
 			warn "done.\n";
 		}
 	
-		if ($debug) {
+		if ($self->debug) {
 			warn "Comparing results...\n";
 		}
 		my $eqtest	= Attean::BindingEqualityTest->new();
 		my $eq		= $eqtest->equals($test_model, $expected_model);
-		if ($debug) {
+		if ($self->debug) {
 			warn "done.\n";
 		}
 		$ok			= is( $eq, 1, $test->value );
@@ -493,13 +376,14 @@ sub update_eval_test {
 		print "# failed: " . $test->value . "\n";
 	}
 
-	warn "ok\n" if ($debug);
+	warn "ok\n" if ($self->debug);
 }
 
 sub query_eval_test {
+	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift || 1;
+	my $count		= shift // 1;
 	
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
@@ -510,13 +394,13 @@ sub query_eval_test {
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
 	
-	if ($STRICT_APPROVAL) {
+	if ($self->strict_approval) {
 		unless ($approved) {
-			warn "- skipping test because it isn't approved\n" if ($debug);
+			warn "- skipping test because it isn't approved\n" if ($self->debug);
 			return;
 		}
 		if ($approved->equal("${DAWGT}NotClassified")) {
-			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($debug);
+			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($self->debug);
 			return;
 		}
 	}
@@ -525,12 +409,12 @@ sub query_eval_test {
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($debug);
+	warn "Loading SPARQL query from file $filename" if ($self->debug);
 	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->value); return }; binmode($fh, ':utf8'); <$fh> };
 	
 	my $q			= $sparql;
 	$q				=~ s/\s+/ /g;
-	if ($debug) {
+	if ($self->debug) {
 		warn "### test     : " . $test->value . "\n";
 		warn "# sparql     : $q\n";
 		warn "# data       : " . ($data->value =~ s#file://##r) if (blessed($data));
@@ -540,22 +424,22 @@ sub query_eval_test {
 	}
 	
 STRESS:	foreach (1 .. $count) {
-		print STDERR "constructing model... " if ($debug);
-		my $test_model	= test_model();
+		print STDERR "constructing model... " if ($self->debug);
+		my $test_model	= $self->test_model();
 		try {
 			if (blessed($data)) {
-				$test_model->load_urls_into_graph($default_graph, $data);
+				$test_model->load_urls_into_graph($self->default_graph, $data);
 			}
 			foreach my $g (@gdata) {
 				$test_model->load_urls_into_graph($g, $g);
 			}
 		} catch {
 			fail($test->value);
-			record_result('evaluation', 0, $test->value);
+			$self->record_result('evaluation', 0, $test->value);
 			print "# died: " . $test->value . ": $_\n";
 			next STRESS;
 		};
-		print STDERR "ok\n" if ($debug);
+		print STDERR "ok\n" if ($self->debug);
 	
 		my $resuri		= URI->new( $result->value );
 		my $resfilename	= $resuri->file;
@@ -564,7 +448,7 @@ STRESS:	foreach (1 .. $count) {
 			local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
 			my $comment;
 			my $ok	= try {
-				if ($debug) {
+				if ($self->debug) {
 					my $q	= $sparql;
 					$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
 					warn $q;
@@ -573,17 +457,17 @@ STRESS:	foreach (1 .. $count) {
 				my ($actual, $type);
 				{
 					local($::DEBUG)	= 1;
-					print STDERR "getting actual results... " if ($debug);
-					($actual, $type)		= get_actual_results( $filename, $test_model, $sparql, $base );
-					print STDERR "ok\n" if ($debug);
+					print STDERR "getting actual results... " if ($self->debug);
+					($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base );
+					print STDERR "ok\n" if ($self->debug);
 				}
 			
-				print STDERR "getting expected results... " if ($debug);
-				my $expected	= get_expected_results( $resfilename, $type );
-				print STDERR "ok\n" if ($debug);
+				print STDERR "getting expected results... " if ($self->debug);
+				my $expected	= $self->get_expected_results( $resfilename, $type );
+				print STDERR "ok\n" if ($self->debug);
 			
 			#	warn "comparing results...";
-				compare_results( $expected, $actual, $test->value, \$comment );
+				$self->compare_results( $expected, $actual, $test->value, \$comment );
 			} catch {
 				if (ref($_)) {
 					warn $_->message;
@@ -592,7 +476,7 @@ STRESS:	foreach (1 .. $count) {
 					warn $_;
 				}
 				fail($test->value);
-				record_result('evaluation', 0, $test->value);
+				$self->record_result('evaluation', 0, $test->value);
 			};
 			if ($ok) {
 			} else {
@@ -602,12 +486,8 @@ STRESS:	foreach (1 .. $count) {
 	}
 }
 
-
-exit;
-
-######################################################################
-
 sub get_actual_results {
+	my $self		= shift;
 	my $filename	= shift;
 	my $model		= shift;
 	my $sparql		= shift;
@@ -623,12 +503,12 @@ sub get_actual_results {
 		die $@;
 	}
 	
-	if ($debug) {
+	if ($self->debug) {
 		warn "Walking algebra:\n";
 		warn $algebra->as_string;
 	}
 	
-	if ($debug) {
+	if ($self->debug) {
 		my $iter	= $model->get_quads;
 		warn "Dataset:\n-------------\n";
 		while (my $q = $iter->next) {
@@ -641,18 +521,18 @@ sub get_actual_results {
 	my $rmodel	= memory_model();
 
 	my $results;
-	if ($USE_IDP_PLANNER) {
-		my $default_graphs	= [$default_graph];
+	if ($self->use_idp_planner) {
+		my $default_graphs	= [$self->default_graph];
 		my $planner	= Attean::IDPQueryPlanner->new();
 		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
-		if ($debug) {
+		if ($self->debug) {
 			warn "Walking plan:\n";
 			warn $plan->as_string;
 		}
 		$results	= $plan->evaluate($model);
 	} else {
-		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $default_graph );
-		$results	= $e->evaluate($algebra, $default_graph);
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $self->default_graph );
+		$results	= $e->evaluate($algebra, $self->default_graph);
 	}
 	my $count	= 1;
 	
@@ -668,7 +548,7 @@ sub get_actual_results {
 		}
 	}
 	
-	print_results("Actual results", \$results) if ($args{ results });
+	$self->print_results("Actual results", \$results) if ($self->results);
 	return ($results, $type);
 	
 	if ($results->is_bindings) {
@@ -684,6 +564,7 @@ sub get_actual_results {
 }
 
 sub print_results {
+	my $self	= shift;
 	my $name	= shift;
 	my $results	= shift;
 	$$results	= $$results->materialize;
@@ -696,14 +577,15 @@ sub print_results {
 }
 
 sub get_expected_results {
+	my $self		= shift;
 	my $file		= shift;
 	my $type		= shift;
 	
 	if ($type eq 'graph') {
 		my $model	= memory_model();
-		$model->load_urls_into_graph($default_graph, iri("file://$file"));
+		$model->load_urls_into_graph($self->default_graph, iri("file://$file"));
 		my $results	= $model->get_quads->map(sub { shift->as_triple }, 'Attean::API::Triple');
-		print_results("Expected results", \$results) if ($args{ results });
+		print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.](srj|json)/) {
 		my $model	= memory_model();
@@ -712,12 +594,12 @@ sub get_expected_results {
 		my $results	= $parser->parse_iter_from_io($fh)->materialize;
 		my $item	= $results->peek;
 		if ($item->does('Attean::API::Term')) {
-			if ($args{ results }) {
+			if ($self->results) {
 				warn "Expected result: " . $item->as_string . "\n";
 			}
 			return $results;
 		} else {
-			print_results("Expected results", \$results) if ($args{ results });
+			print_results("Expected results", \$results) if ($self->results);
 			return $results;
 		}
 	} elsif ($file =~ /[.]srx/) {
@@ -726,7 +608,7 @@ sub get_expected_results {
 		open(my $fh, '<', $file);
 		my $results	= $parser->parse_iter_from_io($fh);
 		
-		print_results("Expected results", \$results) if ($args{ results });
+		print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.]csv/) {
 		my $csv	= Text::CSV->new({binary => 1});
@@ -755,7 +637,7 @@ sub get_expected_results {
 			push(@data, Attean::Result->new( bindings => \%result ));
 		}
 		my $results	= Attean::ListIterator->new(values => \@data, item_type => 'Attean::API::Result');
-		print_results("Expected results", \$results) if ($args{ results });
+		print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.]tsv/) {
 		my $parser	= Attean->get_parser('SPARQLTSV')->new();
@@ -764,12 +646,12 @@ sub get_expected_results {
 		return $iter;
 	} elsif ($file =~ /[.](ttl|rdf|nt)/) {
 		my $model	= memory_model();
-		$model->load_urls_into_graph($default_graph, iri("file://$file"));
+		$model->load_urls_into_graph($self->default_graph, iri("file://$file"));
 		my ($res)	= $model->subjects( iri("${RDF}type"), iri("${RS}ResultSet") )->elements;
 		if (my($b) = $model->objects( $res, iri("${RS}boolean") )->elements) {
 			my $bool	= $b->value;
 			my $term	= literal(value => $bool, datatype => "${XSD}boolean");
-			if ($args{ results }) {
+			if ($self->results) {
 				warn "Expected result: " . $term->as_string . "\n";
 			}
 			return Attean::ListIterator->new(values => [$term], item_type => 'Attean::API::Term');
@@ -789,7 +671,7 @@ sub get_expected_results {
 				push(@bindings, Attean::Result->new( bindings => \%data ));
 			}
 			my $results	= Attean::ListIterator->new(values => \@bindings, item_type => 'Attean::API::Result');
-			print_results("Expected results", \$results) if ($args{ results });
+			print_results("Expected results", \$results) if ($self->results);
 			return $results;
 		}
 	} else {
@@ -798,6 +680,7 @@ sub get_expected_results {
 }
 
 sub compare_results {
+	my $self		= shift;
 	my $expected	= shift->canonicalize->materialize;
 	my $actual		= shift->canonicalize->materialize;
 	my $test		= shift;
@@ -819,56 +702,130 @@ sub compare_results {
 		}
 
 		my $ok		= ok( $eqtest->equals( $actual, $expected ), $test ) or diag($eqtest->error);
-		record_result('evaluation', $ok, $test);
+		$self->record_result('evaluation', $ok, $test);
 		return $ok;
 	} elsif ($actual->does('Attean::API::TermIterator')) {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
-		my $name	= $debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
+		my $name	= $self->debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
 		my $ok		= ok( $a->equals($e), $name );
-		record_result('evaluation', $ok, $test);
+		$self->record_result('evaluation', $ok, $test);
 		return $ok;
 	} else {
 		die "Unexpected result type $actual";
 	}
 }
 
-{
-	my %failures;
-	sub record_result {
-		my $type	= shift;
-		my $ok		= shift;
-		my $name	= shift;
-		unless ($ok) {
-			push(@{ $failures{$type} }, $name);
-		}
+sub record_result {
+	my $self	= shift;
+	my $type	= shift;
+	my $ok		= shift;
+	my $name	= shift;
+	unless ($ok) {
+		push(@{ $self->failures->{$type} }, $name);
 	}
-	END {
-		my $count	= 0;
-		while (my ($type, $failures) = each(%failures)) {
-			$count	+= scalar(@$failures);
-		}
-		if ($RUN_QUERY_TESTS and $count) {
-			my $d	= Data::Dumper->new([\%failures], [qw(failures)]);
-			$d->Sortkeys(1)->Indent(2);
-			my $msg	= "Failing tests: " . $d->Dump;
-			warn $msg;
-			unless ($PATTERN) {
-				open(my $fh, '>', sprintf('.sparql-test-suite-%d', scalar(time)));
-				while (my ($type, $failures) = each(%failures)) {
-					say $fh $type;
-					say $fh join("\n", sort @$failures);
-				}
+}
+
+sub DESTROY {
+	my $self	= shift;
+	my $count	= 0;
+	while (my ($type, $failures) = each(%{ $self->failures })) {
+		$count	+= scalar(@$failures);
+	}
+	if ($self->run_query_tests and $count) {
+		my $d	= Data::Dumper->new([$self->failures], [qw(failures)]);
+		$d->Sortkeys(1)->Indent(2);
+		my $msg	= "Failing tests: " . $d->Dump;
+		warn $msg;
+		unless ($self->pattern) {
+			open(my $fh, '>', sprintf('.sparql-test-suite-%d', scalar(time)));
+			while (my ($type, $failures) = each(%{ $self->failures })) {
+				say $fh $type;
+				say $fh join("\n", sort @$failures);
 			}
 		}
 	}
 }
 
-sub model_as_string {
-	my $model	= shift;
-	my $ser		= Attean->get_serializer('nquads');
-	my $sep		= ('####' x 25) . "\n";
-	my $s		= sprintf("Model with %d quads:\n", $model->size);
-	$s			.= $ser->serialize_iter_to_bytes($model->get_quads);
-	return $sep . $s . $sep;
-}
+###############################################################################
+
+
+Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
+	my $self		= shift;
+	my $PATTERN		= $self->pattern;
+	my @manifests	= @{ $self->manifests };
+	my $model		= $self->model;
+	foreach my $m (@manifests) {
+# 		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
+		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
+		unless (blessed($list)) {
+			warn "No mf:entries found for manifest " . $m->as_string . "\n";
+		}
+		my @tests	= $model->get_list( $self->default_graph, $list )->elements;
+		foreach my $test (@tests) {
+			unless ($test->value =~ /$PATTERN/) {
+				next;
+			}
+# 			if ($LIST_TESTS) {
+# 				say $test->value;
+# 			}
+			if ($self->run_query_tests) {
+				{
+					# Evaluation Tests
+					my $et	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}QueryEvaluationTest"));
+					my $ct	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}CSVResultFormatTest"));
+					if ($et + $ct) {
+						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
+						warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
+						$self->query_eval_test( $model, $test );
+					}
+				}
+				
+				{
+					# Syntax Tests
+					my $total	= 0;
+					foreach my $type (qw(PositiveSyntaxTest11 NegativeSyntaxTest11)) {
+						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
+					}
+
+					if ($total) {
+						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
+						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
+						$self->syntax_test( 'query', $model, $test );
+					}
+				}
+			}
+			
+			if ($self->run_update_tests) {
+				{
+					# Evaluation Tests
+					if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_quads($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
+						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
+						unless ($test->value =~ /$PATTERN/) {
+							next;
+						}
+						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
+						$self->update_eval_test( $model, $test, );
+					}
+				}
+				
+				{
+					# Syntax Tests
+					my $total	= 0;
+					foreach my $type (qw(PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest11)) {
+						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
+					}
+
+					if ($total) {
+						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
+						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
+						$self->syntax_test( 'update', $model, $test );
+					}
+				}
+			}
+		}
+	}
+};
+
+
+1;
