@@ -37,7 +37,7 @@ package Attean::Algebra::Query 0.012 {
 	has 'subquery' => (is => 'ro', isa => Bool, default => 0);
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
-
+	
 	sub algebra_as_string {
 		my $self	= shift;
 		my $name	= $self->subquery ? 'SubQuery' : 'Query';
@@ -149,6 +149,7 @@ package Attean::Algebra::Sequence 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	sub algebra_as_string { return 'Sequence' }
 
@@ -177,6 +178,7 @@ package Attean::Algebra::Join 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	with 'Attean::API::UnOrderedChildIsomorphism';
 
 	sub algebra_as_string { return 'Join' }
 
@@ -207,8 +209,10 @@ package Attean::Algebra::LeftJoin 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1, default => sub { Attean::ValueExpression->new( value => Attean::Literal->true ) });
+	
 	sub algebra_as_string {
 		my $self	= shift;
 		return sprintf('LeftJoin { %s }', $self->expression->as_string);
@@ -250,6 +254,12 @@ package Attean::Algebra::LeftJoin 0.012 {
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
 	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->expression->isomorphic_with($other->expression));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Filter>
@@ -264,6 +274,7 @@ package Attean::Algebra::Filter 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 	sub algebra_as_string {
@@ -286,6 +297,13 @@ package Attean::Algebra::Filter 0.012 {
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->expression->isomorphic_with($other->expression));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Union>
@@ -300,6 +318,7 @@ package Attean::Algebra::Union 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnOrderedChildIsomorphism';
 
 	sub algebra_as_string { return 'Union' }
 	sub sparql_tokens {
@@ -331,6 +350,7 @@ package Attean::Algebra::Graph 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 
@@ -365,6 +385,13 @@ package Attean::Algebra::Graph 0.012 {
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->graph->equals($other->graph));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Extend>
@@ -384,7 +411,9 @@ package Attean::Algebra::Extend 0.012 {
 		my @vars	= $child->in_scope_variables;
 		return Set::Scalar->new(@vars, $self->variable->value)->elements;
 	}
+
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::UnOrderedChildIsomorphism';
 
 	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
@@ -414,6 +443,14 @@ package Attean::Algebra::Extend 0.012 {
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->variable->equals($other->variable));
+		return 0 unless ($self->expression->isomorphic_with($other->expression));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Minus>
@@ -428,6 +465,7 @@ package Attean::Algebra::Minus 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	sub in_scope_variables {
 		my $self	= shift;
@@ -464,6 +502,7 @@ package Attean::Algebra::Distinct 0.012 {
 
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	sub algebra_as_string { return 'Distinct' }
 }
@@ -478,6 +517,7 @@ package Attean::Algebra::Reduced 0.012 {
 
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	sub algebra_as_string { return 'Reduced' }
 }
@@ -493,6 +533,7 @@ package Attean::Algebra::Slice 0.012 {
 
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'limit' => (is => 'ro', isa => Int, default => -1);
 	has 'offset' => (is => 'ro', isa => Int, default => 0);
@@ -502,6 +543,14 @@ package Attean::Algebra::Slice 0.012 {
 		push(@str, "Limit=" . $self->limit) if ($self->limit >= 0);
 		push(@str, "Offset=" . $self->offset) if ($self->offset > 0);
 		return join(' ', @str);
+	}
+	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->limit == $other->limit);
+		return 0 unless ($self->offset == $other->offset);
+		return 1;
 	}
 }
 
@@ -516,6 +565,7 @@ package Attean::Algebra::Project 0.012 {
 
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
 
@@ -531,6 +581,19 @@ package Attean::Algebra::Project 0.012 {
 		return sprintf('Project { %s }', join(' ', map { '?' . $_->value } @{ $self->variables }));
 	}
 	sub tree_attributes { return qw(variables) };
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		
+		my $a_vars	= $self->variables;
+		my $b_vars	= $other->variables;
+		return 0 unless (scalar(@$a_vars) == scalar(@$b_vars));
+		foreach my $i (0 .. $#{ $a_vars }) {
+			return 0 unless $a_vars->[$i]->equals( $b_vars->[$i] );
+		}
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Comparator>
@@ -543,7 +606,6 @@ package Attean::Algebra::Comparator 0.012 {
 	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(Bool ConsumerOf);
 	use namespace::clean;
-
 
 	has 'ascending' => (is => 'ro', isa => Bool, default => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
@@ -575,6 +637,14 @@ package Attean::Algebra::Comparator 0.012 {
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->ascending == $other->ascending);
+		return 0 unless ($self->expression->isomorphic_with($other->expression));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::OrderBy>
@@ -590,6 +660,7 @@ package Attean::Algebra::OrderBy 0.012 {
 	
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 	
 	has 'comparators' => (is => 'ro', isa => ArrayRef[InstanceOf['Attean::Algebra::Comparator']], required => 1);
 	
@@ -597,6 +668,19 @@ package Attean::Algebra::OrderBy 0.012 {
 	sub algebra_as_string {
 		my $self	= shift;
 		return sprintf('Order { %s }', join(', ', map { $_->as_string } @{ $self->comparators }));
+	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		
+		my $a_comparators	= $self->comparators;
+		my $b_comparators	= $other->comparators;
+		return 0 unless (scalar(@$a_comparators) == scalar(@$b_comparators));
+		foreach my $i (0 .. $#{ $a_comparators }) {
+			return 0 unless $a_comparators->[$i]->isomorphic_with( $b_comparators->[$i] );
+		}
+		return 1;
 	}
 }
 
@@ -667,7 +751,16 @@ package Attean::Algebra::BGP 0.012 {
 		my $algebra	= Attean::Algebra::BGP->new( triples => $triples );
 		return ($algebra, $mapping);
 	}
+	
 	sub tree_attributes { return qw(triples) };
+	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $bgp		= shift;
+		my ($a)		= $self->canonical_bgp_with_mapping;
+		my ($b)		= $bgp->canonical_bgp_with_mapping;
+		return ($a->as_string eq $b->as_string);
+	}
 }
 
 =item * L<Attean::Algebra::Service>
@@ -682,6 +775,7 @@ package Attean::Algebra::Service 0.012 {
 	use namespace::clean;
 
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree', 'Attean::API::UnionScopeVariables';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
@@ -712,6 +806,14 @@ package Attean::Algebra::Service 0.012 {
 		push(@tokens, $child->sparql_subtokens->elements);
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->silent == $other->silent);
+		return 0 unless ($self->endpoint->equals($other->endpoint));
+		return 1;
 	}
 }
 
@@ -1200,6 +1302,7 @@ package Attean::Algebra::Ask 0.012 {
 	
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 	
 	sub in_scope_variables { return; }
 
@@ -1219,12 +1322,21 @@ package Attean::Algebra::Construct 0.012 {
 	
 	with 'Attean::API::SPARQLQuerySerializable';
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'triples' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TriplePattern']]);
 
 	sub in_scope_variables { return qw(subject predicate object); }
 	sub tree_attributes { return; }
 	sub algebra_as_string { return 'Construct' }
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		my ($a)		= Attean::Algebra::BGP->new( triples => $self->triples )->canonical_bgp_with_mapping;
+		my ($b)		= Attean::Algebra::BGP->new( triples => $other->triples )->canonical_bgp_with_mapping;
+		return ($a->as_string eq $b->as_string);
+	}
 }
 
 =item * L<Attean::Algebra::Describe>
@@ -1246,6 +1358,19 @@ package Attean::Algebra::Describe 0.012 {
 	sub in_scope_variables { return qw(subject predicate object); }
 	sub tree_attributes { return; }
 	sub algebra_as_string { return 'Describe' }
+	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		
+		my $a_terms	= $self->terms;
+		my $b_terms	= $other->terms;
+		return 0 unless (scalar(@$a_terms) == scalar(@$b_terms));
+		foreach my $i (0 .. $#{ $a_terms }) {
+			return 0 unless $a_terms->[$i]->equals( $b_terms->[$i] );
+		}
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Load>
@@ -1260,6 +1385,7 @@ package Attean::Algebra::Load 0.012 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
 	has 'url' => (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
@@ -1289,6 +1415,15 @@ package Attean::Algebra::Load 0.012 {
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+	
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->silent == $other->silent);
+		return 0 unless ($self->url eq $other->url);
+		return 0 unless ($self->graph->equals($other->graph));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Clear>
@@ -1304,6 +1439,7 @@ package Attean::Algebra::Clear 0.012 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'drop' => (is => 'ro', isa => Bool, default => 0);
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
@@ -1343,6 +1479,20 @@ package Attean::Algebra::Clear 0.012 {
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->drop == $other->drop);
+		return 0 unless ($self->silent == $other->silent);
+		return 0 unless ($self->target eq $other->target);
+		if ($self->graph and $other->graph) {
+			return 0 unless ($self->graph->equals($other->graph));
+		} else {
+			return 0 if ($self->graph or $other->graph);
+		}
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Create>
@@ -1358,7 +1508,8 @@ package Attean::Algebra::Create 0.012 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
-
+	with 'Attean::API::OrderedChildIsomorphism';
+	
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
 	has 'graph' => (is => 'ro', isa => ConsumerOf['Attean::API::Term'], required => 1);
 
@@ -1378,6 +1529,14 @@ package Attean::Algebra::Create 0.012 {
 		push(@tokens, $self->graph->sparql_tokens->elements);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->silent == $other->silent);
+		return 0 unless ($self->graph->equals($other->graph));
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Add>
@@ -1393,6 +1552,7 @@ package Attean::Algebra::Add 0.012 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
 	has 'drop_source' => (is => 'ro', isa => Bool, default => 0);
@@ -1436,6 +1596,29 @@ package Attean::Algebra::Add 0.012 {
 		
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($self->silent == $other->silent);
+		return 0 unless ($self->drop_source == $other->drop_source);
+		return 0 unless ($self->drop_destination == $other->drop_destination);
+		
+		if ($self->has_source and $other->has_source) {
+			return 0 unless ($self->source->equals($other->source));
+		} else {
+			return 0 if ($self->has_source or $other->has_source)
+		}
+
+		if ($self->has_destination and $other->has_destination) {
+			return 0 unless ($self->destination->equals($other->destination));
+		} else {
+			return 0 if ($self->has_destination or $other->has_destination)
+		}
+		
+		return 1;
+	}
 }
 
 =item * L<Attean::Algebra::Modify>
@@ -1452,6 +1635,7 @@ package Attean::Algebra::Modify 0.012 {
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	with 'Attean::API::OrderedChildIsomorphism';
 
 	has 'dataset' => (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'insert' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
@@ -1605,6 +1789,20 @@ package Attean::Algebra::Modify 0.012 {
 		}
 		
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+
+	sub isomorphic_with {
+		my $self	= shift;
+		my $other	= shift;
+		my ($ia)		= Attean::Algebra::BGP->new( triples => $self->insert )->canonical_bgp_with_mapping;
+		my ($ib)		= Attean::Algebra::BGP->new( triples => $other->insert )->canonical_bgp_with_mapping;
+		return 0 unless ($ia->as_string eq $ib->as_string);
+
+		my ($da)		= Attean::Algebra::BGP->new( triples => $self->delete )->canonical_bgp_with_mapping;
+		my ($db)		= Attean::Algebra::BGP->new( triples => $other->delete )->canonical_bgp_with_mapping;
+		return 0 unless ($da->as_string eq $db->as_string);
+		
+		return 1;
 	}
 }
 

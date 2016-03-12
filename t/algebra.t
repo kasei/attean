@@ -9,15 +9,15 @@ use Attean;
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 
-{
+subtest 'BGP algebra tree' => sub {
 	my $b	= Attean::Algebra::BGP->new(triples => []);
 	isa_ok($b, 'Attean::Algebra::BGP');
 	ok($b->does('Attean::API::QueryTree'), 'bgp consumes QueryTree');
 	ok($b->is_leaf, 'bgp is_leaf');
-}
+};
 
-{
-	my $t	= triple(iri('s'), iri('p'), literal('1'));
+subtest 'Distinct algebra tree' => sub {
+	my $t	= triplepattern(iri('s'), variable('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
 	isa_ok($bgp, 'Attean::Algebra::BGP');
 	ok($bgp->is_leaf, 'bgp is_leaf');
@@ -45,7 +45,21 @@ use Attean::SimpleQueryEvaluator;
 		is_deeply(\@prefix_seen, [qw'Distinct BGP'], 'prefix walk order');
 		is_deeply(\@postfix_seen, [qw'BGP Distinct'], 'postfix walk order');
 	}
-}
+	
+	{
+		my $q		= triplepattern(iri('s'), variable('q'), literal('1'));
+		my $bgp2	= Attean::Algebra::BGP->new(triples => [$q]);
+		my $dist2	= Attean::Algebra::Distinct->new( children => [$bgp2] );
+		ok($dist2->isomorphic_with($dist), 'Distinct(BGP) isomorphic with variable renaming');
+	}
+
+	{
+		my $q		= triplepattern(iri('t'), variable('q'), literal('1'));
+		my $bgp2	= Attean::Algebra::BGP->new(triples => [$q]);
+		my $dist2	= Attean::Algebra::Distinct->new( children => [$bgp2] );
+		ok(not($dist2->isomorphic_with($dist)), 'Distinct(BGP) non-isomorphic');
+	}
+};
 
 {
 	my $t	= triplepattern(variable('s'), iri('p'), literal('1'));
@@ -95,8 +109,7 @@ use Attean::SimpleQueryEvaluator;
 	is($inv_seq_star->as_string, '(^(<p1>/<p2>))*', 'complex ZeroOrMorePath as_string');
 }
 
-{
-	note('BGP canonicalization');
+subtest 'BGP canonicalization' => sub {
 	my $b		= blank('person');
 	my $rdf_type	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 	my $foaf_name	= iri('http://xmlns.com/foaf/0.1/name');
@@ -108,9 +121,14 @@ use Attean::SimpleQueryEvaluator;
 		triplepattern($b, $foaf_knows, variable('knows')),
 	] );
 	my $bgp2	= Attean::Algebra::BGP->new( triples => [
-		triplepattern(blank('s'), $foaf_knows, variable('person')),
-		triplepattern(blank('s'), $rdf_type, $foaf_Person),
 		triplepattern(blank('s'), $foaf_name, variable('myname')),
+		triplepattern(blank('s'), $rdf_type, $foaf_Person),
+		triplepattern(blank('s'), $foaf_knows, variable('person')),
+	] );
+	my $bgp3	= Attean::Algebra::BGP->new( triples => [
+		triplepattern(blank('q'), $foaf_knows, variable('person')),
+		triplepattern(blank('q'), $rdf_type, $foaf_Person),
+		triplepattern(blank('q'), $foaf_name, variable('person')),
 	] );
 
 	my $hash1	= sha1_hex( join("\n", map { $_->tuples_string } (@{$bgp1->triples}) ) );
@@ -126,7 +144,10 @@ use Attean::SimpleQueryEvaluator;
 	
 	is_deeply($m1, { '?name' => { 'prefix' => '?', 'id' => 'v003', 'type' => 'variable' }, '?knows' => { 'id' => 'v002', 'prefix' => '?', 'type' => 'variable' }, '_:person' => { 'id' => 'v001', 'prefix' => '_:', 'type' => 'blank' } }, 'BGP1 mapping');
 	is_deeply($m2, { '?person' => { 'prefix' => '?', 'id' => 'v002', 'type' => 'variable' }, '_:s' => { 'prefix' => '_:', 'id' => 'v001', 'type' => 'blank' }, '?myname' => { 'type' => 'variable', 'id' => 'v003', 'prefix' => '?' } }, 'BGP2 mapping');
-}
+
+	ok($bgp1->isomorphic_with($bgp2), 'BGP isomorphic with variable/blank renaming and triple re-ordering');
+	ok(not($bgp1->isomorphic_with($bgp3)), 'not isomorphic_with');
+};
 
 subtest 'Triple canonicalization' => sub {
 	my $t = triplepattern(variable('bar'), iri('p'), variable('foo'));

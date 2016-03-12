@@ -416,6 +416,43 @@ package Attean::API::SPARQLQuerySerializable 0.012 {
 
 =cut
 
+package Attean::API::OrderedChildIsomorphism {
+	use Moo::Role;
+	
+	sub isomorphic_with { return 1; }
+	
+	around 'isomorphic_with' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $other	= shift;
+		
+		return 0 unless (ref($self) eq ref($other));
+		my $a_children	= $self->children;
+		my $b_children	= $other->children;
+		return 0 unless (scalar(@$a_children) == scalar(@$b_children));
+		foreach my $i (0 .. $#{ $a_children }) {
+			return 0 unless $a_children->[$i]->isomorphic_with( $b_children->[$i] );
+		}
+		
+		return $orig->($self, $other, @_);
+	};
+}
+
+package Attean::API::UnOrderedChildIsomorphism {
+	use Moo::Role;
+	
+	sub isomorphic_with { return 1; }
+	
+	around 'isomorphic_with' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $other	= shift;
+		
+		die "Attean::API::UnOrderedChildIsomorphism is Unimplemented";
+		return $orig->($self, $other, @_);
+	};
+}
+
 package Attean::API::Algebra 0.012 {
 	use Moo::Role;
 
