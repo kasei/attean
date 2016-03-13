@@ -52,6 +52,9 @@ around 'setup' => sub {
 	if (my $file = $store->create_schema_file) {
 		my $sql	= read_file($file);
 		$batch->do($sql);
+	} else {
+		plan skip_all => "No schema files available for SQLite";
+		exit(0);
 	}
 
 	return $orig->($self, @_);
