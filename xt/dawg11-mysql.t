@@ -1,10 +1,14 @@
 #!/usr/bin/perl
 
+use utf8;
 use v5.14;
 use strict;
 use warnings;
 no warnings 'redefine';
 no warnings 'once';
+
+binmode(\*STDOUT, ':encoding(UTF-8)');
+binmode(\*STDERR, ':encoding(UTF-8)');
 
 use autodie;
 use Test::Roo;
@@ -20,9 +24,6 @@ while (defined(my $opt = shift)) {
 		$args{pattern}	= $opt;
 	}
 }
-run_me(\%args);
-
-done_testing;
 
 sub test_model {
 	unless (all { exists $ENV{$_} } qw(ATTEAN_STORE_MYSQL_DATABASE ATTEAN_STORE_MYSQL_HOST ATTEAN_STORE_MYSQL_USER ATTEAN_STORE_MYSQL_PASSWORD)) {
@@ -44,3 +45,7 @@ sub test_model {
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	return $model;
 }
+
+run_me(\%args);
+
+done_testing;
