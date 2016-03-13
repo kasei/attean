@@ -167,6 +167,8 @@ t/serializer-turtle.t
 t/simple-eval.t
 t/simple.t
 t/store-dbi-mysql.t
+t/store-dbi-sqlite.t
+t/store-dbi-postgresql.t
 t/store-memory.t
 t/store-simple.t
 t/store-simpletriple.t
