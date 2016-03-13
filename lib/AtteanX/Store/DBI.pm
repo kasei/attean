@@ -38,7 +38,7 @@ package AtteanX::Store::DBI 0.012 {
 	use Cache::LRU;
 	use Set::Scalar;
 	use List::MoreUtils qw(zip);
-	use List::Util qw(any first);
+	use List::Util qw(any all first);
 	use File::ShareDir qw(dist_dir dist_file);
 	use Scalar::Util qw(refaddr reftype blessed);
 	use namespace::clean;
@@ -347,7 +347,11 @@ Removes the specified C<$statement> from the underlying model.
 		my $self	= shift;
 		my $st		= shift;
 		my @ids		= map { $self->_get_term_id($_) } $st->values;
-		if (any { not defined($_) } @ids) {
+		unless (scalar(@ids) == 4) {
+			warn $st->as_string;
+			Carp::confess "Not enough ID values in remove_quad call: " . Dumper(\@ids);
+		}
+		unless (all { defined($_) } @ids) {
 			return;
 		}
 		my $sth		= $self->dbh->prepare('DELETE FROM quad WHERE subject = ? AND predicate = ? AND object = ? AND graph = ?');
@@ -552,18 +556,108 @@ returns undef.
 		my $model			= shift;
 		my $active_graphs	= shift;
 		my $default_graphs	= shift;
+		
 		my %args			= @_;
 		return unless ($algebra);
-
-		if ($algebra->isa('Attean::Algebra::BGP') and scalar(@{ $algebra->triples }) == 1) {
+		
+		if ($algebra->isa('Attean::Algebra::BGP') and scalar(@{ $algebra->triples }) > 0) {
 			my @vars	= $algebra->in_scope_variables;
-			return;
-			warn "TODO: generate SQL for BGP";
-			my $sql		= 'SELECT subject AS s, predicate AS p, object AS o, graph AS g FROM quad';
+			
+			my @triples	= @{ $algebra->triples };
+			my @select;
+			my @where_joins;
+			my %seen_vars;
+			my %source_table_for_var;
+			my %blanks;
+			my $tcounter	= 0;
+			my $bcounter	= 0;
+			my @tables;
+			
+			my %rename_mapping;
+			my $rename_proj	= sub {
+				my $name	= shift;
+				if ($name =~ /[-._]|\W/) {
+					my $old	= $name;
+					$name	=~ s/_/__/g;
+					$name	=~ s/([-.]|\W)/_d/g;
+					$name	=~ s/([-.]|\W)/'_x' . sprintf('%02x', ord($1))/e;
+					$rename_mapping{$old}	= $name;
+				}
+				
+				return $name;
+			};
+			
+			Carp::confess Dumper($active_graphs) unless (ref($active_graphs) eq 'ARRAY');
+			
+			my @graph_ids	= map { $self->_get_term_id($_) } @{ $active_graphs };
+			if (any { not defined($_) } @graph_ids) {
+				return;
+			}
+		
+			my @bind;
+			my $graph	= Attean::Variable->new(value => '___g');
+			$seen_vars{ $graph->value }++;
+			my $graph_values	= sprintf('(%s)', join(', ', ('?') x scalar(@graph_ids)));
+			push(@bind, @graph_ids);
+			my @where	= ("t0.graph IN $graph_values");
+			
+			foreach my $t (@triples) {
+				my $table	= 't' . $tcounter++;
+				push(@tables, $table);
+
+				my @vars;
+				my $q		= $t->as_quadpattern($graph);
+				my @nodes	= $q->values;
+				foreach my $i (0 .. $#nodes) {
+					my $node	= $nodes[$i];
+					my $name	= $pos_names[$i];
+					if ($node->does('Attean::API::Variable')) {
+						my $var	= $node;
+						push(@vars, [$var, $name]);
+					} elsif ($node->does('Attean::API::Blank')) {
+						my $id	= $node->value;
+						unless (exists $blanks{$id}) {
+							my $bname		= sprintf('.%s_%d', 'blank', $bcounter++);
+							$blanks{$id}	= Attean::Variable->new(value => $bname);
+						}
+						my $var	= $blanks{$id};
+						push(@vars, [$var, $name]);
+						$seen_vars{ $var->value }++;
+					} else {
+						my $id	= $self->_get_term_id($node);
+						return unless defined($id);
+						push(@where, sprintf('%s.%s = ?', $table, $name));
+						push(@bind, $id);
+					}
+				}
+				
+				foreach my $vdata (@vars) {
+					my ($var, $name)	= @$vdata;
+					my $var_name		= $rename_proj->( $var->value );
+					push(@select, [$table, $name, $var_name]) unless ($seen_vars{$var->value}++);
+					if (my $tt = $source_table_for_var{ $var->value }) {
+						push(@where_joins, ['=', $tt, [$table, $name]]);
+					} else {
+						$source_table_for_var{ $var->value }	= [$table, $name];
+					}
+				}
+			}
+			
+			foreach my $w (@where_joins) {
+				my ($op, $a, $b)	= @$w;
+				my ($as, $bs)		= map { sprintf('%s.%s', @$_) } ($a, $b);
+				push(@where, join(' ', $as, $op, $bs));
+			}
+			
 			return AtteanX::Store::DBI::Plan->new(
 				store => $self,
-				sql => $sql,
-				in_scope_variables => [@vars]
+				select => \@select,
+				where => \@where,
+				tables => \@tables,
+				in_scope_variables => [@vars],
+				rename_mapping => \%rename_mapping,
+				bindings => \@bind,
+				variables => \%source_table_for_var,
 			);
 		}
 
@@ -590,29 +684,89 @@ Returns the estimated cost for a DBI-specific query plan, undef otherwise.
 package AtteanX::Store::DBI::Plan 0.012 {
 	use Moo;
 	use Type::Tiny::Role;
-	use Types::Standard qw(InstanceOf Str);
+	use Types::Standard qw(HashRef ArrayRef InstanceOf Str);
 	use namespace::clean;
 	
-	has store	=> (is => 'ro', isa => InstanceOf['AtteanX::Store::DBI'], required => 1);
-	has sql	=> (is => 'ro', isa => Str, required => 1);
-
-	with 'Attean::API::Plan', 'Attean::API::NullaryQueryTree';
+	has store			=> (is => 'ro', isa => InstanceOf['AtteanX::Store::DBI'], required => 1);
+	has rename_mapping	=> (is => 'ro', isa => HashRef[Str], default => sub { +{} });
+	has variables		=> (is => 'ro', isa => HashRef, required => 1);
+	has bindings		=> (is => 'ro', isa => ArrayRef, required => 1);
+	has select			=> (is => 'ro', isa => ArrayRef, required => 1);
+	has where			=> (is => 'ro', isa => ArrayRef, required => 1);
+	has tables			=> (is => 'ro', isa => ArrayRef[Str], required => 1);
 	
-	sub plan_as_string { 'DBI BGP { 1 triple }' }
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::NullaryQueryTree';
 	
-	sub impl {
+	sub plan_as_string {
 		my $self	= shift;
-		my @bind;
+		my ($sql, @bind)	= $self->sql();
+		return sprintf('DBI BGP { %s ← (%s) }', $sql, join(', ', @bind));
+	}
+	
+	sub sql {
+		my $self	= shift;
+		my $bind	= shift;
+
 		my $store	= $self->store;
-		my $sth		= $store->dbh->prepare($self->sql);
+		my $dbh		= $store->dbh;
+		my @bind	= @{ $self->bindings };
+		my @where	= @{ $self->where };
+		if ($bind) {
+			foreach my $var ($bind->variables) {
+				my $id	= $store->_get_term_id($bind->value($var));
+				return unless defined($id);
+				if (my $cdata = $self->variables->{ $var }) {
+					my ($table, $col)	= @$cdata;
+					push(@where, sprintf("%s.%s = ?", $table, $col));
+					push(@bind, $id);
+				}
+			}
+		}
+		
+		my @select	= map { sprintf("%s.%s AS %s", map { $dbh->quote_identifier( $_ ) } @$_) } @{ $self->select };
+		unless (scalar(@select)) {
+			push(@select, '1');
+		}
+		
+		
+		my @sql;
+		push(@sql, 'SELECT');
+		push(@sql, join(', ', @select));
+
+		push(@sql, 'FROM');
+		push(@sql, join(', ', map { sprintf("quad %s", $_) } @{ $self->tables }));
+
+		if (scalar(@where)) {
+			push(@sql, 'WHERE');
+			push(@sql, join(' AND ', map { "($_)" } @where));
+		}
+		
+		my $sql	= join(" ", @sql);
+		return ($sql, @bind);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my ($sql, @bind)	= $self->sql(@_);
+		my $store	= $self->store;
+		my $dbh		= $store->dbh;
+
+# 		warn "TODO: generatee SQL for BGP: $sql\n";
+# 		warn "======================================================================\n";
+# 		warn "$sql\n";
+# 		warn "======================================================================\n";
+
+		my $sth		= $dbh->prepare($sql);
 		my $vars	= $self->in_scope_variables;
 		return sub {
-			$sth->execute(@bind);
+			my $rv	= $sth->execute(@bind);
 			my $sub	= sub {
 				if (my $row = $sth->fetchrow_hashref) {
 					my %bindings;
 					foreach my $k (@$vars) {
-						my $term		= $store->_get_term($row->{$k});
+						my $key			= $self->rename_mapping->{$k} // $k;
+						my $term		= $store->_get_term($row->{$key});
 						$bindings{$k}	= $term;
 					}
 					my $r	= Attean::Result->new( bindings => \%bindings );
