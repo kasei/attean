@@ -275,7 +275,7 @@ the supplied C<< $active_graph >>.
 						return $plan;
 					}
 				}
-				return $self->plans_for_algebra($child, $model, $graph, $default_graphs, %args);
+				return $self->plans_for_algebra($child, $model, [$graph], $default_graphs, %args);
 			} else {
 				my $gvar	= $graph->value;
 				my $graphs	= $model->get_graphs;
