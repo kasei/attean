@@ -24,6 +24,7 @@ AtteanX::Store::DBI provides a quad-store backed by a relational database.
 
 =cut
 
+use utf8;
 use v5.14;
 use warnings;
 
@@ -532,6 +533,7 @@ C<< AtteanX::Store::DBI >> object.
 			}
 		} elsif ($type eq 'sqlite') {
 			$dsn		= "DBI:SQLite:dbname=${database}";
+			$connect_args{sqlite_unicode}	= 1;
 		}
 		
 		return ($dsn, $user, $password, \%connect_args);
