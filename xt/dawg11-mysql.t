@@ -12,7 +12,15 @@ use List::MoreUtils qw(all);
 
 with 'Test::Attean::SPARQLSuite';
 
-run_me();
+my %args;
+while (defined(my $opt = shift)) {
+	if ($opt eq '-v') {
+		$args{debug}++;
+	} else {
+		$args{pattern}	= $opt;
+	}
+}
+run_me(\%args);
 
 done_testing;
 
