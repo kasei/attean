@@ -348,8 +348,7 @@ Removes the specified C<$statement> from the underlying model.
 		my $st		= shift;
 		my @ids		= map { $self->_get_term_id($_) } $st->values;
 		unless (scalar(@ids) == 4) {
-			warn $st->as_string;
-			Carp::confess "Not enough ID values in remove_quad call: " . Dumper(\@ids);
+			return;
 		}
 		unless (all { defined($_) } @ids) {
 			return;
