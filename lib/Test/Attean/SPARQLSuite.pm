@@ -54,6 +54,13 @@ has manifests			=> (is => 'rw', isa => ArrayRef, init_arg => undef);
 has default_graph		=> (is => 'rw');
 has failures			=> (is => 'rw', isa => HashRef, default => sub { +{} });
 
+sub BUILD {
+	my $self	= shift;
+	if ($self->pattern) {
+		$self->results(1);
+	}
+}
+
 sub memory_model {
 	my $self	= shift;
 	my $store	= Attean->get_store('Memory')->new();
@@ -318,7 +325,7 @@ sub update_eval_test {
 
 	if ($self->debug) {
 		warn "Dataset before update operation:\n";
-		warn model_as_string($test_model);
+		warn $self->model_as_string($test_model);
 	}
 	
 	my $ok	= 0;
@@ -364,8 +371,8 @@ sub update_eval_test {
 		$ok			= is( $eq, 1, $test->value );
 		unless ($ok) {
 			warn $eqtest->error;
-			warn "Got model:\n" . model_as_string($test_model);
-			warn "Expected model:\n" . model_as_string($expected_model);
+			warn "Got model:\n" . $self->model_as_string($test_model);
+			warn "Expected model:\n" . $self->model_as_string($expected_model);
 		}
 	};
 	if ($@) {
@@ -447,7 +454,7 @@ STRESS:	foreach (1 .. $count) {
 		TODO: {
 			local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
 			my $comment;
-			my $ok	= try {
+			eval {
 				if ($self->debug) {
 					my $q	= $sparql;
 					$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
@@ -468,13 +475,11 @@ STRESS:	foreach (1 .. $count) {
 			
 			#	warn "comparing results...";
 				$self->compare_results( $expected, $actual, $test->value, \$comment );
-			} catch {
-				if (ref($_)) {
-					warn $_->message;
-					warn $_->stack_trace;
-				} else {
-					warn $_;
-				}
+			};
+			
+			my $ok	= not($@);
+			unless ($ok) {
+				warn $@;
 				fail($test->value);
 				$self->record_result('evaluation', 0, $test->value);
 			};
@@ -585,7 +590,7 @@ sub get_expected_results {
 		my $model	= memory_model();
 		$model->load_urls_into_graph($self->default_graph, iri("file://$file"));
 		my $results	= $model->get_quads->map(sub { shift->as_triple }, 'Attean::API::Triple');
-		print_results("Expected results", \$results) if ($self->results);
+		$self->print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.](srj|json)/) {
 		my $model	= memory_model();
@@ -599,7 +604,7 @@ sub get_expected_results {
 			}
 			return $results;
 		} else {
-			print_results("Expected results", \$results) if ($self->results);
+			$self->print_results("Expected results", \$results) if ($self->results);
 			return $results;
 		}
 	} elsif ($file =~ /[.]srx/) {
@@ -608,7 +613,7 @@ sub get_expected_results {
 		open(my $fh, '<', $file);
 		my $results	= $parser->parse_iter_from_io($fh);
 		
-		print_results("Expected results", \$results) if ($self->results);
+		$self->print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.]csv/) {
 		my $csv	= Text::CSV->new({binary => 1});
@@ -637,7 +642,7 @@ sub get_expected_results {
 			push(@data, Attean::Result->new( bindings => \%result ));
 		}
 		my $results	= Attean::ListIterator->new(values => \@data, item_type => 'Attean::API::Result');
-		print_results("Expected results", \$results) if ($self->results);
+		$self->print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.]tsv/) {
 		my $parser	= Attean->get_parser('SPARQLTSV')->new();
@@ -671,7 +676,7 @@ sub get_expected_results {
 				push(@bindings, Attean::Result->new( bindings => \%data ));
 			}
 			my $results	= Attean::ListIterator->new(values => \@bindings, item_type => 'Attean::API::Result');
-			print_results("Expected results", \$results) if ($self->results);
+			$self->print_results("Expected results", \$results) if ($self->results);
 			return $results;
 		}
 	} else {
@@ -724,6 +729,16 @@ sub record_result {
 	unless ($ok) {
 		push(@{ $self->failures->{$type} }, $name);
 	}
+}
+
+sub model_as_string {
+	my $self	= shift;
+	my $model	= shift;
+	my $ser		= Attean->get_serializer('nquads');
+	my $sep		= ('####' x 25) . "\n";
+	my $s		= sprintf("Model with %d quads:\n", $model->size);
+	$s			.= $ser->serialize_iter_to_bytes($model->get_quads);
+	return $sep . $s . $sep;
 }
 
 sub DESTROY {
