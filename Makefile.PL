@@ -57,7 +57,6 @@ resources(
 
 author_tests('xt');
 
-install_share;
 install_script glob('bin/attean_*');
 
 write_doap_changes "meta/changes.ttl", "Changes", "turtle";
