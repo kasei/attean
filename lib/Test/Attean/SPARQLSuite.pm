@@ -6,7 +6,6 @@ use Test::Roo::Role;
 
 use Attean;
 use Attean::RDF;
-use AtteanX::Store::DBI;
 use AtteanX::Parser::SPARQL;
 use Attean::SimpleQueryEvaluator;
 

@@ -1,2 +1,0 @@
-DROP TABLE quad;
-DROP TABLE term;

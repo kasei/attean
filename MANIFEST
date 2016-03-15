@@ -113,7 +113,6 @@ lib/AtteanX/Serializer/Turtle.pm
 lib/AtteanX/Serializer/TurtleTokens.pm
 lib/AtteanX/SPARQL/Constants.pm
 lib/AtteanX/SPARQL/Token.pm
-lib/AtteanX/Store/DBI.pm
 lib/AtteanX/Store/Memory.pm
 lib/AtteanX/Store/Simple.pm
 lib/AtteanX/Store/SimpleTripleStore.pm
@@ -166,9 +165,6 @@ t/serializer-sparqlxml.t
 t/serializer-turtle.t
 t/simple-eval.t
 t/simple.t
-t/store-dbi-mysql.t
-t/store-dbi-sqlite.t
-t/store-dbi-postgresql.t
 t/store-memory.t
 t/store-simple.t
 t/store-simpletriple.t
@@ -178,4 +174,3 @@ t/treerewrite.t
 xt/pod-coverage.t
 xt/pod.t
 xt/dawg11-memory.t
-xt/dawg11-mysql.t

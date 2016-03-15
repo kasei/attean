@@ -39,6 +39,5 @@ install:
   - "cpanm --quiet --notest URI::Escape"
   - "cpanm --quiet --notest URI::Namespace"
   - "cpanm --quiet --notest XML::SAX"
-  - "cpanm --quiet --notest DBIx::MultiStatementDo"
 script:
   - "perl Makefile.PL && make test"
