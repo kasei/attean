@@ -196,7 +196,8 @@ sub parse_list_from_bytes {
 =item C<< parse_nodes ( $string ) >>
 
 Returns a list of L<Attean::API::Term> or L<Attean::API::Variable> objects,
-parsed in SPARQL syntax from the supplied C<< $string >>.
+parsed in SPARQL syntax from the supplied C<< $string >>. Parsing is ended
+either upon seeing a DOT, or reaching the end of the string.
 
 =cut
 
@@ -215,6 +216,7 @@ sub parse_nodes {
 			$self->_GraphNode;
 		}
 		push(@nodes, splice(@{ $self->{_stack} }));
+		last if $self->_test_token(DOT);
 	}
 	
 	return @nodes;
