@@ -3495,7 +3495,8 @@ sub __new_path_pred {
 	} elsif ($op eq '|') {
 		return Attean::Algebra::AlternativePath->new( children => [@nodes] );
 	} else {
-		confess "Path $op: " . Dumper(\@nodes);
+		$self->log->debug("Path $op:\n". Dumper(\@nodes));
+		confess "Error in path $op. See debug log for details." 
 	}
 }
 
