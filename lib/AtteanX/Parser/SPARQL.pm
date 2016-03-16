@@ -3274,8 +3274,8 @@ sub __solution_modifiers {
 			if ($g->isa('Attean::ValueExpression') and $g->value->does('Attean::API::Variable')) {
 				$group_vars{ $g->value->value }++;
 			} else {
-				use Data::Dumper;
-				croak Dumper($g);
+				$self->log->trace("Remaining GROUP BY clauses:\n" . Dumper($g));
+				croak 'Unrecognized GROUP BY clauses, see trace log for details.';
 			}
 		}
 	}
