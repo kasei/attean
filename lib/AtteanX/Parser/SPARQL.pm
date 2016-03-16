@@ -112,7 +112,8 @@ sub handled_type {
 	return $ITEM_TYPE;
 }
 
-with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser', 'MooX::Log::Any';
+with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser';
+with 'MooX::Log::Any';
 
 sub BUILDARGS {
 	my $class	= shift;
