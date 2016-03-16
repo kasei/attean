@@ -112,7 +112,7 @@ sub handled_type {
 	return $ITEM_TYPE;
 }
 
-with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser';
+with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser', 'MooX::Log::Any';
 
 sub BUILDARGS {
 	my $class	= shift;
@@ -216,7 +216,10 @@ sub parse_nodes {
 			$self->_GraphNode;
 		}
 		push(@nodes, splice(@{ $self->{_stack} }));
-		last if $self->_test_token(DOT);
+		if ($self->_test_token(DOT)) {
+			$self->log->notice('DOT seen in string, stopping here');
+			last;
+		}
 	}
 	
 	return @nodes;
