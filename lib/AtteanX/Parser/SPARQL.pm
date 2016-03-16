@@ -1,6 +1,5 @@
 use v5.14;
 use warnings;
-use Carp;
 
 =head1 NAME
 
@@ -76,6 +75,7 @@ package AtteanX::Parser::SPARQL 0.012;
 use strict;
 use warnings;
 no warnings 'redefine';
+use Carp qw(cluck confess croak);
 
 use Attean;
 use Data::Dumper;
@@ -232,7 +232,7 @@ sub _parse {
 	unless ($self->update) {
 		my $t		= $self->lexer->peek;
 		unless (defined($t)) {
-			croak "No query string found to parse";
+			confess "No query string found to parse";
 		}
 	}
 
@@ -2667,7 +2667,7 @@ sub _ConditionalOrExpression {
 	} else {
 		$self->_add_stack( @list );
 	}
-	Carp::confess $self->{tokens} if (scalar(@{ $self->{_stack} }) == 0);
+	confess $self->{tokens} if (scalar(@{ $self->{_stack} }) == 0);
 }
 
 # [48] ConditionalAndExpression ::= ValueLogical ( '&&' ValueLogical )*
@@ -3495,7 +3495,7 @@ sub __new_path_pred {
 	} elsif ($op eq '|') {
 		return Attean::Algebra::AlternativePath->new( children => [@nodes] );
 	} else {
-		Carp::confess "Path $op: " . Dumper(\@nodes);
+		confess "Path $op: " . Dumper(\@nodes);
 	}
 }
 
@@ -3508,7 +3508,7 @@ sub __new_bgp {
 	my @paths		= grep { reftype($_->predicate) eq 'ARRAY' and $_->predicate->[0] eq 'PATH' } @patterns;
 	my @triples		= grep { blessed($_->predicate) } @patterns;
 	if (scalar(@patterns) > scalar(@paths) + scalar(@triples)) {
-		Carp::cluck "more than just triples and paths passed to __new_bgp: " . Dumper(\@patterns);
+		cluck "more than just triples and paths passed to __new_bgp: " . Dumper(\@patterns);
 	}
 	
 	my $bgp			= Attean::Algebra::BGP->new( triples => \@triples );
@@ -3629,9 +3629,9 @@ sub _expected_token {
 		if (@_) {
 			my $value	= shift;
 			my $value2	= $t->value;
-			Carp::confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
+			confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
 		} else {
-			Carp::confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
+			confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
 		}
 	}
 }
