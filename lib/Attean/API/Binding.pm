@@ -174,6 +174,8 @@ C<< $binding >>.
 }
 
 package Attean::API::TripleOrQuadPattern 0.012 {
+	use Encode qw(encode);
+	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
 	use Attean::API::Query;
@@ -250,6 +252,23 @@ package Attean::API::TripleOrQuadPattern 0.012 {
 		my $triples	= $iter->canonical_set();
 		my ($t)		= @$triples;
 		return $t;
+	}
+	
+=item C<< parse ( $string ) >>
+
+Returns a triple or quad pattern object using the variables and/or terms
+parsed from C<< $string >> in SPARQL syntax.
+
+=cut
+
+	sub parse {
+		my $self	= shift;
+		my $string	= shift;
+		my $bytes	= encode('UTF-8', $string, Encode::FB_CROAK);
+		my $parser	= Attean->get_parser('SPARQL')->new(@_);
+		my @values	= $parser->parse_nodes($bytes);
+		my @keys	= $self->variables;
+		return $self->new(zip @keys, @values);
 	}
 }
 

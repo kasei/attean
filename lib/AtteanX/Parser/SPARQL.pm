@@ -193,6 +193,33 @@ sub parse_list_from_bytes {
 	return $a;
 }
 
+=item C<< parse_nodes ( $string ) >>
+
+Returns a list of L<Attean::API::Term> or L<Attean::API::Variable> objects,
+parsed in SPARQL syntax from the supplied C<< $string >>.
+
+=cut
+
+sub parse_nodes {
+	my $self	= shift;
+	my $p 		= AtteanX::Parser::SPARQLLex->new();
+	my $l		= $self->_configure_lexer( $p->parse_iter_from_bytes(@_) );
+	$self->lexer($l);
+	$self->baseURI($self->{args}{base});
+	
+	my @nodes;
+	while ($self->_peek_token) {
+		if ($self->_Verb_test) {
+			$self->_Verb;
+		} else {
+			$self->_GraphNode;
+		}
+		push(@nodes, splice(@{ $self->{_stack} }));
+	}
+	
+	return @nodes;
+}
+
 sub _parse {
 	my $self	= shift;
 	
