@@ -3508,8 +3508,9 @@ sub __new_bgp {
 	my @patterns	= @_;
 	my @paths		= grep { reftype($_->predicate) eq 'ARRAY' and $_->predicate->[0] eq 'PATH' } @patterns;
 	my @triples		= grep { blessed($_->predicate) } @patterns;
-	if (scalar(@patterns) > scalar(@paths) + scalar(@triples)) {
-		cluck "more than just triples and paths passed to __new_bgp: " . Dumper(\@patterns);
+	if ($self->log->is_trace && (scalar(@patterns) > scalar(@paths) + scalar(@triples))) {
+		$self->log->warn('More than just triples and paths passed to __new_bgp');
+		$self->log->trace("Arguments to __new_bgp:\n" .Dumper(\@patterns));
 	}
 	
 	my $bgp			= Attean::Algebra::BGP->new( triples => \@triples );
