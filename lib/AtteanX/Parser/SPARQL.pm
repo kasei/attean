@@ -75,6 +75,7 @@ package AtteanX::Parser::SPARQL 0.012;
 use strict;
 use warnings;
 no warnings 'redefine';
+use Carp qw(cluck confess croak);
 
 use Attean;
 use Data::Dumper;
@@ -232,7 +233,7 @@ sub _parse {
 	unless ($self->update) {
 		my $t		= $self->lexer->peek;
 		unless (defined($t)) {
-			die "No query string found to parse";
+			confess "No query string found to parse";
 		}
 	}
 
@@ -278,31 +279,31 @@ sub _RW_Query {
 			$read_query++;
 		} elsif ($self->_test_token(KEYWORD, 'CREATE')) {
 			unless ($self->update) {
-				die "CREATE GRAPH update forbidden in read-only queries";
+				croak "CREATE GRAPH update forbidden in read-only queries";
 			}
 			$update++;
 			$self->_CreateGraph();
 		} elsif ($self->_test_token(KEYWORD, 'DROP')) {
 			unless ($self->update) {
-				die "DROP GRAPH update forbidden in read-only queries";
+				croak "DROP GRAPH update forbidden in read-only queries";
 			}
 			$update++;
 			$self->_DropGraph();
 		} elsif ($self->_test_token(KEYWORD, 'LOAD')) {
 			unless ($self->update) {
-				die "LOAD update forbidden in read-only queries"
+				croak "LOAD update forbidden in read-only queries"
 			}
 			$update++;
 			$self->_LoadUpdate();
 		} elsif ($self->_test_token(KEYWORD, 'CLEAR')) {
 			unless ($self->update) {
-				die "CLEAR GRAPH update forbidden in read-only queries";
+				croak "CLEAR GRAPH update forbidden in read-only queries";
 			}
 			$update++;
 			$self->_ClearGraphUpdate();
 		} elsif ($self->_test_token(KEYWORD, qr/^(WITH|INSERT|DELETE)/)) {
 			unless ($self->update) {
-				die "INSERT/DELETE update forbidden in read-only queries";
+				croak "INSERT/DELETE update forbidden in read-only queries";
 			}
 			$update++;
 			my ($graph);
@@ -314,7 +315,7 @@ sub _RW_Query {
 			if ($self->_optional_token(KEYWORD, 'INSERT')) {
 				if ($self->_optional_token(KEYWORD, 'DATA')) {
 					unless ($self->update) {
-						die "INSERT DATA update forbidden in read-only queries";
+						croak "INSERT DATA update forbidden in read-only queries";
 					}
 					$self->_InsertDataUpdate();
 				} else {
@@ -323,7 +324,7 @@ sub _RW_Query {
 			} elsif ($self->_optional_token(KEYWORD, 'DELETE')) {
 				if ($self->_optional_token(KEYWORD, 'DATA')) {
 					unless ($self->update) {
-						die "DELETE DATA update forbidden in read-only queries";
+						croak "DELETE DATA update forbidden in read-only queries";
 					}
 					$self->_DeleteDataUpdate();
 				} else {
@@ -347,7 +348,7 @@ sub _RW_Query {
 			if ($self->update and not $self->_peek_token) {
 				last;
 			}
-			die "Syntax error: Expected query type with input <<$self->{tokens}>>";
+			croak "Syntax error: Expected query type with input <<$self->{tokens}>>";
 		}
 
 		last if ($read_query);
@@ -363,7 +364,7 @@ sub _RW_Query {
 	my $t	= $self->_peek_token;
 	if ($t) {
 		my $type	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
-		die "Syntax error: Remaining input after query: $type " . Dumper($t->args);
+		croak "Syntax error: Remaining input after query: $type " . Dumper($t->args);
 	}
 
 	if ($count == 0 or $count > 1) {
@@ -373,7 +374,7 @@ sub _RW_Query {
 			my @blanks	= $p->blank_nodes;
 			foreach my $b (@blanks) {
 				if ($seen{$b->value}++) {
-					die "Cannot re-use a blank node label in multiple update operations in a single request";
+					croak "Cannot re-use a blank node label in multiple update operations in a single request";
 				}
 			}
 		}
@@ -427,7 +428,7 @@ sub _Prologue {
 		my $prefix	= $self->_expected_token(PREFIXNAME);
 		my @args	= @{ $prefix->args };
 		if (scalar(@args) > 1) {
-			die "Syntax error: PREFIX namespace used a full PNAME_LN, not a PNAME_NS";
+			croak "Syntax error: PREFIX namespace used a full PNAME_LN, not a PNAME_NS";
 		}
 		my $ns		= substr($prefix->value, 0, length($prefix->value) - 1);
 		my $iriref	= $self->_expected_token(IRI);
@@ -558,7 +559,7 @@ sub _DeleteUpdate {
 	my %dataset;
 	if ($self->_optional_token(KEYWORD, 'WHERE')) {
 		if ($graph) {
-			die "Syntax error: WITH clause cannot be used with DELETE WHERE operations";
+			croak "Syntax error: WITH clause cannot be used with DELETE WHERE operations";
 		}
 		$self->_expected_token(LBRACE);
 		my @st	= $self->_ModifyTemplate();
@@ -568,7 +569,7 @@ sub _DeleteUpdate {
 		my @quads;
 		my @blanks	= grep { $_->does('Attean::API::Blank') } map { $_->values } @st;
 		if (scalar(@blanks) > 0) {
-			die "Cannot use blank nodes in a DELETE pattern";
+			croak "Cannot use blank nodes in a DELETE pattern";
 		}
 		foreach my $s (@st) {
 			if ($s->does('Attean::API::QuadPattern')) {
@@ -646,7 +647,7 @@ sub _DeleteUpdate {
 			$args{delete}	= \@delete_triples;
 			my @blanks	= grep { $_->does('Attean::API::Blank') } map { $_->values } @delete_triples;
 			if (scalar(@blanks) > 0) {
-				die "Cannot use blank nodes in a DELETE pattern";
+				croak "Cannot use blank nodes in a DELETE pattern";
 			}
 		}
 		my $update	= Attean::Algebra::Modify->new( %args );
@@ -853,9 +854,9 @@ sub _SelectQuery {
 		
 		my $count	= scalar(@vars);
 		if (not($parens) and $count == 0) {
-			die "Syntax error: Expected VAR in inline data declaration";
+			croak "Syntax error: Expected VAR in inline data declaration";
 		} elsif (not($parens) and $count > 1) {
-			die "Syntax error: Inline data declaration can only have one variable when parens are omitted";
+			croak "Syntax error: Inline data declaration can only have one variable when parens are omitted";
 		}
 		
 		my $short	= (not($parens) and $count == 1);
@@ -934,14 +935,14 @@ sub __SelectVars {
 		if ($v->does('Attean::API::Variable')) {
 			my $name	= $v->value;
 			if ($seen{ $name }++) {
-				die "Syntax error: Repeated variable ($name) used in projection list";
+				croak "Syntax error: Repeated variable ($name) used in projection list";
 			}
 		}
 	}
 	
 	$self->{build}{variables}	= \@vars;
 	if ($count == 0) {
-		die "Syntax error: No select variable or expression specified";
+		croak "Syntax error: No select variable or expression specified";
 	}
 	return $star, \@exprs, \@vars;
 }
@@ -1136,7 +1137,7 @@ sub _check_duplicate_blanks {
 # 			my $id	= $b->value;
 # 			if ($seen{ $id }++) {
 # 				warn $ggp->as_string;
-# 				die "Same blank node identifier ($id) used in more than one BasicGraphPattern.";
+# 				croak "Same blank node identifier ($id) used in more than one BasicGraphPattern.";
 # 			}
 # 		}
 # 	}
@@ -1176,7 +1177,7 @@ sub _Binding {
 	foreach my $i (1..$count) {
 		unless ($self->_BindingValue_test) {
 			my $found	= $i-1;
-			die "Syntax error: Expected $count BindingValues but only found $found";
+			croak "Syntax error: Expected $count BindingValues but only found $found";
 		}
 		$self->_BindingValue;
 		push( @terms, splice(@{ $self->{_stack} }));
@@ -1276,7 +1277,7 @@ sub _GroupClause {
 	$self->_expected_token(KEYWORD, 'BY');
 	
 	if ($self->{build}{star}) {
-		die "Syntax error: SELECT * cannot be used with aggregate grouping";
+		croak "Syntax error: SELECT * cannot be used with aggregate grouping";
 	}
 	
 	$self->{build}{__aggregate}	||= {};
@@ -1304,7 +1305,7 @@ sub _GroupClause {
 # 		if ($v->does('Attean::API::Variable')) {
 # 			my $name	= $v->value;
 # 			unless ($seen{ $name }) {
-# 				die "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
+# 				croak "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
 # #				throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
 # 			}
 # 		}
@@ -1506,7 +1507,7 @@ sub _GroupGraphPatternSub {
 				$need_dot		= 0;
 				$got_pattern	= 0;
 			} else {
-				die "Syntax error: Extra dot found without preceding pattern";
+				croak "Syntax error: Extra dot found without preceding pattern";
 			}
 		}
 		
@@ -1573,7 +1574,7 @@ sub __handle_GraphPatternNotTriples {
 		my ($var, $expr)	= @args;
 		my %in_scope	= map { $_ => 1 } $ggp->in_scope_variables;
 		if (exists $in_scope{ $var->value }) {
-			die "Syntax error: BIND used with variable already in scope";
+			croak "Syntax error: BIND used with variable already in scope";
 		}
 		my $bind	= Attean::Algebra::Extend->new( children => [$ggp], variable => $var, expression => $expr );
 		$self->_add_patterns( $bind );
@@ -1581,7 +1582,7 @@ sub __handle_GraphPatternNotTriples {
 		my ($endpoint, $pattern, $silent)	= @args;
 		if ($endpoint->does('Attean::API::Variable')) {
 			# SERVICE ?var
-			die "SERVICE ?var not implemented";
+			croak "SERVICE ?var not implemented";
 		} else {
 			# SERVICE <endpoint>
 			# no-op
@@ -1591,7 +1592,7 @@ sub __handle_GraphPatternNotTriples {
 	} elsif ($class =~ /Attean::Algebra::(Union|Graph|Join)$/) {
 		# no-op
 	} else {
-		die 'Unrecognized GraphPattern: ' . $class;
+		croak 'Unrecognized GraphPattern: ' . $class;
 	}
 }
 
@@ -1657,9 +1658,9 @@ sub _SubSelect {
 			}
 			my $count	= scalar(@vars);
 			if (not($parens) and $count == 0) {
-				die "Syntax error: Expected VAR in inline data declaration";
+				croak "Syntax error: Expected VAR in inline data declaration";
 			} elsif (not($parens) and $count > 1) {
-				die "Syntax error: Inline data declaration can only have one variable when parens are omitted";
+				croak "Syntax error: Inline data declaration can only have one variable when parens are omitted";
 			}
 			
 			my $short	= (not($parens) and $count == 1);
@@ -1759,7 +1760,7 @@ TRIPLESBLOCKLOOP:
 	$self->_TriplesSameSubjectPath;
 	while ($self->_test_token(DOT)) {
 		if ($got_dot) {
-			die "Syntax error: found extra DOT after TriplesBlock";
+			croak "Syntax error: found extra DOT after TriplesBlock";
 		}
 		$self->_expected_token(DOT);
 		$got_dot++;
@@ -1818,9 +1819,9 @@ sub _InlineDataClause {
 	
 	my $count	= scalar(@vars);
 	if (not($parens) and $count == 0) {
-		die "Syntax error: Expected VAR in inline data declaration";
+		croak "Syntax error: Expected VAR in inline data declaration";
 	} elsif (not($parens) and $count > 1) {
-		die "Syntax error: Inline data declaration can only have one variable when parens are omitted";
+		croak "Syntax error: Inline data declaration can only have one variable when parens are omitted";
 	}
 	
 	my $short	= (not($parens) and $count == 1);
@@ -1925,7 +1926,7 @@ sub _GraphGraphPattern {
 	my $self	= shift;
 	if ($self->{__data_pattern}) {
 		if ($self->{__graph_nesting_level}++) {
-			die "Syntax error: Nested named GRAPH blocks not allowed in data template.";
+			croak "Syntax error: Nested named GRAPH blocks not allowed in data template.";
 		}
 	}
 	
@@ -2488,7 +2489,7 @@ sub _TriplesNode {
 sub _BlankNodePropertyList {
 	my $self	= shift;
 	if (my $where = $self->{__no_bnodes}) {
-		die "Syntax error: Blank nodes not allowed in $where";
+		croak "Syntax error: Blank nodes not allowed in $where";
 	}
 	$self->_expected_token(LBRACKET);
 #	$self->_PropertyListNotEmpty;
@@ -2608,7 +2609,7 @@ sub _VarOrIRIref {
 sub _Var {
 	my $self	= shift;
 	if ($self->{__data_pattern}) {
-		die "Syntax error: Variable found where Term expected";
+		croak "Syntax error: Variable found where Term expected";
 	}
 
 	my $var		= $self->_expected_token(VAR);
@@ -2667,7 +2668,7 @@ sub _ConditionalOrExpression {
 	} else {
 		$self->_add_stack( @list );
 	}
-	Carp::confess $self->{tokens} if (scalar(@{ $self->{_stack} }) == 0);
+	confess $self->{tokens} if (scalar(@{ $self->{_stack} }) == 0);
 }
 
 # [48] ConditionalAndExpression ::= ValueLogical ( '&&' ValueLogical )*
@@ -3154,7 +3155,7 @@ sub _String {
 	} else {
 		my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		my $value	= $t->value;
-		die "Expecting string literal but found $got '$value'";
+		croak "Expecting string literal but found $got '$value'";
 	}
 
 	$value	=~ s/\\t/\t/g;
@@ -3198,7 +3199,7 @@ sub _PrefixedName {
 # 		$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 	
 	unless ($self->namespaces->namespace_uri($ns)) {
-		die "Syntax error: Use of undefined namespace '$ns'";
+		croak "Syntax error: Use of undefined namespace '$ns'";
 	}
 	
 	my $iri		= $self->namespaces->namespace_uri($ns)->iri($local);
@@ -3211,7 +3212,7 @@ sub _PrefixedName {
 sub _BlankNode {
 	my $self	= shift;
 	if (my $where = $self->{__no_bnodes}) {
-		die "Syntax error: Blank nodes not allowed in $where";
+		croak "Syntax error: Blank nodes not allowed in $where";
 	}
 	if (my $b = $self->_optional_token(BNODE)) {
 		my $label	= $b->value;
@@ -3274,8 +3275,8 @@ sub __solution_modifiers {
 			if ($g->isa('Attean::ValueExpression') and $g->value->does('Attean::API::Variable')) {
 				$group_vars{ $g->value->value }++;
 			} else {
-				use Data::Dumper;
-				die Dumper($g);
+				$self->log->trace("Remaining GROUP BY clauses:\n" . Dumper($g));
+				croak 'Unrecognized GROUP BY clauses, see trace log for details.';
 			}
 		}
 	}
@@ -3287,7 +3288,7 @@ sub __solution_modifiers {
 		my $pattern	= ${ $self->{build}{triples} }[-1];
 		push(@project, $pattern->in_scope_variables);
 		if ($has_aggregation) {
-			die "Cannot SELECT * in an aggregate query";
+			croak "Cannot SELECT * in an aggregate query";
 		}
 	} else {
 		for (my $i = 0; $i < $#exprs; $i += 2) {
@@ -3298,7 +3299,7 @@ sub __solution_modifiers {
 				foreach my $var (@vars) {
 					my $name	= $var->value;
 					unless (exists $agg_vars{$name} or exists $group_vars{$name}) {
-						die "Cannot project variable ?$name that is not aggregated or used in grouping";
+						croak "Cannot project variable ?$name that is not aggregated or used in grouping";
 					}
 				}
 			}
@@ -3317,7 +3318,7 @@ sub __solution_modifiers {
 		my %in_scope	= map { $_ => 1 } $pattern->in_scope_variables;
 		while (my($name, $expr) = splice(@extend, 0, 2)) {
 			if (exists $in_scope{$name}) {
-				die "Syntax error: Already-bound variable ($name) used in project expression";
+				croak "Syntax error: Already-bound variable ($name) used in project expression";
 			}
 			my $var		= Attean::Variable->new( value => $name );
 			$pattern	= Attean::Algebra::Extend->new(children => [$pattern], variable => $var, expression => $expr);
@@ -3495,7 +3496,8 @@ sub __new_path_pred {
 	} elsif ($op eq '|') {
 		return Attean::Algebra::AlternativePath->new( children => [@nodes] );
 	} else {
-		Carp::confess "Path $op: " . Dumper(\@nodes);
+		$self->log->debug("Path $op:\n". Dumper(\@nodes));
+		confess "Error in path $op. See debug log for details." 
 	}
 }
 
@@ -3507,8 +3509,9 @@ sub __new_bgp {
 	my @patterns	= @_;
 	my @paths		= grep { reftype($_->predicate) eq 'ARRAY' and $_->predicate->[0] eq 'PATH' } @patterns;
 	my @triples		= grep { blessed($_->predicate) } @patterns;
-	if (scalar(@patterns) > scalar(@paths) + scalar(@triples)) {
-		Carp::cluck "more than just triples and paths passed to __new_bgp: " . Dumper(\@patterns);
+	if ($self->log->is_trace && (scalar(@patterns) > scalar(@paths) + scalar(@triples))) {
+		$self->log->warn('More than just triples and paths passed to __new_bgp');
+		$self->log->trace("Arguments to __new_bgp:\n" .Dumper(\@patterns));
 	}
 	
 	my $bgp			= Attean::Algebra::BGP->new( triples => \@triples );
@@ -3629,9 +3632,9 @@ sub _expected_token {
 		if (@_) {
 			my $value	= shift;
 			my $value2	= $t->value;
-			Carp::confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
+			confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
 		} else {
-			Carp::confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
+			confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
 		}
 	}
 }
