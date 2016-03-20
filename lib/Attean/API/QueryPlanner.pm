@@ -7,7 +7,7 @@ Attean::API::IDPJoinPlanner - Iterative dynamic programming query planning role
 
 =head1 VERSION
 
-This document describes Attean::API::IDPJoinPlanner version 0.012
+This document describes Attean::API::IDPJoinPlanner version 0.013
 
 =head1 SYNOPSIS
 
@@ -32,7 +32,7 @@ methods that consume the L<Attean::API::CostPlanner> role.
 
 =cut
 
-package Attean::API::QueryPlanner 0.012 {
+package Attean::API::QueryPlanner 0.013 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
@@ -40,14 +40,27 @@ package Attean::API::QueryPlanner 0.012 {
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
-package Attean::API::CostPlanner 0.012 {
+package Attean::API::CostPlanner 0.013 {
 	use Moo::Role;
+	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(CodeRef);
 	use namespace::clean;
 	with 'Attean::API::QueryPlanner';
 	
 	requires 'plans_for_algebra'; # plans_for_algebra($algebra, $model, \@active_graphs, \@default_graphs)
 	requires 'cost_for_plan'; # cost_for_plan($plan, $model)
+	
+	before 'cost_for_plan' => sub {
+		my $self	= shift;
+		my $plan	= shift;
+		my $model	= shift;
+		
+		if (refaddr($self) == refaddr($model)) {
+			Carp::confess "Model and planner objects cannot be the same in call to cost_for_plan";
+		} elsif ($self->does('Attean::API::Model') and $model->does('Attean::API::Model')) {
+			Carp::confess "Model and planner objects cannot both consume Attean::API::Model in call to cost_for_plan";
+		}
+	};
 	
 	sub plan_for_algebra {
 		my $self			= shift;
@@ -61,13 +74,13 @@ package Attean::API::CostPlanner 0.012 {
 	}
 }
 
-package Attean::API::JoinPlanner 0.012 {
+package Attean::API::JoinPlanner 0.013 {
 	use Moo::Role;
 	use namespace::clean;
 	requires 'joins_for_plan_alternatives';
 }
 
-package Attean::API::NaiveJoinPlanner 0.012 {
+package Attean::API::NaiveJoinPlanner 0.013 {
 	use Moo::Role;
 	use Math::Cartesian::Product;
 	use namespace::clean;
@@ -95,7 +108,7 @@ package Attean::API::NaiveJoinPlanner 0.012 {
 	}
 }
 
-package Attean::API::SimpleCostPlanner 0.012 {
+package Attean::API::SimpleCostPlanner 0.013 {
 	use Moo::Role;
 	use namespace::clean;
 	use Types::Standard qw(Int);
@@ -128,7 +141,7 @@ package Attean::API::SimpleCostPlanner 0.012 {
 		my $self	= shift;
 		my $plan	= shift;
 		my $model	= shift;
-		Carp::confess "No model given" unless ref($model);
+		Carp::confess "No model given" unless (blessed($model) and $model->does('Attean::API::Model'));
 		
 		if ($plan->has_cost) {
 			return $plan->cost;
@@ -198,7 +211,7 @@ package Attean::API::SimpleCostPlanner 0.012 {
 	}
 }
 
-package Attean::API::IDPJoinPlanner 0.012 {
+package Attean::API::IDPJoinPlanner 0.013 {
 	use Moo::Role;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -337,7 +350,7 @@ package Attean::API::IDPJoinPlanner 0.012 {
 		my $self	= shift;
 		my $plan	= shift;
 		my $model	= shift;
-		Carp::confess "No model given" unless ref($model);
+		Carp::confess "No model given" unless (blessed($model) and $model->does('Attean::API::Model'));
 		
 		if ($plan->has_cost) {
 			return $plan->cost;

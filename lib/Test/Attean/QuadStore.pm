@@ -46,22 +46,22 @@ test 'quadstore get_quads with quads' => sub {
     {
 		my $iter	= $store->get_quads();
 		my @elements	= $iter->elements;
-		is(scalar(@elements), 2);
+		is(scalar(@elements), 2, '2 quads');
 	}
     {
 		my $iter	= $store->get_quads(iri('s'));
 		my @elements	= $iter->elements;
-		is(scalar(@elements), 1);
+		is(scalar(@elements), 1, '1 quad with <s> as subject');
 	}
     {
 		my $iter	= $store->get_quads(variable('s'), undef, undef, iri('g'));
 		my @elements	= $iter->elements;
-		is(scalar(@elements), 2);
+		is(scalar(@elements), 2, '2 quads with <g> as graph');
 	}
     {
 		my $iter	= $store->get_quads(iri('abc'));
 		my @elements	= $iter->elements;
-		is(scalar(@elements), 0);
+		is(scalar(@elements), 0, '0 quads with <abc> as subject');
 	}
 };
 
@@ -70,10 +70,10 @@ test 'count_quads' => sub {
     my $q1		= quad(iri('s'), iri('p'), iri('o'), iri('g'));
     my $q2		= quad(iri('x'), iri('y'), iri('z'), iri('g'));
     my $store	= $self->create_store(quads => [$q1, $q2]);
-    is($store->count_quads(), 2);
-    is($store->count_quads(iri('s')), 1);
-    is($store->count_quads(variable('s'), undef, undef, iri('g')), 2);
-    is($store->count_quads(iri('abc')), 0);
+    is($store->count_quads(), 2, '2 quads');
+    is($store->count_quads(iri('s')), 1, '1 quad with <s> as subject');
+    is($store->count_quads(variable('s'), undef, undef, iri('g')), 2, '2 quads with <g> as graph');
+    is($store->count_quads(iri('abc')), 0, '0 quads with <abc> as subject');
 };
 
 # test 'count_quads_estimate' => sub {};

@@ -752,10 +752,29 @@ subtest 'expected tokens: modify update' => sub {
 	}
 };
 
+subtest 'expected tokens: custom query dataset' => sub {
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('SELECT * FROM NAMED <bar> FROM <foo> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'SELECT * FROM <foo> FROM NAMED <bar> WHERE { ?s ?p ?o . }', 'SELECT FROM');
+	}
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('ASK FROM NAMED <bar> FROM <foo> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'ASK FROM <foo> FROM NAMED <bar> { ?s ?p ?o . }', 'ASK FROM');
+	}
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('DESCRIBE ?s FROM NAMED <bar> FROM <foo> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'DESCRIBE ?s FROM <foo> FROM NAMED <bar> WHERE { ?s ?p ?o . }', 'DESCRIBE FROM');
+	}
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse_update('CONSTRUCT { ?s ?p ?o } FROM NAMED <bar> FROM <foo> WHERE { ?s ?p ?o }')->as_sparql;
+		ws_is($s, 'CONSTRUCT { ?s ?p ?o . } FROM <foo> FROM NAMED <bar> WHERE { ?s ?p ?o . }', 'CONSTRUCT FROM');
+	}
+};
+
 subtest 'Regressions' => sub {
 	{
-	my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
-	ws_is($s, 'SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }', 'missing projection in serialization of some SPARQL queries #67');
+		my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
+		ws_is($s, 'SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }', 'missing projection in serialization of some SPARQL queries #67');
 	}
 };
 

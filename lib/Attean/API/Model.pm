@@ -7,7 +7,7 @@ Attean::API::Model - RDF Model
 
 =head1 VERSION
 
-This document describes Attean::API::Model version 0.012
+This document describes Attean::API::Model version 0.013
 
 =head1 DESCRIPTION
 
@@ -115,7 +115,7 @@ subjects and objects present in the specified C<< $graph >>.
 
 use Attean::API::Binding;
 
-package Attean::API::Model 0.012 {
+package Attean::API::Model 0.013 {
 	use Moo::Role;
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
@@ -236,9 +236,12 @@ package Attean::API::Model 0.012 {
 }
 
 
-package Attean::API::MutableModel 0.012 {
+package Attean::API::MutableModel 0.013 {
 	use Moo::Role;
+	use Attean::RDF;
+	use LWP::UserAgent;
 	use Encode qw(encode);
+	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
 	requires 'add_quad';
@@ -250,6 +253,36 @@ package Attean::API::MutableModel 0.012 {
 	
 	with 'Attean::API::Model';
 	
+	sub load_urls_into_graph {
+		my $self	= shift;
+		my $graph	= shift;
+		my @urls	= @_;
+		my $ua		= LWP::UserAgent->new();
+		my $accept	= Attean->acceptable_parsers( handles => 'Attean::API::Triple' );
+		$ua->default_headers->push_header( 'Accept' => $accept );
+		
+		foreach my $u (@urls) {
+			my $url		= blessed($u) ? $u->value : $u;
+			my $resp	= $ua->get($url);
+			if ($resp->is_success) {
+				my $ct		= $resp->header('Content-Type');
+				my $pclass = Attean->get_parser( media_type => $ct ) // Attean->get_parser('ntriples');
+				if ($pclass) {
+					my $p		= $pclass->new(base => iri($url));
+					my $str		= $resp->decoded_content;
+					my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
+					my $iter	= $p->parse_iter_from_bytes( $bytes );
+					$self->add_iter($iter->as_quads($graph));
+				} else {
+					die "No parser found for content type $ct: $url";
+				}
+			} else {
+				die $resp->status_line;
+			}
+		}
+	}
+	
+	# $model->load_triples( 'turtle', iri('http://example.org/graph1') => "@prefix foaf: ...", iri('http://example.org/graph2') => "@prefix foaf: ..." );
 	sub load_triples {
 		my $self	= shift;
 		my $format	= shift;
@@ -295,21 +328,21 @@ package Attean::API::MutableModel 0.012 {
 }
 
 
-package Attean::API::ETagCacheableModel 0.012 {
+package Attean::API::ETagCacheableModel 0.013 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
-package Attean::API::TimeCacheableModel 0.012 {
+package Attean::API::TimeCacheableModel 0.013 {
 	use Moo::Role;
 	
 	requires 'mtime_for_quads';
 }
 
 
-package Attean::API::BulkUpdatableModel 0.012 {
+package Attean::API::BulkUpdatableModel 0.013 {
 	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';

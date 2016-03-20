@@ -7,7 +7,7 @@ Attean::QueryPlanner - Query planner
 
 =head1 VERSION
 
-This document describes Attean::QueryPlanner version 0.012
+This document describes Attean::QueryPlanner version 0.013
 
 =head1 SYNOPSIS
 
@@ -34,7 +34,7 @@ use Attean::Algebra;
 use Attean::Plan;
 use Attean::Expression;
 
-package Attean::QueryPlanner 0.012 {
+package Attean::QueryPlanner 0.013 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -275,7 +275,7 @@ the supplied C<< $active_graph >>.
 						return $plan;
 					}
 				}
-				return $self->plans_for_algebra($child, $model, $graph, $default_graphs, %args);
+				return $self->plans_for_algebra($child, $model, [$graph], $default_graphs, %args);
 			} else {
 				my $gvar	= $graph->value;
 				my $graphs	= $model->get_graphs;
@@ -471,7 +471,6 @@ the supplied C<< $active_graph >>.
 				push(@plans, Attean::Plan::Describe->new(terms => $algebra->terms, graph => $active_graphs, children => [$plan], distinct => 0, ordered => []));
 			}
 			return @plans;
-		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 		} elsif ($algebra->isa('Attean::Algebra::Clear')) {
 			my $plan_class	= $algebra->drop ? 'Attean::Plan::Drop' : 'Attean::Plan::Clear';
 			my $target	= $algebra->target;

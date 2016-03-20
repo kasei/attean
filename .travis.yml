@@ -38,7 +38,8 @@ install:
   - "cpanm --quiet --notest Type::Tiny"
   - "cpanm --quiet --notest URI::Escape"
   - "cpanm --quiet --notest File::ShareDir"
-  - "cpanm --notest URI::Namespace"
-  - "cpanm --notest XML::SAX"
+  - "cpanm --quiet --notest URI::Namespace"
+  - "cpanm --quiet --notest XML::SAX"
+  - "cpanm --quiet --notest URI::Namespace"
 script:
   - "perl Makefile.PL && make test"

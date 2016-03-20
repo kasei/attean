@@ -208,6 +208,15 @@ does_ok($p, 'Attean::API::CostPlanner');
 		isa_ok($plan, 'Attean::Plan::Describe');
 		is(scalar(@{ $plan->children }), 1);
 	};
+
+	subtest 'Issues and Regressions' => sub {
+		{
+			my $sparql	= 'SELECT * WHERE { { SELECT ?o (AVG(?v) AS ?mean) WHERE { ?s <subject> ?o ; <value> ?v . } GROUP BY ?o } }';
+			my $algebra	= Attean->get_parser('SPARQL')->parse($sparql);
+			my $plan	= $p->plan_for_algebra($algebra, $model, [$graph]);
+			is_deeply([sort @{ $plan->in_scope_variables }], [qw(mean o)], 'sub-query in-scope variables (#78)');
+		}
+	}
 }
 
 done_testing();

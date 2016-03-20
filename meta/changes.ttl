@@ -28,8 +28,49 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010, my:v_0-011, my:v_0-012 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 ;
 	.
+
+my:v_0-013
+	a					:Version ;
+	dc:issued			"2016-03-19"^^xsd:date ;
+	:revision			"0.013" ;
+	dcterms:replaces	my:v_0-012 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added Attean::Algebra::Query to indicate a full query trees and aid in serialization (#67)." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::TripleOrQuadPattern->parse and AtteanX::Parser::SPARQL->parse_nodes methods (#82)." ],
+			[ a dcs:Addition ; rdfs:label "Added parsing, algebra, planning, and test support for SPARQL 1.1 Updates." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::BulkUpdatableStore role." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::MutableModel->load_urls_into_graph method." ],
+			[ a dcs:Addition ; rdfs:label "Added AtteanX::SPARQL::Token->integer constructor." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::QuadPattern->as_triple_pattern method." ],
+			[ a dcs:Update ; rdfs:label "Improved error message in query planners (#76 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Check types of invocant and model objects in calls to cost_for_plan planning method (#77)." ],
+			[ a dcs:Update ; rdfs:label "Fix lost in-scope variables in aggregation algebra and plans (#78)." ],
+			[ a dcs:Update ; rdfs:label "Refactored SPARQL 1.1 test harness into a testing role (#80)." ],
+			[ a dcs:Update ; rdfs:label "Improve errors and logging in SPARQL parser (#84 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean::Algebra::Update->blank_nodes (#70)." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean::QueryPlanner active_graphs argument during recursive call to plans_for_algebra." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in Attean::Literal that was returning rdf:string instead of rdf:langString for language literals." ],
+			[ a dcs:Update ; rdfs:label "Improve temporary variable names in aggregates generated during parsing." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean::API::IDPJoinPlanner->cost_for_plan to pass the planner object in calls to the model." ],
+			[ a dcs:Update ; rdfs:label "Improved Attean::Plan::Union to handle plans with zero children." ],
+			[ a dcs:Update ; rdfs:label "Improve error messages in Attean::CodeIterator and Attean::API::Binding." ],
+			[ a dcs:Update ; rdfs:label "Pass tree depth as argument to algebra_as_string." ],
+			[ a dcs:Update ; rdfs:label "Add and use Attean::Algebra::Query->subquery flag when appropriate and stop generating needless unary join algebras." ],
+			[ a dcs:Update ; rdfs:label "Add child accessor to Attean::API::UnaryQueryTree." ],
+			[ a dcs:Update ; rdfs:label "Fix sparql_tokens generation for quad patterns to use SPARQL GRAPH syntax, not N-Quads syntax." ],
+			[ a dcs:Update ; rdfs:label "Fix result iterator generation for quad patterns to keep associated variable names." ],
+			[ a dcs:Update ; rdfs:label "Update bin/attean_query to allow dryruns to avoid generating query plans when appropriate." ],
+			[ a dcs:Update ; rdfs:label "Allow producing short blank node labels in attean_query results." ],
+			[ a dcs:Update ; rdfs:label "Updated attean_query to allow updates." ],
+			[ a dcs:Update ; rdfs:label "Improve handling of utf8 encoding in SPARQL/XML, algebra, and plan serializations." ],
+			[ a dcs:Update ; rdfs:label "Fix serialization of SILENT flag on Service queries." ],
+			[ a dcs:Update ; rdfs:label "Added CONTRIBUTING file." ]
+	]
+	.
+
 
 my:v_0-012
 	a					:Version ;

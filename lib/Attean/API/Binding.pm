@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.012
+This document describes Attean::API::Binding version 0.013
 
 =head1 DESCRIPTION
 
@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.012 {
+package Attean::API::Binding 0.013 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
@@ -173,7 +173,9 @@ C<< $binding >>.
 	}
 }
 
-package Attean::API::TripleOrQuadPattern 0.012 {
+package Attean::API::TripleOrQuadPattern 0.013 {
+	use Encode qw(encode);
+	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
 	use Attean::API::Query;
@@ -251,9 +253,26 @@ package Attean::API::TripleOrQuadPattern 0.012 {
 		my ($t)		= @$triples;
 		return $t;
 	}
+	
+=item C<< parse ( $string ) >>
+
+Returns a triple or quad pattern object using the variables and/or terms
+parsed from C<< $string >> in SPARQL syntax.
+
+=cut
+
+	sub parse {
+		my $self	= shift;
+		my $string	= shift;
+		my $bytes	= encode('UTF-8', $string, Encode::FB_CROAK);
+		my $parser	= Attean->get_parser('SPARQL')->new(@_);
+		my @values	= $parser->parse_nodes($bytes);
+		my @keys	= $self->variables;
+		return $self->new(zip @keys, @values);
+	}
 }
 
-package Attean::API::TripleOrQuad 0.012 {
+package Attean::API::TripleOrQuad 0.013 {
 	use Moo::Role;
 	use List::MoreUtils qw(any);
 	use Carp;
@@ -267,7 +286,7 @@ package Attean::API::TripleOrQuad 0.012 {
 	}
 }
 
-package Attean::API::TriplePattern 0.012 {
+package Attean::API::TriplePattern 0.013 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
@@ -319,7 +338,7 @@ package Attean::API::TriplePattern 0.012 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Triple 0.012 {
+package Attean::API::Triple 0.013 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -354,7 +373,7 @@ package Attean::API::Triple 0.012 {
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
 }
 
-package Attean::API::QuadPattern 0.012 {
+package Attean::API::QuadPattern 0.013 {
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
 	use Moo::Role;
@@ -411,7 +430,7 @@ package Attean::API::QuadPattern 0.012 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.012 {
+package Attean::API::Quad 0.013 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -438,7 +457,7 @@ package Attean::API::Quad 0.012 {
 }
 
 
-package Attean::API::Result 0.012 {
+package Attean::API::Result 0.013 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(HashRef);

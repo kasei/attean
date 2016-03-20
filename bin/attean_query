@@ -28,6 +28,9 @@ END
 	exit(0);
 }
 
+binmode(\*STDOUT, ':encoding(UTF-8)');
+binmode(\*STDERR, ':encoding(UTF-8)');
+
 my $dryrun			= 0;
 my $check_syntax	= 0;
 my $verbose			= 0;

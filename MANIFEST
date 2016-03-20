@@ -122,6 +122,7 @@ lib/Test/Attean/MutableQuadStore.pm
 lib/Test/Attean/MutableTimeCacheableQuadStore.pm
 lib/Test/Attean/MutableTripleStore.pm
 lib/Test/Attean/QuadStore.pm
+lib/Test/Attean/SPARQLSuite.pm
 lib/Test/Attean/TimeCacheableQuadStore.pm
 lib/Test/Attean/TripleStore.pm
 LICENSE
@@ -172,3 +173,4 @@ t/term.t
 t/treerewrite.t
 xt/pod-coverage.t
 xt/pod.t
+xt/dawg11-memory.t

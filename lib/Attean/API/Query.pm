@@ -7,7 +7,7 @@ Attean::API::Query - Utility package defining query-related roles
 
 =head1 VERSION
 
-This document describes Attean::API::Query version 0.012
+This document describes Attean::API::Query version 0.013
 
 =head1 SYNOPSIS
 
@@ -24,7 +24,7 @@ This is a utility package for defining query-related roles:
 
 =cut
 
-package Attean::API::DirectedAcyclicGraph 0.012 {
+package Attean::API::DirectedAcyclicGraph 0.013 {
 	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(ArrayRef ConsumerOf);
@@ -149,7 +149,7 @@ package Attean::API::DirectedAcyclicGraph 0.012 {
 	}
 }
 
-package Attean::API::SPARQLSerializable 0.012 {
+package Attean::API::SPARQLSerializable 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo::Role;
@@ -171,8 +171,8 @@ package Attean::API::SPARQLSerializable 0.012 {
 	sub sparql_subtokens {
 		my $self	= shift;
 		if ($self->does('Attean::API::SPARQLQuerySerializable')) {
-			my $l	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-			my $r	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+			my $l	= AtteanX::SPARQL::Token->lbrace;
+			my $r	= AtteanX::SPARQL::Token->rbrace;
 			my @tokens;
 			push(@tokens, $l);
 			push(@tokens, $self->sparql_tokens->elements);
@@ -183,11 +183,37 @@ package Attean::API::SPARQLSerializable 0.012 {
 		}
 	}
 	
+	sub dataset_tokens {
+		my $self	= shift;
+		my $dataset	= shift;
+		my @default	= @{ $dataset->{ default } || [] };
+		my @named	= @{ $dataset->{ named } || [] };
+		my $has_dataset	= (scalar(@default) + scalar(@named));
+		my @tokens;
+		if ($has_dataset) {
+			my $from		= AtteanX::SPARQL::Token->keyword('FROM');
+			my $named		= AtteanX::SPARQL::Token->keyword('NAMED');
+			foreach my $i (sort { $a->as_string cmp $b->as_string } @default) {
+				push(@tokens, $from);
+				push(@tokens, $i->sparql_tokens->elements);
+			}
+			foreach my $i (sort { $a->as_string cmp $b->as_string } @named) {
+				push(@tokens, $from);
+				push(@tokens, $named);
+				push(@tokens, $i->sparql_tokens->elements);
+			}
+		}
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+	
 	sub query_tokens {
 		my $self	= shift;
-		my $as		= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['AS'] );
-		my $lparen	= AtteanX::SPARQL::Token->fast_constructor( LPAREN, -1, -1, -1, -1, ['('] );
-		my $rparen	= AtteanX::SPARQL::Token->fast_constructor( RPAREN, -1, -1, -1, -1, [')'] );
+		my %args	= @_;
+		my $dataset	= $args{dataset} || {};
+		
+		my $as		= AtteanX::SPARQL::Token->keyword('AS');
+		my $lparen	= AtteanX::SPARQL::Token->lparen;
+		my $rparen	= AtteanX::SPARQL::Token->rparen;
 		
 		my $algebra	= $self;
 		
@@ -278,17 +304,17 @@ package Attean::API::SPARQLSerializable 0.012 {
 		
 		my @tokens;
 
-		my $where	= AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['WHERE'] );
-		my $lbrace	= AtteanX::SPARQL::Token->fast_constructor( LBRACE, -1, -1, -1, -1, ['{'] );
-		my $rbrace	= AtteanX::SPARQL::Token->fast_constructor( RBRACE, -1, -1, -1, -1, ['}'] );
+		my $where	= AtteanX::SPARQL::Token->keyword('WHERE');
+		my $lbrace	= AtteanX::SPARQL::Token->lbrace;
+		my $rbrace	= AtteanX::SPARQL::Token->rbrace;
 
 
 		if ($form eq 'SELECT') {
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['SELECT'] ));
+			push(@tokens, AtteanX::SPARQL::Token->keyword('SELECT'));
 			if ($modifiers{distinct}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DISTINCT'] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('DISTINCT'));
 			} elsif ($modifiers{reduced}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['REDUCED'] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('REDUCED'));
 			}
 			
 			if (my $p = $modifiers{project_variables_order}) {
@@ -301,8 +327,11 @@ package Attean::API::SPARQLSerializable 0.012 {
 					}
 				}
 			} else {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( STAR, -1, -1, -1, -1, ['*'] ));
+				push(@tokens, AtteanX::SPARQL::Token->star);
 			}
+			
+			push(@tokens, $self->dataset_tokens($dataset)->elements);
+			
 			push(@tokens, $where);
 			if ($algebra->isa('Attean::Algebra::Join')) {
 				# don't emit extraneous braces at the top-level
@@ -313,52 +342,55 @@ package Attean::API::SPARQLSerializable 0.012 {
 				push(@tokens, $rbrace);
 			}
 			if (my $groups = $modifiers{groups}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['GROUP'] ));
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('GROUP'));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('BY'));
 				push(@tokens, @$groups);
 			}
 			if (my $expr = $modifiers{having}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['HAVING'] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('HAVING'));
 				push(@tokens, $expr->sparql_tokens->elements);
 			}
 			if (my $comps = $modifiers{order}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ORDER'] ));
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['BY'] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('ORDER'));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('BY'));
 				foreach my $c (@$comps) {
 					push(@tokens, $c->sparql_tokens->elements);
 				}
 			}
 			if (exists $modifiers{limit}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['LIMIT'] ));
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{limit}] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('LIMIT'));
+				push(@tokens, AtteanX::SPARQL::Token->integer($modifiers{limit}));
 			}
 			if (exists $modifiers{offset}) {
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['OFFSET'] ));
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( INTEGER, -1, -1, -1, -1, [$modifiers{offset}] ));
+				push(@tokens, AtteanX::SPARQL::Token->keyword('OFFSET'));
+				push(@tokens, AtteanX::SPARQL::Token->integer($modifiers{offset}));
 			}
 		} elsif ($form eq 'DESCRIBE') {
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['DESCRIBE'] ));
+			push(@tokens, AtteanX::SPARQL::Token->keyword('DESCRIBE'));
 			foreach my $t (@{ $modifiers{describe} }) {
 				push(@tokens, $t->sparql_tokens->elements);
 			}
+			push(@tokens, $self->dataset_tokens($dataset)->elements);
 			push(@tokens, $where);
 			push(@tokens, $lbrace);
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, $rbrace);
 		} elsif ($form eq 'CONSTRUCT') {
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['CONSTRUCT'] ));
+			push(@tokens, AtteanX::SPARQL::Token->keyword('CONSTRUCT'));
 			push(@tokens, $lbrace);
 			foreach my $t (@{ $modifiers{construct} }) {
 				push(@tokens, $t->sparql_tokens->elements);
-				push(@tokens, AtteanX::SPARQL::Token->fast_constructor( DOT, -1, -1, -1, -1, ['.'] ));
+				push(@tokens, AtteanX::SPARQL::Token->dot);
 			}
 			push(@tokens, $rbrace);
+			push(@tokens, $self->dataset_tokens($dataset)->elements);
 			push(@tokens, $where);
 			push(@tokens, $lbrace);
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, $rbrace);
 		} elsif ($form eq 'ASK') {
-			push(@tokens, AtteanX::SPARQL::Token->fast_constructor( KEYWORD, -1, -1, -1, -1, ['ASK'] ));
+			push(@tokens, AtteanX::SPARQL::Token->keyword('ASK'));
+			push(@tokens, $self->dataset_tokens($dataset)->elements);
 			push(@tokens, $lbrace);
 			push(@tokens, $algebra->sparql_tokens->elements);
 			push(@tokens, $rbrace);
@@ -369,7 +401,7 @@ package Attean::API::SPARQLSerializable 0.012 {
 	}
 }
 
-package Attean::API::SPARQLQuerySerializable 0.012 {
+package Attean::API::SPARQLQuerySerializable 0.013 {
 	use Moo::Role;
 	use namespace::clean;
 	with 'Attean::API::SPARQLSerializable';
@@ -384,7 +416,7 @@ package Attean::API::SPARQLQuerySerializable 0.012 {
 
 =cut
 
-package Attean::API::Algebra 0.012 {
+package Attean::API::Algebra 0.013 {
 	use Moo::Role;
 
 	with 'Attean::API::SPARQLSerializable';
@@ -461,7 +493,7 @@ package Attean::API::Algebra 0.012 {
 
 =cut
 
-package Attean::API::QueryTree 0.012 {
+package Attean::API::QueryTree 0.013 {
 	use Moo::Role;
 	with 'Attean::API::DirectedAcyclicGraph';
 }
@@ -470,7 +502,7 @@ package Attean::API::QueryTree 0.012 {
 
 =cut
 
-package Attean::API::NullaryQueryTree 0.012 {
+package Attean::API::NullaryQueryTree 0.013 {
 	use Moo::Role;
 	sub arity { return 0 }
 	with 'Attean::API::QueryTree';
@@ -480,7 +512,7 @@ package Attean::API::NullaryQueryTree 0.012 {
 
 =cut
 
-package Attean::API::UnaryQueryTree 0.012 {
+package Attean::API::UnaryQueryTree 0.013 {
 	use Moo::Role;
 	sub arity { return 1 }
 	with 'Attean::API::QueryTree';
@@ -495,7 +527,7 @@ package Attean::API::UnaryQueryTree 0.012 {
 
 =cut
 
-package Attean::API::BinaryQueryTree 0.012 {
+package Attean::API::BinaryQueryTree 0.013 {
 	use Moo::Role;
 	sub arity { return 2 }
 	with 'Attean::API::QueryTree';
@@ -505,7 +537,7 @@ package Attean::API::BinaryQueryTree 0.012 {
 
 =cut
 
-package Attean::API::PropertyPath 0.012 {
+package Attean::API::PropertyPath 0.013 {
 	use Moo::Role;
 	with 'Attean::API::QueryTree';
 	requires 'as_string';
@@ -516,7 +548,7 @@ package Attean::API::PropertyPath 0.012 {
 
 =cut
 
-package Attean::API::UnaryPropertyPath 0.012 {
+package Attean::API::UnaryPropertyPath 0.013 {
 	use Moo::Role;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -546,7 +578,7 @@ package Attean::API::UnaryPropertyPath 0.012 {
 
 =cut
 
-package Attean::API::NaryPropertyPath 0.012 {
+package Attean::API::NaryPropertyPath 0.013 {
 	use Moo::Role;
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
@@ -573,7 +605,7 @@ package Attean::API::NaryPropertyPath 0.012 {
 
 =cut
 
-package Attean::API::UnionScopeVariables 0.012 {
+package Attean::API::UnionScopeVariables 0.013 {
 	use Moo::Role;
 	sub in_scope_variables {
 		my $self	= shift;
@@ -589,7 +621,7 @@ package Attean::API::UnionScopeVariables 0.012 {
 
 =cut
 
-package Attean::API::IntersectionScopeVariables 0.012 {
+package Attean::API::IntersectionScopeVariables 0.013 {
 	use Moo::Role;
 	sub in_scope_variables {
 		my $self	= shift;

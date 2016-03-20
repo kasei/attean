@@ -1,5 +1,6 @@
 use v5.14;
 use warnings;
+use utf8;
 
 =head1 NAME
 
@@ -7,7 +8,7 @@ Attean::Algebra - Representation of SPARQL algebra operators
 
 =head1 VERSION
 
-This document describes Attean::Algebra version 0.012
+This document describes Attean::Algebra version 0.013
 
 =head1 SYNOPSIS
 
@@ -25,20 +26,39 @@ in the Attean::Algebra namespace:
 
 use Attean::API::Query;
 
-package Attean::Algebra::Query 0.012 {
+package Attean::Algebra::Query 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
-	use Types::Standard qw(Bool);
+	use Types::Standard qw(Bool ArrayRef HashRef ConsumerOf);
 	use Moo;
 	use namespace::clean;
 
+	has 'dataset' => (is => 'ro', isa => HashRef[ArrayRef[ConsumerOf['Attean::API::Term']]], default => sub { +{} });
 	has 'subquery' => (is => 'ro', isa => Bool, default => 0);
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	sub algebra_as_string {
 		my $self	= shift;
-		return $self->subquery ? 'SubQuery' : 'Query';
+		my $name	= $self->subquery ? 'SubQuery' : 'Query';
+		
+		my %dataset	= %{ $self->dataset };
+		my @default	= @{ $dataset{ default } || [] };
+		my @named	= @{ $dataset{ named } || [] };
+		my $has_dataset	= (scalar(@default) + scalar(@named));
+		
+		my $s	= $name;
+		if ($has_dataset) {
+			my @parts;
+			if (scalar(@default)) {
+				push(@parts, 'Default graph(s): ' . join(', ', map { chomp; $_ } map { $_->as_sparql } @default));
+			}
+			if (scalar(@named)) {
+				push(@parts, 'Named graph(s): ' . join(', ', map { chomp; $_ } map { $_->as_sparql } @named));
+			}
+			$s	.= ' { ' . join('; ', @parts) . ' }';
+		}
+		return $s;
 	}
 
 	sub sparql_tokens {
@@ -46,6 +66,13 @@ package Attean::Algebra::Query 0.012 {
 		my $child	= $self->child;
 		my $l		= AtteanX::SPARQL::Token->lbrace;
 		my $r		= AtteanX::SPARQL::Token->rbrace;
+		my $from		= AtteanX::SPARQL::Token->keyword('FROM');
+		my $named		= AtteanX::SPARQL::Token->keyword('NAMED');
+
+		my %dataset	= %{ $self->dataset };
+		my @default	= @{ $dataset{ default } || [] };
+		my @named	= @{ $dataset{ named } || [] };
+		my $has_dataset	= (scalar(@default) + scalar(@named));
 		if ($child->does('Attean::API::SPARQLQuerySerializable')) {
 			if ($self->subquery) {
 				my @tokens;
@@ -54,7 +81,11 @@ package Attean::Algebra::Query 0.012 {
 				push(@tokens, $r);
 				return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 			} else {
-				return $child->sparql_tokens;
+				my %args;
+				if ($has_dataset) {
+					$args{dataset}	= $self->dataset;
+				}
+				return $child->query_tokens(%args);
 			}
 		} else {
 			my $sel		= AtteanX::SPARQL::Token->keyword('SELECT');
@@ -65,7 +96,19 @@ package Attean::Algebra::Query 0.012 {
 			if ($self->subquery) {
 				push(@tokens, $l);
 			}
-			push(@tokens, $sel, $star, $where);
+			push(@tokens, $sel, $star);
+			if ($has_dataset) {
+				foreach my $i (sort { $a->as_string cmp $b->as_string } @default) {
+					push(@tokens, $from);
+					push(@tokens, $i->sparql_tokens->elements);
+				}
+				foreach my $i (sort { $a->as_string cmp $b->as_string } @named) {
+					push(@tokens, $from);
+					push(@tokens, $named);
+					push(@tokens, $i->sparql_tokens->elements);
+				}
+			}
+			push(@tokens, $where);
 			push(@tokens, $l);
 			push(@tokens, $child->sparql_tokens->elements);
 			push(@tokens, $r);
@@ -77,7 +120,7 @@ package Attean::Algebra::Query 0.012 {
 	}
 }
 
-package Attean::Algebra::Update 0.012 {
+package Attean::Algebra::Update 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Types::Standard qw(Bool);
@@ -99,7 +142,7 @@ package Attean::Algebra::Update 0.012 {
 
 =cut
 
-package Attean::Algebra::Sequence 0.012 {
+package Attean::Algebra::Sequence 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -127,7 +170,7 @@ package Attean::Algebra::Sequence 0.012 {
 
 =cut
 
-package Attean::Algebra::Join 0.012 {
+package Attean::Algebra::Join 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -156,7 +199,7 @@ package Attean::Algebra::Join 0.012 {
 
 =cut
 
-package Attean::Algebra::LeftJoin 0.012 {
+package Attean::Algebra::LeftJoin 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -213,7 +256,7 @@ package Attean::Algebra::LeftJoin 0.012 {
 
 =cut
 
-package Attean::Algebra::Filter 0.012 {
+package Attean::Algebra::Filter 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -249,7 +292,7 @@ package Attean::Algebra::Filter 0.012 {
 
 =cut
 
-package Attean::Algebra::Union 0.012 {
+package Attean::Algebra::Union 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -280,7 +323,7 @@ package Attean::Algebra::Union 0.012 {
 
 =cut
 
-package Attean::Algebra::Graph 0.012 {
+package Attean::Algebra::Graph 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -328,7 +371,7 @@ package Attean::Algebra::Graph 0.012 {
 
 =cut
 
-package Attean::Algebra::Extend 0.012 {
+package Attean::Algebra::Extend 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -377,7 +420,7 @@ package Attean::Algebra::Extend 0.012 {
 
 =cut
 
-package Attean::Algebra::Minus 0.012 {
+package Attean::Algebra::Minus 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -415,7 +458,7 @@ package Attean::Algebra::Minus 0.012 {
 
 =cut
 
-package Attean::Algebra::Distinct 0.012 {
+package Attean::Algebra::Distinct 0.013 {
 	use Moo;
 	use namespace::clean;
 
@@ -429,7 +472,7 @@ package Attean::Algebra::Distinct 0.012 {
 
 =cut
 
-package Attean::Algebra::Reduced 0.012 {
+package Attean::Algebra::Reduced 0.013 {
 	use Moo;
 	use namespace::clean;
 
@@ -443,7 +486,7 @@ package Attean::Algebra::Reduced 0.012 {
 
 =cut
 
-package Attean::Algebra::Slice 0.012 {
+package Attean::Algebra::Slice 0.013 {
 	use Moo;
 	use Types::Standard qw(Int);
 	use namespace::clean;
@@ -466,7 +509,7 @@ package Attean::Algebra::Slice 0.012 {
 
 =cut
 
-package Attean::Algebra::Project 0.012 {
+package Attean::Algebra::Project 0.013 {
 	use Types::Standard qw(ArrayRef ConsumerOf);
 	use Moo;
 	use namespace::clean;
@@ -494,7 +537,7 @@ package Attean::Algebra::Project 0.012 {
 
 =cut
 
-package Attean::Algebra::Comparator 0.012 {
+package Attean::Algebra::Comparator 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -538,7 +581,7 @@ package Attean::Algebra::Comparator 0.012 {
 
 =cut
 
-package Attean::Algebra::OrderBy 0.012 {
+package Attean::Algebra::OrderBy 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -561,7 +604,7 @@ package Attean::Algebra::OrderBy 0.012 {
 
 =cut
 
-package Attean::Algebra::BGP 0.012 {
+package Attean::Algebra::BGP 0.013 {
 	use Moo;
 	use Attean::RDF;
 	use Set::Scalar;
@@ -631,7 +674,7 @@ package Attean::Algebra::BGP 0.012 {
 
 =cut
 
-package Attean::Algebra::Service 0.012 {
+package Attean::Algebra::Service 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
@@ -676,7 +719,7 @@ package Attean::Algebra::Service 0.012 {
 
 =cut
 
-package Attean::Algebra::Path 0.012 {
+package Attean::Algebra::Path 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -716,7 +759,7 @@ package Attean::Algebra::Path 0.012 {
 
 =cut
 
-package Attean::Algebra::Group 0.012 {
+package Attean::Algebra::Group 0.013 {
 	use utf8;
 	use Moo;
 	use Attean::API::Query;
@@ -746,11 +789,21 @@ package Attean::Algebra::Group 0.012 {
 	sub in_scope_variables {
 		my $self	= shift;
 		my $aggs	= $self->aggregates // [];
-		my @vars;
+		my $groups	= $self->groupby // [];
+		my %vars;
 		foreach my $a (@$aggs) {
-			push(@vars, $a->variable->value);
+			$vars{ $a->variable->value }++;
 		}
-		return @vars;
+		foreach my $e (@$groups) {
+			if ($e->isa('Attean::ValueExpression')) {
+				my $value	= $e->value;
+				if ($value->does('Attean::API::Variable')) {
+					$vars{ $value->value }++;
+				}
+			}
+		}
+		
+		return keys %vars;
 	}
 	
 	sub algebra_as_string {
@@ -763,7 +816,8 @@ package Attean::Algebra::Group 0.012 {
 			my $op	= $a->operator;
 			my $d	= $a->distinct ? "DISTINCT " : '';
 			my ($e)	= ((map { $_->as_string } @{ $a->children }), '');
-			push(@aggs, "$v ← ${op}($d$e)");
+			my $s	= "$v ← ${op}($d$e)";
+			push(@aggs, $s);
 		}
 		return sprintf('Group { %s } aggregate { %s }', join(', ', map { $_->as_string() } @$groups), join(', ', @aggs));
 	}
@@ -775,7 +829,7 @@ package Attean::Algebra::Group 0.012 {
 
 =cut
 
-package Attean::Algebra::NegatedPropertySet 0.012 {
+package Attean::Algebra::NegatedPropertySet 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -820,7 +874,7 @@ package Attean::Algebra::NegatedPropertySet 0.012 {
 
 =cut
 
-package Attean::Algebra::PredicatePath 0.012 {
+package Attean::Algebra::PredicatePath 0.013 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
@@ -853,7 +907,7 @@ package Attean::Algebra::PredicatePath 0.012 {
 
 =cut
 
-package Attean::Algebra::InversePath 0.012 {
+package Attean::Algebra::InversePath 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -895,7 +949,7 @@ package Attean::Algebra::InversePath 0.012 {
 
 =cut
 
-package Attean::Algebra::SequencePath 0.012 {
+package Attean::Algebra::SequencePath 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -928,7 +982,7 @@ package Attean::Algebra::SequencePath 0.012 {
 
 =cut
 
-package Attean::Algebra::AlternativePath 0.012 {
+package Attean::Algebra::AlternativePath 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -961,7 +1015,7 @@ package Attean::Algebra::AlternativePath 0.012 {
 
 =cut
 
-package Attean::Algebra::ZeroOrMorePath 0.012 {
+package Attean::Algebra::ZeroOrMorePath 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1002,7 +1056,7 @@ package Attean::Algebra::ZeroOrMorePath 0.012 {
 
 =cut
 
-package Attean::Algebra::OneOrMorePath 0.012 {
+package Attean::Algebra::OneOrMorePath 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1043,7 +1097,7 @@ package Attean::Algebra::OneOrMorePath 0.012 {
 
 =cut
 
-package Attean::Algebra::ZeroOrOnePath 0.012 {
+package Attean::Algebra::ZeroOrOnePath 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1084,7 +1138,7 @@ package Attean::Algebra::ZeroOrOnePath 0.012 {
 
 =cut
 
-package Attean::Algebra::Table 0.012 {
+package Attean::Algebra::Table 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1138,7 +1192,7 @@ package Attean::Algebra::Table 0.012 {
 
 =cut
 
-package Attean::Algebra::Ask 0.012 {
+package Attean::Algebra::Ask 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1156,7 +1210,7 @@ package Attean::Algebra::Ask 0.012 {
 
 =cut
 
-package Attean::Algebra::Construct 0.012 {
+package Attean::Algebra::Construct 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1177,7 +1231,7 @@ package Attean::Algebra::Construct 0.012 {
 
 =cut
 
-package Attean::Algebra::Describe 0.012 {
+package Attean::Algebra::Describe 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1198,7 +1252,7 @@ package Attean::Algebra::Describe 0.012 {
 
 =cut
 
-package Attean::Algebra::Load 0.012 {
+package Attean::Algebra::Load 0.013 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1241,7 +1295,7 @@ package Attean::Algebra::Load 0.012 {
 
 =cut
 
-package Attean::Algebra::Clear 0.012 {
+package Attean::Algebra::Clear 0.013 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
@@ -1295,7 +1349,7 @@ package Attean::Algebra::Clear 0.012 {
 
 =cut
 
-package Attean::Algebra::Create 0.012 {
+package Attean::Algebra::Create 0.013 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
@@ -1330,7 +1384,7 @@ package Attean::Algebra::Create 0.012 {
 
 =cut
 
-package Attean::Algebra::Add 0.012 {
+package Attean::Algebra::Add 0.013 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
@@ -1388,7 +1442,7 @@ package Attean::Algebra::Add 0.012 {
 
 =cut
 
-package Attean::Algebra::Modify 0.012 {
+package Attean::Algebra::Modify 0.013 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;

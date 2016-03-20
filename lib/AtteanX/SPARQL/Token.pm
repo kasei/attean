@@ -7,7 +7,7 @@ AtteanX::SPARQL::Token - Token objects used for parsing and serializing SPARQL
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Token version 0.012
+This document describes AtteanX::SPARQL::Token version 0.013
 
 =head1 SYNOPSIS
 
@@ -55,7 +55,7 @@ An array of values associated with the token (e.g. the integer value of an INT t
 
 =cut
 
-package AtteanX::SPARQL::Token 0.012;
+package AtteanX::SPARQL::Token 0.013;
 
 use Moo;
 use Types::Standard qw(ArrayRef Str);
@@ -158,6 +158,19 @@ sub keyword {
 	my $class	= shift;
 	my $kw		= shift;
 	return $class->fast_constructor(KEYWORD, -1, -1, -1, -1, [uc($kw)]);
+}
+
+=item C<< integer( $value ) >>
+
+Returns a new L<AtteanX::SPARQL::Token> object with the C<INTEGER> type and
+the given C<$value>.
+
+=cut
+
+sub integer {
+	my $class	= shift;
+	my $value	= shift;
+	return $class->fast_constructor(INTEGER, -1, -1, -1, -1, [+$value] );
 }
 
 =item C<< as_string >>
