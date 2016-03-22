@@ -122,6 +122,8 @@ package Attean::Endpoint 0.010 {
 # 	use Fcntl qw(:flock SEEK_END);
 	use namespace::clean;
 
+	with 'MooX::Log::Any';
+
 	has 'planner' => (
 		is => 'ro',
 		isa => ConsumerOf['Attean::API::QueryPlanner'],
@@ -457,6 +459,7 @@ END
 		my $self	= shift;
 		my $req		= shift;
 		my $message	= shift;
+		$self->log->info($message);
 		$self->_log( $req, { level => 'info', message => $message } );
 	}
 
@@ -468,6 +471,7 @@ END
 		my $self	= shift;
 		my $req		= shift;
 		my $message	= shift;
+		$self->log->error($message);
 		$self->_log( $req, { level => 'error', message => $message } );
 	}
 
