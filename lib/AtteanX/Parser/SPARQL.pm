@@ -348,7 +348,9 @@ sub _RW_Query {
 			if ($self->update and not $self->_peek_token) {
 				last;
 			}
-			croak "Syntax error: Expected query type with input <<$self->{tokens}>>";
+			
+			my $t		= $self->_peek_token;
+			return $self->_token_error($t, 'Expected query type');
 		}
 
 		last if ($read_query);
@@ -2668,7 +2670,10 @@ sub _ConditionalOrExpression {
 	} else {
 		$self->_add_stack( @list );
 	}
-	confess $self->{tokens} if (scalar(@{ $self->{_stack} }) == 0);
+	if (scalar(@{ $self->{_stack} }) == 0) {
+		my $t	= $self->_peek_token;
+		$self->_token_error($t, "Missing conditional expression");
+	}
 }
 
 # [48] ConditionalAndExpression ::= ValueLogical ( '&&' ValueLogical )*
@@ -3637,6 +3642,27 @@ sub _expected_token {
 			confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
 		}
 	}
+}
+
+sub _token_error {
+	my $self	= shift;
+	my $t		= shift;
+	my $note	= shift;
+	my $got		= blessed($t) ? AtteanX::SPARQL::Constants::decrypt_constant($t->type) : '(undef)';
+	my $message	= "$note but got $got";
+	if ($t and $t->start_line > 0) {
+		my $l	= $t->start_line;
+		my $c	= $t->start_column;
+		$message	.= " at $l:$c";
+	} else {
+		my $n 		= $self->lexer->buffer;
+		$n			=~ s/\s+/ /g;
+		$n			=~ s/\s*$//;
+		if ($n) {
+			$message	.= " near '$n'";
+		}
+	}
+	croak $message;
 }
 
 1;
