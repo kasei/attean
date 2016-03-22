@@ -157,7 +157,7 @@ package Attean::Endpoint 0.010 {
 			if (defined($file) and length($file)) {
 				$graph		= Attean::IRI->new('file://' . File::Spec->rel2abs($file));
 				open(my $fh, '<:encoding(UTF-8)', $file) or die $!;
-# 				warn "Parsing data from $file...\n";
+ 				#$self->log->debug("Parsing data from $file...");
 				my $pclass	= Attean->get_parser( filename => $file ) // 'AtteanX::Parser::Turtle';
 				my $parser	= $pclass->new(base => $graph);
 				my $iter	= $parser->parse_iter_from_io($fh);
@@ -321,7 +321,7 @@ END
 				if (scalar(@default) or scalar(@named)) {
 					delete $args{ load_data };
 					# TODO: handle custom-dataset
-					warn 'custom query datasets not supported yet';
+					$self->log->warn('custom query datasets not supported yet');
 # 					$model	= Attean::MutableQuadModel->new( store => Attean->get_store('Memory')->new() );
 # 					foreach my $url (@named) {
 # 						RDF::Trine::Parser->parse_url_into_model( $url, $model, context => iri($url) );
@@ -338,7 +338,7 @@ END
 				if (scalar(@named) or scalar(@default)) {
 					$protocol_specifies_update_dataset	= 1;
 					# TODO: handle custom-dataset
-					warn 'custom update datasets not supported yet';
+					$self->log->warn('custom update datasets not supported yet');
 # 					$model	= RDF::Trine::Model::Dataset->new( $model );
 # 					$model->push_dataset( default => \@default, named => \@named );
 				}
@@ -377,21 +377,27 @@ END
 # 					die Attean::Endpoint::ClientError->new(code => 400, message => 'Multiple datasets specified for update', uri => 'http://id.kasei.us/rdf-endpoint/error/update_specifies_multiple_datasets');
 # 				}
 
-# 				warn "Algebra:\n" . $algebra->as_string;
+				if ($self->log->is_trace) {
+					$self->log->trace("Algebra:\n" . $algebra->as_string);
+				}
 				my $graph	= $self->graph;
 				my $default_graphs	= [$graph];
 				my $planner	= $self->planner;
-# 				warn "Planning with default graphs:\n";
-				foreach my $g (@$default_graphs) {
-					warn $g->as_string . "\n";
+				if ($self->log->is_trace) {
+					$self->log->debug('Planning with default graphs:');
+					foreach my $g (@$default_graphs) {
+						$self->log->trace($g->as_string);
+					}
 				}
 				my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
-# 				warn "Plan:\n" . $plan->as_string;
+				if ($self->log->is_debug) {
+					$self->log->debug("Plan:\n" . $plan->as_string);
+				}
 				eval {
 					my $iter	= $plan->evaluate($model);
 					$response->status(200);
 					my $sclass	= Attean->negotiate_serializer(request_headers => $headers) // Attean->get_serializer('sparqlxml');
-					warn $sclass;
+					$self->log->debug("Serializer class: $sclass");
 					my $s		= $sclass->new();
 					$content	= $s->serialize_iter_to_bytes($iter);
 					my $stype	= $s->canonical_media_type;
@@ -399,7 +405,7 @@ END
 				};
 				if ($@) {
 					my $error	= $@;
-					warn $@;
+					$self->log->fatal($error);
 					die Attean::Endpoint::ServerError->new(code => 500, message => 'SPARQL query/update execution error', uri => 'http://id.kasei.us/rdf-endpoint/error/execution_error', details => { error => $@, sparql => $sparql });
 				}
 			}
@@ -436,7 +442,7 @@ END
 			}
 			close($wh);
 			my $body	= do { local($/) = undef; <$rh> };
-			warn "Compressed $orig bytes to " . length($body) . " bytes\n";
+			$self->log->info("Compressed $orig bytes to " . length($body) . " bytes");
 			$length		= bytes::length($body);
 			$response->headers->header('Content-Encoding' => 'gzip');
 			$response->headers->header('Content-Length' => $length);
