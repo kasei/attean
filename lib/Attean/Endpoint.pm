@@ -106,6 +106,7 @@ package Attean::Endpoint 0.010 {
 	use Plack::Request;
 	use Plack::Response;
 	use Scalar::Util qw(blessed refaddr);
+	use List::MoreUtils qw(any);
 	use File::ShareDir qw(dist_dir);
 	use HTTP::Negotiate qw(choose);
 	use IO::Compress::Gzip qw(gzip);
@@ -136,15 +137,19 @@ package Attean::Endpoint 0.010 {
 	
 	sub BUILDARGS {
 		my $class		= shift;
+		my @params = @_;
 		my %args;
-		if (blessed($_[0]) and $_[0]->does('Attean::API::Model')) {
+		if (blessed($params[0]) and $params[0]->does('Attean::API::Model')) {
 			# ->new( $model, \%conf )
-			$args{ model }	= shift;
-			$args{ conf }	= shift;
+			$args{ model }	= shift @params;
+			$args{ conf }	= shift @params;
 			$args{ graph }	= Attean::IRI->new('http://example.org/graph');
+		} elsif (any { blessed($_) && $_->does('Attean::API::Model') } @params) {
+			# Assume the buildargs can be taken directly
+			return $class->SUPER::BUILDARGS(@params);
 		} else {
 			# ->new( \%conf )
-			my $conf		= shift;
+			my $conf		= shift @params;
 			my $store_conf	= $conf->{store};
 			my ($name, $file)	= split(';', $store_conf, 2);
 			my $sclass	= Attean->get_store($name)->new();
