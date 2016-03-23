@@ -14,7 +14,7 @@ This document describes AtteanX::Serializer::NQuads version 0.013
 
 =head1 DESCRIPTION
 
-...
+Serializes triples and quads into the RDF 1.1 N-Quads format.
 
 =head1 ATTRIBUTES
 
@@ -27,6 +27,10 @@ This document describes AtteanX::Serializer::NQuads version 0.013
 =head1 METHODS
 
 =over 4
+
+=item C<< serialize_iter_to_io( $fh, $iterator ) >>
+
+=item C<< serialize_iter_to_bytes( $fh ) >>
 
 =cut
 
@@ -65,6 +69,10 @@ __END__
 
 Please report any bugs or feature requests to through the GitHub web interface
 at L<https://github.com/kasei/perlrdf/issues>.
+
+=head1 SEE ALSO
+
+L<https://www.w3.org/TR/n-quads/>
 
 =head1 AUTHOR
 
