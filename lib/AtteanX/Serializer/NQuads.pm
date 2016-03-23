@@ -34,6 +34,9 @@ Serializes triples and quads into the RDF 1.1 N-Quads format.
 
 =cut
 
+use v5.14;
+use warnings;
+
 package AtteanX::Serializer::NQuads 0.013 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
