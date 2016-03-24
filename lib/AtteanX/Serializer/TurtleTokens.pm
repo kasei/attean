@@ -74,7 +74,7 @@ L<IO::Handle> object C<< $fh >>.
 	sub serialize_iter_to_io {
 		my $self	= shift;
 		my $io		= shift;
-		my $iter	= shift || confess "No iterator";
+		my $iter	= shift;
 		my $indent		= 0;
 		my $newline		= 1;
 		my $semicolon	= 0;
