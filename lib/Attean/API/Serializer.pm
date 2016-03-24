@@ -70,6 +70,7 @@ use Type::Tiny;
 
 package Attean::API::Serializer 0.013 {
 	use Moo::Role;
+	use Carp qw(confess);
 	
 	requires 'canonical_media_type'; # => (is => 'ro', isa => 'Str', init_arg => undef);
 	requires 'media_types'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
@@ -77,6 +78,18 @@ package Attean::API::Serializer 0.013 {
 	
 	requires 'serialize_iter_to_io';		# serialize_iter_to_io($io, $iter)
 	requires 'serialize_iter_to_bytes';		# $data = serialize_iter_to_bytes($iter)
+
+	before 'serialize_iter_to_io' => sub {
+		my $self	= shift;
+		my $io		= shift || confess "No filehandle passed to serialize_iter_to_io";
+		my $iter	= shift || confess "No iterator passed to serialize_iter_to_io";
+	};
+
+	before 'serialize_iter_to_bytes' => sub {
+		my $self	= shift;
+		my $iter	= shift || confess "No iterator passed to serialize_iter_to_bytes";
+	};
+
 
 	sub serialize_list_to_io {
 		my $self	= shift;
