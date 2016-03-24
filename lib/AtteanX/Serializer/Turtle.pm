@@ -92,7 +92,7 @@ L<IO::Handle> object C<< $fh >>.
 	sub serialize_iter_to_io {
 		my $self	= shift;
 		my $io		= shift;
-		my $iter	= shift;
+		my $iter	= shift || confess "No iterator";
 		my @buffer;
 		
 		# TODO: look for shared subject-predicate in repeated triples, and emit COMMA syntax
