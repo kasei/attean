@@ -115,8 +115,9 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 			return Attean::Result->new( bindings => \%binding );
 		};
 		return Attean::CodeIterator->new(
-			generator => $gen,
-			item_type => $self->handled_type->role,
+			generator	=> $gen,
+			item_type	=> $self->handled_type->role,
+			variables	=> \@vars,
 		);
 	}
 

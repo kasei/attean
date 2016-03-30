@@ -113,19 +113,19 @@ note('Results');
 {
 	my $a	= Attean::Result->new();
 	my $b	= Attean::Result->new();
-	test_iter_equality(results_iter($a), results_iter($b), 1, 'empty results');
+	test_iter_equality(results_iter([], $a), results_iter([], $b), 1, 'empty results');
 }
 
 {
 	my $a	= Attean::Result->new( bindings => { x => literal('x') } );
 	my $b	= Attean::Result->new( bindings => { x => literal('y') } );
-	test_iter_equality(results_iter($a), results_iter($b), 0, 'different IRIs results');
+	test_iter_equality(results_iter(['x'], $a), results_iter(['x'], $b), 0, 'different IRIs results');
 }
 
 {
 	my $a	= Attean::Result->new( bindings => { x => blank('x') } );
 	my $b	= Attean::Result->new( bindings => { x => blank('y') } );
-	test_iter_equality(results_iter($a), results_iter($b), 1, 'different blanks results');
+	test_iter_equality(results_iter(['x'], $a), results_iter(['x'], $b), 1, 'different blanks results');
 }
 
 {
@@ -133,7 +133,7 @@ note('Results');
 	my $y	= blank('y');
 	my $a	= Attean::Result->new( bindings => { foo => $x, bar => $y, baz => literal('1') } );
 	my $b	= Attean::Result->new( bindings => { foo => $y, bar => $x, baz => literal('1') } );
-	test_iter_equality(results_iter($a), results_iter($b), 1, 'multi-blank mapping results');
+	test_iter_equality(results_iter([qw(foo bar baz)], $a), results_iter([qw(foo bar baz)], $b), 1, 'multi-blank mapping results');
 }
 
 {
@@ -142,7 +142,7 @@ note('Results');
 	my $a	= Attean::Result->new( bindings => { foo => $x, bar => $y, baz => literal('1') } );
 	my $b	= Attean::Result->new( bindings => { foo => $y, bar => $x, baz => literal('1') } );
 	my $test	= Attean::BindingEqualityTest->new();
-	my $map	= $test->injection_map(results_iter($a), results_iter($b));
+	my $map	= $test->injection_map(results_iter([qw(foo bar baz)], $a), results_iter([qw(foo bar baz)], $b));
 	is_deeply($map, {qw(x y y x)}, 'injection map');
 }
 
@@ -169,8 +169,9 @@ sub test_iter_equality {
 }
 
 sub results_iter {
+	my $vars	= shift;
 	my @results	= @_;
-	return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result');
+	return Attean::ListIterator->new(values => \@results, item_type => 'Attean::API::Result', variables => $vars);
 }
 
 sub test_turtle_equality {
