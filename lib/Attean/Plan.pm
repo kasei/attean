@@ -1632,6 +1632,61 @@ package Attean::Plan::Table 0.013 {
 	}
 }
 
+=item * L<Attean::Plan::Iterator>
+
+Returns a constant set of results.
+
+Be aware that if the iterator being wrapped is not repeatable (consuming the
+L<Attean::API::RepeatableIterator> role), then this plan may only be evaluated
+once.
+
+=cut
+
+package Attean::Plan::Iterator 0.013 {
+	use Moo;
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	use namespace::clean;
+
+	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
+
+	has iterator => (is => 'ro', isa => ConsumerOf['Attean::API::ResultIterator']);
+
+	sub tree_attributes { return qw(iterator) };
+	sub plan_as_string {
+		my $self	= shift;
+		my $level	= shift;
+		my $indent	= '  ' x ($level + 1);
+		my $vars	= join(', ', map { "?$_" } @{ $self->in_scope_variables });
+		return "Iterator (" . $vars . ")";
+	}
+	
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		my $vars		= $args{iterator}->variables;
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= $vars;
+
+		return $class->SUPER::BUILDARGS(%args);
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $iter	= $self->iterator;
+
+		return sub {
+			if ($iter->does('Attean::API::RepeatableIterator')) {
+				$iter->reset;
+			}
+			return $iter;
+		};
+	}
+}
+
 =item * L<Attean::Plan::ALPPath>
 
 =cut

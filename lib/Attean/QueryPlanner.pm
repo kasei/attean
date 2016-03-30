@@ -51,6 +51,7 @@ package Attean::QueryPlanner 0.013 {
 
 	with 'Attean::API::QueryPlanner', 'MooX::Log::Any';
 	has 'counter' => (is => 'rw', isa => Int, default => 0);
+	has 'table_threshold'	=> (is => 'rw', isa => Int, default => 10);
 
 =back
 
@@ -310,8 +311,17 @@ the supplied C<< $active_graph >>.
 			my $rows	= $algebra->rows;
 			my $vars	= $algebra->variables;
 			my @vars	= map { $_->value } @{ $vars };
-			my $plan	= Attean::Plan::Table->new( variables => $vars, rows => $rows, distinct => 0, ordered => [] );
-			return $plan;
+			
+			if (scalar(@$rows) < $self->table_threshold) {
+				return Attean::Plan::Table->new( variables => $vars, rows => $rows, distinct => 0, ordered => [] );
+			} else {
+				my $iter	= Attean::ListIterator->new(
+					item_type => 'Attean::API::Result',
+					variables => \@vars,
+					values => $rows
+				);
+				return Attean::Plan::Iterator->new( iterator => $iter, distinct => 0, ordered => [] );
+			}
 		} elsif ($algebra->isa('Attean::Algebra::Service')) {
 			my $endpoint	= $algebra->endpoint;
 			my $silent		= $algebra->silent;
