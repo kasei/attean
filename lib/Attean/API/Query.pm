@@ -487,6 +487,34 @@ package Attean::API::Algebra 0.013 {
 			}
 		}
 	}
+	
+	sub match {
+		my $self	= shift;
+		my $pat		= shift;
+		my $bound	= shift // {};
+		
+		if ($pat->isa('Attean::Algebra::_Placeholder')) {
+			my $var	= $pat->name;
+			if (exists $bound->{ $var }) {
+				return;
+			} else {
+				$bound->{ $pat->name }	= $self;
+			}
+		} elsif (ref($self) eq ref($pat)) {
+			my $c	= $self->children;
+			my $p	= $pat->children;
+			return if (scalar(@$c) != scalar(@$p));
+			foreach my $i (0 .. $#{ $c }) {
+				unless ($c->[$i]->match($p->[$i], $bound)) {
+					return;
+				}
+			}
+		} else {
+			return;
+		}
+		
+		return $bound;
+	}
 }
 
 =item * L<Attean::API::QueryTree>

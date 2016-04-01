@@ -26,6 +26,18 @@ in the Attean::Algebra namespace:
 
 use Attean::API::Query;
 
+package Attean::Algebra 0.013 {
+	require Exporter;
+	use namespace::clean;
+	our @ISA	= qw(Exporter);
+	our @EXPORT_OK	= qw(match);
+	
+	sub match {
+		my $name	= shift;
+		return Attean::Algebra::_Placeholder->new( name => $name );
+	}
+}
+
 package Attean::Algebra::Query 0.013 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -1606,6 +1618,21 @@ package Attean::Algebra::Modify 0.013 {
 		
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
+}
+
+package Attean::Algebra::_Placeholder 0.013 {
+	use Moo;
+	use Scalar::Util qw(blessed);
+	use List::MoreUtils qw(all any);
+	use Types::Standard qw(Str);
+	use namespace::clean;
+	
+	has 'name' => (is => 'ro', isa => Str);
+	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	
+	sub as_sparql { die "Algebra placeholders cannot be serialized" }
+	sub in_scope_variables { die "Algebra placeholders have no in-scope variables" }
+	sub sparql_tokens { die "Algebra placeholders cannot be serialized" }
 }
 
 1;
