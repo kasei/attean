@@ -33,7 +33,7 @@ my $ci = Attean::CodeIterator->new(
 
 isa_ok($ci, 'Attean::CodeIterator');
 
-#subtest 'CodeIterator without size' => sub 
+#subtest 'CodeIterator without size' => sub
 {
 	my $plan = Attean::Plan::Iterator->new( variables => [variable('o')],
 														 iterator => $ci,
@@ -44,6 +44,21 @@ isa_ok($ci, 'Attean::CodeIterator');
 	can_ok($plan, 'iterator');
 	ok(! $plan->has_size_estimate, 'Has no size estimate');
 	is($plan->as_string, "- Iterator (?o)\n", 'Correct serialization');
+};
+
+#subtest 'CodeIterator with size' => sub
+{
+	my $plan = Attean::Plan::Iterator->new( variables => [variable('o')],
+														 iterator => $ci,
+														 distinct => 0,
+														 size_estimate => 2,
+														 ordered => [] );
+	isa_ok($plan, 'Attean::Plan::Iterator');
+	does_ok($plan, 'Attean::API::Plan');
+	can_ok($plan, 'iterator');
+	ok($plan->has_size_estimate, 'Has size estimate');
+	is($plan->size_estimate, 2, 'Correct returned estimate');
+	is($plan->as_string, "- Iterator (?o with 2 elements)\n", 'Correct serialization');
 };
 
 
