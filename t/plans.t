@@ -81,6 +81,7 @@ isa_ok($li, 'Attean::ListIterator');
  TODO: {
 		local $TODO = 'How to set the predicate when a lazy builder does it?';
 		ok($plan->has_size_estimate, 'Has size estimate for ListIterator');
+		is($plan->as_string, "- Iterator (?o with 3 elements)\n", 'Correct serialization');
 	}
 	is($plan->size_estimate, 3, 'Correct returned estimate');
 	ok($plan->has_size_estimate, 'Has size estimate for ListIterator');
