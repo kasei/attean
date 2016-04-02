@@ -1661,7 +1661,7 @@ package Attean::Plan::Iterator 0.013 {
 	sub _build_size_estimate {
 		my $self = shift;
 		my $iter = $self->iterator;
-		if ($iter->isa('Attean::ListIterator') && $iter->size) {
+		if ($iter->isa('Attean::ListIterator')) {
 			return $iter->size;
 		}
 	}
