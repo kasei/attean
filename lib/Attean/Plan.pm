@@ -1654,16 +1654,15 @@ package Attean::Plan::Iterator 0.013 {
 
 	has iterator => (is => 'ro', isa => ConsumerOf['Attean::API::ResultIterator']);
 
-	has size_estimate => (is => 'ro',
+	has size_estimate => (is => 'lazy',
 								 isa => Int,
-								 lazy => 1,
-								 predicate => 'has_size_estimate',
-								 builder => '_build_estimate');
+								 predicate => 1);
 
-	sub _build_estimate {
+	sub _build_size_estimate {
 		my $self = shift;
-		if ($self->iterator->isa('Attean::ListIterator')) {
-			return $self->iterator->size;
+		my $iter = $self->iterator;
+		if ($iter->isa('Attean::ListIterator') && $iter->size) {
+			return $iter->size;
 		}
 	}
 
