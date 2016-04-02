@@ -97,6 +97,18 @@ Returns the iterator's next item, or undef upon reaching the end of iteration.
 		return $item;
 	}
 
+=item C<< size >>
+
+Returns the number of elements still remaining in the iterator until it is
+fully consumed or until C<< reset >> is called.
+
+=cut
+
+	sub size {
+		my $self	= shift;
+		return scalar(@{ $self->values }) - $self->current;
+	}
+	
 	with 'Attean::API::RepeatableIterator';
 }
 

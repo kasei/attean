@@ -173,7 +173,7 @@ supplied C<< $active_graph >>.
 				}
 				$c
 			} map { my $r = $_; [$r, [map { $expr_eval->evaluate_expression( $_, $r, $active_graph, {} ) } @exprs]] } @rows;
-			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type);
+			return Attean::ListIterator->new( values => \@sorted, item_type => $iter->item_type, variables => $iter->variables);
 		} elsif ($algebra->isa('Attean::Algebra::Service')) {
 			my $endpoint	= $algebra->endpoint->value;
 			my ($pattern)	= @{ $algebra->children };
@@ -409,7 +409,11 @@ supplied C<< $active_graph >>.
 				my %seen;
 				push(@iters, $self->evaluate( $path, $active_graph )->grep(sub { return not($seen{shift->as_string}++); }));
 				push(@iters, $self->_zeroLengthPath($s, $o, $active_graph));
-				return Attean::IteratorSequence->new( iterators => \@iters, item_type => 'Attean::API::Result' );
+				my %vars;
+				foreach my $iter (@iters) {
+					$vars{$_}++ for (@{ $iter->variables });
+				}
+				return Attean::IteratorSequence->new( iterators => \@iters, item_type => 'Attean::API::Result', variables => [keys %vars] );
 			}
 			die "Unimplemented path type: $path";
 		} elsif ($algebra->isa('Attean::Algebra::Project')) {
@@ -507,10 +511,14 @@ supplied C<< $active_graph >>.
 		} else {
 			my @vars	= map { $_->value } ($s, $o);
 			my $nodes	= $self->model->graph_nodes( $graph );
-			return $nodes->map(sub {
-				my $term	= shift;
-				Attean::Result->new( bindings => { map { $_ => $term } @vars } );
-			}, 'Attean::API::Result');
+			return $nodes->map(
+				sub {
+					my $term	= shift;
+					Attean::Result->new( bindings => { map { $_ => $term } @vars } );
+				},
+				'Attean::API::Result',
+				variables => \@vars
+			);
 		}
 	}
 }

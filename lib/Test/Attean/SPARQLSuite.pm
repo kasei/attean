@@ -640,7 +640,7 @@ sub get_expected_results {
 			}
 			push(@data, Attean::Result->new( bindings => \%result ));
 		}
-		my $results	= Attean::ListIterator->new(values => \@data, item_type => 'Attean::API::Result');
+		my $results	= Attean::ListIterator->new(values => \@data, item_type => 'Attean::API::Result', variables => \@vars);
 		$self->print_results("Expected results", \$results) if ($self->results);
 		return $results;
 	} elsif ($file =~ /[.]tsv/) {
@@ -664,6 +664,7 @@ sub get_expected_results {
 			my @sols	= $model->objects( $res, iri("${RS}solution") )->elements;
 			my @names	= map { $_->value } @vars;
 			my @bindings;
+			my %vars;
 			foreach my $r (@sols) {
 				my %data;
 				my @b	= $model->objects( $r, iri("${RS}binding") )->elements;
@@ -671,10 +672,11 @@ sub get_expected_results {
 					my ($value)	= $model->objects( $b, iri("${RS}value") )->elements;
 					my ($var)	= $model->objects( $b, iri("${RS}variable") )->elements;
 					$data{ $var->value }	= $value;
+					$vars{ $var->value }++;
 				}
 				push(@bindings, Attean::Result->new( bindings => \%data ));
 			}
-			my $results	= Attean::ListIterator->new(values => \@bindings, item_type => 'Attean::API::Result');
+			my $results	= Attean::ListIterator->new(values => \@bindings, item_type => 'Attean::API::Result', variables => [keys %vars]);
 			$self->print_results("Expected results", \$results) if ($self->results);
 			return $results;
 		}

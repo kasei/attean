@@ -99,6 +99,7 @@ package Attean::API::Iterator 0.013 {
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str Object InstanceOf);
 	use Role::Tiny;
+	use Carp qw(confess);
 	use namespace::clean;
 	
 	has 'item_type' => (is => 'ro', isa => Str, required => 1);
@@ -124,7 +125,8 @@ package Attean::API::Iterator 0.013 {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 			} elsif ($check->('Attean::API::Result')) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
-				$self->variables($args->{variables} || []);
+				my $vars	= $args->{variables} // confess "Construction of a Attean::API::ResultIterator must include a variables list";
+				$self->variables($vars);
 			} elsif ($check->('Attean::API::Term')) {
 				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
 			} elsif ($check->('Attean::API::ResultOrTerm')) {
@@ -190,7 +192,7 @@ package Attean::API::Iterator 0.013 {
 		
 		# copy variables into new iterator if $self does ::ResultIterator or ::ResultOrTermIterator
 		my %args	= @_;
-		if ($self->can('variables')) {
+		if ($self->can('variables') and not exists $args{variables}) {
 			$args{variables}	= $self->variables;
 		}
 		
@@ -201,7 +203,14 @@ package Attean::API::Iterator 0.013 {
 		my $self	= shift;
 		my $block	= shift;
 		
+		# copy variables into new iterator if $self does ::ResultIterator or ::ResultOrTermIterator
+		my %args	= @_;
+		if ($self->can('variables') and not exists $args{variables}) {
+			$args{variables}	= $self->variables;
+		}
+		
 		Attean::CodeIterator->new(
+			%args,
 			item_type => $self->item_type,
 			generator => sub {
 				while (1) {
@@ -225,7 +234,14 @@ package Attean::API::Iterator 0.013 {
 		my $self	= shift;
 		my $limit	= shift;
 		
+		# copy variables into new iterator if $self does ::ResultIterator or ::ResultOrTermIterator
+		my %args	= @_;
+		if ($self->can('variables') and not exists $args{variables}) {
+			$args{variables}	= $self->variables;
+		}
+		
 		Attean::CodeIterator->new(
+			%args,
 			item_type => $self->item_type,
 			generator => sub {
 				return unless $limit;
@@ -240,7 +256,12 @@ package Attean::API::Iterator 0.013 {
 	sub materialize {
 		my $self	= shift;
 		my @data	= $self->elements;
-		return Attean::ListIterator->new( values => \@data, item_type => $self->item_type );
+		my %args	= @_;
+		if ($self->can('variables') and not exists $args{variables}) {
+			$args{variables}	= $self->variables;
+		}
+		
+		return Attean::ListIterator->new( %args, values => \@data, item_type => $self->item_type );
 	}
 	
 =item C<< debug( [$name] ) >>
@@ -361,11 +382,15 @@ package Attean::API::MixedStatementIterator 0.013 {
 package Attean::API::ResultIterator 0.013 {
 	use Moo::Role;
 	use Types::Standard qw(Str ArrayRef);
+	use namespace::clean;
+	
 	with 'Attean::API::CanonicalizingBindingIterator';
 	has 'variables' => (is => 'rw', isa => ArrayRef[Str], required => 1);
 	sub join {
 		my $self	= shift;
 		my $rhs		= shift;
+		my @vars	= keys %{ { map { $_ => 1 } (@{ $self->variables }, @{ $rhs->variables }) } };
+		
 		my @rhs		= $rhs->elements;
 		my @results;
 		while (my $lhs = $self->next) {
@@ -375,7 +400,7 @@ package Attean::API::ResultIterator 0.013 {
 				}
 			}
 		}
-		return Attean::ListIterator->new( values => \@results, item_type => $self->item_type);
+		return Attean::ListIterator->new( values => \@results, item_type => $self->item_type, variables => \@vars);
 	}
 }
 
