@@ -1640,24 +1640,45 @@ Be aware that if the iterator being wrapped is not repeatable (consuming the
 L<Attean::API::RepeatableIterator> role), then this plan may only be evaluated
 once.
 
+A size estimate may be given if it is available. If the iterator is an
+L<Attean::ListIterator>, the size of that iterator will be used.
+
 =cut
 
 package Attean::Plan::Iterator 0.013 {
 	use Moo;
-	use Types::Standard qw(ArrayRef ConsumerOf);
+	use Types::Standard qw(ArrayRef ConsumerOf Int);
 	use namespace::clean;
 
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 
 	has iterator => (is => 'ro', isa => ConsumerOf['Attean::API::ResultIterator']);
 
+	has size_estimate => (is => 'ro',
+								 isa => Int,
+								 lazy => 1,
+								 predicate => 'has_size_estimate',
+								 builder => '_build_estimate');
+
+	sub _build_estimate {
+		my $self = shift;
+		if ($self->iterator->isa('Attean::ListIterator')) {
+			return $self->iterator->size;
+		}
+	}
+
+
 	sub tree_attributes { return qw(iterator) };
 	sub plan_as_string {
 		my $self	= shift;
 		my $level	= shift;
+		my $string = 'Iterator (';
 		my $indent	= '  ' x ($level + 1);
-		my $vars	= join(', ', map { "?$_" } @{ $self->in_scope_variables });
-		return "Iterator (" . $vars . ")";
+		$string	.= join(', ', map { "?$_" } @{ $self->in_scope_variables });
+		if ($self->has_size_estimate) {
+			$string .= ' with ' . $self->size_estimate . ' elements';
+		}
+		return $string . ')';
 	}
 	
 	sub BUILDARGS {
