@@ -26,16 +26,35 @@ in the Attean::Algebra namespace:
 
 use Attean::API::Query;
 
+=item * L<Attean::Algebra>
+
+=cut
+
 package Attean::Algebra 0.013 {
 	require Exporter;
 	use namespace::clean;
 	our @ISA	= qw(Exporter);
 	our @EXPORT_OK	= qw(match);
 	
+=over 4
+
+=item C<< match( $name ) >>
+
+Convenience constructor for L<Attean::Algebra::_Placeholder>.
+
+This function is exportable from L<Attean::Algebra>.
+
+=cut
+
 	sub match {
 		my $name	= shift;
 		return Attean::Algebra::_Placeholder->new( name => $name );
 	}
+
+=back
+
+=cut
+
 }
 
 package Attean::Algebra::Query 0.013 {
