@@ -25,7 +25,7 @@ my $ci = Attean::CodeIterator->new(
 											  generator => sub {
 												  state $i = 0;
 												  return undef if ($i > 2);
-												  return Attean::Result->new(bindings => { 'o' => literal($i) });
+												  return Attean::Result->new(bindings => { 'o' => literal($i++) });
 											  },
 											  item_type => 'Attean::API::Result',
 											  variables => ['o']
