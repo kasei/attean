@@ -79,7 +79,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $fh		= shift;
 		
-		my $parser	= Attean->get_parser('Turtle')->new();
+		my $parser	= Attean->get_parser('Turtle')->new(lazy_iris => $self->lazy_iris);
 
 		my $line	= <$fh>;
 		unless (defined($line)) {

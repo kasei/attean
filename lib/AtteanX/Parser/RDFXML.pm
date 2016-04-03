@@ -79,7 +79,7 @@ Returns a list of file extensions that may be parsed with the parser.
 
 	sub file_extensions { return [qw(rdf xrdf)] }
 
-	with 'Attean::API::TripleParser', 'Attean::API::AbbreviatingParser';
+	with 'Attean::API::TripleParser', 'Attean::API::AbbreviatingParser', 'Attean::API::Parser';
 	with 'Attean::API::PushParser';
 
 	has 'bnode_prefix'	=> (is => 'ro', isa => Str, default => '');
@@ -122,7 +122,8 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		if ($self->has_base) {
 			push(@args, base => $self->base);
 		}
-		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler, @args );
+		my $new_iri		= sub { $self->new_iri(@_) };
+		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler, new_iri => $new_iri, @args );
 		my $p			= XML::SAX::ParserFactory->parser(Handler => $saxhandler);
 		$saxhandler->push_base( $self->base ) if ($self->has_base);
 		eval {
@@ -188,6 +189,7 @@ sub new {
 					nodes			=> [],
 					chars_ok		=> 0,
 					sthandler		=> $args{handler},
+					new_iri			=> $args{new_iri},
 					named_bnodes	=> {},
 				}, $class );
 	if (my $ns = $args{ namespaces }) {
@@ -698,7 +700,7 @@ sub new_resource {
 	my $self	= shift;
 	my $uri		= shift;
 	my ($base)	= $self->get_base;
-	return Attean::IRI->new( value => $uri, $base ? (base => $base) : () );
+	return $self->{new_iri}->( value => $uri, $base ? (base => $base) : () );
 }
 
 sub get_named_bnode {

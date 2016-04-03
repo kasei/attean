@@ -54,15 +54,38 @@ use Type::Tiny::Role;
 
 package Attean::API::Parser 0.013 {
 	use Moo::Role;
-	use Types::Standard qw(CodeRef);
+	use Types::Standard qw(CodeRef Bool);
 	use namespace::clean;
 	
 	has 'handler' => (is => 'rw', isa => CodeRef, default => sub { sub {} });
+	has 'lazy_iris' => (is => 'rw', isa => Bool, default => 0);
 	
 	requires 'canonical_media_type'; # => (is => 'ro', isa => 'Str', init_arg => undef);
 	requires 'media_types'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
 	requires 'handled_type'; # => (is => 'ro', isa => 'Type::Tiny', init_arg => undef);
 	requires 'file_extensions'; # => (is => 'ro', isa => 'ArrayRef[Str]', init_arg => undef);
+	
+=item C<< new_iri( value => $value ) >>
+
+Constructs and returns a new L<Attean::IRI> object, respecting the parser's
+C<lazy_iris> attribute.
+=cut
+
+	sub new_iri {
+		my $self	= shift;
+		my %args;
+		if ($self->lazy_iris) {
+			$args{lazy}	= 1;
+		} else {
+			$args{lazy}	= 0;
+		}
+		if (scalar(@_) == 1) {
+			$args{value}	= shift;
+		} else {
+			%args	= (%args, @_);
+		}
+		return Attean::IRI->new(%args);
+	}
 }
 
 package Attean::API::AbbreviatingParser 0.013 {

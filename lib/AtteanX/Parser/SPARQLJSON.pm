@@ -52,6 +52,7 @@ package AtteanX::Parser::SPARQLJSON 0.013 {
 	sub file_extensions { return [qw(srj)] }
 
 	with 'Attean::API::ResultOrTermParser';
+	with 'Attean::API::Parser';
 	with 'Attean::API::AtOnceParser';
 
 =item C<< parse_list_from_io( $fh ) >>
@@ -88,7 +89,7 @@ package AtteanX::Parser::SPARQLJSON 0.013 {
 						my $type	= $value->{type};
 						if ($type eq 'uri') {
 							my $data	= $value->{value};
-							$data{ $v }	= Attean::IRI->new( $data );
+							$data{ $v }	= $self->new_iri( value => $data );
 						} elsif ($type eq 'bnode') {
 							my $data	= $value->{value};
 							$data{ $v }	= Attean::Blank->new( $data );
@@ -97,14 +98,16 @@ package AtteanX::Parser::SPARQLJSON 0.013 {
 							if (my $lang = $value->{'xml:lang'}) {
 								$data{ $v }	= Attean::Literal->new( value => $data, language => $lang );
 							} elsif (my $dt = $value->{'datatype'}) {
-								$data{ $v }	= Attean::Literal->new( value => $data, datatype => $dt );
+								my $iri		= $self->new_iri(value => $dt);
+								$data{ $v }	= Attean::Literal->new( value => $data, datatype => $iri );
 							} else {
 								$data{ $v }	= Attean::Literal->new( $data );
 							}
 						} elsif ($type eq 'typed-literal') {
 							my $data	= $value->{value};
 							my $dt		= $value->{datatype};
-							$data{ $v }	= Attean::Literal->new( value => $data, datatype => $dt );
+							my $iri		= $self->new_iri(value => $dt);
+							$data{ $v }	= Attean::Literal->new( value => $data, datatype => $iri );
 						} else {
 							die "Unknown node type $type during parsing of SPARQL JSON Results";
 						}

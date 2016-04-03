@@ -420,7 +420,7 @@ sub _Prologue {
 	if ($self->_optional_token(KEYWORD, 'BASE')) {
 		my $iriref	= $self->_expected_token(IRI);
 		my $iri		= $iriref->value;
-		$base		= Attean::IRI->new( value => $iri );
+		$base		= $self->new_iri( value => $iri );
 		@base		= $base;
 		$self->{base}	= $base;
 	}
@@ -436,7 +436,7 @@ sub _Prologue {
 		my $iriref	= $self->_expected_token(IRI);
 		my $iri		= $iriref->value;
 		if (@base) {
-			my $r	= Attean::IRI->new( value => $iri, base => shift(@base) );
+			my $r	= $self->new_iri( value => $iri, base => shift(@base) );
 			$iri	= $r->value;
 		}
 		$namespaces{ $ns }	= $iri;
@@ -2234,7 +2234,7 @@ sub _Verb_test {
 sub _Verb {
 	my $self	= shift;
 	if ($self->_optional_token(A)) {
-		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', lazy => 1);
 		$self->_add_stack( $type );
 	} else {
 		$self->_VarOrIRIref;
@@ -2402,7 +2402,7 @@ sub _PathPrimary {
 	if ($self->_IRIref_test) {
 		$self->_IRIref;
 	} elsif ($self->_optional_token(A)) {
-		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', lazy => 1);
 		$self->_add_stack( $type );
 	} elsif ($self->_optional_token(BANG)) {
 		$self->_PathNegatedPropertyClass;
@@ -2453,7 +2453,7 @@ sub _PathOneInPropertyClass {
 		$rev	= 1;
 	}
 	if ($self->_optional_token(A)) {
-		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+		my $type	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', lazy => 1);
 		if ($rev) {
 			$self->_add_stack( [ 'PATH', '^', $type ] );
 		} else {
@@ -2524,9 +2524,9 @@ sub _Collection {
 	my $cur		= $subj;
 	my $last;
 
-	my $first	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-	my $rest	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-	my $nil		= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+	my $first	= Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#first', lazy => 1);
+	my $rest	= Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#rest', lazy => 1);
+	my $nil		= Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil', lazy => 1);
 
 	
 	my @triples;
@@ -3108,14 +3108,14 @@ sub _NumericLiteral {
 	my $type;
 	if (my $db = $self->_optional_token(DOUBLE)) {
 		$value	= $db->value;
-		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#double' );
+		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#double', lazy => 1);
 	} elsif (my $dc = $self->_optional_token(DECIMAL)) {
 		$value	= $dc->value;
-		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#decimal' );
+		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#decimal', lazy => 1);
 	} else {
 		my $i	= $self->_expected_token(INTEGER);
 		$value	= $i->value;
-		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#integer' );
+		$type	= Attean::IRI->new(value =>  'http://www.w3.org/2001/XMLSchema#integer', lazy => 1);
 	}
 	
 	if ($sign) {
@@ -3187,7 +3187,7 @@ sub _IRIref {
 	if (my $t = $self->_optional_token(IRI)) {
 		my $iri	= $t->value;
 		my $base	= $self->__base;
-		my $node	= Attean::IRI->new( value => $iri, $base ? (base => $base) : () );
+		my $node	= $self->new_iri( value => $iri, $base ? (base => $base) : () );
 		$self->_add_stack( $node );
 	} else {
 		my $p	= $self->_PrefixedName;
@@ -3209,7 +3209,7 @@ sub _PrefixedName {
 	
 	my $iri		= $self->namespaces->namespace_uri($ns)->iri($local);
 	my $base	= $self->__base;
-	my $p		= Attean::IRI->new( value => $iri->value, $base ? (base => $base) : () );
+	my $p		= $self->new_iri( value => $iri->value, $base ? (base => $base) : () );
 	return $p;
 }
 
@@ -3231,7 +3231,7 @@ sub _BlankNode {
 sub _NIL {
 	my $self	= shift;
 	$self->_expected_token(NIL);
-	return Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil' );
+	return Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil', lazy => 1);
 }
 
 sub __solution_modifiers {
@@ -3448,7 +3448,7 @@ sub __base {
 	if (blessed($build->{base})) {
 		return $build->{base};
 	} elsif (defined($build->{base})) {
-		return Attean::IRI->new($build->{base});
+		return $self->new_iri($build->{base});
 	} else {
 		return;
 	}
