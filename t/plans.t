@@ -22,32 +22,34 @@ use Attean::RDF;
 use Attean::Plan::Iterator;
 
 my $ci = Attean::CodeIterator->new(
-											  generator => sub {
-												  state $i = 0;
-												  return undef if ($i > 2);
-												  return Attean::Result->new(bindings => { 'o' => literal($i++) });
-											  },
-											  item_type => 'Attean::API::Result',
-											  variables => ['o']
-											 );
+	generator => sub {
+		state $i = 0;
+		return undef if ($i > 2);
+		return Attean::Result->new(bindings => { 'o' => literal($i++) });
+	},
+	item_type => 'Attean::API::Result',
+	variables => ['o']
+);
 
 isa_ok($ci, 'Attean::CodeIterator');
 
 my @values = map { Attean::Result->new(bindings => { 'o' => literal($_) }) } (1,2,3);
 my $li = Attean::ListIterator->new(
-  values => \@values,
-  item_type => 'Attean::API::Result',
-  variables => ['o']
+values => \@values,
+item_type => 'Attean::API::Result',
+variables => ['o']
 );
 
 isa_ok($li, 'Attean::ListIterator');
 
 #subtest 'CodeIterator without size' => sub
 {
-	my $plan = Attean::Plan::Iterator->new( variables => [variable('o')],
-														 iterator => $ci,
-														 distinct => 0,
-														 ordered => [] );
+	my $plan = Attean::Plan::Iterator->new(
+		variables => [variable('o')],
+		iterator => $ci,
+		distinct => 0,
+		ordered => []
+	);
 	isa_ok($plan, 'Attean::Plan::Iterator');
 	does_ok($plan, 'Attean::API::Plan');
 	can_ok($plan, 'iterator');
@@ -57,11 +59,13 @@ isa_ok($li, 'Attean::ListIterator');
 
 #subtest 'CodeIterator with size' => sub
 {
-	my $plan = Attean::Plan::Iterator->new( variables => [variable('o')],
-														 iterator => $ci,
-														 distinct => 0,
-														 size_estimate => 2,
-														 ordered => [] );
+	my $plan = Attean::Plan::Iterator->new(
+		variables => [variable('o')],
+		iterator => $ci,
+		distinct => 0,
+		size_estimate => 2,
+		ordered => []
+	);
 	isa_ok($plan, 'Attean::Plan::Iterator');
 	does_ok($plan, 'Attean::API::Plan');
 	can_ok($plan, 'iterator');
@@ -71,10 +75,12 @@ isa_ok($li, 'Attean::ListIterator');
 };
 
 {
-	my $plan = Attean::Plan::Iterator->new( variables => [variable('o')],
-														 iterator => $li,
-														 distinct => 0,
-														 ordered => [] );
+	my $plan = Attean::Plan::Iterator->new(
+		variables => [variable('o')],
+		iterator => $li,
+		distinct => 0,
+		ordered => []
+	);
 	isa_ok($plan, 'Attean::Plan::Iterator');
 	does_ok($plan, 'Attean::API::Plan');
 	can_ok($plan, 'iterator');
@@ -84,11 +90,13 @@ isa_ok($li, 'Attean::ListIterator');
 };
 
 {
-	my $plan = Attean::Plan::Iterator->new( variables => [variable('o')],
-														 iterator => $li,
-														 distinct => 0,
-														 size_estimate => 4,
-														 ordered => [] );
+	my $plan = Attean::Plan::Iterator->new(
+		variables => [variable('o')],
+		iterator => $li,
+		distinct => 0,
+		size_estimate => 4,
+		ordered => []
+	);
 	isa_ok($plan, 'Attean::Plan::Iterator');
 	does_ok($plan, 'Attean::API::Plan');
 	can_ok($plan, 'iterator');

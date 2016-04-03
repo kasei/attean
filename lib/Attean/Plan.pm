@@ -1652,11 +1652,8 @@ package Attean::Plan::Iterator 0.013 {
 
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 
-	has iterator => (is => 'ro', isa => ConsumerOf['Attean::API::ResultIterator']);
-
-	has size_estimate => (is => 'lazy',
-								 isa => Int,
-								 predicate => 1);
+	has iterator		=> (is => 'ro', isa => ConsumerOf['Attean::API::ResultIterator']);
+	has size_estimate	=> (is => 'lazy', isa => Int, predicate => 1);
 
 	sub _build_size_estimate {
 		my $self = shift;
@@ -1671,13 +1668,14 @@ package Attean::Plan::Iterator 0.013 {
 	sub plan_as_string {
 		my $self	= shift;
 		my $level	= shift;
-		my $string = 'Iterator (';
 		my $indent	= '  ' x ($level + 1);
+		my $string = 'Iterator (';
 		$string	.= join(', ', map { "?$_" } @{ $self->in_scope_variables });
 		if ($self->has_size_estimate) {
 			$string .= ' with ' . $self->size_estimate . ' elements';
 		}
-		return $string . ')';
+		$string	.= ')';
+		return $string;
 	}
 	
 	sub BUILDARGS {
