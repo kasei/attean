@@ -90,11 +90,6 @@ package Attean::Literal 0.013 {
 		return $class->$orig(@_);
 	};
 	
-	sub BUILD {
-		my $self	= shift;
-		die unless ($self->has_language or length($self->datatype->value));
-	}
-	
 	around 'datatype'	=> sub {
 		my $orig	= shift;
 		my $self	= shift;
