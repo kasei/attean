@@ -233,7 +233,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			if ($self->has_base) {
 				$args{base}	= $self->base;
 			}
-			my $r	= Attean::IRI->new(%args);
+			my $r	= $self->new_iri(%args);
 			my $iri	= $r->as_string;
 			if ($type == TURTLEPREFIX) {
 				$t	= $self->_get_token_type($l, DOT);
@@ -256,7 +256,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			if ($self->has_base) {
 				$args{base}	= $self->base;
 			}
-			my $r	= Attean::IRI->new(%args);
+			my $r	= $self->new_iri(%args);
 			my $iri	= $r->as_string;
 			if ($type == TURTLEBASE) {
 				$t	= $self->_get_token_type($l, DOT);
@@ -294,7 +294,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		} elsif ($type == LPAREN) {
 			my $t	= $self->_next_nonws($l);
 			if ($t->type == RPAREN) {
-				$subj	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+				$subj	= Attean::IRI->new(value => "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", lazy => 1);
 			} else {
 				$subj	= Attean::Blank->new();
 				my @objects	= $self->_object($l, $t);
@@ -336,9 +336,9 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $head	= $subj;
 		while (@objects) {
 			my $obj	= shift(@objects);
-			$self->_assert_triple($head, Attean::IRI->new("${RDF}first"), $obj);
-			my $next	= scalar(@objects) ? Attean::Blank->new() : Attean::IRI->new("${RDF}nil");
-			$self->_assert_triple($head, Attean::IRI->new("${RDF}rest"), $next);
+			$self->_assert_triple($head, Attean::IRI->new(value => "${RDF}first", lazy => 1), $obj);
+			my $next	= scalar(@objects) ? Attean::Blank->new() : Attean::IRI->new(value => "${RDF}nil", lazy => 1);
+			$self->_assert_triple($head, Attean::IRI->new(value => "${RDF}rest", lazy => 1), $next);
 			$head		= $next;
 		}
 	}
@@ -438,7 +438,7 @@ serialization is found at the beginning of C<< $bytes >>.
 				$self->_throw_error("Expecting object but got only opening paren", $tcopy, $l);
 			}
 			if ($t->type == RPAREN) {
-				$obj	= Attean::IRI->new('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+				$obj	= Attean::IRI->new(value => "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", lazy => 1);
 			} else {
 				$obj	= Attean::Blank->new();
 				my @objects	= $self->_object($l, $t);
@@ -489,7 +489,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $t		= shift;
 		my $type	= shift || $t->type;
 		if ($type eq A) {
-			state $rdftype	= Attean::IRI->new("${RDF}type");
+			state $rdftype	= Attean::IRI->new(value => "${RDF}type", lazy => 1);
 			return $rdftype;
 		}
 		elsif ($type eq IRI) {
@@ -498,7 +498,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			my $iri;
 			if ($self->has_base) {
 				$args{base}	= $self->base;
-				my $iri	= Attean::IRI->new(%args);
+				my $iri	= $self->new_iri(%args);
 				return $iri;
 			}
 			
@@ -506,7 +506,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			 if (my $n = $cache{$value}) {
 				return $n;
 			} else {
-				my $iri	= Attean::IRI->new(%args);
+				my $iri	= $self->new_iri(%args);
 				if (rand() < 0.02) {
 					# clear out the cache roughly every 50 IRIs
 					%cache	= ();
@@ -516,16 +516,16 @@ serialization is found at the beginning of C<< $bytes >>.
 			}
 		}
 		elsif ($type eq INTEGER) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}integer"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}integer", lazy => 1));
 		}
 		elsif ($type eq DECIMAL) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}decimal"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}decimal", lazy => 1));
 		}
 		elsif ($type eq DOUBLE) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}double"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}double", lazy => 1));
 		}
 		elsif ($type eq BOOLEAN) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new("${XSD}boolean"));
+			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}boolean", lazy => 1));
 		}
 		elsif ($type eq PREFIXNAME) {
 			my ($ns, $local)	= @{ $t->args };
@@ -535,7 +535,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			}
 			my $prefix			= $self->_map->{$ns};
 			no warnings 'uninitialized';
-			my $iri				= Attean::IRI->new("${prefix}${local}");
+			my $iri				= $self->new_iri("${prefix}${local}");
 			return $iri;
 		}
 		elsif ($type eq BNODE) {

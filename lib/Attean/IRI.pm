@@ -38,6 +38,25 @@ package Attean::IRI 0.013 {
 	
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 
+=item C<< equals ( $iri ) >>
+
+Returns true if C<< $iri >> is equal to the invocant, false otherwise.
+
+=cut
+
+	sub equals {
+		# This overrides the Attean::API::TermOrVariable::equals implementation
+		# to allow lazy IRIs to remain unparsed for the case where neither has
+		# a base IRI.
+		my ($a, $b)	= @_;
+		if ($b->isa('Attean::IRI')) {
+			unless ($a->has_base or $b->has_base) {
+				return ($a->value eq $b->value);
+			}
+		}
+		return ($a->as_string eq $b->as_string);
+	}
+	
 	with 'Attean::API::IRI';
 	with 'Attean::API::BlankOrIRI';
 

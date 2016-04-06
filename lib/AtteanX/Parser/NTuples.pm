@@ -138,7 +138,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 					# clear out the cache roughly every 50 IRIs
 					%cache	= ();
 				}
-				my $iri	= Attean::IRI->new( _unescape($uri, $lineno) );
+				my $iri	= $self->new_iri( value => _unescape($uri, $lineno) );
 				$cache{$uri}	= $iri;
 				return $iri;
 			}
@@ -199,7 +199,8 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				substr($_[0],0,3)	= '';
 				my ($uri)	= $_[0] =~ m/^([^>]*)>/;
 				substr($_[0], 0, length($uri)+1)	= '';
-				return Attean::Literal->new( value => $value, datatype => $uri);
+				my $dt	= $self->new_iri(value => $uri);
+				return Attean::Literal->new( value => $value, datatype => $dt);
 			} else {
 				return Attean::Literal->new($value);
 			}

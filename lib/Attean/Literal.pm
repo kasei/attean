@@ -65,7 +65,14 @@ package Attean::Literal 0.013 {
 		is => 'ro',
 		isa => InstanceOf['Attean::IRI'],
 		required => 1,
-		coerce => sub { blessed($_[0]) ? Attean::IRI->new($_[0]->as_string) : Attean::IRI->new($_[0]) },
+		coerce => sub {
+			my $dt	= shift;
+			if (blessed($dt) and $dt->isa('Attean::IRI')) {
+				return $dt;
+			} else {
+				return blessed($dt) ? Attean::IRI->new($dt->as_string) : Attean::IRI->new($dt)
+			}
+		},
 		default => sub { $XSD_STRING }
 	);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
@@ -82,11 +89,6 @@ package Attean::Literal 0.013 {
 		}
 		return $class->$orig(@_);
 	};
-	
-	sub BUILD {
-		my $self	= shift;
-		die unless ($self->has_language or length($self->datatype->as_string));
-	}
 	
 	around 'datatype'	=> sub {
 		my $orig	= shift;
