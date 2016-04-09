@@ -7,7 +7,7 @@ Attean::API::Expression - SPARQL expressions
 
 =head1 VERSION
 
-This document describes Attean::API::Expression version 0.013
+This document describes Attean::API::Expression version 0.014
 
 =head1 DESCRIPTION
 
@@ -65,7 +65,7 @@ Returns a string serialization of the expression object.
 
 =cut
 
-package Attean::API::Expression 0.013 {
+package Attean::API::Expression 0.014 {
 	use Moo::Role;
 	use Types::Standard qw(Str);
 	use namespace::clean;
@@ -100,7 +100,7 @@ package Attean::API::Expression 0.013 {
 	}
 }
 
-package Attean::API::UnaryExpression 0.013 {
+package Attean::API::UnaryExpression 0.014 {
 	use Moo::Role;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -140,7 +140,7 @@ package Attean::API::UnaryExpression 0.013 {
 	}
 }
 
-package Attean::API::BinaryExpression 0.013 {
+package Attean::API::BinaryExpression 0.014 {
 	use Moo::Role;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -189,7 +189,7 @@ package Attean::API::BinaryExpression 0.013 {
 	}
 }
 
-package Attean::API::NaryExpression 0.013 {
+package Attean::API::NaryExpression 0.014 {
 	use Moo::Role;
 	with 'Attean::API::Expression', 'Attean::API::QueryTree';
 	sub as_string {
@@ -209,7 +209,7 @@ package Attean::API::NaryExpression 0.013 {
 	}
 }
 
-package Attean::API::AggregateExpression 0.013 {
+package Attean::API::AggregateExpression 0.014 {
 	use Moo::Role;
 	requires 'operator';
 	requires 'scalar_vars';
