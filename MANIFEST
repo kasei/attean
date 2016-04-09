@@ -154,6 +154,7 @@ t/parser-sparqlxml.t
 t/parser-turtle.t
 t/parser.t
 t/plan.t
+t/plans.t
 t/serializer-canonicalntriples.t
 t/serializer-nquads.t
 t/serializer-ntriples.t
@@ -171,6 +172,6 @@ t/store-simpletriple.t
 t/term-map.t
 t/term.t
 t/treerewrite.t
+xt/dawg11-memory.t
 xt/pod-coverage.t
 xt/pod.t
-xt/dawg11-memory.t
