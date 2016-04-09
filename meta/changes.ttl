@@ -28,8 +28,39 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ;
 	.
+
+my:v_0-015
+	a					:Version ;
+	dc:issued			"2016-04-09"^^xsd:date ;
+	:revision			"0.015" ;
+	dcterms:replaces	my:v_0-014 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Fixed metadata used to generate README files." ]
+	]
+	.
+
+
+my:v_0-014
+	a					:Version ;
+	dc:issued			"2016-04-09"^^xsd:date ;
+	:revision			"0.014" ;
+	dcterms:replaces	my:v_0-013 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added Attean::Plan::Iterator for cases where there is too much data for Attean::Plan::Table (#88)." ],
+			[ a dcs:Addition ; rdfs:label "Add a size estimate attribute to Attean::Plan::Iterator (#90 from KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Add ability for parsers to construct lazy IRIs." ],
+			[ a dcs:Update ; rdfs:label "Added Attean::ListIterator->size method (#89)." ],
+			[ a dcs:Update ; rdfs:label "Fix cases where result iterators were constructed without a variables list." ],
+			[ a dcs:Update ; rdfs:label "Add type checking to serialize_iter_* methods." ],
+			[ a dcs:Update ; rdfs:label "Improve error message generated for some SPARQL syntax errors." ],
+			[ a dcs:Update ; rdfs:label "Update Attean::FunctionExpression to canonicalize ISURI to ISIRI." ]
+	]
+	.
+
 
 my:v_0-013
 	a					:Version ;

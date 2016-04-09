@@ -7,7 +7,7 @@ Attean::Triple - RDF Triples
 
 =head1 VERSION
 
-This document describes Attean::Triple version 0.014
+This document describes Attean::Triple version 0.015
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ This role consumes L<Attean::API::Triple>.
 
 =cut
 
-package Attean::TriplePattern 0.014 {
+package Attean::TriplePattern 0.015 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
@@ -62,7 +62,7 @@ package Attean::TriplePattern 0.014 {
 	}
 }
 
-package Attean::Triple 0.014 {
+package Attean::Triple 0.015 {
 	use Moo;
 	use Attean::API::Binding;
 	

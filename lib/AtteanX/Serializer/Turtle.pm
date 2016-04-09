@@ -4,7 +4,7 @@ AtteanX::Serializer::Turtle - Turtle Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::Turtle version 0.014
+This document describes AtteanX::Serializer::Turtle version 0.015
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ This document describes AtteanX::Serializer::Turtle version 0.014
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::Turtle 0.014 {
+package AtteanX::Serializer::Turtle 0.015 {
 	use Moo;
 	use Data::Dumper;
 	use Encode qw(encode);

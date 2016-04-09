@@ -7,7 +7,7 @@ AtteanX::RDFQueryTranslator - Translate RDF::Query objects to Attean::API::Algeb
 
 =head1 VERSION
 
-This document describes AtteanX::RDFQueryTranslator version 0.014
+This document describes AtteanX::RDFQueryTranslator version 0.015
 
 =head1 DESCRIPTION
 
@@ -30,7 +30,7 @@ L<Attean::API::Algebra> tree.
 
 =cut
 
-package AtteanX::RDFQueryTranslator 0.014 {
+package AtteanX::RDFQueryTranslator 0.015 {
 	use v5.14;
 	use warnings;
 	use Moo;
