@@ -81,6 +81,13 @@ L<IO::Handle> object C<< $fh >>.
 		my $ns 			= $self->namespaces;
 		my $parser		= Attean->get_parser('SPARQLLex')->new();
 		
+		if ($ns) {
+			NSLOOP: foreach my $p ($ns->list_prefixes) {
+				my $prefix	= $ns->namespace_uri($p)->as_string;
+				$io->print("PREFIX $p: <$prefix>\n");
+			}
+		}
+		
 		my $last;
 		
 		while (my $t = $iter->next()) {

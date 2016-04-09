@@ -784,6 +784,7 @@ subtest 'AbbreviatingSerializer' => sub {
 	my $s		= Attean->get_serializer('SPARQL')->new( namespaces => $map );
 	my $i		= $a->sparql_tokens;
 	my $bytes	= $s->serialize_iter_to_bytes($i);
+	like($bytes, qr[PREFIX foaf: <http://xmlns.com/foaf/0.1/>]);
 	like($bytes, qr<http://example.org/people/alice>);
 	like($bytes, qr/foaf:Person/);
 	like($bytes, qr/foaf:name [?]name/);
