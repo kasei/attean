@@ -778,6 +778,17 @@ subtest 'Regressions' => sub {
 	}
 };
 
+subtest 'AbbreviatingSerializer' => sub {
+	my $map		= URI::NamespaceMap->new( { foaf => iri('http://xmlns.com/foaf/0.1/') } );
+	my $a		= Attean->get_parser('SPARQL')->parse('PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { <http://example.org/people/alice> a foaf:Person ; foaf:name ?name }');
+	my $s		= Attean->get_serializer('SPARQL')->new( namespaces => $map );
+	my $i		= $a->sparql_tokens;
+	my $bytes	= $s->serialize_iter_to_bytes($i);
+	like($bytes, qr<http://example.org/people/alice>);
+	like($bytes, qr/foaf:Person/);
+	like($bytes, qr/foaf:name [?]name/);
+};
+
 done_testing();
 
 sub warn_token_stream {

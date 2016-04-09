@@ -78,7 +78,11 @@ L<IO::Handle> object C<< $fh >>.
 		my $newline		= 1;
 		my $semicolon	= 0;
 		my $need_space	= 0;
+		my $ns 			= $self->namespaces;
+		my $parser		= Attean->get_parser('SPARQLLex')->new();
+		
 		my $last;
+		
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
 			
@@ -124,10 +128,27 @@ L<IO::Handle> object C<< $fh >>.
 				$io->print($t->value);
 				$need_space++;
 			} elsif ($type == IRI) {
+				my $value	= $t->value;
+				my $ser		= '<' . $value . '>';
+				if ($ns) {
+					NSLOOP: foreach my $p ($ns->list_prefixes) {
+						my $prefix	= $ns->namespace_uri($p)->as_string;
+						if (substr($value, 0, length($prefix)) eq $prefix) {
+							# now verify that the prefixname is valid SPARQL syntax by re-parsing it
+							my $pname	= join(':', $p, substr($value, length($prefix)));
+							my $b		= $pname;
+							$b			= encode('UTF-8', $b, Encode::FB_CROAK);
+							my ($pnt)	= $parser->parse_list_from_bytes($b);
+							if (blessed($pnt) and $pnt->type == PREFIXNAME) {
+								$ser	= $pname;
+							}
+							last NSLOOP;
+						}
+					}
+				}
+				
 				# TODO: escape
-				$io->print('<');
-				$io->print($t->value);
-				$io->print('>');
+				$io->print($ser);
 				$need_space++;
 			} elsif ($type == PREFIXNAME) {
 				my $args	= $t->args;
