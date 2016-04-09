@@ -153,6 +153,7 @@ package Attean::API::SPARQLSerializable 0.015 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo::Role;
+	use Encode qw(decode_utf8);
 	use Attean::API::Iterator;
 	use Attean::API::Serializer;
 	use AtteanX::Serializer::SPARQL;
@@ -165,7 +166,7 @@ package Attean::API::SPARQLSerializable 0.015 {
 		my $s		= AtteanX::Serializer::SPARQL->new();
 		my $i		= $self->sparql_tokens;
 		my $bytes	= $s->serialize_iter_to_bytes($i);
-		return $bytes;
+		return decode_utf8($bytes);
 	}
 	
 	sub sparql_subtokens {
