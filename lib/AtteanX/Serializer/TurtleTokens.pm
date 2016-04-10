@@ -79,14 +79,24 @@ L<IO::Handle> object C<< $fh >>.
 		my $newline		= 1;
 		my $semicolon	= 0;
 		my $need_space	= 0;
+
+		my $map = $self->namespaces;
+		my %namespace_map;
+		if ($map) {
+			foreach my $p ($map->list_prefixes) {
+				my $prefix	= $map->namespace_uri($p)->as_string;
+				$namespace_map{$prefix}	= $p;
+			}
+		}
+		
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
 			
-			if (my $map = $self->namespaces) {
+			if ($map) {
 				if ($type == IRI) {
 					my $value	= $t->value;
 					if ($value =~ /^(?<namespace>.*?)(?<local>$AtteanX::Parser::Turtle::Lexer::r_PN_LOCAL)$/) {
-						if (my $ns = $map->prefix_for($+{namespace})) {
+						if (my $ns = $namespace_map{$+{namespace}}) {
 							$type	= PREFIXNAME;
 							$t		= AtteanX::SPARQL::Token->fast_constructor( $type, $t->start_line, $t->start_column, $t->line, $t->column, ["${ns}:", $+{local}] );
 						}
