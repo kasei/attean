@@ -183,6 +183,32 @@ subtest 'token serialization' => sub {
 	like($data, qr/"""world"""\^\^xsd:string/);
 };
 
+subtest 'AbbreviatingSerializer with explicit namespace map' => sub {
+	my $map		= URI::NamespaceMap->new( { foaf => iri('http://xmlns.com/foaf/0.1/') } );
+	my $p		= Attean->get_parser('Turtle')->new();
+	my $iter	= $p->parse_iter_from_bytes('@prefix foaf: <http://xmlns.com/foaf/0.1/> . <http://example.org/people/alice> a foaf:Person ; foaf:name "Alice" .');
+	my $s		= Attean->get_serializer('Turtle')->new( namespaces => $map );
+	my $bytes	= $s->serialize_iter_to_bytes($iter);
+	like($bytes, qr[prefix foaf: <http://xmlns.com/foaf/0.1/> .], 'serialization has prefix declaration');
+	like($bytes, qr<http://example.org/people/alice>, 'serialization has IRI');
+	like($bytes, qr/foaf:Person/, 'serialization has prefix name foaf:Person');
+	like($bytes, qr/foaf:name "Alice"/, 'serialization has prefix name foaf:name');
+};
+
+subtest 'End-to-end AbbreviatingSerializer' => sub {
+	my $map		= URI::NamespaceMap->new();
+	my $p		= Attean->get_parser('Turtle')->new( namespaces => $map );
+	my $iter	= $p->parse_iter_from_bytes('@prefix foaf: <http://xmlns.com/foaf/0.1/> . @prefix ex: <http://example.org/> . <http://example.org/people/alice> a foaf:Person ; foaf:name "Alice" .');
+	my $s		= Attean->get_serializer('Turtle')->new( namespaces => $map );
+	my $bytes	= $s->serialize_iter_to_bytes($iter);
+	like($bytes, qr[prefix ex: <http://example.org/> .], 'serialization has prefix declaration ex:');
+	like($bytes, qr[prefix foaf: <http://xmlns.com/foaf/0.1/> .], 'serialization has prefix declaration');
+	like($bytes, qr<http://example.org/people/alice>, 'serialization has IRI');
+	like($bytes, qr/foaf:Person/, 'serialization has prefix name foaf:Person');
+	like($bytes, qr/foaf:name "Alice"/, 'serialization has prefix name foaf:name');
+	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);
+};
+
 done_testing();
 
 sub expect {
