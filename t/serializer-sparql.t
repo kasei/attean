@@ -771,23 +771,38 @@ subtest 'expected tokens: custom query dataset' => sub {
 	}
 };
 
-subtest 'Regressions' => sub {
-	{
-		my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
-		ws_is($s, 'SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }', 'missing projection in serialization of some SPARQL queries #67');
-	}
-};
-
-subtest 'AbbreviatingSerializer' => sub {
+subtest 'AbbreviatingSerializer with explicit namespace map' => sub {
 	my $map		= URI::NamespaceMap->new( { foaf => iri('http://xmlns.com/foaf/0.1/') } );
 	my $a		= Attean->get_parser('SPARQL')->parse('PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { <http://example.org/people/alice> a foaf:Person ; foaf:name ?name }');
 	my $s		= Attean->get_serializer('SPARQL')->new( namespaces => $map );
 	my $i		= $a->sparql_tokens;
 	my $bytes	= $s->serialize_iter_to_bytes($i);
-	like($bytes, qr[PREFIX foaf: <http://xmlns.com/foaf/0.1/>]);
-	like($bytes, qr<http://example.org/people/alice>);
-	like($bytes, qr/foaf:Person/);
-	like($bytes, qr/foaf:name [?]name/);
+	like($bytes, qr[PREFIX foaf: <http://xmlns.com/foaf/0.1/>], 'serialization has prefix declaration');
+	like($bytes, qr<http://example.org/people/alice>, 'serialization has IRI');
+	like($bytes, qr/foaf:Person/, 'serialization has prefix name foaf:Person');
+	like($bytes, qr/foaf:name [?]name/, 'serialization has prefix name foaf:name');
+};
+
+subtest 'End-to-end AbbreviatingSerializer' => sub {
+	my $map		= URI::NamespaceMap->new();
+	my $parser	= Attean->get_parser('SPARQL')->new( namespaces => $map );
+	my ($a)		= $parser->parse_list_from_bytes('PREFIX foaf: <http://xmlns.com/foaf/0.1/> PREFIX ex: <http://example.org/> SELECT * WHERE { <http://example.org/people/alice> a foaf:Person ; foaf:name ?name }');
+	my $s		= Attean->get_serializer('SPARQL')->new( namespaces => $map );
+	my $i		= $a->sparql_tokens;
+	my $bytes	= $s->serialize_iter_to_bytes($i);
+	like($bytes, qr[PREFIX ex: <http://example.org/>], 'serialization has prefix declaration ex:');
+	like($bytes, qr[PREFIX foaf: <http://xmlns.com/foaf/0.1/>], 'serialization has prefix declaration foaf:');
+	like($bytes, qr<http://example.org/people/alice>, 'serialization has IRI');
+	like($bytes, qr/foaf:Person/, 'serialization has prefix name foaf:Person');
+	like($bytes, qr/foaf:name [?]name/, 'serialization has prefix name foaf:name');
+	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);
+};
+
+subtest 'Regressions' => sub {
+	{
+		my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
+		ws_is($s, 'SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }', 'missing projection in serialization of some SPARQL queries #67');
+	}
 };
 
 done_testing();
