@@ -82,7 +82,7 @@ L<IO::Handle> object C<< $fh >>.
 		my $parser		= Attean->get_parser('SPARQLLex')->new();
 		
 		if ($ns) {
-			NSLOOP: foreach my $p ($ns->list_prefixes) {
+			NSLOOP: foreach my $p (sort $ns->list_prefixes) {
 				my $prefix	= $ns->namespace_uri($p)->as_string;
 				$io->print("PREFIX $p: <$prefix>\n");
 			}
@@ -145,7 +145,7 @@ L<IO::Handle> object C<< $fh >>.
 							my $pname	= join(':', $p, substr($value, length($prefix)));
 							my $b		= $pname;
 							$b			= encode('UTF-8', $b, Encode::FB_CROAK);
-							my ($pnt)	= $parser->parse_list_from_bytes($b);
+							my ($pnt)	= eval { $parser->parse_list_from_bytes($b) };
 							if (blessed($pnt) and $pnt->type == PREFIXNAME) {
 								$ser	= $pname;
 							}
