@@ -103,7 +103,7 @@ L<IO::Handle> object C<< $fh >>.
 		my $semi	= AtteanX::Parser::Turtle::Token->semicolon;
 		if (my $map = $self->namespaces) {
 			my $prefix	= AtteanX::Parser::Turtle::Token->prefix;
-			foreach my $ns ($map->list_prefixes) {
+			foreach my $ns (sort $map->list_prefixes) {
 				my $uri		= Attean::IRI->new( value => $map->namespace_uri($ns)->as_string );
 				my $name	= AtteanX::Parser::Turtle::Token->fast_constructor( PREFIXNAME, -1, -1, -1, -1, ["${ns}:"] );
 				my $iri		= AtteanX::Parser::Turtle::Token->fast_constructor( IRI, -1, -1, -1, -1, [$uri->value] );
