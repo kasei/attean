@@ -104,6 +104,7 @@ lib/AtteanX/Serializer/CanonicalNTriples.pm
 lib/AtteanX/Serializer/NQuads.pm
 lib/AtteanX/Serializer/NTriples.pm
 lib/AtteanX/Serializer/NTuples.pm
+lib/AtteanX/Serializer/RDFXML.pm
 lib/AtteanX/Serializer/SPARQL.pm
 lib/AtteanX/Serializer/SPARQLCSV.pm
 lib/AtteanX/Serializer/SPARQLHTML.pm
