@@ -22,6 +22,8 @@ This document describes AtteanX::Serializer::RDFXML version 0.015
 
 =item C<< canonical_media_type >>
 
+=item C<< scoped_namespaces >>
+
 =back
 
 =head1 METHODS
