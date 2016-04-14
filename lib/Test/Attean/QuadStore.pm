@@ -8,7 +8,7 @@ use Attean;
 use Attean::RDF;
 
 requires 'create_store';		# create_store( quads => \@quads )
-sub cleanup_store {}			# cleanup_store( $store )
+with 'Test::Attean::StoreCleanup';
 
 test 'quadstore roles' => sub {
     my $self	= shift;

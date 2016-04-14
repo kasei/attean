@@ -8,7 +8,8 @@ use Test::More;
 use Attean;
 use Attean::RDF;
 
-requires 'create_store';       # create_store( quads => \@quads )
+requires 'create_store';		# create_store( quads => \@quads )
+with 'Test::Attean::StoreCleanup';
 with 'Test::Attean::TimeCacheableQuadStore';
 
 sub caching_sleep_time {
@@ -28,6 +29,7 @@ test 'mutable timecacheablequadstore' => sub {
     my $end		= $store->mtime_for_quads();
     my $diff	= abs($end - $start);
     isnt($start, $end, "mtime changed after update (by $diff seconds)");
+	$self->cleanup_store($store);
 };
 
 1;

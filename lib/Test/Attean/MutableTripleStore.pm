@@ -8,6 +8,7 @@ use Attean;
 use Attean::RDF;
 
 requires 'create_store';       # create_store( triples => \@triples )
+with 'Test::Attean::StoreCleanup';
 
 test 'mutabletriplestore add_triple' => sub {
     my $self	= shift;
@@ -21,6 +22,7 @@ test 'mutabletriplestore add_triple' => sub {
     	$store->add_triple($t);
     	is($store->size, ++$size, "size $size");
     }
+	$self->cleanup_store($store);
 };
 
 test 'mutabletriplestore remove_triple' => sub {
@@ -38,6 +40,7 @@ test 'mutabletriplestore remove_triple' => sub {
     }
 	$store->remove_triple($t2);
 	is($store->size, 0, "size $size");
+	$self->cleanup_store($store);
 };
 
 1;

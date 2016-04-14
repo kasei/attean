@@ -7,7 +7,8 @@ use Test::Moose;
 use Attean;
 use Attean::RDF;
 
-requires 'create_store';       # create_store( quads => \@quads )
+requires 'create_store';      # create_store( quads => \@quads )
+with 'Test::Attean::StoreCleanup';
 
 test 'mutablequadstore add_quad' => sub {
     my $self	= shift;
@@ -21,6 +22,7 @@ test 'mutablequadstore add_quad' => sub {
     	$store->add_quad($q);
     	is($store->size, ++$size, "size $size");
     }
+	$self->cleanup_store($store);
 };
 
 test 'mutablequadstore remove_quad' => sub {
@@ -38,6 +40,7 @@ test 'mutablequadstore remove_quad' => sub {
     }
 	$store->remove_quad($q2);
 	is($store->size, 0, "size $size");
+	$self->cleanup_store($store);
 };
 
 test 'mutablequadstore create_graph' => sub {
@@ -56,6 +59,7 @@ test 'mutablequadstore create_graph' => sub {
 	my @graphs	= sort map { $_->value } $store->get_graphs->elements;
 	my $graphs	= scalar(@graphs);
 	ok($graphs == 0 or $graphs == $count);
+	$self->cleanup_store($store);
 };
 
 test 'mutablequadstore drop_graph' => sub {
@@ -73,6 +77,7 @@ test 'mutablequadstore drop_graph' => sub {
 		is($store->size, 1);
 		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
 		is_deeply(\@graphs, ['g2']);
+		$self->cleanup_store($store);
 	}
     {
 		my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
@@ -80,6 +85,7 @@ test 'mutablequadstore drop_graph' => sub {
 		is($store->size, 2);
 		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
 		is_deeply(\@graphs, ['g']);
+		$self->cleanup_store($store);
 	}
 };
 
@@ -100,6 +106,7 @@ test 'mutablequadstore clear_graph' => sub {
 		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
 		my $graphs	= scalar(@graphs);
 		ok($graphs == 1 or $graphs == 2);
+		$self->cleanup_store($store);
 	}
     {
 		my $store	= $self->create_store(quads => [$q1, $q2, $q3]);
@@ -108,6 +115,7 @@ test 'mutablequadstore clear_graph' => sub {
 		my @graphs	= sort map { $_->value } $store->get_graphs->elements;
 		my $graphs	= scalar(@graphs);
 		ok($graphs == 1 or $graphs == 2);
+		$self->cleanup_store($store);
 	}
 };
 

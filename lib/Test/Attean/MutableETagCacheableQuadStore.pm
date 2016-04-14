@@ -20,6 +20,7 @@ test 'mutable etagcacheablequadstore' => sub {
     $store->remove_quad($q1);
     my $end		= $store->etag_value_for_quads();
     isnt($start, $end, "etag changed after update ($start => $end)");
+	$self->cleanup_store($store);
 };
 
 1;

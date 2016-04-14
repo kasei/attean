@@ -124,6 +124,7 @@ lib/Test/Attean/MutableTimeCacheableQuadStore.pm
 lib/Test/Attean/MutableTripleStore.pm
 lib/Test/Attean/QuadStore.pm
 lib/Test/Attean/SPARQLSuite.pm
+lib/Test/Attean/StoreCleanup.pm
 lib/Test/Attean/TimeCacheableQuadStore.pm
 lib/Test/Attean/TripleStore.pm
 LICENSE

@@ -8,6 +8,7 @@ use Attean;
 use Attean::RDF;
 
 requires 'create_store';       # create_store( quads => \@quads )
+with 'Test::Attean::StoreCleanup';
 
 test 'etagcacheablequadstore' => sub {
     my $self	= shift;
@@ -15,6 +16,7 @@ test 'etagcacheablequadstore' => sub {
     my $store	= $self->create_store(quads => []);
     my $etag	= $store->etag_value_for_quads();
     ok(length($etag));
+	$self->cleanup_store($store);
 };
 
 1;

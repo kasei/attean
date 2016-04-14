@@ -8,6 +8,7 @@ use Attean;
 use Attean::RDF;
 
 requires 'create_store';	   # create_store( triples => \@triples )
+sub cleanup_store {}			# cleanup_store( $store )
 
 test 'get_triples' => sub {
 	my $self	= shift;
@@ -17,6 +18,7 @@ test 'get_triples' => sub {
 	my $store	= $self->create_store(triples => \@triples);
 	ok $store->does('Attean::API::Store');
 	ok $store->does('Attean::API::TripleStore');
+	$self->cleanup_store($store);
 };
 
 test 'count_triples' => sub {
@@ -42,6 +44,7 @@ test 'count_triples' => sub {
 	is($store->count_triples(variable('s'), variable('p'), literal('7')), 1, 'expected object with variable');
 	is($store->count_triples(variable('s'), variable('p'), literal('10')), 2, 'expected object (2) with variable');
 	is($store->count_triples(iri('http://example.org/z'), variable('o'), literal('10')), 1, 'expected subject/object with variable');
+	$self->cleanup_store($store);
 };
 
 
@@ -56,6 +59,7 @@ test 'size' => sub {
 		}
 		my $store	= $self->create_store(triples => \@triples);
 		is($store->size(), $size);
+		$self->cleanup_store($store);
 	}
 };
 
