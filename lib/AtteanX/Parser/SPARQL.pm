@@ -2624,7 +2624,7 @@ sub _GraphTerm {
 	if ($self->_test_token(BOOLEAN)) {
 		my $b	= $self->_BooleanLiteral;
 		$self->_add_stack( $b );
-	} elsif ($self->_test_token(LPAREN)) {
+	} elsif ($self->_test_token(NIL)) {
 		my $n	= $self->_NIL;
 		$self->_add_stack( $n );
 	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
