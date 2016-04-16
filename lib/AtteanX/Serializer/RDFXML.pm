@@ -24,6 +24,8 @@ This document describes AtteanX::Serializer::RDFXML version 0.015
 
 =item C<< scoped_namespaces >>
 
+=item C<< file_extensions >>
+
 =back
 
 =head1 METHODS
@@ -47,6 +49,8 @@ package AtteanX::Serializer::RDFXML 0.015 {
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/rdf+xml');
 	has '_rev' => (is => 'rw', isa => HashRef, init_arg => undef, default => sub { +{} });
 	has 'scoped_namespaces' => (is => 'rw', init_arg => undef);
+
+	sub file_extensions { return [qw(rdf xml)] }
 	
 =item C<< media_types >>
 
@@ -175,7 +179,11 @@ and returns the serialization as a UTF-8 encoded byte string.
 				if ($lang) {
 					$string	.= qq[\t<${tag}${nsdecl} xml:lang="${lang}">${lv}</${tag}>\n];
 				} elsif ($dt) {
-					$string	.= qq[\t<${tag}${nsdecl} rdf:datatype="${dt}">${lv}</${tag}>\n];
+					if ($dt eq 'http://www.w3.org/2001/XMLSchema#string') {
+						$string	.= qq[\t<${tag}${nsdecl}>${lv}</${tag}>\n];
+					} else {
+						$string	.= qq[\t<${tag}${nsdecl} rdf:datatype="${dt}">${lv}</${tag}>\n];
+					}
 				} else {
 					$string	.= qq[\t<${tag}${nsdecl}>${lv}</${tag}>\n];
 				}
@@ -240,7 +248,8 @@ and returns the serialization as a UTF-8 encoded byte string.
 		return '' if ($self->scoped_namespaces);
 	
 		my @ns;
-		foreach my $k (sort { $a cmp $b } $namespaces->list_prefixes) {
+		my @prefixes	= $namespaces ? $namespaces->list_prefixes : ();
+		foreach my $k (sort { $a cmp $b } @prefixes) {
 			my $v	= $namespaces->namespace_uri($k)->as_string;
 			$self->_rev->{$v}	= $k;
 			next if ($v eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
