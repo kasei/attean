@@ -113,6 +113,20 @@ subtest 'custom function' => sub {
 	is($term->value, 'o');
 };
 
+subtest 'syntax coverage: top-level filter custom function call' => sub {
+	my $sparql	= q[PREFIX ex: <http://example.org/> SELECT * WHERE { ?s ?p ?o FILTER ex:test(?o) }];
+	my $a	= AtteanX::Parser::SPARQL->parse($sparql);
+	my ($f)		= $a->subpatterns_of_type('Attean::Algebra::Filter');
+	isa_ok($f, 'Attean::Algebra::Filter');
+	my $expr	= $f->expression;
+	isa_ok($expr, 'Attean::FunctionExpression');
+	is($expr->operator, 'INVOKE');
+	my ($iri, $term)	= map { $_->value } @{ $expr->children };
+	does_ok($iri, 'Attean::API::IRI');
+	is($iri->value, 'http://example.org/test');
+	does_ok($term, 'Attean::API::Variable');
+	is($term->value, 'o');
+};
 
 done_testing();
 
