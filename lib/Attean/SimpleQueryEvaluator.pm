@@ -88,7 +88,9 @@ supplied C<< $active_graph >>.
 
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
-		if ($algebra->isa('Attean::Algebra::BGP')) {
+		if ($algebra->isa('Attean::Algebra::Query') or $algebra->isa('Attean::Algebra::Update')) {
+			return $self->evaluate($algebra->child, $active_graph, @_);
+		} elsif ($algebra->isa('Attean::Algebra::BGP')) {
 			my @triples	= @{ $algebra->triples };
 			if (scalar(@triples) == 0) {
 				my $b	= Attean::Result->new( bindings => {} );
@@ -321,7 +323,7 @@ supplied C<< $active_graph >>.
 				my @children	= @{ $path->children };
 				my @algebras	= map { Attean::Algebra::Path->new( subject => $s, path => $_, object => $o ) } @children;
 				my @iters		= map { $self->evaluate($_, $active_graph) } @algebras;
-				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
+				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type, variables => [$algebra->in_scope_variables] );
 			} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
 				my $preds	= $path->predicates;
 				my %preds	= map { $_->value => 1 } @$preds;
@@ -338,7 +340,7 @@ supplied C<< $active_graph >>.
 					return unless $q;
 					my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
 					return Attean::Result->new( bindings => \%bindings );
-				}, 'Attean::API::Result');
+				}, 'Attean::API::Result', variables => [values %vars]);
 			} elsif ($path->isa('Attean::Algebra::SequencePath')) {
 				if (scalar(@children) == 1) {
 					my $path	= Attean::Algebra::Path->new( subject => $s, path => $children[0], object => $o );
@@ -430,7 +432,7 @@ supplied C<< $active_graph >>.
 			$iter		= $iter->limit($algebra->limit) if ($algebra->limit >= 0);
 			return $iter;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
-			return Attean::IteratorSequence->new( iterators => [map { $self->evaluate($_, $active_graph) } @children], item_type => 'Attean::API::Result');
+			return Attean::IteratorSequence->new( iterators => [map { $self->evaluate($_, $active_graph) } @children], item_type => 'Attean::API::Result', variables => [$algebra->in_scope_variables] );
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my $iter	= $self->evaluate($child, $active_graph);
 			my $result	= $iter->next;
