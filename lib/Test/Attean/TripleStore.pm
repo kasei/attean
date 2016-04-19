@@ -44,6 +44,7 @@ test 'count_triples' => sub {
 	is($store->count_triples(variable('s'), variable('p'), literal('7')), 1, 'expected object with variable');
 	is($store->count_triples(variable('s'), variable('p'), literal('10')), 2, 'expected object (2) with variable');
 	is($store->count_triples(iri('http://example.org/z'), variable('o'), literal('10')), 1, 'expected subject/object with variable');
+	cmp_ok($store->count_triples_estimate(iri('http://example.org/z')), '>=', 0, 'count_triples_estimate');
 	$self->cleanup_store($store);
 };
 
