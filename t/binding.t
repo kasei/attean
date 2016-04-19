@@ -11,8 +11,7 @@ use Attean::RDF;
 is_deeply([Attean::API::Triple->variables], [qw(subject predicate object)]);
 is_deeply([Attean::API::Quad->variables], [qw(subject predicate object graph)]);
 
-{
-	note('Attean::Triple');
+subtest 'Attean::Triple' => sub {
 	my $b	= triple(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'));
 	dies_ok { $b->value('xxx') } 'bad binding key';
 	does_ok($b, 'Attean::API::Binding');
@@ -28,10 +27,9 @@ is_deeply([Attean::API::Quad->variables], [qw(subject predicate object graph)]);
 	does_ok($q, 'Attean::API::Binding');
 	does_ok($q, 'Attean::API::Quad');
 	is_deeply($q, quad(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'), iri('graph')));
-}
+};
 
-{
-	note('Attean::Quad');
+subtest 'Attean::Quad' => sub {
 	my $b	= quad(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'), iri('graph'));
 	dies_ok { $b->value('xxx') } 'bad binding key';
 	does_ok($b, 'Attean::API::Binding');
@@ -40,10 +38,9 @@ is_deeply([Attean::API::Quad->variables], [qw(subject predicate object graph)]);
 	my %m	= $b->mapping;
 	is_deeply(\%m, { subject => blank('eve'), predicate => iri('http://xmlns.com/foaf/0.1/name'), object => literal('Eve'), graph => iri('graph') }, 'mapping');
 	is_deeply($b->value('subject'), blank('eve'), 'value');
-}
+};
 
-{
-	note('Attean::Result');
+subtest 'Attean::Result' => sub {
 	my $b	= Attean::Result->new( bindings => { name => literal('Eve') } );
 	does_ok($b, 'Attean::API::Binding');
 	is_deeply([$b->variables], ['name'], 'variables');
@@ -51,10 +48,9 @@ is_deeply([Attean::API::Quad->variables], [qw(subject predicate object graph)]);
 	my %m	= $b->mapping;
 	is_deeply(\%m, { name => literal('Eve') }, 'mapping');
 	is_deeply($b->value('name'), literal('Eve'), 'value');
-}
+};
 
-{
-	note('Attean::Result joining');
+subtest 'Attean::Result joining' => sub {
 	my $shared	= blank('eve');
 	my $b1	= Attean::Result->new( bindings => { p => $shared, type => iri('http://xmlns.com/foaf/0.1/Person') } );
 	my $b2	= Attean::Result->new( bindings => { p => blank('eve'), name => literal('Eve') } );
@@ -65,8 +61,15 @@ is_deeply([Attean::API::Quad->variables], [qw(subject predicate object graph)]);
 	is($b1->join($b4)->as_string, '{p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>, x="xxx"}', 'disjoint result join');
 	is($b1->join($b2)->as_string, '{name="Eve", p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>}', 'intersecting result join');
 	is($b1->join($b5)->as_string, '{name="Eve", p=_:eve, type=<http://xmlns.com/foaf/0.1/Person>}', 'intersecting result join using shared term object');
-}
+};
 
+subtest 'Attean::TriplePattern' => sub {
+	my $b	= triplepattern(variable('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'));
+	does_ok($b, 'Attean::API::Binding');
+	my $qp	= $b->as_quadpattern(variable('g'));
+	does_ok($b, 'Attean::API::Binding');
+	isa_ok($qp, 'Attean::QuadPattern');
+};
 
 done_testing();
 
