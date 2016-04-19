@@ -53,12 +53,8 @@ package Attean::TriplePattern 0.015 {
 	sub as_quadpattern {
 		my $self	= shift;
 		my $graph	= shift;
-		return Attean::QuadPattern->new(
-			subject		=> $self->subject,
-			predicate	=> $self->predicate,
-			object		=> $self->object,
-			graph		=> $graph,
-		);
+		# TODO: deprecate this in favor of as_quad_pattern() provided by Attean::API::TriplePattern
+		return $self->as_quad_pattern($graph);
 	}
 }
 
