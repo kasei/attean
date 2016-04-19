@@ -58,8 +58,7 @@ Returns true if the term has a true SPARQL "effective boolean value", false othe
 
 =cut
 
-	sub ebv { return 0; }
-	
+	requires 'ebv';
 	requires 'compare';
 	
 	sub __ntriples_string {
