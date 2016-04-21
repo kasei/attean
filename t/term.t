@@ -1,7 +1,7 @@
 use v5.14;
 use utf8;
 use Data::Dumper;
-use Test::More;
+use Test::Modern;
 use Type::Tiny::Role;
 use Attean::RDF;
 
@@ -26,6 +26,19 @@ is(dtliteral('1.5', "${XSD}float")->numeric_value, 1.5, 'float numeric value');
 is(dtliteral('2.2e3', "${XSD}double")->numeric_value, 2200, 'double numeric value');
 is(dtliteral('2.5', "${XSD}decimal")->numeric_value, 2.5, 'decimal numeric value');
 
+subtest 'term type check methods' => sub {
+	my $xl	= literal("🐶\\\n✪");
+	my $dtl	= dtliteral('1', "${XSD}integer");
+	my $ll	= langliteral('Eve', 'en');
+	foreach my $l ($xl, $dtl, $ll) {
+		ok($l->is_literal);
+		foreach my $type (qw(variable blank resource iri)) {
+			my $method	= "is_$type";
+			ok(not($l->$method()));
+		}
+	}
+};
+
 {
 	my $l1	= literal(7);
 	my $l2	= literal(10);
@@ -42,8 +55,7 @@ is(dtliteral('2.5', "${XSD}decimal")->numeric_value, 2.5, 'decimal numeric value
 	is($i1->compare($i2), -1, 'numeric literal sort');
 }
 
-{
-	note('XSD type promotion');
+subtest 'XSD type promotion' => sub {
 	{
 		my $a	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#long');
 		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#short');
@@ -74,12 +86,23 @@ is(dtliteral('2.5', "${XSD}decimal")->numeric_value, 2.5, 'decimal numeric value
 		my $b	= dtliteral('2', 'http://www.w3.org/2001/XMLSchema#double');
 		is($a->binary_promotion_type($b, '*'), 'http://www.w3.org/2001/XMLSchema#double');
 	}
-}
+};
+
+subtest 'TermOrVariable apply_binding' => sub {
+	my $i	= Attean::Literal->integer(350);
+	my $unbound	= Attean::Variable->new(value => 'number');
+	my $bound	= Attean::Variable->new(value => 'x');
+	my $b	= Attean::Result->new( bindings => { x => literal('foo'), z => blank('bar') } );
+	
+	my $a_i	= $i->apply_binding($b);
+	does_ok($a_i, 'Attean::API::Literal');
+	
+	my $a_unbound	= $unbound->apply_binding($b);
+	does_ok($a_unbound, 'Attean::API::Variable');
+	
+	my $a_bound	= $bound->apply_binding($b);
+	does_ok($a_bound, 'Attean::API::Literal');
+	is($a_bound->value, 'foo');
+};
 
 done_testing();
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
-}
