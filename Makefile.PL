@@ -10,10 +10,7 @@ license			'perl';
 
 test_requires	'Test::Exception'			=> 0;
 test_requires	'Test::LWP::UserAgent'		=> 0;
-test_requires	'Test::Modern'				=> 0;
-test_requires	'Test::Moose'				=> 0;
 test_requires	'Test::More'				=> 0.88;
-test_requires	'Test::Roo'					=> 0;
 
 ### This is required for running xt/dawg11.t, which also requires manual
 ### downloading of the SPARQL test suite, so will not be relevant to automated
@@ -48,6 +45,9 @@ requires		'XML::SAX'					=> 0;
 requires		'File::Slurp'				=> 0;
 requires		'File::ShareDir'			=> 0;
 requires		'RDF::Query'				=> 2.910;
+requires		'Test::Moose'				=> 0;
+requires		'Test::Roo'					=> 0;
+requires		'Test::Modern'				=> 0;
 
 resources(
 	'homepage'   => "http://search.cpan.org/dist/Attean/",

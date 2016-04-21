@@ -1,7 +1,7 @@
 use v5.14;
 use autodie;
 use utf8;
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 use Digest::SHA qw(sha1_hex);
 
@@ -204,11 +204,3 @@ sub order_algebra_by_variables {
 	my $sorted	= Attean::Algebra::OrderBy->new( children => [$algebra], comparators => \@cmps );
 	return $sorted;
 }
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
-}
-
-

@@ -1,5 +1,5 @@
 use Test::Roo;
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 
 use v5.14;
@@ -85,9 +85,3 @@ run_me; # run these Test::Attean tests
 }
 
 done_testing();
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
-}

@@ -1,7 +1,7 @@
 use v5.14;
 use autodie;
 use utf8;
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 
 use Attean;
@@ -149,12 +149,6 @@ my $ident	= Attean::Result->new();
 
 
 done_testing();
-
-sub does_ok {
-    my ($class_or_obj, $does, $message) = @_;
-    $message ||= "The object does $does";
-    ok(eval { $class_or_obj->does($does) }, $message);
-}
 
 sub integer {
 	my $value	= shift;
