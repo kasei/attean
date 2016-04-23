@@ -104,7 +104,7 @@ the supplied C<< $active_graph >>.
 		my %args			= @_;
 		
 		if ($model->does('Attean::API::CostPlanner')) {
-			my @plans	= $model->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs, %args);
+			my @plans	= $model->plans_for_algebra($algebra, $self, $active_graphs, $default_graphs, %args);
 			if (@plans) {
 				return @plans; # trust that the model knows better than us what plans are best
 			} else {

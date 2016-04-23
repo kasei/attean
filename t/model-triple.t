@@ -152,4 +152,40 @@ use Type::Tiny::Role;
 	is_deeply(\@graphs4, ['http://example.org/graph2', 'http://example.org/graph3']);
 }
 
+{
+	my $store	= Attean->get_store('SimpleTripleStore')->new();
+	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
+	my $g		= Attean::IRI->new('http://example.org/graph');
+	my $a		= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { ?s ?p ?o }');
+	my @p		= $model->plans_for_algebra($a, undef, [$g], [$g]);
+	is(scalar(@p), 0);
+}
+
+{
+	my $store	= Attean->get_store('SimpleTripleStore')->new();
+	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
+	my $g		= Attean::IRI->new('http://example.org/graph');
+	dies_ok { $model->create_graph($g) } 'create_graph dies on Attean::MutableTripleModel';
+}
+
+{
+	my $store	= Attean->get_store('SimpleTripleStore')->new();
+	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
+	my $g		= Attean::IRI->new('http://example.org/graph');
+	my @pre_graphs	= $model->get_graphs->elements;
+	is(scalar(@pre_graphs), 1);
+
+	$model->drop_graph($g);
+
+	my @post_graphs	= $model->get_graphs->elements;
+	is(scalar(@post_graphs), 0);
+}
+
+{
+	my $store	= Attean->get_store('SimpleTripleStore')->new();
+	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
+	my $g		= Attean::IRI->new('http://example.org/graph');
+	dies_ok { $model->clear_graph($g) } 'clear_graph dies on Attean::MutableTripleModel';
+}
+
 done_testing();

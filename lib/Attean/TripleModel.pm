@@ -166,7 +166,7 @@ L<Attean::API::QuadIterator>.
 		return Attean::ListIterator->new( values => [], item_type => 'Attean::API::Quad' );
 	}
 	
-=item C<< plans_for_algebra( $algebra, $model, $active_graphs, $default_graphs ) >>
+=item C<< plans_for_algebra( $algebra, $planner, $active_graphs, $default_graphs ) >>
 
 Delegates to an underlying store if the active graph is bound to the store,
 and the store consumes Attean::API::CostPlanner.
@@ -176,7 +176,7 @@ and the store consumes Attean::API::CostPlanner.
 	sub plans_for_algebra {
 		my $self	= shift;
 		my $algebra	= shift;
-		my $model	= shift;
+		my $planner	= shift;
 		my $active_graphs	= shift;
 		my $default_graphs	= shift;
 		my @plans;
@@ -184,7 +184,7 @@ and the store consumes Attean::API::CostPlanner.
 			my $graph	= $active_graphs->[0];
 			if (my $store = $self->stores->{ $graph->value }) {
 				if ($store->does('Attean::API::CostPlanner')) {
-					push(@plans, $store->plans_for_algebra($algebra, $model, $active_graphs, $default_graphs));
+					push(@plans, $store->plans_for_algebra($algebra, $planner, $active_graphs, $default_graphs));
 				}
 			}
 		}
