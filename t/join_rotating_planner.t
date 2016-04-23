@@ -64,6 +64,75 @@ package MyPlanner {
 	}
 }
 
+package MyPlanner1 {
+	# this planner uses the default allow_join_rotation()
+	use Moo;
+	use namespace::clean;
+	extends 'Attean::QueryPlanner';
+	with 'Attean::API::NaiveJoinPlanner';
+	with 'Attean::API::SimpleCostPlanner';
+	with 'AtteanX::API::JoinRotatingPlanner';
+	
+	sub coalesce_rotated_join {
+		my $self	= shift;
+		my $join	= shift;
+		my ($lhs, $rhs)	= @{ $join->children };
+		if ($lhs->isa('Attean::Plan::Quad') and $rhs->isa('Attean::Plan::Quad')) {
+			return MyBGP->new(children => [$lhs, $rhs], distinct => 0);
+		} elsif ($lhs->isa('MyBGP') and $rhs->isa('Attean::Plan::Quad')) {
+			my @quads	= (@{ $lhs->children }, $rhs);
+			return MyBGP->new(children => \@quads, distinct => 0);
+		} elsif ($rhs->isa('MyBGP') and $lhs->isa('Attean::Plan::Quad')) {
+			my @quads	= ($lhs, @{ $rhs->children });
+			return MyBGP->new(children => \@quads, distinct => 0);
+		} elsif ($rhs->isa('MyBGP') and $lhs->isa('MyBGP')) {
+			my @quads	= (@{ $lhs->children }, @{ $rhs->children });
+			return MyBGP->new(children => \@quads, distinct => 0);
+		}
+		return $join;
+	}
+	
+	
+	around 'cost_for_plan' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $plan	= shift;
+		if ($plan->isa('MyBGP')) {
+			# Force MyBGP objects to cost less than an equivalent join over Quad plans.
+			return 1;
+		}
+		return $orig->($self, $plan, @_);
+	}
+}
+
+package MyPlanner2 {
+	# this planner uses the default coalesce_rotated_join()
+	use Moo;
+	use namespace::clean;
+	extends 'Attean::QueryPlanner';
+	with 'Attean::API::NaiveJoinPlanner';
+	with 'Attean::API::SimpleCostPlanner';
+	with 'AtteanX::API::JoinRotatingPlanner';
+	
+	sub allow_join_rotation {
+		my $self	= shift;
+		my $join	= shift;
+		# Inspect $join to conditionally allow/disallow join rotation
+		return 1;
+	}
+	
+	around 'cost_for_plan' => sub {
+		my $orig	= shift;
+		my $self	= shift;
+		my $plan	= shift;
+		if ($plan->isa('MyBGP')) {
+			# Force MyBGP objects to cost less than an equivalent join over Quad plans.
+			return 1;
+		}
+		return $orig->($self, $plan, @_);
+	}
+}
+
 package MyTestStore {
 	use Moo;
 	use namespace::clean;
@@ -141,36 +210,44 @@ package MyTestStore {
 		}
 	};
 
-	subtest 'after BGP merging' => sub {
-		# This test is similar, but requires that the resulting plan has
-		# undergone join rotation and quad coalescing, and that the lowest
-		# cost plan will be a join with children being a service and a BGP.
-		# 
-		# A possible plan for this algebra:
-		# - NestedLoop Join
-		# -   Service <http://endpoint.example.org/sparql> SELECT * WHERE { { ?o <b> <c> . } }
-		# -   BGP
-		# -     Quad { ?s, <p>, ?o, <http://example.org/> } (distinct)
-		# -     Quad { ?s, <q>, "xyz", <http://example.org/> } (distinct)
+	foreach my $planner_class (qw(MyPlanner MyPlanner1)) {
+		subtest "after BGP merging ($planner_class)" => sub {
+			# This test is similar, but requires that the resulting plan has
+			# undergone join rotation and quad coalescing, and that the lowest
+			# cost plan will be a join with children being a service and a BGP.
+			# 
+			# A possible plan for this algebra:
+			# - NestedLoop Join
+			# -   Service <http://endpoint.example.org/sparql> SELECT * WHERE { { ?o <b> <c> . } }
+			# -   BGP
+			# -     Quad { ?s, <p>, ?o, <http://example.org/> } (distinct)
+			# -     Quad { ?s, <q>, "xyz", <http://example.org/> } (distinct)
 
 
-		# (t ⋈ Service(w)) ⋈ v
-		# should yield one of the following after rewriting:
-		# - BGP(tv) ⋈ Service(w)
-		# - Service(w) ⋈ BGP(tv)
-		my $p		= MyPlanner->new();
+			# (t ⋈ Service(w)) ⋈ v
+			# should yield one of the following after rewriting:
+			# - BGP(tv) ⋈ Service(w)
+			# - Service(w) ⋈ BGP(tv)
+			my $p		= $planner_class->new();
+			my $plan	= $p->plan_for_algebra($join2, $model, [$graph]);
+	# 		warn $plan->as_string;
+
+			does_ok($plan, 'Attean::API::Plan::Join');
+			my ($lhs, $rhs)	= @{ $plan->children };
+			if ($lhs->isa('MyBGP')) {
+				isa_ok($lhs, 'MyBGP');
+				isa_ok($rhs, 'Attean::Plan::Service');
+			} else {
+				isa_ok($rhs, 'MyBGP');
+				isa_ok($lhs, 'Attean::Plan::Service');
+			}
+		};
+	}
+
+	subtest "after BGP merging (MyPlanner2)" => sub {
+		my $p		= MyPlanner2->new();
 		my $plan	= $p->plan_for_algebra($join2, $model, [$graph]);
-# 		warn $plan->as_string;
-
 		does_ok($plan, 'Attean::API::Plan::Join');
-		my ($lhs, $rhs)	= @{ $plan->children };
-		if ($lhs->isa('MyBGP')) {
-			isa_ok($lhs, 'MyBGP');
-			isa_ok($rhs, 'Attean::Plan::Service');
-		} else {
-			isa_ok($rhs, 'MyBGP');
-			isa_ok($lhs, 'Attean::Plan::Service');
-		}
 	};
 }
 
