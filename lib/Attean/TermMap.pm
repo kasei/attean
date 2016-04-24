@@ -73,7 +73,7 @@ L<Attean::API::Literal> values.
 		my %map;
 		return $class->new(mapper => sub {
 			my $term	= shift;
-			return $term unless ($term->does('Attean::API::Literal') and $term->datatype);
+			return $term unless ($term->does('Attean::API::Literal'));
 			
 			if ($term->does('Attean::API::NumericLiteral')) {
 				return $term->canonicalized_term;
