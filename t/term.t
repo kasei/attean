@@ -105,4 +105,13 @@ subtest 'TermOrVariable apply_binding' => sub {
 	is($a_bound->value, 'foo');
 };
 
+subtest 'blank comparison' => sub {
+	my $b1	= blank('foo');
+	my $b2	= blank('bar');
+	my $b3	= blank('foo');
+	is($b1->compare($b3), 0, 'blank term equality comparison');
+	is($b1->compare($b2), 1, 'blank term equality comparison');
+	is($b2->compare($b3), -1, 'blank term equality comparison');
+};
+
 done_testing();
