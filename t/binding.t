@@ -71,4 +71,69 @@ subtest 'Attean::TriplePattern' => sub {
 	isa_ok($qp, 'Attean::QuadPattern');
 };
 
+subtest 'statement application' => sub {
+	{
+		my $t	= triple(iri('s'), iri('p'), iri('o'));
+		my $b	= triplepattern(variable('object'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'));
+		my $x	= $b->apply_triple($t);
+	
+		does_ok($x, 'Attean::API::Binding');
+		is_deeply([$x->variables], ['subject']);
+		my $o	= $x->value('subject');
+		does_ok($o, 'Attean::API::IRI');
+		is($o->value, 'o');
+	}
+	{
+		my $q	= triple(iri('s'), iri('p'), iri('o'), iri('ggg'));
+		my $b	= quadpattern(variable('object'), iri('http://xmlns.com/foaf/0.1/name'), variable('subject'), iri('http://example.org/graph'));
+		my $x	= $b->apply_quad($q);
+	
+		does_ok($x, 'Attean::API::Binding');
+		is_deeply([sort $x->variables], [qw(object subject)]);
+		
+		my $s	= $x->value('subject');
+		does_ok($s, 'Attean::API::IRI');
+		is($s->value, 'o');
+		
+		my $o	= $x->value('object');
+		does_ok($o, 'Attean::API::IRI');
+		is($o->value, 's');
+	}
+};
+
+subtest 'binding projection' => sub {
+	my $b	= Attean::Result->new(bindings => {
+		subject => iri('s'),
+		predicate => iri('http://xmlns.com/foaf/0.1/name'),
+		object => literal('Hello!')
+	});
+	my $p	= $b->project(qw(predicate object));
+	does_ok($p, 'Attean::API::Result');
+	is_deeply([sort $b->variables], [qw(object predicate subject)]);
+	is_deeply([sort $p->variables], [qw(object predicate)]);
+};
+
+subtest 'Attean::API::Binding convenience parse method' => sub {
+	{
+		my $t	= Attean::Triple->parse('<s> a <Class>');
+		does_ok($t, 'Attean::API::Triple');
+		is($t->predicate->value, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', 'parsed A');
+	}
+	
+	{
+		my $map		= URI::NamespaceMap->new({ foaf => 'http://xmlns.com/foaf/0.1/' });
+		my $t	= Attean::TriplePattern->parse('?s a foaf:Person', namespaces => $map);
+		does_ok($t, 'Attean::API::TriplePattern');
+		does_ok($t->subject, 'Attean::API::Variable');
+		is($t->object->value, 'http://xmlns.com/foaf/0.1/Person', 'parsed prefixname');
+	}
+	
+	{
+		my $q	= Attean::Quad->parse('<s> <p> "foo"@en <http://example.org/graph/>');
+		does_ok($q, 'Attean::API::Quad');
+		does_ok($q->graph, 'Attean::API::IRI');
+		is($q->graph->value, 'http://example.org/graph/', 'parsed quad graph');
+	}
+};
+
 done_testing();

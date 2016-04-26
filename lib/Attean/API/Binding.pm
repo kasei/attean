@@ -263,11 +263,18 @@ parsed from C<< $string >> in SPARQL syntax.
 
 	sub parse {
 		my $self	= shift;
+		my $class	= ref($self) || $self;
 		my $string	= shift;
 		my $bytes	= encode('UTF-8', $string, Encode::FB_CROAK);
 		my $parser	= Attean->get_parser('SPARQL')->new(@_);
 		my @values	= $parser->parse_nodes($bytes);
 		my @keys	= $self->variables;
+		
+		my $f	= scalar(@values);
+		my $e	= scalar(@keys);
+		unless ($e == $f) {
+			die "${class}->parse found wrong number of nodes (found $f but expecting $e)";
+		}
 		return $self->new(zip @keys, @values);
 	}
 }
@@ -503,6 +510,13 @@ package Attean::API::Result 0.015 {
 		return $joined;
 	}
 	
+=item C<< project( @keys ) >>
+
+Returns a new L<Attean::Result> binding which contains variable-value mappings
+from the invocant for every variable name in C<< @keys >>.
+
+=cut
+
 	sub project {
 		my $self	= shift;
 		my @vars	= @_;
@@ -513,7 +527,7 @@ package Attean::API::Result 0.015 {
 		}
 		return Attean::Result->new( bindings => \%bindings );
 	}
-	
+
 	sub project_complement {
 		my $self	= shift;
 		my %vars	= map { $_ => 1 } @_;

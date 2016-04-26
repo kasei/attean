@@ -40,6 +40,14 @@ subtest 'expected tokens: empty BGP tokens' => sub {
 	ws_is($a->as_sparql, '');
 };
 
+subtest 'expected tokens: quad pattern' => sub {
+	my $q	= Attean::QuadPattern->parse('<s> <p> "foo"@en <http://example.org/graph/>');
+	my $i	= $q->sparql_tokens;
+	does_ok($i, 'Attean::API::Iterator');
+	expect_token_stream($i, [KEYWORD, IRI, LBRACE, IRI, IRI, STRING1D, LANG, RBRACE]);
+	ws_is($q->as_sparql, 'GRAPH <http://example.org/graph/> { <s> <p> "foo"@en }');
+};
+
 subtest 'expected tokens: 1-triple BGP tokens' => sub {
 	my $t	= triple(iri('s'), iri('p'), literal('1'));
 	my $a	= Attean::Algebra::BGP->new(triples => [$t]);
