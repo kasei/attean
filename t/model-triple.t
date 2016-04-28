@@ -188,4 +188,21 @@ use Type::Tiny::Role;
 	dies_ok { $model->clear_graph($g) } 'clear_graph dies on Attean::MutableTripleModel';
 }
 
+subtest 'Model add_iter' => sub {
+	my $store	= Attean->get_store('SimpleTripleStore')->new();
+	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
+	
+	my $s	= Attean::Blank->new('x');
+	my $p	= Attean::IRI->new('http://example.org/p1');
+	my $o1	= Attean::Literal->new(value => 'foo', language => 'en-US');
+	my $o2	= Attean::Literal->new(value => 'bar', language => 'en-GB');
+	my $g	= Attean::IRI->new('http://example.org/graph');
+	my $q1	= Attean::Quad->new($s, $p, $o1, $g);
+	my $q2	= Attean::Quad->new($s, $p, $o2, $g);
+	my $i	= Attean::ListIterator->new(values => [$q1, $q2], item_type => 'Attean::API::Quad');
+	is($model->size, 0, 'size before add_iter');
+	$model->add_iter($i);
+	is($model->size, 2, 'size after add_iter');
+};
+
 done_testing();
