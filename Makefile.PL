@@ -44,7 +44,6 @@ requires		'URI::NamespaceMap'			=> 0.12;
 requires		'XML::SAX'					=> 0;
 requires		'File::Slurp'				=> 0;
 requires		'File::ShareDir'			=> 0;
-requires		'RDF::Query'				=> 2.910;
 requires		'Test::Moose'				=> 0;
 requires		'Test::Roo'					=> 0;
 requires		'Test::Modern'				=> 0;

@@ -1308,7 +1308,7 @@ sub _GroupClause {
 # 			my $name	= $v->value;
 # 			unless ($seen{ $name }) {
 # 				croak "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
-# #				throw RDF::Query::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
+# #				throw ::Error::ParseError -text => "Syntax error: Variable used in projection but not present in aggregate grouping ($name)";
 # 			}
 # 		}
 # 	}
@@ -2371,7 +2371,7 @@ sub _PathMod {
 # 		$self->__consume_ws_opt;
 # 		my $value	= 0;
 # 		if ($self->_test(qr/}/)) {
-# 			throw RDF::Query::Error::ParseError -text => "Syntax error: Empty Path Modifier";
+# 			throw ::Error::ParseError -text => "Syntax error: Empty Path Modifier";
 # 		}
 # 		if ($self->_test($r_INTEGER)) {
 # 			$value	= $self->_eat( $r_INTEGER );

@@ -99,7 +99,6 @@ lib/AtteanX/Parser/Turtle.pm
 lib/AtteanX/Parser/Turtle/Constants.pm
 lib/AtteanX/Parser/Turtle/Lexer.pm
 lib/AtteanX/Parser/Turtle/Token.pm
-lib/AtteanX/RDFQueryTranslator.pm
 lib/AtteanX/Serializer/CanonicalNTriples.pm
 lib/AtteanX/Serializer/NQuads.pm
 lib/AtteanX/Serializer/NTriples.pm
