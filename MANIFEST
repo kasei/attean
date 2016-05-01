@@ -159,12 +159,14 @@ t/plans.t
 t/serializer-canonicalntriples.t
 t/serializer-nquads.t
 t/serializer-ntriples.t
+t/serializer-rdfxml.t
 t/serializer-sparql.t
 t/serializer-sparqlcsv.t
 t/serializer-sparqlhtml.t
 t/serializer-sparqltsv.t
 t/serializer-sparqlxml.t
 t/serializer-turtle.t
+t/serializer.t
 t/simple-eval.t
 t/simple.t
 t/store-memory.t
