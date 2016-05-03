@@ -17,7 +17,9 @@ This document describes Attean::QueryPlanner version 0.015
   my $default_graphs = [ Attean::IRI->new('http://example.org/') ];
   my $plan = $planner->plan_for_algebra( $algebra, $model, $default_graphs );
   my $iter = $plan->evaluate($model);
-  my $iter = $e->evaluate( $model );
+  while (my $result = $iter->next()) {
+    say $result->as_string;
+  }
 
 =head1 DESCRIPTION
 
