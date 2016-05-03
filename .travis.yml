@@ -2,7 +2,6 @@ language: perl
 
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y librdf-perl
 install:
   - "cpanm --quiet --notest Module::Install::AuthorTests"
   - "cpanm --quiet --notest Module::Install::DOAPChangeSets"
