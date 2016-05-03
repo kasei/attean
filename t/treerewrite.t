@@ -7,7 +7,6 @@ use Data::Dumper;
 
 use Attean;
 use Attean::RDF;
-use Attean::SimpleQueryEvaluator;
 use Attean::TreeRewriter;
 
 {

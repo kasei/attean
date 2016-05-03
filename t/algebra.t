@@ -7,7 +7,6 @@ use Digest::SHA qw(sha1_hex);
 
 use Attean;
 use Attean::RDF;
-use Attean::SimpleQueryEvaluator;
 
 {
 	my $b	= Attean::Algebra::BGP->new(triples => []);
