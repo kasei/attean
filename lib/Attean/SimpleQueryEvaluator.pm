@@ -13,6 +13,8 @@ This document describes Attean::SimpleQueryEvaluator version 0.015
 
   use v5.14;
   use Attean;
+  my $algebra = Attean->get_parser('SPARQL')->parse('SELECT * WHERE { ... }');
+  my $active_graph = Attean::IRI->new('http://example.org/');
   my $e = Attean::SimpleQueryEvaluator->new( model => $model );
   my $iter = $e->evaluate( $algebra, $active_graph );
 
