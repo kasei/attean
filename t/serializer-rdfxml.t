@@ -1,8 +1,10 @@
 use Test::Modern;
 use Test::Exception;
 
+use utf8;
 use v5.14;
 use warnings;
+use Encode qw(decode);
 no warnings 'redefine';
 
 use Attean;
@@ -98,7 +100,7 @@ subtest 'RDF/XML with predicate-object list' => sub {
 	<ns1:q>3</ns1:q>
 </rdf:Description>
 <rdf:Description xmlns:ns1="http://example.org/" rdf:nodeID="by">
-	<ns1:r xml:lang="ja">ç«æ</ns1:r>
+	<ns1:r xml:lang="ja">火星</ns1:r>
 </rdf:Description>
 </rdf:RDF>
 END
@@ -106,9 +108,11 @@ END
 	my $i	= Attean::ListIterator->new(values => [$t1, $t2, $t3, $t4], item_type => $constraint);
 	my $data1	= $ser->serialize_iter_to_bytes($i);
 	my $data2	= $ser->serialize_list_to_bytes($t1, $t2, $t3, $t4);
-
-	is($data1, $expected, 'serialize_iter_to_bytes');
-	is($data1, $data2, 'serialize_list_to_bytes');
+	
+	my $string1	= decode('UTF-8', $data1, Encode::FB_CROAK);
+	my $string2	= decode('UTF-8', $data2, Encode::FB_CROAK);
+	is($string1, $expected, 'serialize_iter_to_bytes');
+	is($string1, $string2, 'serialize_list_to_bytes');
 };
 
 subtest 'RDF/XML with prefix namespace declaration' => sub {
