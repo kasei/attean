@@ -7,7 +7,7 @@ AtteanX::Parser::Turtle::Token - Token objects used for parsing of Turtle
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle::Token version 0.015
+This document describes AtteanX::Parser::Turtle::Token version 0.016
 
 =head1 SYNOPSIS
 
@@ -65,6 +65,8 @@ use List::MoreUtils qw(zip);
 use Sub::Util qw(set_subname);
 use AtteanX::Parser::Turtle::Constants;
 use namespace::clean;
+
+our $VERSION	= 0.016;
 
 has type => ( is => 'ro', );
 has start_line => ( is => 'ro', );

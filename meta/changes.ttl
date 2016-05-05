@@ -28,8 +28,34 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 ;
 	.
+
+my:v_0-016
+	a					:Version ;
+	dc:issued			"2016-05-04"^^xsd:date ;
+	:revision			"0.016" ;
+	dcterms:replaces	my:v_0-015 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Ported RDF::Trine::Serializer::RDFXML to AtteanX::Serializer::RDFXML (#22)." ],
+			[ a dcs:Update ; rdfs:label "Fixes to POD, test, and metadata issues reported by jonassmedegaard (#93, #94, #95, #96)." ],
+			[ a dcs:Update ; rdfs:label "Removed AtteanX::RDFQueryTranslator (split into a new package) and all other references to RDF::Query." ],
+			[ a dcs:Update ; rdfs:label "Improved test suite (includes #92 from KjetilK, #53)." ],
+			[ a dcs:Update ; rdfs:label "Changed Attean::TriplePattern->as_quadpattern to delegate to Attean::API::TriplePattern->as_quad_pattern." ],
+			[ a dcs:Update ; rdfs:label "Removed default implementation of Attean::API::Term->ebv (now required of consumers)." ],
+			[ a dcs:Update ; rdfs:label "Improve Attean::SimpleQueryEvaluator to handle updated algebra classes and iterator API." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in SPARQL parsing of NIL tokens." ],
+			[ a dcs:Update ; rdfs:label "Added Test::Attean::StoreCleanup role and added store cleanup to store tests." ],
+			[ a dcs:Update ; rdfs:label "Added Test::Attean::QuadStore->cleanup_store method." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::API::AbbreviatingParser->base definition to be a consumer of Attean::API::IRI." ],
+			[ a dcs:Update ; rdfs:label "Fix overly aggressive code that attempted to turn IRIs into prefix names during Turtle serialization." ],
+			[ a dcs:Update ; rdfs:label "Serialize SPARQL and Turtle namespace declarations in a stable order." ],
+			[ a dcs:Update ; rdfs:label "Add serialization of SPARQL PREFIX declarations and prefixnames when namespaces are set (#53)." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::API::SPARQLSerializable->as_sparql to return a unicode string, not bytes." ]
+	]
+	.
+
 
 my:v_0-015
 	a					:Version ;

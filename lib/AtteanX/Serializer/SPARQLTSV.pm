@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLTSV - SPARQL Results TSV Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLTSV version 0.015
+This document describes AtteanX::Serializer::SPARQLTSV version 0.016
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::SPARQLTSV version 0.015
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLTSV 0.015 {
+package AtteanX::Serializer::SPARQLTSV 0.016 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);
