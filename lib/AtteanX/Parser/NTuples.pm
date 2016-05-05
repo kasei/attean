@@ -27,6 +27,7 @@ package AtteanX::Parser::NTuples 0.016 {
 	use utf8;
 	use Moo;
 	use Attean;
+	use Carp qw(carp);
 	use Encode qw(decode);
 	use namespace::clean;
 
@@ -42,12 +43,15 @@ Parses the given C<< $bytes >> and returns a corresponding L<Attean::API::Term> 
 =cut
 
 	sub parse_term_from_string {
-# 		TODO: warn "parse_term_from_string is now called parse_term_from_bytes\n";
+		carp "parse_term_from_string is deprecated and will be removed in Attean 0.018 (use parse_term_from_bytes instead)";
 		return shift->parse_term_from_bytes(@_);
 	}
 	
 	sub parse_term_from_bytes {
 		my $self	= shift;
+		unless (ref($self)) {
+			$self	= $self->new();
+		}
 		my $string	= shift;
 		my $n = $self->_eat_node( 0, $string );
 		return $n;

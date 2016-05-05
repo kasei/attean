@@ -48,6 +48,7 @@ package AtteanX::Parser::Turtle 0.016 {
 	use Moo;
 	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 	use utf8;
+	use Carp qw(carp);
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use AtteanX::Parser::Turtle::Constants;
@@ -142,12 +143,15 @@ serialization is found at the beginning of C<< $bytes >>.
 =cut
 
 	sub parse_term_from_string {
-# 		TODO: warn "parse_term_from_string is now called parse_term_from_bytes\n";
+		carp "parse_term_from_string is deprecated and will be removed in Attean 0.018 (use parse_term_from_bytes instead)";
 		return shift->parse_term_from_bytes(@_);
 	}
 	
 	sub parse_term_from_bytes {
 		my $self	= shift;
+		unless (ref($self)) {
+			$self	= $self->new();
+		}
 		return $self->parse_node(@_);
 	}
 	
