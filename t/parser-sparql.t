@@ -128,6 +128,50 @@ subtest 'syntax coverage: top-level filter custom function call' => sub {
 	is($term->value, 'o');
 };
 
+subtest 'parse coverage: NIL' => sub {
+	my $a	= AtteanX::Parser::SPARQL->parse('SELECT * WHERE { ?s ?p () }');
+	does_ok($a, 'Attean::API::Algebra');
+	my ($bgp)	= $a->subpatterns_of_type('Attean::Algebra::BGP');
+	isa_ok($bgp, 'Attean::Algebra::BGP');
+	my @t		= @{ $bgp->triples };
+	is(scalar(@t), 1);
+	my $t		= $t[0];
+	does_ok($t, 'Attean::API::TriplePattern');
+	my $nil		= $t->object;
+	does_ok($nil, 'Attean::IRI');
+	is($nil->value, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+};
+
+subtest 'parse coverage: TriplesSameSubject' => sub {
+	my $a	= AtteanX::Parser::SPARQL->parse('CONSTRUCT { ( ?s ?o ) } WHERE { ?s ?p ?o }');
+	does_ok($a, 'Attean::API::Algebra');
+};
+
+subtest 'parse coverage: RANK' => sub {
+	local($TODO)	= 'Fix RANK projection';
+	my $sparql	= <<"END";
+PREFIX : <http://example.org/>
+SELECT ?age ?name ?school WHERE {
+    ?p
+    	:name ?name ;
+        :school ?school ;
+        :age ?age
+        .
+}
+GROUP BY ?school
+RANK(ASC(?age)) AS ?rank
+HAVING (?rank < 2)
+END
+	my $a	= eval { AtteanX::Parser::SPARQL->parse($sparql) };
+	does_ok($a, 'Attean::API::Algebra');
+};
+
+subtest 'parse error' => sub {
+	dies_ok {
+		my $a	= AtteanX::Parser::SPARQL->parse('* WHERE { ?s ?p ?o }');
+	} 'missing method';
+};
+
 done_testing();
 
 sub expect {

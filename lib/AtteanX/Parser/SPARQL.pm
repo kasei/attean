@@ -2570,16 +2570,16 @@ sub _GraphNode {
 }
 
 # [42] VarOrTerm ::= Var | GraphTerm
-sub _VarOrTerm_test {
-	my $self	= shift;
-	return 1 if ($self->_peek_token(VAR));
-	return 1 if ($self->_IRIref_test);
-	return 1 if ($self->_peek_token(BOOLEAN));
-	return 1 if ($self->_test_literal_token);
-	return 1 if ($self->_peek_token(BNODE));
-	return 1 if ($self->_peek_token(NIL));
-	return 0;
-}
+# sub _VarOrTerm_test {
+# 	my $self	= shift;
+# 	return 1 if ($self->_peek_token(VAR));
+# 	return 1 if ($self->_IRIref_test);
+# 	return 1 if ($self->_peek_token(BOOLEAN));
+# 	return 1 if ($self->_test_literal_token);
+# 	return 1 if ($self->_peek_token(BNODE));
+# 	return 1 if ($self->_peek_token(NIL));
+# 	return 0;
+# }
 
 sub _VarOrTerm {
 	my $self	= shift;
