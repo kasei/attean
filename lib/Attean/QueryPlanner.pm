@@ -814,23 +814,23 @@ sub-plan participating in the join.
 		return $self->joins_for_plan_alternatives(@_);
 	}
 	
-=item C<< joins_for_plan_alternatives( $model, \@active_graphs, \@default_graphs, $interesting, \@plan_A, \@plan_B, ... ) >>
-
-Returns a list of alternative plans that may all be used to produce results
-matching the join of C<< plan_A >>, C< plan_B >>, etc. Each plan array here
-(e.g. C<< @plan_A >>) should contain equivalent plans.
-
-=cut
-
-	sub joins_for_plan_alternatives {
-		my $self			= shift;
-		my $model			= shift;
-		my $active_graphs	= shift;
-		my $default_graphs	= shift;
-		my $interesting		= shift;
-		my @args			= @_; # each $args[$i] here is an array reference containing alternate plans for element $i
-		die "This query planner does not seem to consume a Attean::API::JoinPlanner role (which is necessary for query planning)";
-	}
+# =item C<< joins_for_plan_alternatives( $model, \@active_graphs, \@default_graphs, $interesting, \@plan_A, \@plan_B, ... ) >>
+# 
+# Returns a list of alternative plans that may all be used to produce results
+# matching the join of C<< plan_A >>, C< plan_B >>, etc. Each plan array here
+# (e.g. C<< @plan_A >>) should contain equivalent plans.
+# 
+# =cut
+# 
+# 	sub joins_for_plan_alternatives {
+# 		my $self			= shift;
+# 		my $model			= shift;
+# 		my $active_graphs	= shift;
+# 		my $default_graphs	= shift;
+# 		my $interesting		= shift;
+# 		my @args			= @_; # each $args[$i] here is an array reference containing alternate plans for element $i
+# 		die "This query planner does not seem to consume a Attean::API::JoinPlanner role (which is necessary for query planning)";
+# 	}
 	
 =item C<< access_plans( $model, $active_graphs, $pattern ) >>
 
