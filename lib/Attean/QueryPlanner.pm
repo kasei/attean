@@ -282,13 +282,18 @@ the supplied C<< $active_graph >>.
 			} else {
 				my $gvar	= $graph->value;
 				my $graphs	= $model->get_graphs;
-				if (my $available = $args{available_graphs}) {
-					$graphs	= Attean::ListIterator->new( item_type => 'Attean::API::Term', values => $available );
-				}
 				my @plans;
 				my %vars		= map { $_ => 1 } $child->in_scope_variables;
 				$vars{ $gvar }++;
 				my @vars	= keys %vars;
+				
+				my %available;
+				if (my $available = $args{available_graphs}) {
+					foreach my $a (@$available) {
+						$available{ $a->value }++;
+					}
+					$graphs	= $graphs->grep(sub { $available{ $_->value } });
+				}
 				
 				my @branches;
 				my %ignore	= map { $_->value => 1 } @$default_graphs;

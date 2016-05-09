@@ -190,6 +190,52 @@ subtest 'Naive join planning should leave cartesian products intact' => sub {
 	is_deeply([sort @{ $q3->in_scope_variables }], ['o', 's']);
 };
 
+subtest 'Named graphs restricted by available graphs' => sub {
+	my $store	= AtteanX::Store::Memory->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $g1		= iri('http://example.org/g1');
+	my $g2		= iri('http://example.org/g2');
+	my $g3		= iri('http://example.org/g3');
+	
+	my $s		= Attean::Blank->new('x');
+	my $pred	= Attean::IRI->new('http://example.org/p1');
+	my $o1		= Attean::Literal->new(value => 'foo', language => 'en-US');
+	my $o2		= Attean::Literal->new(value => 'bar', language => 'en-GB');
+	my $q1		= Attean::Quad->new($s, $pred, $o1, $g1);
+	my $q2		= Attean::Quad->new($s, $pred, $o2, $g2);
+	my $i		= Attean::ListIterator->new(values => [$q1, $q2], item_type => 'Attean::API::Quad');
+	$model->add_iter($i);
+
+	{
+		my $a		= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { GRAPH <http://example.org/g1> { ?s ?p ?o } }');
+		{
+			my $plan	= $p->plan_for_algebra($a, $model, [$graph], [], available_graphs => [$g1]);
+			isa_ok($plan, 'Attean::Plan::Quad');
+		}
+		{
+			# <g2> isn't an available graph, so the named graph algebra should result in an empty query plan (in this case, a Project(Table())
+			my $plan	= $p->plan_for_algebra($a, $model, [$graph], [], available_graphs => [$g2]);
+			isa_ok($plan, 'Attean::Plan::Project');
+			my $sp		= $plan->child;
+			isa_ok($sp, 'Attean::Plan::Table');
+		}
+	}
+	{
+		my $a		= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { GRAPH ?g {} }');
+		{
+			my $plan	= $p->plan_for_algebra($a, $model, [$graph], [], available_graphs => [$g1, $g2]);
+			isa_ok($plan, 'Attean::Plan::Union');
+			my $children	= $plan->children;
+			is(scalar(@$children), 2);
+		}
+		{
+			# Only one of the restricted 'available' graphs is actually in the model, so the result should be a single Extend(), not a union of two Extend()s
+			my $plan	= $p->plan_for_algebra($a, $model, [$graph], [], available_graphs => [$g1, $g3]);
+			isa_ok($plan, 'Attean::Plan::Extend');
+		}
+	}
+};
+
 done_testing();
 
 sub order_algebra_by_variables {
