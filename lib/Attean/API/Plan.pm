@@ -66,17 +66,7 @@ package Attean::API::Plan 0.016 {
 	has 'ordered' => (is => 'ro', isa => ArrayRef, required => 1, default => sub { [] });
 	
 	requires 'impl';
-	
-=item C<< plan_as_string >>
-
-Returns a string representation of this plan, excluding children.
-
-=cut
-
-	sub plan_as_string {
-		my $self	= shift;
-		return "$self";
-	}
+	requires 'plan_as_string';
 
 =item C<< as_string >>
 
