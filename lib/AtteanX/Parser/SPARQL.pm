@@ -120,7 +120,8 @@ sub BUILDARGS {
 	my $class	= shift;
 	my %args	= @_;
 	my $ns		= delete $args{namespaces} // 	URI::NamespaceMap->new();
-	return { args => \%args, namespaces => $ns };
+	my $handler	= delete $args{handler} // 	sub {};
+	return { args => \%args, namespaces => $ns, handler => $handler };
 }
 
 ################################################################################

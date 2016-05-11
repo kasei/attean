@@ -172,6 +172,17 @@ subtest 'parse error' => sub {
 	} 'missing method';
 };
 
+subtest 'parse_cb_from_bytes' => sub {
+	my $cb	= sub {
+		my $a	= shift;
+		does_ok($a, 'Attean::API::Algebra');
+	};
+	my $p	= Attean->get_parser('SPARQL')->new(handler => $cb);
+	my $data	= "ASK { ?s ?p ?o }";
+	open(my $fh, '<', \$data);
+	$p->parse_cb_from_io($fh);
+};
+
 done_testing();
 
 sub expect {
