@@ -35,9 +35,9 @@ isa_ok($ci, 'Attean::CodeIterator');
 
 my @values = map { Attean::Result->new(bindings => { 'o' => literal($_) }) } (1,2,3);
 my $li = Attean::ListIterator->new(
-values => \@values,
-item_type => 'Attean::API::Result',
-variables => ['o']
+	values => \@values,
+	item_type => 'Attean::API::Result',
+	variables => ['o']
 );
 
 isa_ok($li, 'Attean::ListIterator');
@@ -105,5 +105,28 @@ isa_ok($li, 'Attean::ListIterator');
 	is($plan->as_string, "- Iterator (?o with 4 elements)\n", 'Correct serialization');
 };
 
+{
+	my $li = Attean::ListIterator->new(
+		values => \@values,
+		item_type => 'Attean::API::Result',
+		variables => ['o']
+	);
+	$li->next;
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $plan = Attean::Plan::Iterator->new(
+		variables => [variable('o')],
+		iterator => $li,
+		distinct => 0,
+		ordered => []
+	);
+	
+	my $c	= $plan->impl($model);
+	isa_ok($c, 'CODE');
+	my $i	= $c->();
+	does_ok($i, 'Attean::API::Iterator');
+	my @r	= $i->elements;
+	is(scalar(@r), 3);
+};
 
 done_testing;
