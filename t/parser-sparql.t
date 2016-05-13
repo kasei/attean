@@ -170,6 +170,11 @@ subtest 'parse error' => sub {
 	dies_ok {
 		my $a	= AtteanX::Parser::SPARQL->parse('* WHERE { ?s ?p ?o }');
 	} 'missing method';
+	
+	dies_ok {
+		my $a	= AtteanX::Parser::SPARQL->parse_update('INSERT { <s> <p> <o> }');
+	} 'unexpected EOF in update';
+	
 };
 
 subtest 'parse_cb_from_bytes' => sub {
