@@ -3637,8 +3637,12 @@ sub _expected_token {
 		my $got			= blessed($t) ? AtteanX::SPARQL::Constants::decrypt_constant($t->type) : '(undef)';
 		if (@_) {
 			my $value	= shift;
-			my $value2	= $t->value;
-			confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
+			if ($t) {
+				my $value2	= $t->value;
+				confess "Expecting $expecting '$value' but got $got '$value2' before " . $self->lexer->buffer;
+			} else {
+				confess "Expecting $expecting '$value' but found EOF";
+			}
 		} else {
 			confess "Expecting $expecting but found $got before " . $self->lexer->buffer;
 		}
