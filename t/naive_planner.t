@@ -27,6 +27,12 @@ my $u		= triplepattern(variable('s'), iri('p'), variable('o'));
 my $v		= triplepattern(variable('s'), iri('q'), blank('xyz'));
 my $w		= triplepattern(variable('a'), iri('b'), iri('c'));
 
+dies_ok {
+	my $p		= Attean::QueryPlanner->new();
+	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
+	my $plan	= $p->plan_for_algebra($bgp, $model, [$graph]);
+} 'QueryPlanner base class cannot be used directly';
+
 subtest 'Empty BGP' => sub {
 	note("An empty BGP should produce the join identity table plan");
 	my $bgp		= Attean::Algebra::BGP->new(triples => []);
