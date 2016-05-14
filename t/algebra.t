@@ -1,7 +1,7 @@
 use v5.14;
 use autodie;
 use utf8;
-use Test::More;
+use Test::Modern;
 use Test::Exception;
 use Digest::SHA qw(sha1_hex);
 
@@ -170,8 +170,7 @@ subtest 'Quad canonicalization' => sub {
 	like($s, qr/Group [{] [?]s [}] aggregate [{] [?]sum ← SUM\([?]s\) [}]/, 'aggregate serialization');
 }
 
-{
-	note('Aggregation');
+subtest 'Aggregation' => sub {
 	my $t		= triplepattern(variable('s'), iri('p'), variable('o'));
 	my $bgp		= Attean::Algebra::BGP->new(triples => [$t]);
 	my @groups	= Attean::ValueExpression->new( value => variable('s') );
@@ -189,10 +188,9 @@ subtest 'Quad canonicalization' => sub {
 	);
 	my $s	= $agg->as_string;
 	like($s, qr/Group [{] [?]s [}] aggregate [{] [?]sum ← SUM\([?]s\) [}]/, 'aggregate serialization');
-}
+};
 
-{
-	note('Ranking');
+subtest 'Ranking' => sub {
 	# RANKing example for 2 youngest students per school
 	my $bgp		= Attean::Algebra::BGP->new(triples => [
 		triplepattern(variable('p'), iri('ex:name'), variable('name')),
@@ -224,6 +222,16 @@ subtest 'Quad canonicalization' => sub {
 	);
 	my $s	= $rank->as_string;
 	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
-}
+};
+
+subtest 'Modify' => sub {
+	my $a	= Attean->get_parser('SPARQL')->parse_update('INSERT { ?s ?p 1 } WHERE { ?s ?p 2 }');
+	is_deeply([$a->in_scope_variables], []);
+};
+
+subtest 'Add' => sub {
+	my $a	= Attean->get_parser('SPARQL')->parse_update('ADD GRAPH <g1> TO DEFAULT');
+	is_deeply([$a->in_scope_variables], []);
+};
 
 done_testing();
