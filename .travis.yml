@@ -1,42 +1,18 @@
 language: perl
 
+perl:
+  - "5.22"
+  - "5.20"
+  - "5.18"
+  - "5.16"
+  - "5.14"
+
 before_install:
   - sudo apt-get update -qq
+  - git clone git://github.com/travis-perl/helpers ~/travis-perl-helpers
+  - source ~/travis-perl-helpers/init
+
 install:
-  - "cpanm --quiet --notest Module::Install::AuthorTests"
-  - "cpanm --quiet --notest Module::Install::DOAPChangeSets"
-  - "cpanm --quiet --notest Test::Exception"
-  - "cpanm --quiet --notest Test::LWP::UserAgent"
-  - "cpanm --quiet --notest Test::Modern"
-  - "cpanm --quiet --notest Test::Moose"
-  - "cpanm --quiet --notest Test::Pod"
-  - "cpanm --quiet --notest Test::Pod::Coverage"
-  - "cpanm --quiet --notest Test::Roo"
-  - "cpanm --quiet --notest Regexp::Common"
-  - "cpanm --quiet --notest DBD::Pg"
-  - "cpanm --quiet --notest File::Slurp"
-  - "cpanm --quiet --notest HTTP::Message::PSGI"
-  - "cpanm --quiet --notest XML::Simple"
-  - "cpanm --quiet --notest Algorithm::Combinatorics"
-  - "cpanm --quiet --notest Data::UUID"
-  - "cpanm --quiet --notest DateTime::Format::W3CDTF"
-  - "cpanm --quiet --notest HTTP::Negotiate"
-  - "cpanm --quiet --notest I18N::LangTags"
-  - "cpanm --quiet --notest IRI"
-  - "cpanm --quiet --notest JSON"
-  - "cpanm --quiet --notest List::MoreUtils"
-  - "cpanm --quiet --notest Math::Cartesian::Product"
-  - "cpanm --quiet --notest Module::Pluggable"
-  - "cpanm --quiet --notest Moo"
-  - "cpanm --quiet --notest MooX::Log::Any"
-  - "cpanm --quiet --notest namespace::clean"
-  - "cpanm --quiet --notest Set::Scalar"
-  - "cpanm --quiet --notest Sub::Install"
-  - "cpanm --quiet --notest Sub::Util"
-  - "cpanm --quiet --notest Text::CSV"
-  - "cpanm --quiet --notest Type::Tiny"
-  - "cpanm --quiet --notest URI::Escape"
-  - "cpanm --quiet --notest URI::Namespace"
-  - "cpanm --quiet --notest XML::SAX"
-script:
-  - "perl Makefile.PL && make test"
+  - cpanm --quiet --notest Module::Install::AuthorTests
+  - cpanm --quiet --notest Module::Install::DOAPChangeSets
+  - cpan-install --deps
