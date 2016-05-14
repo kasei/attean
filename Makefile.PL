@@ -8,14 +8,12 @@ all_from		'lib/Attean.pm';
 author			'Gregory Todd Williams <gwilliams@cpan.org>';
 license			'perl';
 
+test_requires   'HTTP::Message::PSGI'           => 0;
+test_requires   'Regexp::Common'                => 0;
 test_requires	'Test::Exception'			=> 0;
 test_requires	'Test::LWP::UserAgent'		=> 0;
 test_requires	'Test::More'				=> 0.88;
-
-### This is required for running xt/dawg11.t, which also requires manual
-### downloading of the SPARQL test suite, so will not be relevant to automated
-### tooling:
-# test_requires	'XML::Simple'				=> 0;
+test_requires	'XML::Simple'				=> 0;
 
 perl_version	'5.014';
 
