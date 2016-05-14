@@ -8,8 +8,8 @@ all_from		'lib/Attean.pm';
 author			'Gregory Todd Williams <gwilliams@cpan.org>';
 license			'perl';
 
-test_requires   'HTTP::Message::PSGI'           => 0;
-test_requires   'Regexp::Common'                => 0;
+test_requires	'HTTP::Message::PSGI'		=> 0;
+test_requires	'Regexp::Common'			=> 0;
 test_requires	'Test::Exception'			=> 0;
 test_requires	'Test::LWP::UserAgent'		=> 0;
 test_requires	'Test::More'				=> 0.88;
@@ -46,10 +46,10 @@ requires		'Test::Roo'					=> 0;
 requires		'Test::Modern'				=> 0;
 
 resources(
-	'homepage'   => "http://search.cpan.org/dist/Attean/",
-	'repository' => "http://github.com/kasei/attean/",
-	'bugtracker' => "https://github.com/kasei/attean/issues",
-	'IRC'        => "irc://irc.perl.org/#perlrdf",
+	'homepage'		=> "http://search.cpan.org/dist/Attean/",
+	'repository'	=> "http://github.com/kasei/attean/",
+	'bugtracker'	=> "https://github.com/kasei/attean/issues",
+	'IRC'			=> "irc://irc.perl.org/#perlrdf",
 );
 
 author_tests('xt');
