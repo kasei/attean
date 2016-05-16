@@ -9,6 +9,7 @@ use Scalar::Util qw(blessed);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Attean;
 use Try::Tiny;
+use open ':std', ':encoding(utf8)';
 
 unless (@ARGV) {
 	print <<"END";
@@ -18,9 +19,6 @@ Usage: $0 -list
 END
 	exit;
 }
-
-binmode(\*STDOUT, ':encoding(UTF-8)');
-binmode(\*STDERR, ':encoding(UTF-8)');
 
 my $verbose		= 0;
 my $pull		= 0;

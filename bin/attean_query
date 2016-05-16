@@ -11,7 +11,7 @@ use Attean::RDF;
 use Data::Dumper;
 use Getopt::Long;
 use Try::Tiny;
-use Benchmark qw(timethese);
+use open ':std', ':encoding(utf8)';
 
 BEGIN { $Error::TypeTiny::StackTrace	= 1; }
 
@@ -26,9 +26,6 @@ from the data file(s) using Attean::SimpleQueryEvaluator.
 END
 	exit(0);
 }
-
-binmode(\*STDOUT, ':encoding(UTF-8)');
-binmode(\*STDERR, ':encoding(UTF-8)');
 
 my $dryrun			= 0;
 my $check_syntax	= 0;
