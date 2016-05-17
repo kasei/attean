@@ -27,7 +27,7 @@ requires		'LWP::UserAgent'			=> 0;
 requires		'List::MoreUtils'			=> 0;
 requires		'Math::Cartesian::Product'	=> 1.008;
 requires		'Module::Pluggable'			=> 0;
-requires		'Moo'						=> 1.006000;
+requires		'Moo'						=> 2.000002;
 requires		'MooX::Log::Any'			=> 0;
 requires		'namespace::clean'			=> 0;
 requires		'Role::Tiny'				=> 2.000003;
@@ -43,7 +43,7 @@ requires		'XML::SAX'					=> 0;
 requires		'File::Slurp'				=> 0;
 requires		'Test::Moose'				=> 0;
 requires		'Test::Roo'					=> 0;
-requires		'Test::Modern'				=> 0;
+requires		'Test::Modern'				=> 0.012;
 
 resources(
 	'homepage'		=> "http://search.cpan.org/dist/Attean/",
