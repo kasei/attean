@@ -224,14 +224,26 @@ subtest 'Ranking' => sub {
 	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 };
 
+subtest 'Query' => sub {
+	my $a	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { ?s ?p 2 }');
+	like($a->as_string, qr/Query.*Project.*BGP/s);
+};
+
 subtest 'Modify' => sub {
 	my $a	= Attean->get_parser('SPARQL')->parse_update('INSERT { ?s ?p 1 } WHERE { ?s ?p 2 }');
 	is_deeply([$a->in_scope_variables], []);
+	like($a->as_string, qr/Update.*Insert.*Data/s);
 };
 
 subtest 'Add' => sub {
 	my $a	= Attean->get_parser('SPARQL')->parse_update('ADD GRAPH <g1> TO DEFAULT');
 	is_deeply([$a->in_scope_variables], []);
+	like($a->as_string, qr/Update.*Add/s);
+};
+
+subtest 'Update Sequence' => sub {
+	my $a	= Attean->get_parser('SPARQL')->parse_update('ADD GRAPH <g1> TO DEFAULT; ADD GRAPH <g2> TO DEFAULT');
+	like($a->as_string, qr/Update.*Add.*Add/s);
 };
 
 done_testing();
