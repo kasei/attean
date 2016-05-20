@@ -823,8 +823,10 @@ sub _AddCopyMoveUpdate {
 # [5] SelectQuery ::= 'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( Var+ | '*' ) DatasetClause* WhereClause SolutionModifier
 sub _SelectQuery {
 	my $self	= shift;
-	if ($self->_optional_token(KEYWORD, qr/^(DISTINCT|REDUCED)/)) {
+	if ($self->_optional_token(KEYWORD, qr/^(DISTINCT)/)) {
 		$self->{build}{options}{distinct}	= 1;
+	} elsif ($self->_optional_token(KEYWORD, qr/^(REDUCED)/)) {
+		$self->{build}{options}{distinct}	= 2;
 	}
 	
 	my ($star, $exprs, $vars)	= $self->__SelectVars;
@@ -3361,10 +3363,12 @@ sub __solution_modifiers {
 		push(@{ $self->{build}{triples} }, $pattern);
 	}
 	
-	if ($self->{build}{options}{distinct}) {
+	if (my $level = $self->{build}{options}{distinct}) {
 		delete $self->{build}{options}{distinct};
 		my $pattern	= pop(@{ $self->{build}{triples} });
-		my $sort	= Attean::Algebra::Distinct->new( children => [$pattern] );
+		my $sort	= ($level == 1)
+					? Attean::Algebra::Distinct->new( children => [$pattern] )
+					: Attean::Algebra::Reduced->new( children => [$pattern] );
 		push(@{ $self->{build}{triples} }, $sort);
 	}
 	
