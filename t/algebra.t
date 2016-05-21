@@ -224,9 +224,36 @@ subtest 'Ranking' => sub {
 	like($s, qr/Group [{] [?]school [}] aggregate [{] [?]rank ← RANK\([?]age\) [}]/, 'ranking serialization');
 };
 
-subtest 'Query' => sub {
-	my $a	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { ?s ?p 2 }');
-	like($a->as_string, qr/Query.*Project.*BGP/s);
+subtest 'Query Serialization' => sub {
+	{
+		my $a	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { ?s ?p 2 }');
+		like($a->as_string, qr/Query.*Project.*BGP/s);
+	}
+	
+	{
+		my $a	= Attean->get_parser('SPARQL')->parse('SELECT REDUCED * WHERE { SERVICE <http://example.org/sparql> { ?s <p>*/<q> 2 } } ORDER BY ?s');
+		like($a->as_string, qr/Query.*Reduced.*Project.*Order.*Service.*Path/s);
+	}
+	
+	{
+		my $a	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { { ?s <p> 1 . BIND(?s+1 AS ?x) } UNION { GRAPH <g> { ?s <p> 1 } } }');
+		like($a->as_string, qr/Project.*Union.*Extend.*BGP.*Graph.*BGP/s);
+	}
+
+	{
+		my $a	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { { ?s <p> 1 } MINUS { ?s <q> 2 } }');
+		like($a->as_string, qr/Query.*Project.*Minus.*BGP.*BGP/s);
+	}
+
+	{
+		my $a	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { ?s <q> 2 } VALUES (?z) { ("abc") ("def") }');
+		like($a->as_string, qr/Query.*Project.*Join.*BGP.*Table/s);
+	}
+
+	{
+		my $a	= Attean->get_parser('SPARQL')->parse('CONSTRUCT { ?s ?p 1 } WHERE { ?s ?p 2 }');
+		like($a->as_string, qr/Query.*Construct.*BGP/s);
+	}
 };
 
 subtest 'Modify' => sub {
