@@ -299,6 +299,38 @@ END
 			is(scalar(@rows), 6);
 		}
 	}
+
+	{
+		note('NegatedPropertySet');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		
+		{
+			# <c> !<p> ?o
+			my $pp		= Attean::Algebra::NegatedPropertySet->new( predicates => [iri('p')] );
+			my $path	= Attean::Algebra::Path->new( subject => iri('c'), path => $pp, object => variable('o') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 1);
+			is($rows[0]->value('o')->value, 'e');
+		}
+	}
+
+	{
+		note('Sequence Path');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		
+		{
+			# <a> <p>/<values> ?o
+			my $p1		= Attean::Algebra::PredicatePath->new( predicate => iri('p') );
+			my $p2		= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pp		= Attean::Algebra::SequencePath->new( children => [ $p1, $p2 ] );
+			my $path	= Attean::Algebra::Path->new( subject => iri('b'), path => $pp, object => variable('o') );
+			my $iter	= $e->evaluate($path, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 1);
+			is($rows[0]->value('o')->value, 'e');
+		}
+	}
 }
 
 {
@@ -354,17 +386,17 @@ END
 # 		while (my $q = $iter->next) { say $q->as_string }
 	}
 	
-	if (0) {
-		# pp12
-		my $p1	= Attean::Algebra::PredicatePath->new( predicate => iri('http://www.example.org/schema#p1') );
-		my $p2	= Attean::Algebra::PredicatePath->new( predicate => iri('http://www.example.org/schema#p2') );
-		my $seq	= Attean::Algebra::SequencePath->new( children => [$p1, $p2] );
-		my $pp	= Attean::Algebra::OneOrMorePath->new( children => [$seq] );
-		my $path	= Attean::Algebra::Path->new( subject => iri('http://www.example.org/instance#a'), path => $pp, object => variable('x') );
-		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => iri('pp11') );
-		my $iter	= $e->evaluate($path, iri('pp11'));
-		while (my $q = $iter->next) { say $q->as_string }
-	}
+# 	{
+# 		# pp12
+# 		my $p1	= Attean::Algebra::PredicatePath->new( predicate => iri('http://www.example.org/schema#p1') );
+# 		my $p2	= Attean::Algebra::PredicatePath->new( predicate => iri('http://www.example.org/schema#p2') );
+# 		my $seq	= Attean::Algebra::SequencePath->new( children => [$p1, $p2] );
+# 		my $pp	= Attean::Algebra::OneOrMorePath->new( children => [$seq] );
+# 		my $path	= Attean::Algebra::Path->new( subject => iri('http://www.example.org/instance#a'), path => $pp, object => variable('x') );
+# 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => iri('pp11') );
+# 		my $iter	= $e->evaluate($path, iri('pp11'));
+# 		while (my $q = $iter->next) { say $q->as_string }
+# 	}
 
 	{
 		note('Service');
