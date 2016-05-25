@@ -331,6 +331,22 @@ END
 			is($rows[0]->value('o')->value, 'e');
 		}
 	}
+
+	{
+		note('BIND');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		
+		{
+			my $t		= triplepattern(variable('s'), variable('p'), variable('o'));
+			my $b		= Attean::Algebra::BGP->new( triples => [$t] );
+			my $expr	= Attean::ValueExpression->new( value => variable('o') );
+			my $extend	= Attean::Algebra::Extend->new(children => [$b], variable => variable('x'), expression => $expr);
+			my $iter	= $e->evaluate($extend, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 4);
+			like($rows[0]->value('x')->value, qr'^[bcde]$');
+		}
+	}
 }
 
 {
