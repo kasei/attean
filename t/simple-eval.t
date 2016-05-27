@@ -347,6 +347,43 @@ END
 			like($rows[0]->value('x')->value, qr'^[bcde]$');
 		}
 	}
+	
+	{
+		note('CONSTRUCT');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		
+		{
+			my $t		= triplepattern(variable('s'), iri('q'), variable('o'));
+			my $u		= triplepattern(variable('o'), iri('qqq'), variable('s'));
+			my $b		= Attean::Algebra::BGP->new( triples => [$t] );
+			my $c		= Attean::Algebra::Construct->new( children => [$b], triples => [$u] );
+			my $iter	= $e->evaluate($c, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 1);
+			is($rows[0]->as_string, '<e> <qqq> <c> .');
+		}
+	}
+	
+	{
+		note('CAST');
+		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
+		
+		{
+			my $t		= triplepattern(variable('s'), iri('values'), variable('o'));
+			my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
+			my $graph	= Attean::Algebra::Graph->new( children => [$bgp], graph => iri('ints') );
+			my $var		= Attean::ValueExpression->new( value => variable('o') );
+			my $expr	= Attean::CastExpression->new( children => [$var], datatype => iri('http://www.w3.org/2001/XMLSchema#decimal') );
+			my $extend	= Attean::Algebra::Extend->new(children => [$graph], variable => variable('x'), expression => $expr);
+			my $iter	= $e->evaluate($extend, $g);
+			my @rows	= $iter->elements;
+			is(scalar(@rows), 4);
+			foreach my $r (@rows) {
+				is($r->value('x')->datatype->value, 'http://www.w3.org/2001/XMLSchema#decimal', 'decimal datatype');
+				like($r->value('x')->value, qr/^[0127]\.0$/, 'decimal value');
+			}
+		}
+	}
 }
 
 {
