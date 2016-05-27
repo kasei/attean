@@ -13,6 +13,8 @@ use Attean::RDF;
 	isa_ok($b, 'Attean::Algebra::BGP');
 	ok($b->does('Attean::API::QueryTree'), 'bgp consumes QueryTree');
 	ok($b->is_leaf, 'bgp is_leaf');
+	is($b->arity, 0, 'bgp arity');
+	ok(not($b->unary), 'BGP is not unary');
 }
 
 {
@@ -22,6 +24,8 @@ use Attean::RDF;
 	ok($bgp->is_leaf, 'bgp is_leaf');
 	
 	my $dist	= Attean::Algebra::Distinct->new( children => [$bgp] );
+	is($dist->arity, 1, 'Distinct arity');
+	ok($dist->unary, 'Distinct is unary');
 	isa_ok($dist, 'Attean::Algebra::Distinct');
 	ok(not($dist->is_leaf), 'distinct not is_leaf');
 	
@@ -50,6 +54,7 @@ use Attean::RDF;
 	my $t	= triplepattern(variable('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
 	my $join	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
+	is($join->arity, 2, 'Join arity');
 	my @walk;
 	$join->walk(prefix => sub { push(@walk, shift) });
 	is(scalar(@walk), 3, 'expected walk count');

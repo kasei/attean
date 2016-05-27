@@ -150,6 +150,11 @@ package Attean::Algebra::Sequence 0.016 {
 
 	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
 
+	sub arity {
+		my $self	= shift;
+		return scalar(@{ $self->children });
+	}
+	
 	sub algebra_as_string { return 'Sequence' }
 
 	sub sparql_tokens {
@@ -176,7 +181,7 @@ package Attean::Algebra::Join 0.016 {
 	use Moo;
 	use namespace::clean;
 
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
 
 	sub algebra_as_string { return 'Join' }
 
@@ -1451,7 +1456,7 @@ package Attean::Algebra::Modify 0.016 {
 	use Types::Standard qw(HashRef ArrayRef ConsumerOf);
 	use namespace::clean;
 	
-	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
 	has 'dataset' => (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'insert' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
