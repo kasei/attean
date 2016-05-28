@@ -205,14 +205,30 @@ does_ok($p, 'Attean::API::CostPlanner');
 	};
 	
 	subtest 'Describe' => sub {
+		my $store	= TestStore->new();
+		my $model	= Attean::MutableQuadModel->new( store => $store );
+		my $subj	= Attean::Blank->new('x');
+		my $pred	= Attean::IRI->new('http://example.org/p1');
+		my $o1		= Attean::Literal->new(value => 'foo', language => 'en-US');
+		my $o2		= Attean::Literal->new(value => 'bar', language => 'en-GB');
+		my $q1		= Attean::Quad->new($subj, $pred, $o1, $graph);
+		my $q2		= Attean::Quad->new($subj, $pred, $o2, $graph);
+		my $i		= Attean::ListIterator->new(values => [$q1, $q2], item_type => 'Attean::API::Quad');
+		$model->add_iter($i);
+
 		note("Describe query with 1-triple BGP");
-		my $bgp			= Attean::Algebra::BGP->new(triples => [$t]);
+		my $bgp			= Attean::Algebra::BGP->new(triples => [Attean::TriplePattern->new(variable('s'), $pred, variable('o'))]);
 		my $describe	= Attean::Algebra::Describe->new(children => [$bgp], terms => [variable('s')]);
 		my $plan		= $p->plan_for_algebra($describe, $model, [$graph]);
 		like($plan->as_string, qr/Describe/s);
 		does_ok($plan, 'Attean::API::Plan');
 		isa_ok($plan, 'Attean::Plan::Describe');
 		is(scalar(@{ $plan->children }), 1);
+
+		my $code		= $plan->impl($model);
+		my $iter		= $code->();
+		my $row			= $iter->next();
+		does_ok($row, 'Attean::API::Quad');
 	};
 
 	subtest 'Issues and Regressions' => sub {
