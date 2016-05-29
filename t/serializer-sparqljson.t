@@ -1,6 +1,7 @@
 use Test::Modern;
 use Test::Exception;
 
+use utf8;
 use v5.14;
 use warnings;
 no warnings 'redefine';
