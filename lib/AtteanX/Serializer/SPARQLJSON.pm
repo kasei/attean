@@ -34,18 +34,15 @@ use v5.14;
 use warnings;
 
 package AtteanX::Serializer::SPARQLJSON 0.016 {
-        use Moo;
-        use Types::Standard qw(Bool Str);
-        use Encode qw(encode);
-        use Scalar::Util qw(blessed);
-        use Attean::ListIterator;
-        use List::MoreUtils qw(any);
-	use JSON -support_by_pp;
-        use namespace::clean;
+	use Moo;
+	use Types::Standard qw(Str);
+	use Encode qw(encode);
+	use Scalar::Util qw(blessed);
+	use Attean::ListIterator;
+	use JSON; 
+	use namespace::clean;
 
-        has 'distinct'             => (is => 'ro', isa => Bool, init_arg => undef, default => 0 );
-        has 'ordered'              => (is => 'ro', isa => Bool, init_arg => undef, default => 0 );
-        has 'canonical_media_type' => (is => 'ro', isa => Str,  init_arg => undef, default => 'application/sparql-results+json');
+    has 'canonical_media_type' => (is => 'ro', isa => Str,  init_arg => undef, default => 'application/sparql-results+json');
 
 =item C<< media_types >>
 
@@ -65,40 +62,42 @@ L<IO::Handle> object C<< $fh >>.
 =cut
 
 	sub serialize_iter_to_io {
-		my $self        = shift;
-		my $fh          = shift;
-		my $iter        = shift;
 
-                my @vars        = @{ $iter->variables };
-                my $distinct    = $self->distinct ? JSON::true : JSON::false;
-                my $ordered     = $self->ordered  ? JSON::true : JSON::false;
+		my $self	= shift;
+		my $fh		= shift;
+		my $iter	= shift;
 
-                my $data        = {
-				        head    => { vars => \@vars },
-				        results => { ordered => $ordered, distinct => $distinct, bindings => [] },
-				  };
+		my @vars	= sort @{ $iter->variables };
 
-                while (my $t = $iter->next()) {
-                        foreach my $name ($t->variables) {
-                                my $term = $t->value($name);
-                                if (blessed($term)) {
-                                        my $type;
-                                        if ($term->does('Attean::API::IRI')) {
-                                                $type = 'uri';
-                                        } elsif ($term->does('Attean::API::Literal')) {
-                	                        $type = 'literal';
-        	                        } elsif ($term->does('Attean::API::Blank')) {
-                                                $type = 'bnode';
-                                        } else {
-                                                die 'Term object has an unrecognized type: ' . ref($term);
-                                        }
-                                push(@{ $data->{results}{bindings} }, $name => { type => $type, value => $term->value } );
-                                }
-                        }
-                }
+		my $data	= {
+						head	=> { vars => \@vars },
+						results	=> { bindings => [] },
+						};
 
-		print {$fh} JSON->new->utf8(1)->canonical(1)->pretty(0)->encode($data);
+		while (my $t = $iter->next()) {
+			my %binding;
+			foreach my $name ($t->variables) {
+				my $term = $t->value($name);
+				if (blessed($term)) {
+					my $type;
+					if ($term->does('Attean::API::IRI')) {
+						$type = 'uri';
+					} elsif ($term->does('Attean::API::Literal')) {
+						$type = 'literal';
+					} elsif ($term->does('Attean::API::Blank')) {
+						$type = 'bnode';
+					} else {
+						die 'Term object has an unrecognized type: ' . ref($term);
+					}
+				$binding{$name} = { type => $type, value => $term->value };
+				}
+			}
+			push(@{ $data->{results}{bindings} }, { %binding });
+		}
+
+		print {$fh} JSON->new->canonical(1)->encode($data);
 		return;
+
 	}
 
 =item C<< serialize_iter_to_bytes( $fh, $iterator ) >>
@@ -109,16 +108,20 @@ and returns the serialization as a UTF-8 encoded byte string.
 =cut
 
 	sub serialize_iter_to_bytes {
-		my $self        = shift;
-		my $iter        = shift;
-		my $data        = encode('UTF-8', '');
+
+		my $self	= shift;
+		my $iter	= shift;
+		my $data	= encode('UTF-8', '');
+
 		open(my $fh, '>', \$data);
 		$self->serialize_iter_to_io($fh, $iter);
 		close($fh);
 		return $data;
+
 	}
 
-	with 'Attean::API::ResultSerializer', 'Attean::API::AppendableSerializer';
+with 'Attean::API::ResultSerializer', 'Attean::API::AppendableSerializer';
+
 }
 
 1;
