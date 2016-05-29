@@ -6,6 +6,7 @@ use v5.14;
 use warnings;
 no warnings 'redefine';
 
+use JSON qw(decode_json);
 use Attean;
 use Attean::RDF;
 use Type::Tiny::Role;
@@ -33,27 +34,24 @@ my @triples  = ($t1, $t2, $t3);
 	my @media_types = @{ $ser->media_types };
 	is($media_types[0], $ser->canonical_media_type(), 'media_types');
 
-	my $expected = <<'END';
-{"head":{"vars":["object","predicate","subject"]},"results":{"bindings":[{"object":{"type":"literal","value":"1"},"predicate":{"type":"uri","value":"http://example.org/p"},"subject":{"type":"bnode","value":"x"}},{"object":{"type":"literal","value":"火"},"predicate":{"type":"uri","value":"http://example.org/p"},"subject":{"type":"bnode","value":"x"}},{"subject":{"type":"uri","value":"http://perlrdf.org/"}}]}}
-END
-
-	chomp($expected);
+	my $expected = {"head" => {"vars" => ["object","predicate","subject"]},"results" => {"bindings" => [{"object" => {"type" => "literal","value" => "1"},"predicate" => {"type" => "uri","value" => "http://example.org/p"},"subject" => {"type" => "bnode","value" => "x"}},{"object" => {"type" => "literal","value" => "火"},"predicate" => {"type" => "uri","value" => "http://example.org/p"},"subject" => {"type" => "bnode","value" => "x"}},{"subject" => {"type" => "uri","value" => "http://perlrdf.org/"}}]}};
 
 	{
-		my $i = Attean::ListIterator->new(values => [@triples], item_type => $constraint, variables => [@vars]);
-		my $b = $ser->serialize_iter_to_bytes($i);
-
-		is($b, $expected, 'serialize_iter_to_bytes');
+		my $i		= Attean::ListIterator->new(values => [@triples], item_type => $constraint, variables => [@vars]);
+		my $b		= $ser->serialize_iter_to_bytes($i);
+		my $data	= decode_json($b);
+		is_deeply($data, $expected, 'serialize_iter_to_bytes');
 	}
 
 	{
 		my $i = Attean::ListIterator->new(values => [@triples], item_type => $constraint, variables => [@vars]);
-		my $data = '';
-		open(my $fh, '>', \$data);
+		my $bytes = '';
+		open(my $fh, '>:encoding(UTF-8)', \$bytes);
 		$ser->serialize_iter_to_io($fh, $i);
 		close($fh);
-
-		is($data, $expected, 'serialize_iter_to_io');
+		
+		my $data	= decode_json($bytes);
+		is_deeply($data, $expected, 'serialize_iter_to_io');
 	}
 
 }

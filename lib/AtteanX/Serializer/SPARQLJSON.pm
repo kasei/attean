@@ -112,7 +112,7 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my $iter	= shift;
 		my $data	= encode('UTF-8', '');
 
-		open(my $fh, '>', \$data);
+		open(my $fh, '>:encoding(UTF-8)', \$data);
 		$self->serialize_iter_to_io($fh, $iter);
 		close($fh);
 		return $data;
