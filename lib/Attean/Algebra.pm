@@ -181,7 +181,7 @@ package Attean::Algebra::Join 0.016 {
 	use Moo;
 	use namespace::clean;
 
-	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::BinaryQueryTree';
+	with 'Attean::API::UnionScopeVariables', 'Attean::API::Algebra', 'Attean::API::QueryTree';
 
 	sub algebra_as_string { return 'Join' }
 

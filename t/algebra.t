@@ -54,7 +54,6 @@ use Attean::RDF;
 	my $t	= triplepattern(variable('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
 	my $join	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
-	is($join->arity, 2, 'Join arity');
 	my @walk;
 	$join->walk(prefix => sub { push(@walk, shift) });
 	is(scalar(@walk), 3, 'expected walk count');

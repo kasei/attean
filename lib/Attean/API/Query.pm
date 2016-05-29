@@ -483,7 +483,7 @@ package Attean::API::Algebra 0.016 {
 				my $children	= $self->children;
 				my $size	= scalar(@$children);
 				unless ($size == $arity) {
-					die "${name} algebra construction with bad number of children (expected $arity, but got $size)";
+					Carp::confess "${name} algebra construction with bad number of children (expected $arity, but got $size)";
 				}
 			}
 		}
