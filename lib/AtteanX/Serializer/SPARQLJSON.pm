@@ -42,7 +42,7 @@ package AtteanX::Serializer::SPARQLJSON 0.016 {
 	use JSON; 
 	use namespace::clean;
 
-    has 'canonical_media_type' => (is => 'ro', isa => Str,  init_arg => undef, default => 'application/sparql-results+json');
+	has 'canonical_media_type' => (is => 'ro', isa => Str,  init_arg => undef, default => 'application/sparql-results+json');
 
 =item C<< media_types >>
 
@@ -62,7 +62,6 @@ L<IO::Handle> object C<< $fh >>.
 =cut
 
 	sub serialize_iter_to_io {
-
 		my $self	= shift;
 		my $fh		= shift;
 		my $iter	= shift;
