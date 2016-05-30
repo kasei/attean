@@ -1456,7 +1456,7 @@ package Attean::Algebra::Modify 0.016 {
 	use Types::Standard qw(HashRef ArrayRef ConsumerOf);
 	use namespace::clean;
 	
-	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
 
 	has 'dataset' => (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'insert' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
