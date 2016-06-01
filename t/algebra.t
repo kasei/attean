@@ -53,7 +53,10 @@ use Attean::RDF;
 {
 	my $t	= triplepattern(variable('s'), iri('p'), literal('1'));
 	my $bgp	= Attean::Algebra::BGP->new(triples => [$t]);
+	ok($bgp->has_only_subtree_types('Attean::Algebra::BGP'));
 	my $join	= Attean::Algebra::Join->new( children => [$bgp, $bgp] );
+	ok(not $join->has_only_subtree_types('Attean::Algebra::BGP'));
+	
 	my @walk;
 	$join->walk(prefix => sub { push(@walk, shift) });
 	is(scalar(@walk), 3, 'expected walk count');
