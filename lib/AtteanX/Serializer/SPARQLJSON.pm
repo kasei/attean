@@ -119,8 +119,7 @@ and returns the serialization as a UTF-8 encoded byte string.
 
 	}
 
-with 'Attean::API::ResultSerializer', 'Attean::API::AppendableSerializer';
-
+	with 'Attean::API::ResultSerializer', 'Attean::API::AppendableSerializer';
 }
 
 1;
@@ -133,6 +132,10 @@ __END__
 
 Please report any bugs or feature requests to through the GitHub web interface
 at L<https://github.com/kasei/attean/issues>.
+
+=head1 SEE ALSO
+
+L<http://www.w3.org/TR/sparql11-results-json/>
 
 =head1 AUTHOR
 
