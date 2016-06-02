@@ -24,13 +24,16 @@ my $t2  = Attean::Result->new(bindings => { subject => $s, predicate => $p, obje
 my $t3  = Attean::Result->new(bindings => { subject => iri('http://perlrdf.org/') });
 my @triples  = ($t1, $t2, $t3);
 
+is(Attean->get_serializer('sparqljson'), 'AtteanX::Serializer::SPARQLJSON', 'get serializer by name');
+is(Attean->get_serializer(media_type => 'application/sparql-results+json'), 'AtteanX::Serializer::SPARQLJSON', 'get serializer by media type');
+
 {
 	my $ser = Attean->get_serializer('SPARQLJSON')->new();
 	does_ok($ser, 'Attean::API::Serializer');
 	does_ok($ser, 'Attean::API::AppendableSerializer');
 	does_ok($ser, 'Attean::API::ResultSerializer');
 	isa_ok($ser, 'AtteanX::Serializer::SPARQLJSON');    
-
+	
 	my @media_types = @{ $ser->media_types };
 	is($media_types[0], $ser->canonical_media_type(), 'media_types');
 
