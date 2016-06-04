@@ -47,7 +47,7 @@ test_triples_for_connected_plan([$t, $u, $v, $w], 0, '4-triple BGP');
 test_triples_for_connected_plan([$x, $t, $u, $v, $w], 0, '5-triple BGP');
 
 subtest 'Construct' => sub {
-	local($TODO)	= 'Fix as_string serialization of CONSTRUCT algebras (#97)';
+	local($TODO)	= 'Fix as_string serialization of CONSTRUCT plans (related to #97 which is the same issue for algebra objects)';
 	my $t	= Attean::Plan::Quad->new( subject => variable('s'), predicate => iri('p'), object => variable('o'), graph => iri('g'), distinct => 1, ordered => []);
 	my $u	= triplepattern(variable('s'), iri('q'), variable('o'));
 	my $c	= Attean::Plan::Construct->new(triples => [$u], children => [$t], distinct => 0, ordered => []);
