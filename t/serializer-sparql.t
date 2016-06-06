@@ -806,6 +806,11 @@ subtest 'End-to-end AbbreviatingSerializer' => sub {
 	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);
 };
 
+subtest 'Update sequence' => sub {
+	my $s	= Attean->get_parser('SPARQL')->parse_update('DELETE DATA { <s> <p> "o" } ; INSERT DATA { <s> <q> "o" }')->as_sparql;
+	ws_is($s, 'DELETE DATA { <s> <p> "o" . } ; INSERT DATA { <s> <q> "o" . }', 'update sequence');
+};
+
 subtest 'Regressions' => sub {
 	{
 		my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;
