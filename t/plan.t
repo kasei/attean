@@ -51,7 +51,8 @@ subtest 'Construct' => sub {
 	my $t	= Attean::Plan::Quad->new( subject => variable('s'), predicate => iri('p'), object => variable('o'), graph => iri('g'), distinct => 1, ordered => []);
 	my $u	= triplepattern(variable('s'), iri('q'), variable('o'));
 	my $c	= Attean::Plan::Construct->new(triples => [$u], children => [$t], distinct => 0, ordered => []);
-	like($c->plan_as_string, qr/Construct.*Quad/);
+	like($c->plan_as_string, qr/Construct.*Quad/s);
+	like($c->plan_as_string, qr/Triples/);
 };
 
 done_testing();
