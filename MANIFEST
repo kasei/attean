@@ -107,6 +107,7 @@ lib/AtteanX/Serializer/RDFXML.pm
 lib/AtteanX/Serializer/SPARQL.pm
 lib/AtteanX/Serializer/SPARQLCSV.pm
 lib/AtteanX/Serializer/SPARQLHTML.pm
+lib/AtteanX/Serializer/SPARQLJSON.pm
 lib/AtteanX/Serializer/SPARQLTSV.pm
 lib/AtteanX/Serializer/SPARQLXML.pm
 lib/AtteanX/Serializer/Turtle.pm
@@ -163,6 +164,7 @@ t/serializer-rdfxml.t
 t/serializer-sparql.t
 t/serializer-sparqlcsv.t
 t/serializer-sparqlhtml.t
+t/serializer-sparqljson.t
 t/serializer-sparqltsv.t
 t/serializer-sparqlxml.t
 t/serializer-turtle.t
