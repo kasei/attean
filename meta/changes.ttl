@@ -28,8 +28,33 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 ;
 	.
+
+my:v_0-017
+	a					:Version ;
+	dc:issued			"2016-06-XX"^^xsd:date ;
+	:revision			"0.017" ;
+	dcterms:replaces	my:v_0-016 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Port SPARQL-JSON serializer to Attean (#20, #101 from @cakirke)." ],
+			[ a dcs:Update ; rdfs:label "Improved test coverage." ],
+			[ a dcs:Update ; rdfs:label "Fix Construct plan string serialization." ],
+			[ a dcs:Update ; rdfs:label "Fix declared arity of various algebra classes." ],
+			[ a dcs:Update ; rdfs:label "Updated SPARQL parser to produce Attean::Algebra::Reduced algebra objects for REDUCED queries." ],
+			[ a dcs:Update ; rdfs:label "Updated required versions of Moo and Test::Modern." ],
+			[ a dcs:Update ; rdfs:label "Changed use of binmode to `use open` in attean_parse and attean_query." ],
+			[ a dcs:Update ; rdfs:label "Add a .gitignore file (#99 from @cakirke)." ],
+			[ a dcs:Update ; rdfs:label "Improved use of Travis CI (#100 from @cakirke)." ],
+			[ a dcs:Update ; rdfs:label "Fixed documentation in Attean::QueryPlanner." ],
+			[ a dcs:Update ; rdfs:label "Improved handling of unexpected EOF in AtteanX::Parser::SPARQL." ],
+			[ a dcs:Update ; rdfs:label "Removed default implementation of Attean::API::Plan->plan_as_string." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in handling of restricted available named graphs during query planning." ],
+			[ a dcs:Update ; rdfs:label "Make parse_term_from_string deprecations noisy." ]
+	]
+	.
+
 
 my:v_0-016
 	a					:Version ;
