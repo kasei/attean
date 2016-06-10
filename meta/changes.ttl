@@ -33,7 +33,7 @@ my:project
 
 my:v_0-017
 	a					:Version ;
-	dc:issued			"2016-06-XX"^^xsd:date ;
+	dc:issued			"2016-06-09"^^xsd:date ;
 	:revision			"0.017" ;
 	dcterms:replaces	my:v_0-016 ;
 	dcs:changeset [

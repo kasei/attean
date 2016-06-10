@@ -8,7 +8,7 @@ Attean::API::Plan - Query plan
 
 =head1 VERSION
 
-This document describes Attean::API::Plan version 0.016
+This document describes Attean::API::Plan version 0.017
 
 =head1 DESCRIPTION
 
@@ -53,7 +53,7 @@ L<Attean::API::Iterator> object.
 
 use Type::Tiny::Role;
 
-package Attean::API::Plan 0.016 {
+package Attean::API::Plan 0.017 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ArrayRef CodeRef Str Object InstanceOf Bool Num Int);
@@ -207,7 +207,7 @@ product if this plan performs some form of join.
 	}
 }
 
-package Attean::API::BindingSubstitutionPlan 0.016 {
+package Attean::API::BindingSubstitutionPlan 0.017 {
 	use Moo::Role;
 	with 'Attean::API::Plan';
 	requires 'substitute_impl'; # $code = $plan->impl($model, $binding);
@@ -220,7 +220,7 @@ package Attean::API::BindingSubstitutionPlan 0.016 {
 	}
 }
 
-package Attean::API::UnionScopeVariablesPlan 0.016 {
+package Attean::API::UnionScopeVariablesPlan 0.017 {
 	use Moo::Role;
 	use namespace::clean;
 
@@ -241,7 +241,7 @@ package Attean::API::UnionScopeVariablesPlan 0.016 {
 	};
 }
 
-package Attean::API::Plan::Join 0.016 {
+package Attean::API::Plan::Join 0.017 {
 	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);

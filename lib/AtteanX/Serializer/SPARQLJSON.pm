@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLJSON - SPARQL Results JSON Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLJSON version 0.016
+This document describes AtteanX::Serializer::SPARQLJSON version 0.017
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::SPARQLJSON version 0.016
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLJSON 0.016 {
+package AtteanX::Serializer::SPARQLJSON 0.017 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use Encode qw(encode);

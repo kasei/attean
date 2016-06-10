@@ -7,7 +7,7 @@ AtteanX::Parser::NTuples - Shared functionality for N-Triples and N-Quads parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTuples version 0.016
+This document describes AtteanX::Parser::NTuples version 0.017
 
 =head1 SYNOPSIS
 
@@ -23,7 +23,7 @@ This document describes AtteanX::Parser::NTuples version 0.016
 
 =cut
 
-package AtteanX::Parser::NTuples 0.016 {
+package AtteanX::Parser::NTuples 0.017 {
 	use utf8;
 	use Moo;
 	use Attean;

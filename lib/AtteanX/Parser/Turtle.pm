@@ -10,7 +10,7 @@ AtteanX::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle version 0.016
+This document describes AtteanX::Parser::Turtle version 0.017
 
 =head1 SYNOPSIS
 
@@ -44,7 +44,7 @@ A boolean indicating whether term values should be canonicalized during parsing.
 
 =cut
 
-package AtteanX::Parser::Turtle 0.016 {
+package AtteanX::Parser::Turtle 0.017 {
 	use Moo;
 	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 	use utf8;

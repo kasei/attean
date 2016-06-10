@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLTSV - SPARQL Results TSV Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLTSV version 0.016
+This document describes AtteanX::Parser::SPARQLTSV version 0.017
 
 =head1 SYNOPSIS
 
@@ -35,7 +35,7 @@ This document describes AtteanX::Parser::SPARQLTSV version 0.016
 
 =cut
 
-package AtteanX::Parser::SPARQLTSV 0.016 {
+package AtteanX::Parser::SPARQLTSV 0.017 {
 	use utf8;
 	use Moo;
 	use Attean;

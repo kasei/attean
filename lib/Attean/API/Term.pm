@@ -7,7 +7,7 @@ Attean::API::Term - RDF Terms
 
 =head1 VERSION
 
-This document describes Attean::API::Term version 0.016
+This document describes Attean::API::Term version 0.017
 
 =head1 DESCRIPTION
 
@@ -41,7 +41,7 @@ Returns a string serialization of the term.
 
 =cut
 
-package Attean::API::Term 0.016 {
+package Attean::API::Term 0.017 {
 	use Moo::Role;
 	
 	with 'Attean::API::TermOrVariable', 'Attean::API::ResultOrTerm';
@@ -105,7 +105,7 @@ Returns true if the term has a true SPARQL "effective boolean value", false othe
 	}
 }
 
-package Attean::API::Literal 0.016 {
+package Attean::API::Literal 0.017 {
 	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
@@ -289,7 +289,7 @@ package Attean::API::Literal 0.016 {
 	};
 }
 
-package Attean::API::DateTimeLiteral 0.016 {
+package Attean::API::DateTimeLiteral 0.017 {
 	use Moo::Role;
 	use DateTime::Format::W3CDTF;
 	use namespace::clean;
@@ -300,12 +300,12 @@ package Attean::API::DateTimeLiteral 0.016 {
 	}
 }
 
-package Attean::API::CanonicalizingLiteral 0.016 {
+package Attean::API::CanonicalizingLiteral 0.017 {
 	use Moo::Role;
 	requires 'canonicalized_term';
 }
 
-package Attean::API::NumericLiteral 0.016 {
+package Attean::API::NumericLiteral 0.017 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed looks_like_number);
 	use namespace::clean;
@@ -496,7 +496,7 @@ package Attean::API::NumericLiteral 0.016 {
 	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
 }
 
-package Attean::API::Blank 0.016 {
+package Attean::API::Blank 0.017 {
 	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
@@ -522,7 +522,7 @@ package Attean::API::Blank 0.016 {
 	}
 }
 
-package Attean::API::IRI 0.016 {
+package Attean::API::IRI 0.017 {
 	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
