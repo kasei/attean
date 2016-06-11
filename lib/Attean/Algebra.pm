@@ -1229,7 +1229,11 @@ package Attean::Algebra::Construct 0.017 {
 
 	sub in_scope_variables { return qw(subject predicate object); }
 	sub tree_attributes { return; }
-	sub algebra_as_string { return 'Construct' }
+	sub algebra_as_string {
+		my $self	= shift;
+		my $triples	= $self->triples;
+		return sprintf('Construct { %s }', join(' . ', map { $_->as_string } @$triples));
+	}
 }
 
 =item * L<Attean::Algebra::Describe>

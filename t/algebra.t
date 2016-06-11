@@ -258,10 +258,10 @@ subtest 'Query Serialization' => sub {
 	}
 
 	{
-		local($TODO)	= 'Fix as_string serialization of CONSTRUCT algebras (#97)';
 		my $a	= Attean->get_parser('SPARQL')->parse('CONSTRUCT { ?s ?p 1 } WHERE { ?s ?p 2 }');
 		like($a->as_string, qr/Query.*Construct.*BGP/s);
-		like($a->as_string, qr/Triple/s);
+		like($a->as_string, qr/1/s);
+		like($a->as_string, qr/2/s);
 	}
 };
 
