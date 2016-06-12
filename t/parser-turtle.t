@@ -73,6 +73,20 @@ subtest 'parse_term_from_bytes' => sub {
 	is($term->language, 'en');
 };
 
+subtest 'turtle numeric u escaping' => sub {
+	open(my $fh, '<', \q['\\u006F']);
+	my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+	my $t	= $l->get_token;
+	is($t->value, 'o');
+};
+
+subtest 'turtle numeric U escaping' => sub {
+	open(my $fh, '<', \q['\\U0000006F']);
+	my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+	my $t	= $l->get_token;
+	is($t->value, 'o');
+};
+
 done_testing();
 
 sub expect {
