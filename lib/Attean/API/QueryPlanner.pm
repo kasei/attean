@@ -182,6 +182,7 @@ package Attean::API::SimpleCostPlanner 0.017 {
 				my $lcost		= $self->cost_for_plan($children[0], $model);
 				my $rcost		= $self->cost_for_plan($children[1], $model);
 				$cost	= ($lcost + $rcost);
+				$cost += ($lcost < $rcost); # To let the plan with cheaper rhs win
 				$cost	*= 100 unless ($plan->children_are_variable_connected);
 			} elsif ($plan->isa('Attean::Plan::Service')) {
 				my $scost	= 10;
@@ -395,6 +396,7 @@ package Attean::API::IDPJoinPlanner 0.017 {
 					my $mult = $self->_penalize_joins($plan);
 # 					warn "$mult * ($lcost + $rcost)";
 					$cost	= $mult * ($lcost + $rcost);
+					$cost += ($lcost < $rcost); # To let the plan with cheaper rhs win
 				}
 			} elsif ($plan->isa('Attean::Plan::Service')) {
 				my $scost	= 10;
