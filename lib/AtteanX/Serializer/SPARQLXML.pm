@@ -127,7 +127,7 @@ END
 		return;
 	}
 	
-=item C<< serialize_iter_to_bytes( $fh, $iterator ) >>
+=item C<< serialize_iter_to_bytes( $iterator ) >>
 
 Serializes the L<Attean::API::Binding> objects from C<< $iterator >>
 and returns the serialization as a UTF-8 encoded byte string.
