@@ -16,7 +16,7 @@ PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 foaf:person
 IRI
 
-is ($value->as_sparql(namespaces => $map), <<IRI, 'as_sparql with HASH ref passed as namespace value');
+is ($value->as_sparql(namespaces => $ns), <<IRI, 'as_sparql with HASH ref passed as namespace value');
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 foaf:person
 IRI
