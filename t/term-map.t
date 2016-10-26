@@ -75,4 +75,12 @@ subtest 'UUID blank node label mapping' => sub {
 	}
 };
 
+subtest 'canonicalize literal' => sub {
+		my $i = Attean::Literal->integer('+12');
+		my $m = Attean::TermMap->canonicalization_map;
+		my $new_i = $m->map($i);
+
+		is($new_i->ntriples_string, '"12"^^<http://www.w3.org/2001/XMLSchema#integer>');
+};
+
 done_testing();
