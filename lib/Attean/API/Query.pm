@@ -167,7 +167,7 @@ package Attean::API::SPARQLSerializable 0.017 {
 
 		my $s = do {
 
-			if ($args{namespaces} && $self->value->isa('Attean::IRI')) {
+			if ($args{namespaces}) {
 
 				my $map = ref $args{namespaces} eq 'URI::NamespaceMap' ?
 						  $args{namespaces} :
