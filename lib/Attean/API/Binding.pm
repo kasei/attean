@@ -72,10 +72,10 @@ otherwise.
 use Type::Tiny::Role;
 
 package Attean::API::Binding 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	requires 'value';
 	requires 'variables';
@@ -179,8 +179,8 @@ package Attean::API::TripleOrQuadPattern 0.017 {
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
 	use Attean::API::Query;
+
 	use Moo::Role;
-	use namespace::clean;
 
 	with 'Attean::API::SPARQLSerializable';
 	
@@ -280,9 +280,11 @@ parsed from C<< $string >> in SPARQL syntax.
 }
 
 package Attean::API::TripleOrQuad 0.017 {
-	use Moo::Role;
 	use List::MoreUtils qw(any);
 	use Carp;
+
+	use Moo::Role;
+
 	with 'Attean::API::TripleOrQuadPattern';
 
 	sub BUILD {
@@ -297,7 +299,8 @@ package Attean::API::TriplePattern 0.017 {
 	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	sub variables { return qw(subject predicate object) }
 
@@ -383,8 +386,8 @@ package Attean::API::Triple 0.017 {
 package Attean::API::QuadPattern 0.017 {
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
+
 	use Moo::Role;
-	use namespace::clean;
 	
 	sub variables { return qw(subject predicate object graph) }
 	sub value {
@@ -465,10 +468,10 @@ package Attean::API::Quad 0.017 {
 
 
 package Attean::API::Result 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(HashRef);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	has 'eval_stash' => (is => 'rw', isa => HashRef);
 

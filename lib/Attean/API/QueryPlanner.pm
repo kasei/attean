@@ -33,17 +33,18 @@ methods that consume the L<Attean::API::CostPlanner> role.
 =cut
 
 package Attean::API::QueryPlanner 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(CodeRef);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
 }
 
 package Attean::API::CostPlanner 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(CodeRef);
+
+	use Moo::Role;
 	use namespace::clean;
 	with 'Attean::API::QueryPlanner';
 	
@@ -76,14 +77,13 @@ package Attean::API::CostPlanner 0.017 {
 
 package Attean::API::JoinPlanner 0.017 {
 	use Moo::Role;
-	use namespace::clean;
 	requires 'joins_for_plan_alternatives';
 }
 
 package Attean::API::NaiveJoinPlanner 0.017 {
-	use Moo::Role;
 	use Math::Cartesian::Product;
-	use namespace::clean;
+
+	use Moo::Role;
 
 	with 'Attean::API::JoinPlanner';
 	with 'Attean::API::QueryPlanner';
@@ -109,10 +109,11 @@ package Attean::API::NaiveJoinPlanner 0.017 {
 }
 
 package Attean::API::SimpleCostPlanner 0.017 {
-	use Moo::Role;
-	use namespace::clean;
 	use Types::Standard qw(Int);
 	use Scalar::Util qw(blessed);
+
+	use Moo::Role;
+
 	with 'Attean::API::CostPlanner';
 	with 'MooX::Log::Any';
 
@@ -213,7 +214,6 @@ package Attean::API::SimpleCostPlanner 0.017 {
 }
 
 package Attean::API::IDPJoinPlanner 0.017 {
-	use Moo::Role;
 	use Encode qw(encode);
 	use Attean::RDF;
 	use LWP::UserAgent;
@@ -225,7 +225,8 @@ package Attean::API::IDPJoinPlanner 0.017 {
 	use Algorithm::Combinatorics qw(subsets);
 	use List::Util qw(min);
 	use Math::Cartesian::Product;
-	use namespace::clean;
+
+	use Moo::Role;
 
 	with 'Attean::API::JoinPlanner';
 	with 'Attean::API::SimpleCostPlanner';

@@ -107,9 +107,9 @@ package Attean::API::Serializer 0.017 {
 
 package Attean::API::AbbreviatingSerializer 0.017 {
 	# Serializer that can make use of a base IRI and/or prefix IRI mappings
-	use Moo::Role;
 	use Types::Standard qw(InstanceOf ConsumerOf Maybe);
-	use namespace::clean;
+
+	use Moo::Role;
 
 	with 'Attean::API::Serializer';
 

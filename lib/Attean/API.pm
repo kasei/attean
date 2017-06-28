@@ -34,11 +34,11 @@ package Attean::API::BlankOrIRI 0.017 {
 }
 
 package Attean::API::TermOrVariable 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
-	use namespace::clean;
+
+	use Moo::Role;
 
 	with 'Attean::API::SPARQLSerializable';
 
@@ -91,8 +91,8 @@ package Attean::Mapper 0.017 {
 package Attean::API::Variable 0.017 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
+
 	use Moo::Role;
-	use namespace::clean;
 
 	with 'Attean::API::TermOrVariable';
 
@@ -116,8 +116,9 @@ Returns a string representation of the variable.'
 }
 
 package Attean::API::CanonicalizingBindingSet 0.017 {
-	use Moo::Role;
 	use Attean::RDF;
+
+	use Moo::Role;
 	use namespace::clean;
 
 	with 'MooX::Log::Any';

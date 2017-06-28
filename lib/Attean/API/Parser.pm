@@ -53,8 +53,9 @@ parsing.
 use Type::Tiny::Role;
 
 package Attean::API::Parser 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(CodeRef Bool);
+
+	use Moo::Role;
 	use namespace::clean;
 	
 	has 'handler' => (is => 'rw', isa => CodeRef, default => sub { sub {} });
@@ -89,11 +90,11 @@ C<lazy_iris> attribute.
 }
 
 package Attean::API::AbbreviatingParser 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(ConsumerOf InstanceOf Maybe);
 	use URI::NamespaceMap;
 	use Scalar::Util qw(blessed);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	with 'Attean::API::Parser';
 	has 'base' 		=> (is => 'rw', isa => ConsumerOf['Attean::API::IRI'], coerce => sub { blessed($_[0]) ? Attean::IRI->new($_[0]->as_string) : Attean::IRI->new($_[0]) }, predicate => 'has_base');

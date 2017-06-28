@@ -40,10 +40,10 @@ package Attean::API::Store 0.017 {
 }
 
 package Attean::API::TripleStore 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
-	use namespace::clean;
-	
+
+	use Moo::Role;
+
 	with 'Attean::API::Store';
 
 	requires 'get_triples';
@@ -107,10 +107,10 @@ package Attean::API::TimeCacheableTripleStore 0.017 {
 }
 
 package Attean::API::QuadStore 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
-	use namespace::clean;
-	
+
+	use Moo::Role;
+
 	with 'Attean::API::Store';
 
 	requires 'get_quads';

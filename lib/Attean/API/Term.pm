@@ -106,14 +106,14 @@ Returns true if the term has a true SPARQL "effective boolean value", false othe
 }
 
 package Attean::API::Literal 0.017 {
-	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Maybe Str ConsumerOf);
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Attean::API::Query;
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	with 'Attean::API::Term';
 	with 'Attean::API::SPARQLSerializable';
@@ -290,9 +290,10 @@ package Attean::API::Literal 0.017 {
 }
 
 package Attean::API::DateTimeLiteral 0.017 {
-	use Moo::Role;
 	use DateTime::Format::W3CDTF;
-	use namespace::clean;
+
+	use Moo::Role;
+
 	sub datetime {
 		my $self	= shift;
 		my $w3c	= DateTime::Format::W3CDTF->new;
@@ -306,10 +307,10 @@ package Attean::API::CanonicalizingLiteral 0.017 {
 }
 
 package Attean::API::NumericLiteral 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed looks_like_number);
-	use namespace::clean;
-	
+
+	use Moo::Role;
+
 	sub compare {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
@@ -497,12 +498,12 @@ package Attean::API::NumericLiteral 0.017 {
 }
 
 package Attean::API::Blank 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Attean::API::Query;
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
@@ -523,13 +524,13 @@ package Attean::API::Blank 0.017 {
 }
 
 package Attean::API::IRI 0.017 {
-	use Moo::Role;
 	use IRI;
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Attean::API::Query;
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	sub ebv { return 1; }
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';

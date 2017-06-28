@@ -66,9 +66,9 @@ Returns a string serialization of the expression object.
 =cut
 
 package Attean::API::Expression 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(Str);
-	use namespace::clean;
+
+	use Moo::Role;
 
 	with 'Attean::API::DirectedAcyclicGraph', 'Attean::API::UnionScopeVariables';
 	
@@ -101,10 +101,10 @@ package Attean::API::Expression 0.017 {
 }
 
 package Attean::API::UnaryExpression 0.017 {
-	use Moo::Role;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	with 'Attean::API::Expression', 'Attean::API::UnaryQueryTree';
 	with 'Attean::API::SPARQLSerializable';
@@ -141,10 +141,10 @@ package Attean::API::UnaryExpression 0.017 {
 }
 
 package Attean::API::BinaryExpression 0.017 {
-	use Moo::Role;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	with 'Attean::API::Expression', 'Attean::API::BinaryQueryTree';
 	with 'Attean::API::SPARQLSerializable';

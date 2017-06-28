@@ -212,10 +212,10 @@ Attempts to delegate to all the underlying stores if that store consumes Attean:
 }
 
 package Attean::AddativeTripleModelRole 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	with 'Attean::API::Model';
 	has 'store_constructor'	=> (is => 'ro', isa => CodeRef, required => 1);
