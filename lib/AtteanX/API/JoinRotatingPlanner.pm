@@ -37,11 +37,11 @@ plan.
 
 package AtteanX::API::JoinRotatingPlanner 0.017 {
 	# Rotate joins like (A⋈B)⋈C to A⋈(B⋈C), with the ability to coalesce B⋈C (e.g. for adjacent BGPs)
-	use Moo::Role;
 	use Attean;
 	use Attean::RDF;
-	use namespace::clean;
-	
+
+	use Moo::Role;
+
 	requires 'coalesce_rotated_join';
 	requires 'allow_join_rotation';
 	

@@ -116,13 +116,13 @@ subjects and objects present in the specified C<< $graph >>.
 use Attean::API::Binding;
 
 package Attean::API::Model 0.017 {
-	use Moo::Role;
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	# get_quads($s, $p, $o, $g)
 	# or:
@@ -237,12 +237,12 @@ package Attean::API::Model 0.017 {
 
 
 package Attean::API::MutableModel 0.017 {
-	use Moo::Role;
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	requires 'add_quad';
 	requires 'remove_quad';

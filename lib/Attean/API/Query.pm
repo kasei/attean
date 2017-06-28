@@ -25,10 +25,10 @@ This is a utility package for defining query-related roles:
 =cut
 
 package Attean::API::DirectedAcyclicGraph 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(ArrayRef ConsumerOf);
-	use namespace::clean;
+
+	use Moo::Role;
 
 # =item C<< children >>
 # 
@@ -152,12 +152,12 @@ package Attean::API::DirectedAcyclicGraph 0.017 {
 package Attean::API::SPARQLSerializable 0.017 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
-	use Moo::Role;
 	use Encode qw(decode_utf8);
 	use Attean::API::Iterator;
 	use Attean::API::Serializer;
 	use AtteanX::Serializer::SPARQL;
-	use namespace::clean;
+
+	use Moo::Role;
 
 	requires 'sparql_tokens';
 	
@@ -550,9 +550,9 @@ package Attean::API::PropertyPath 0.017 {
 =cut
 
 package Attean::API::UnaryPropertyPath 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(ConsumerOf);
-	use namespace::clean;
+
+	use Moo::Role;
 
 	sub arity { return 1 }
 # 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
@@ -580,9 +580,9 @@ package Attean::API::UnaryPropertyPath 0.017 {
 =cut
 
 package Attean::API::NaryPropertyPath 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(ArrayRef ConsumerOf);
-	use namespace::clean;
+
+	use Moo::Role;
 
 # 	has 'children' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::PropertyPath']], required => 1);
 	requires 'separator';

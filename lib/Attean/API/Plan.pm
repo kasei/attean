@@ -54,10 +54,10 @@ L<Attean::API::Iterator> object.
 use Type::Tiny::Role;
 
 package Attean::API::Plan 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ArrayRef CodeRef Str Object InstanceOf Bool Num Int);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	has 'cost' => (is => 'rw', isa => Int, predicate => 'has_cost');
 	has 'distinct' => (is => 'rw', isa => Bool, required => 1, default => 0);
@@ -222,7 +222,6 @@ package Attean::API::BindingSubstitutionPlan 0.017 {
 
 package Attean::API::UnionScopeVariablesPlan 0.017 {
 	use Moo::Role;
-	use namespace::clean;
 
 	with 'Attean::API::Plan';
 	
@@ -242,10 +241,10 @@ package Attean::API::UnionScopeVariablesPlan 0.017 {
 }
 
 package Attean::API::Plan::Join 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(CodeRef);
 	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
-	use namespace::clean;
+
+	use Moo::Role;
 
 	with 'Attean::API::Plan', 'Attean::API::BinaryQueryTree';
 	with 'Attean::API::UnionScopeVariablesPlan';

@@ -43,9 +43,9 @@ of characters, constant strings, and fixed-length buffers.
 
 package AtteanX::API::Lexer 0.017 {
 	use strict;
-	use Moo::Role;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
-	use namespace::clean;
+
+	use Moo::Role;
 
 	has file			=> ( is => 'ro', isa => FileHandle, required => 1, );
 	has linebuffer		=> ( is => 'rw', isa => Str, default => '', );

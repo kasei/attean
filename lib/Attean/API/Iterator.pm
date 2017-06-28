@@ -95,12 +95,12 @@ elements from the referent.
 =cut
 
 package Attean::API::Iterator 0.017 {
-	use Moo::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str Object InstanceOf);
 	use Role::Tiny;
 	use Carp qw(confess);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	has 'item_type' => (is => 'ro', isa => Str, required => 1);
 	requires 'next';
@@ -380,9 +380,9 @@ package Attean::API::MixedStatementIterator 0.017 {
 }
 
 package Attean::API::ResultIterator 0.017 {
-	use Moo::Role;
 	use Types::Standard qw(Str ArrayRef);
-	use namespace::clean;
+
+	use Moo::Role;
 	
 	with 'Attean::API::CanonicalizingBindingIterator';
 	has 'variables' => (is => 'rw', isa => ArrayRef[Str], required => 1);
