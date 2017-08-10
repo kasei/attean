@@ -66,6 +66,7 @@ package Attean::Literal 0.017 {
 		is => 'ro',
 		isa => InstanceOf['Attean::IRI'],
 		required => 1,
+		predicate => 'has_datatype', # Meaningless with RDF 1.1
 		coerce => sub {
 			my $dt	= shift;
 			if (blessed($dt) and $dt->isa('Attean::IRI')) {
