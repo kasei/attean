@@ -38,8 +38,9 @@ package Attean::Blank 0.017 {
 	use Types::Standard qw(Str);
 	use Data::UUID;
 	use namespace::clean;
-	
-	has 'value' => (is => 'ro', isa => Str, required => 1);
+	use MooX::Aliases;
+
+	has 'value' => (is => 'ro', isa => Str, required => 1, alias => 'blank_identifier');
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
 	
 	with 'Attean::API::Blank';
