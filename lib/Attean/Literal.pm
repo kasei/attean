@@ -57,9 +57,10 @@ package Attean::Literal 0.017 {
 	use Sub::Util qw(set_subname);
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
+	use MooX::Aliases;
 	
 	my $XSD_STRING	= IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
-	has 'value'				=> (is => 'ro', isa => Str, required => 1);
+	has 'value'				=> (is => 'ro', isa => Str, required => 1, alias => 'literal_value');
 	has 'language'			=> (is => 'ro', isa => Maybe[Str], predicate => 'has_language');
 	has 'datatype'			=> (
 		is => 'ro',
@@ -73,6 +74,7 @@ package Attean::Literal 0.017 {
 				return blessed($dt) ? Attean::IRI->new($dt->as_string) : Attean::IRI->new($dt)
 			}
 		},
+		handles => { 'literal_datatype' => 'as_string' },
 		default => sub { $XSD_STRING }
 	);
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
