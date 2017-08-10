@@ -61,7 +61,7 @@ package Attean::Literal 0.017 {
 	
 	my $XSD_STRING	= IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
 	has 'value'				=> (is => 'ro', isa => Str, required => 1, alias => 'literal_value');
-	has 'language'			=> (is => 'ro', isa => Maybe[Str], predicate => 'has_language');
+	has 'language'			=> (is => 'ro', isa => Maybe[Str], predicate => 'has_language', alias => 'literal_value_language');
 	has 'datatype'			=> (
 		is => 'ro',
 		isa => InstanceOf['Attean::IRI'],
