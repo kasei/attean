@@ -80,7 +80,7 @@ Returns true if C<< $iri >> is equal to the invocant, false otherwise.
 
 =item C<< as_string >>
 
-Returns the IRI value.
+Returns the IRI value. C<< uri >> is an alias for the same method.
 
 =cut
 
@@ -88,6 +88,12 @@ Returns the IRI value.
 		my $self	= shift;
 		return $self->abs;
 	}
+
+	sub uri {
+		my $self	= shift;
+		return $self->abs;
+	}
+
 }
 
 1;
