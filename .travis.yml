@@ -16,3 +16,7 @@ install:
   - cpanm --quiet --notest Module::Install::AuthorTests
   - cpanm --quiet --notest Module::Install::DOAPChangeSets
   - cpan-install --deps
+
+notifications:
+  irc: "irc://irc.perl.org/#perlrdf"
+
