@@ -74,6 +74,9 @@ package AtteanX::Serializer::Turtle 0.017 {
 		my $s		= $self->serializer;
 		unless ($s) {
 			my @args;
+			if (my $base = $self->base) {
+				push(@args, base => $base);
+			}
 			if (my $map = $self->namespaces) {
 				push(@args, namespaces => $map);
 			}
@@ -101,12 +104,20 @@ L<IO::Handle> object C<< $fh >>.
 		my $dot		= AtteanX::Parser::Turtle::Token->dot;
 		my $comma	= AtteanX::Parser::Turtle::Token->comma;
 		my $semi	= AtteanX::Parser::Turtle::Token->semicolon;
+		if (my $baseiri = $self->base) {
+			my $base	= AtteanX::Parser::Turtle::Token->base;
+			my $iri		= AtteanX::Parser::Turtle::Token->fast_constructor( IRI, -1, -1, -1, -1, [$baseiri->value] );
+			push(@buffer, $base);
+			push(@buffer, $iri);
+			push(@buffer, $dot);
+		}
 		if (my $map = $self->namespaces) {
 			my $prefix	= AtteanX::Parser::Turtle::Token->prefix;
 			foreach my $ns (sort $map->list_prefixes) {
 				my $uri		= Attean::IRI->new( value => $map->namespace_uri($ns)->as_string );
 				my $name	= AtteanX::Parser::Turtle::Token->fast_constructor( PREFIXNAME, -1, -1, -1, -1, ["${ns}:"] );
 				my $iri		= AtteanX::Parser::Turtle::Token->fast_constructor( IRI, -1, -1, -1, -1, [$uri->value] );
+				($iri)		= $self->serializer->abbreviated_token($iri);
 				push(@buffer, $prefix);
 				push(@buffer, $name);
 				push(@buffer, $iri);
@@ -125,18 +136,18 @@ L<IO::Handle> object C<< $fh >>.
 				if (defined($last_subj) and $subj->equals($last_subj)) {
 					if (defined($last_pred) and $pred->equals($last_pred)) {
 						push(@buffer, $comma);
-						push(@buffer, $obj->sparql_tokens->elements);
+						push(@buffer, $self->serializer->abbreviated_token($obj->sparql_tokens->elements));
 					} else {
 						push(@buffer, $semi);
-						push(@buffer, $pred->sparql_tokens->elements);
-						push(@buffer, $obj->sparql_tokens->elements);
+						push(@buffer, $self->serializer->abbreviated_token($pred->sparql_tokens->elements));
+						push(@buffer, $self->serializer->abbreviated_token($obj->sparql_tokens->elements));
 					}
 				} else {
 					if (defined($last_pred)) {
 						push(@buffer, $dot);
 					}
 					foreach my $term ($subj, $pred, $obj) {
-						push(@buffer, $term->sparql_tokens->elements);
+						push(@buffer, $self->serializer->abbreviated_token($term->sparql_tokens->elements));
 					}
 				}
 				

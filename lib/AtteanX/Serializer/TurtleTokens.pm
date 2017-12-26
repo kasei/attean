@@ -47,6 +47,7 @@ package AtteanX::Serializer::TurtleTokens 0.017 {
 	use List::MoreUtils qw(any);
 	use AtteanX::Parser::Turtle::Constants;
 	use AtteanX::Parser::Turtle::Lexer;
+	use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str);
 	use namespace::clean;
 	with 'Attean::API::AbbreviatingSerializer';
 	with 'Attean::API::AppendableSerializer';
@@ -64,6 +65,41 @@ package AtteanX::Serializer::TurtleTokens 0.017 {
 
 	sub file_extensions { return [qw(ttl)] }
 
+	has 'namespace_map' => (is => 'ro', isa => HashRef, default => sub { +{} });
+	
+	sub BUILD {
+		my $self	= shift;
+		if (my $map = $self->namespaces) {
+			foreach my $p ($map->list_prefixes) {
+				my $prefix	= $map->namespace_uri($p)->as_string;
+				$self->namespace_map->{$prefix}	= $p;
+			}
+		}
+	}
+	
+	sub abbreviated_token {
+		my $self	= shift;
+		my $t		= shift;
+		if ($t->type == IRI) {
+			my $value	= $t->value;
+			if ($value =~ /^(?<namespace>.*?)(?<local>$AtteanX::Parser::Turtle::Lexer::r_PN_LOCAL)$/) {
+				if (my $ns = $self->namespace_map->{$+{namespace}}) {
+					my $type	= PREFIXNAME;
+					return AtteanX::SPARQL::Token->fast_constructor( $type, $t->start_line, $t->start_column, $t->line, $t->column, ["${ns}:", $+{local}] );
+				}
+			}
+		
+			if (my $base = $self->base) {
+				my $iri	= Attean::IRI->new( value => $value );
+				
+				my $rel	= $iri->rel($base);
+				return AtteanX::Parser::Turtle::Token->fast_constructor( IRI, -1, -1, -1, -1, [$rel] );
+				
+			}
+		}
+		return ($t, @_);
+	}
+	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 
 Serializes the Turtle token objects from C<< $iterator >> to the
@@ -75,6 +111,7 @@ L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $io		= shift;
 		my $iter	= shift;
+		my %args	= @_;
 		my $indent		= 0;
 		my $newline		= 1;
 		my $semicolon	= 0;
@@ -91,19 +128,7 @@ L<IO::Handle> object C<< $fh >>.
 		
 		while (my $t = $iter->next()) {
 			my $type	= $t->type;
-			
-			if ($map) {
-				if ($type == IRI) {
-					my $value	= $t->value;
-					if ($value =~ /^(?<namespace>.*?)(?<local>$AtteanX::Parser::Turtle::Lexer::r_PN_LOCAL)$/) {
-						if (my $ns = $namespace_map{$+{namespace}}) {
-							$type	= PREFIXNAME;
-							$t		= AtteanX::SPARQL::Token->fast_constructor( $type, $t->start_line, $t->start_column, $t->line, $t->column, ["${ns}:", $+{local}] );
-						}
-					}
-				}
-			}
-			
+
 			if ($type == LANG or $type == HATHAT) {
 				$need_space= 0;
 			}
@@ -146,7 +171,7 @@ L<IO::Handle> object C<< $fh >>.
 				$io->print(' ');
 				
 				my $iri = $iter->next();
-				unless ($iri->type == IRI) {
+				unless (ref($iri) and $iri->type == IRI) {
 					die "PREFIX IRI not found during Turtle serialization";
 				}
 				$io->print('<');
