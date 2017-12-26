@@ -88,6 +88,54 @@ Returns the IRI value.
 		my $self	= shift;
 		return $self->abs;
 	}
+	
+# 	sub rel {
+# 		my $self	= shift;
+# 		my $base	= shift;
+# 
+# 		my %components	= %{ $self->components };
+# 
+# 		my $sscheme	= $self->scheme // '';
+# 		my $bscheme	= $base->scheme // '';
+# 		if ($sscheme eq $bscheme) {
+# 			my $suser	= $self->user // '';
+# 			my $buser	= $base->user // '';
+# 			if ($suser eq $buser) {
+# 				my $shost	= $self->host // '';
+# 				my $bhost	= $base->host // '';
+# 				if ($shost eq $bhost) {
+# 					delete $components{'scheme'};
+# 					delete $components{'user'};
+# 					delete $components{'host'};
+# 
+# 					my $sport	= $self->port // '';
+# 					my $bport	= $base->port // '';
+# 					if ($sport eq $bport) {
+# 						delete $components{'port'};
+# 
+# 						my $spath	= $self->path;
+# 						my $bpath	= $base->path;
+# 						if ($spath eq $bpath) {
+# 							delete $components{'path'};
+# 						} elsif (substr($spath, 0, 1) eq '/' and substr($bpath, 0, 1) eq '/') {
+# 							my @spath	= split('/', substr($spath, 1), -1);
+# 							my @bpath	= split('/', substr($bpath, 1), -1);
+# 							while (scalar(@spath) and scalar(@bpath) > 1 and $spath[0] eq $bpath[0]) {
+# 								shift(@spath);
+# 								shift(@bpath);
+# 							}
+# 							
+# 							$components{'path'}	= join('/', @spath);
+# 						} else {
+# 							# path doesn't start with a /, so leave it untouched
+# 						}
+# 					}
+# 				}
+# 			}
+# 		}
+# 		
+# 		return $self->_string_from_components(\%components);
+# 	}
 }
 
 1;
