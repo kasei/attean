@@ -103,7 +103,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2016 Toby Inkster. This
+Copyright (c) 2014--2018 Toby Inkster. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
