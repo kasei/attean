@@ -31,7 +31,7 @@ and extends the L<IRI> class.
 package Attean::IRI 0.017 {
 	use Moo;
 	use Types::Standard qw(Str);
-	use IRI 0.004;
+	use IRI 0.005;
 	use namespace::clean;
 
 	extends 'IRI';
