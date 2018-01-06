@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLXML::SAXHandler - XML parser for SPARQL XML Results forma
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 0.017
+This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 0.018
 
 =head1 STATUS
 
@@ -26,7 +26,7 @@ please L<get in touch|http://www.perlrdf.org/>.
 
 =cut
 
-package AtteanX::Parser::SPARQLXML::SAXHandler 0.017;
+package AtteanX::Parser::SPARQLXML::SAXHandler 0.018;
 
 use v5.14;
 use warnings;
@@ -210,7 +210,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2016 Gregory Todd Williams. This
+Copyright (c) 2014--2018 Gregory Todd Williams. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

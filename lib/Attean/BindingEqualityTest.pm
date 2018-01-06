@@ -7,7 +7,7 @@ Attean::BindingEqualityTest - Test for equality of binding sets with bnode isomo
 
 =head1 VERSION
 
-This document describes Attean::BindingEqualityTest version 0.017
+This document describes Attean::BindingEqualityTest version 0.018
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ This document describes Attean::BindingEqualityTest version 0.017
 
 =cut
 
-package Attean::BindingEqualityTest 0.017 {
+package Attean::BindingEqualityTest 0.018 {
 	use v5.14;
 	use warnings;
 	use Moo;
@@ -257,7 +257,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2016 Gregory Todd Williams.
+Copyright (c) 2014--2018 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

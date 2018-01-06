@@ -7,7 +7,7 @@ Attean::SimpleQueryEvaluator - Simple query evaluator
 
 =head1 VERSION
 
-This document describes Attean::SimpleQueryEvaluator version 0.017
+This document describes Attean::SimpleQueryEvaluator version 0.018
 
 =head1 SYNOPSIS
 
@@ -34,7 +34,7 @@ model, and returns a query result.
 use Attean::Algebra;
 use Attean::Expression;
 
-package Attean::SimpleQueryEvaluator 0.017 {
+package Attean::SimpleQueryEvaluator 0.018 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -527,7 +527,7 @@ supplied C<< $active_graph >>.
 	}
 }
 
-package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.017 {
+package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.018 {
 	use Moo;
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);
@@ -1028,7 +1028,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2016 Gregory Todd Williams.
+Copyright (c) 2014--2018 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

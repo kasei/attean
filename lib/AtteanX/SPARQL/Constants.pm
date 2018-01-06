@@ -7,7 +7,7 @@ AtteanX::SPARQL::Constants - Constant definitions for use in parsing and seriali
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Constants version 0.017
+This document describes AtteanX::SPARQL::Constants version 0.018
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,7 @@ This document describes AtteanX::SPARQL::Constants version 0.017
 
 =cut
 
-package AtteanX::SPARQL::Constants 0.017 {
+package AtteanX::SPARQL::Constants 0.018 {
 	use v5.14;
 	use warnings;
 	use AtteanX::Parser::Turtle::Constants;
@@ -103,7 +103,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2016 Toby Inkster. This
+Copyright (c) 2014--2018 Toby Inkster. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

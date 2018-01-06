@@ -30,3 +30,10 @@ You can also:
 
 * Email our [mailing list](http://lists.perlrdf.org/listinfo/dev)
 * Create a new [GitHub Issue](https://github.com/kasei/attean/issues) or submit a pull request
+
+Licensing
+---------
+
+Copyright (c) 2014--2018 Gregory Todd Williams.
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.

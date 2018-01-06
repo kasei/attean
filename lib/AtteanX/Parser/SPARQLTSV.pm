@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLTSV - SPARQL Results TSV Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLTSV version 0.017
+This document describes AtteanX::Parser::SPARQLTSV version 0.018
 
 =head1 SYNOPSIS
 
@@ -35,7 +35,7 @@ This document describes AtteanX::Parser::SPARQLTSV version 0.017
 
 =cut
 
-package AtteanX::Parser::SPARQLTSV 0.017 {
+package AtteanX::Parser::SPARQLTSV 0.018 {
 	use utf8;
 	use Moo;
 	use Attean;
@@ -140,7 +140,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2016 Gregory Todd Williams. This
+Copyright (c) 2014--2018 Gregory Todd Williams. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
