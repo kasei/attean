@@ -28,8 +28,29 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 , my:v_0-018 ;
 	.
+
+my:v_0-018
+	a					:Version ;
+	dc:issued			"2018-01-06"^^xsd:date ;
+	:revision			"0.018" ;
+	dcterms:replaces	my:v_0-017 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Use Moo::Role instead of namespace::clean to cleanup namespaces (#112 from @baby-gnu)." ],
+			[ a dcs:Update ; rdfs:label "Updated Makefile.PL for perl 5.26." ],
+			[ a dcs:Update ; rdfs:label "Improve code coverage for Attean::TermMap (#107 from @Varadinsky)." ],
+			[ a dcs:Update ; rdfs:label "Documentation fixes (#105 from @Varadinsky)." ],
+			[ a dcs:Update ; rdfs:label "Allow UUIDs to have lowercase hex digits (#102)." ],
+			[ a dcs:Update ; rdfs:label "Added tests for turtle parser escape handling (#55)." ],
+			[ a dcs:Update ; rdfs:label "Fixed as_string serialization of CONSTRUCT algebras (#97)." ],
+			[ a dcs:Update ; rdfs:label "Improvements to HashJoin query planning (#103 from @KjetilK)." ],
+			[ a dcs:Update ; rdfs:label "Updated required version of IRI (#118)." ],
+			[ a dcs:Update ; rdfs:label "Removed LICENSE file and updated licensing statement in individual modules (#116)." ]
+	]
+	.
+
 
 my:v_0-017
 	a					:Version ;

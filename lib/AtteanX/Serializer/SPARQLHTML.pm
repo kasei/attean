@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLHTML - SPARQL Results HTML Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLHTML version 0.017
+This document describes AtteanX::Serializer::SPARQLHTML version 0.018
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::SPARQLHTML version 0.017
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLHTML 0.017 {
+package AtteanX::Serializer::SPARQLHTML 0.018 {
 	use Moo;
 	use Types::Standard qw(Str Bool ArrayRef);
 	use Encode qw(encode);
