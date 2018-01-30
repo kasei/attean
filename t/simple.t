@@ -33,7 +33,7 @@ use Attean;
 	is($a->value, 'foo', 'value');
 	is($a->language, 'en-US', 'language');
 	does_ok($a->datatype, 'Attean::API::IRI', 'datatype IRI');
-	is($a->datatype->as_string, 'http://www.w3.org/2001/XMLSchema#langString', 'language literal datatype is xsd:langString');
+	is($a->datatype->as_string, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString', 'language literal datatype is rdf:langString');
 	is($a->ntriples_string, '"foo"@en-US', 'ntriples_string');
 }
 
