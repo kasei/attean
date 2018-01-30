@@ -987,7 +987,7 @@ package Attean::Plan::Extend 0.018 {
 				}
 				foreach my $s (@strings) {
 					die unless ($s->does('Attean::API::Literal'));
-					die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#(langString|string)>));
+					die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>));
 					if (my $l2 = $s->language) {
 						if (my $l1 = $args{language}) {
 							if ($l1 ne $l2) {
@@ -1030,20 +1030,20 @@ package Attean::Plan::Extend 0.018 {
 			} elsif ($func eq 'STRLANG') {
 				my ($term, $lang)	= @terms;
 				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#(langString|string)>);
+				die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
 				die if ($term->language);
 				return Attean::Literal->new(value => $term->value, language => $lang->value);
 			} elsif ($func eq 'STRDT') {
 				my ($term, $dt)	= @terms;
 				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#(langString|string)>);
+				die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
 				die if ($term->language);
 # 				my ($term, $dt)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				return Attean::Literal->new(value => $term->value, datatype => $dt->value);
 			} elsif ($func eq 'REPLACE') {
 				my ($term, $pat, $rep)	= @terms;
 				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->language or $term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#(langString|string)>);
+				die unless ($term->language or $term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
 # 				my ($term, $pat, $rep)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				my $value	= $term->value;
 				my $pattern	= $pat->value;
