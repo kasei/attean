@@ -94,7 +94,7 @@ package Attean::Literal 0.018 {
 		my $orig	= shift;
 		my $self	= shift;
 		if ($self->has_language) {
-			return Attean::IRI->new(value => 'http://www.w3.org/2001/XMLSchema#langString');
+			return Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
 		} else {
 			return $self->$orig(@_);
 		}
