@@ -37,7 +37,8 @@ in the serialized data should be resolved.
 
 =item C<< namespaces >>
 
-A HASH reference mapping prefix strings to L<URI::NamespaceMap> objects.
+A L<URI::NamespaceMap> object representing prefix and namespace URI
+pairs that can be used to create abbreviations.
 
 =back
 
