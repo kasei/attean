@@ -554,7 +554,7 @@ influenced by L<The ICS-FORTH Heuristics-based SPARQL Planner
 
 =head1 SEE ALSO
 
-L<http://www.perlrdf.org/>
+
 
 =head1 AUTHOR
 

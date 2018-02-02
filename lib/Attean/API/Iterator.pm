@@ -429,7 +429,7 @@ at L<https://github.com/kasei/attean/issues>.
 
 L<Attean::API::RepeatableIterator>
 
-L<http://www.perlrdf.org/>
+
 
 =head1 AUTHOR
 
