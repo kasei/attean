@@ -13,8 +13,7 @@ This document describes AtteanX::Parser::SPARQLXML::SAXHandler version 0.018
 
 This module's API and functionality should be considered unstable.
 In the future, this module may change in backwards-incompatible ways,
-or be removed entirely. If you need functionality that this module provides,
-please L<get in touch|http://www.perlrdf.org/>.
+or be removed entirely.
 
 =head1 SYNOPSIS
 
