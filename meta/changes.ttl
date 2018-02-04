@@ -28,8 +28,21 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 , my:v_0-018 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 ;
 	.
+
+my:v_0-019
+	a					:Version ;
+	dc:issued			"2018-02-04"^^xsd:date ;
+	:revision			"0.019" ;
+	dcterms:replaces	my:v_0-018 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Fix incorrect URI for langString (#119 from @kjetilk)." ],
+			[ a dcs:Update ; rdfs:label "Documentation updates (#120, #121 from @kjetilk)." ]
+	]
+	.
+
 
 my:v_0-018
 	a					:Version ;

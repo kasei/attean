@@ -7,7 +7,7 @@ Attean::API::Store - Triple/quad store role
 
 =head1 VERSION
 
-This document describes Attean::Store version 0.018
+This document describes Attean::Store version 0.019
 
 =head1 DESCRIPTION
 
@@ -35,11 +35,11 @@ The Attean::Store role is an empty role that more specialized roles conform to:
 
 =cut
 
-package Attean::API::Store 0.018 {
+package Attean::API::Store 0.019 {
 	use Moo::Role;
 }
 
-package Attean::API::TripleStore 0.018 {
+package Attean::API::TripleStore 0.019 {
 	use Scalar::Util qw(blessed);
 
 	use Moo::Role;
@@ -76,7 +76,7 @@ package Attean::API::TripleStore 0.018 {
 	}
 }
 
-package Attean::API::MutableTripleStore 0.018 {
+package Attean::API::MutableTripleStore 0.019 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
@@ -92,21 +92,21 @@ package Attean::API::MutableTripleStore 0.018 {
 	};
 }
 
-package Attean::API::ETagCacheableTripleStore 0.018 {
+package Attean::API::ETagCacheableTripleStore 0.019 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'etag_value_for_triples';
 }
 
-package Attean::API::TimeCacheableTripleStore 0.018 {
+package Attean::API::TimeCacheableTripleStore 0.019 {
 	use Moo::Role;
 	with 'Attean::API::TripleStore';
 	
 	requires 'mtime_for_triples';
 }
 
-package Attean::API::QuadStore 0.018 {
+package Attean::API::QuadStore 0.019 {
 	use Scalar::Util qw(blessed);
 
 	use Moo::Role;
@@ -154,7 +154,7 @@ package Attean::API::QuadStore 0.018 {
 	}
 }
 
-package Attean::API::MutableQuadStore 0.018 {
+package Attean::API::MutableQuadStore 0.019 {
 	use Moo::Role;
 	use Type::Tiny::Role;
 	with 'Attean::API::QuadStore';
@@ -185,7 +185,7 @@ package Attean::API::MutableQuadStore 0.018 {
 	}
 }
 
-package Attean::API::ETagCacheableQuadStore 0.018 {
+package Attean::API::ETagCacheableQuadStore 0.019 {
 	use Moo::Role;
 
 	with 'Attean::API::QuadStore';
@@ -193,7 +193,7 @@ package Attean::API::ETagCacheableQuadStore 0.018 {
 	requires 'etag_value_for_quads';
 }
 
-package Attean::API::TimeCacheableQuadStore 0.018 {
+package Attean::API::TimeCacheableQuadStore 0.019 {
 	use Moo::Role;
 
 	with 'Attean::API::QuadStore';
@@ -201,7 +201,7 @@ package Attean::API::TimeCacheableQuadStore 0.018 {
 	requires 'mtime_for_quads';
 }
 
-package Attean::API::BulkUpdatableStore 0.018 {
+package Attean::API::BulkUpdatableStore 0.019 {
 	use Moo::Role;
 	
 	requires 'begin_bulk_updates';

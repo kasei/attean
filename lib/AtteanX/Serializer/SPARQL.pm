@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQL - SPARQL Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQL version 0.018
+This document describes AtteanX::Serializer::SPARQL version 0.019
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ This document describes AtteanX::Serializer::SPARQL version 0.018
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQL 0.018 {
+package AtteanX::Serializer::SPARQL 0.019 {
 	use Moo;
 	use Data::Dumper;
 	use Encode qw(encode);
