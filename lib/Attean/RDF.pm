@@ -163,7 +163,7 @@ L<IRI>
 
 L<http://www.ietf.org/rfc/rfc3987.txt>
 
-L<http://www.perlrdf.org/>
+
 
 =head1 AUTHOR
 
