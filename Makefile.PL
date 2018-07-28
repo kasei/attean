@@ -22,6 +22,7 @@ requires		'Algorithm::Combinatorics'	=> 0;
 requires		'Data::UUID'				=> 0;
 requires		'DateTime::Format::W3CDTF'	=> 0;
 requires		'HTTP::Negotiate'			=> 0;
+requires		'Exporter::Tiny'				=> 1.000000;
 requires		'IRI'						=> 0.005;
 requires		'JSON'						=> 0;
 requires		'LWP::UserAgent'			=> 0;
