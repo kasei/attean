@@ -47,7 +47,7 @@ package Attean::QuadModel 0.019 {
 		is => 'ro',
 		does => 'Attean::API::QuadStore',
 		required => 1,
-		handles	=> [qw(size count_quads get_graphs)],
+		handles	=> [qw(size count_quads get_graphs holds)],
 	);
 	
 =item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
