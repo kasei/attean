@@ -47,7 +47,10 @@ use Type::Tiny::Role;
 	is($model->count_quads($s), 1);
 	is($model->count_quads($s2), 3);
 	is($model->count_quads(), 4);
+	is($model->count_quads_estimate($s2), 3);
 	is($model->count_quads(undef, $p), 2);
+	ok($model->holds($s2));
+	ok(!$model->holds($s2, $g));
 
 	{
 		note('get_quads single-term matching with undef placeholders');
