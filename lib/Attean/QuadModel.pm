@@ -47,7 +47,7 @@ package Attean::QuadModel 0.019 {
 		is => 'ro',
 		does => 'Attean::API::QuadStore',
 		required => 1,
-		handles	=> [qw(size count_quads get_graphs holds)],
+		handles	=> [qw(size count_quads count_quads_estimate get_graphs holds)],
 	);
 	
 =item C<< get_quads ( $subject, $predicate, $object, $graph ) >>
@@ -131,7 +131,7 @@ package Attean::MutableQuadModel 0.019 {
 		is => 'ro',
 		does => 'Attean::API::MutableQuadStore',
 		required => 1,
-		handles	=> [qw(size count_quads add_quad remove_quad get_graphs create_graph drop_graph clear_graph add_iter)],
+		handles	=> [qw(size count_quads count_quads_estimate add_quad remove_quad get_graphs create_graph drop_graph clear_graph add_iter)],
 	);
 
 	with 'Attean::API::MutableModel';
