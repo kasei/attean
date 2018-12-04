@@ -46,6 +46,13 @@ L<Attean::API::QuadIterator>.
 Returns the number of quads in the model matching the supplied pattern
 (using the same matching semantics as C<< get_quads >>).
 
+=item C<< count_quads_estimate( $subject, $predicate, $object, $graph ) >>
+
+Returns an estimate of the number of quads in the model matching the supplied
+pattern (using the same matching semantics as C<< get_quads >>). This estimate
+is guaranteed to non-zero if the count returned from an equivalent call to
+`count_quads` would return a non-zero result.
+
 =item C<< get_graphs >>
 
 Returns an L<Attean::API::Iterator> of distinct L<Attean::API::Term> objects
@@ -151,6 +158,7 @@ package Attean::API::Model 0.019 {
 	}
 	
 	requires 'count_quads';
+	requires 'count_quads_estimate';
 	requires 'get_graphs';
 	
 	sub get_list {
@@ -359,7 +367,7 @@ package Attean::API::BulkUpdatableModel 0.019 {
 	};
 
 	# End bulk updates the moment a read operation is performed...
-	before [qw(get_quads get_bindings count_quads get_graphs subject predicate object graph)] => sub {
+	before [qw(get_quads get_bindings count_quads count_quads_estimate get_graphs subject predicate object graph)] => sub {
 		my $self	= shift;
 		$self->end_bulk_updates();
 	};
