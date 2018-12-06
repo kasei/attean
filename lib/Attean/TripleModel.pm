@@ -51,7 +51,7 @@ package Attean::TripleModel 0.019 {
 	with 'Attean::API::Model';
 	with 'Attean::API::CostPlanner';
 
-	has 'stores'	=> (
+	has 'stores' => (
 		is => 'ro',
 		isa => HashRef[ConsumerOf['Attean::API::TripleStore']],
 		required => 1,
@@ -87,6 +87,33 @@ package Attean::TripleModel 0.019 {
 		return $count;
 	}
 
+=item C<< count_quads_estimate >>
+
+=cut
+
+	sub count_quads_estimate {
+		my $self	= shift;
+		my ($s, $p, $o, $g)	= @_;
+		if (blessed($g) and $g->does('Attean::API::IRI')) {
+			if (my $store = $self->stores->{ $g->value }) {
+				return $store->count_quads_estimate(@_);
+			} else {
+				return 0;
+			}
+		} else {
+			return $self->count_quads(@_);
+		}
+	}
+	
+=item C<< holds >>
+
+=cut
+
+	sub holds {
+		my $self	= shift;
+		return ($self->count_quads_estimate(@_) > 0)
+	}
+	
 =item C<< get_graphs >>
 
 =cut

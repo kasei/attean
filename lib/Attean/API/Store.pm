@@ -74,6 +74,12 @@ package Attean::API::TripleStore 0.019 {
 		my $self	= shift;
 		return $self->count_triples();
 	}
+
+	sub holds {
+	  my $self = shift;
+	  return ($self->count_triples_estimate(@_) > 0)
+	}
+
 }
 
 package Attean::API::MutableTripleStore 0.019 {
@@ -136,7 +142,12 @@ package Attean::API::QuadStore 0.019 {
 		my $self	= shift;
 		return $self->count_quads(@_);
 	}
-	
+
+	sub holds {
+	  my $self = shift;
+	  return ($self->count_quads_estimate(@_) > 0)
+	}
+
 	sub get_graphs {
 		my $self	= shift;
 		my $iter	= $self->get_quads(@_);

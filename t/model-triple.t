@@ -9,7 +9,7 @@ use Attean;
 use Attean::RDF;
 use Type::Tiny::Role;
 
-{
+subtest 'MutableTripleModel' => sub {
 	my $store	= Attean->get_store('SimpleTripleStore')->new();
 	isa_ok($store, 'AtteanX::Store::SimpleTripleStore');
 	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
@@ -24,7 +24,7 @@ use Type::Tiny::Role;
 	isa_ok($q, 'Attean::Quad');
 	
 	$model->add_quad($q);
-	is($model->size, 1);
+	is($model->size, 1, 'model->size');
 	
 	{
 		my $iter	= $model->get_quads($s, undef, undef, $g);
@@ -43,11 +43,14 @@ use Type::Tiny::Role;
 		my $q	= Attean::Quad->new($s2, $p, $o, $g);
 		$model->add_quad($q);
 	}
-	is($model->size, 4);
-	is($model->count_quads($s), 1);
-	is($model->count_quads($s2), 3);
-	is($model->count_quads(), 4);
-	is($model->count_quads(undef, $p), 2);
+	is($model->size, 4, 'model->size');
+	is($model->count_quads($s), 1, 'count_quads($s)');
+	is($model->count_quads($s2), 3, 'count_quads($s2)');
+	is($model->count_quads(), 4, 'count_quads()');
+	is($model->count_quads_estimate($s2), 3, 'count_quads_estimate');
+	is($model->count_quads(undef, $p), 2, 'count_quads');
+	ok($model->holds($s2), 'holds($tp)');
+	ok(!$model->holds($s2, $g), 'holds(@tp)');
 
 	{
 		note('get_quads single-term matching with undef placeholders');
@@ -119,9 +122,9 @@ use Type::Tiny::Role;
 		}
 		is($count, 3);
 	}
-}
+};
 
-{
+subtest 'AddativeMutableTripleModel' => sub {
 	my $store1	= Attean->get_store('SimpleTripleStore')->new();
 	isa_ok($store1, 'AtteanX::Store::SimpleTripleStore');
 
@@ -150,7 +153,7 @@ use Type::Tiny::Role;
 	my @graphs4	= sort map { $_->value } $model->get_graphs->elements;
 	is(scalar(@graphs4), 2);
 	is_deeply(\@graphs4, ['http://example.org/graph2', 'http://example.org/graph3']);
-}
+};
 
 {
 	my $store	= Attean->get_store('SimpleTripleStore')->new();
