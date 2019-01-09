@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLCSV - SPARQL Results CSV Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLCSV version 0.019
+This document describes AtteanX::Serializer::SPARQLCSV version 0.020
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::SPARQLCSV version 0.019
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLCSV 0.019 {
+package AtteanX::Serializer::SPARQLCSV 0.020 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);

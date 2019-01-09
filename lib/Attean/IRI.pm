@@ -7,7 +7,7 @@ Attean::IRI - RDF Internationalized Resource Identifiers (IRIs)
 
 =head1 VERSION
 
-This document describes Attean::IRI version 0.019
+This document describes Attean::IRI version 0.020
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ and extends the L<IRI> class.
 
 =cut
 
-package Attean::IRI 0.019 {
+package Attean::IRI 0.020 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use IRI 0.005;

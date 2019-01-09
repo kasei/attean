@@ -7,7 +7,7 @@ AtteanX::API::Lexer - Role defining common functionality for lexers.
 
 =head1 VERSION
 
-This document describes AtteanX::API::Lexer version 0.019
+This document describes AtteanX::API::Lexer version 0.020
 
 =head1 DESCRIPTION
 
@@ -41,7 +41,7 @@ of characters, constant strings, and fixed-length buffers.
 
 =cut
 
-package AtteanX::API::Lexer 0.019 {
+package AtteanX::API::Lexer 0.020 {
 	use strict;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 

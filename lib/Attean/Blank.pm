@@ -7,7 +7,7 @@ Attean::Blank - RDF blank nodes
 
 =head1 VERSION
 
-This document describes Attean::Blank version 0.019
+This document describes Attean::Blank version 0.020
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This role consumes L<Attean::API::Blank>, which provides the following methods:
 
 =cut
 
-package Attean::Blank 0.019 {
+package Attean::Blank 0.020 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use Data::UUID;

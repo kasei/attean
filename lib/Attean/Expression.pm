@@ -7,7 +7,7 @@ Attean::Expression - SPARQL Expressions
 
 =head1 VERSION
 
-This document describes Attean::Expression version 0.019
+This document describes Attean::Expression version 0.020
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ use Attean::API::Expression;
 
 =cut
 
-package Attean::ValueExpression 0.019 {
+package Attean::ValueExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use AtteanX::SPARQL::Constants;
@@ -101,7 +101,7 @@ package Attean::ValueExpression 0.019 {
 
 =cut
 
-package Attean::UnaryExpression 0.019 {
+package Attean::UnaryExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -138,7 +138,7 @@ package Attean::UnaryExpression 0.019 {
 
 =cut
 
-package Attean::BinaryExpression 0.019 {
+package Attean::BinaryExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -166,7 +166,7 @@ package Attean::BinaryExpression 0.019 {
 
 =cut
 
-package Attean::FunctionExpression 0.019 {
+package Attean::FunctionExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf HashRef);
 	use Types::Common::String qw(UpperCaseStr);
@@ -230,7 +230,7 @@ package Attean::FunctionExpression 0.019 {
 	}
 }
 
-package Attean::AggregateExpression 0.019 {
+package Attean::AggregateExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf);
 	use Types::Common::String qw(UpperCaseStr);
@@ -298,7 +298,7 @@ package Attean::AggregateExpression 0.019 {
 	}
 }
 
-package Attean::CastExpression 0.019 {
+package Attean::CastExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf);
 	use AtteanX::SPARQL::Constants;
@@ -350,7 +350,7 @@ package Attean::CastExpression 0.019 {
 	}
 }
 
-package Attean::ExistsExpression 0.019 {
+package Attean::ExistsExpression 0.020 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -402,7 +402,7 @@ package Attean::ExistsExpression 0.019 {
 	}
 }
 
-package Attean::ExistsPlanExpression 0.019 {
+package Attean::ExistsPlanExpression 0.020 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;
