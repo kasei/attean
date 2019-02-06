@@ -208,4 +208,29 @@ subtest 'Model add_iter' => sub {
 	is($model->size, 2, 'size after add_iter');
 };
 
+
+subtest 'holds and algebra_holds methods' => sub {
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	my $store	= Attean->get_store('SimpleTripleStore')->new();
+	my $model	= Attean::MutableTripleModel->new( stores => { 'http://example.org/graph' => $store } );
+	my $parser	= Attean->get_parser('turtle')->new();
+	my $data	= <<'END';
+@prefix : <http://example.org/> .
+@prefix foaf: <http://xmlns.com/foaf/> .
+:alice a foaf:Person ; foaf:name "Alice" ; foaf:knows :bob .
+:bob a foaf:Person ; foaf:name "Bob" ; foaf:knows :alice .
+:eve a foaf:Person ; foaf:name "Eve" .
+END
+	my $iter	= $parser->parse_iter_from_bytes($data);
+	my $quads	= $iter->as_quads($graph);
+	$model->add_iter($quads);
+	
+	ok($model->holds(iri('http://example.org/alice')), 'holds(subj)');
+	ok($model->holds(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/knows')), 'holds(subj, pred)');
+	ok(!$model->holds(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/knows')), '!holds(subj, pred)');
+	ok($model->holds(triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/name'), variable('name'))), 'holds(triplepattern)');
+	ok($model->algebra_holds(bgp(triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/name'), variable('name')), triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/knows'), variable('friend'))), $graph), 'algebra_holds(bgp)');
+	ok(!$model->algebra_holds(bgp(triplepattern(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/name'), variable('name')), triplepattern(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/knows'), variable('friend'))), $graph), '!algebra_holds(bgp)');
+};
+
 done_testing();

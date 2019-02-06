@@ -197,4 +197,86 @@ END
 	dies_ok { $model->get_sequence($graph, iri('http://example.org/favourite-fruit')) } 'get_sequence dies on invalid sequence data';
 };
 
+subtest 'holds and algebra_holds methods' => sub {
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	my $store	= Attean->get_store('Memory')->new();
+	my $parser	= Attean->get_parser('turtle')->new();
+	my $data	= <<'END';
+@prefix : <http://example.org/> .
+@prefix foaf: <http://xmlns.com/foaf/> .
+:alice a foaf:Person ; foaf:name "Alice" ; foaf:knows :bob .
+:bob a foaf:Person ; foaf:name "Bob" ; foaf:knows :alice .
+:eve a foaf:Person ; foaf:name "Eve" .
+END
+	my $iter	= $parser->parse_iter_from_bytes($data);
+	my $quads	= $iter->as_quads($graph);
+	$store->add_iter($quads);
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	
+	ok($model->holds(iri('http://example.org/alice')), 'holds(subj)');
+	ok($model->holds(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/knows')), 'holds(subj, pred)');
+	ok(!$model->holds(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/knows')), '!holds(subj, pred)');
+	ok($model->holds(triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/name'), variable('name'))), 'holds(triplepattern)');
+	ok($model->algebra_holds(bgp(triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/name'), variable('name')), triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/knows'), variable('friend'))), $graph), 'algebra_holds(bgp)');
+	ok(!$model->algebra_holds(bgp(triplepattern(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/name'), variable('name')), triplepattern(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/knows'), variable('friend'))), $graph), '!algebra_holds(bgp)');
+};
+
+package TruePlan {
+	use Moo;
+	extends 'Attean::Plan::Exists';
+
+	sub plan_as_string { return 'AlwaysTrue' }
+	sub impl {
+		return sub {
+			return Attean::ListIterator->new(values => [Attean::Literal->true], item_type => 'Attean::API::Term');
+		}
+	}
+}
+
+package AllAlgebrasHoldMemoryStore {
+	use Moo;
+	extends 'AtteanX::Store::Memory';
+	with 'Attean::API::CostPlanner';
+
+	sub plans_for_algebra {
+		my $self	= shift;
+		my $algebra	= shift;
+		if ($algebra->isa('Attean::Algebra::Ask')) {
+			return TruePlan->new();
+		}
+		return;
+	}
+
+	sub cost_for_plan {
+		my $self	= shift;
+		my $plan	= shift;
+		if ($plan->isa('TruePlan')) { return 1 }
+		return;
+	}
+}
+
+subtest 'holds planning optimization' => sub {
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	my $store	= AllAlgebrasHoldMemoryStore->new();
+	my $parser	= Attean->get_parser('turtle')->new();
+	my $data	= <<'END';
+@prefix : <http://example.org/> .
+:x :p 1, 2, 3 .
+END
+	my $iter	= $parser->parse_iter_from_bytes($data);
+	my $quads	= $iter->as_quads($graph);
+	$store->add_iter($quads);
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	
+	# holds() calls will fail because node of the matching data is in the store
+	ok(!$model->holds(iri('http://example.org/alice')), 'holds(subj)');
+	ok(!$model->holds(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/knows')), 'holds(subj, pred)');
+	ok(!$model->holds(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/knows')), '!holds(subj, pred)');
+	ok(!$model->holds(triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/name'), variable('name'))), 'holds(triplepattern)');
+
+	# algebra_holds calls will pass because AllAlgebrasHoldMemoryStore will override query planning to return TruePlan query plans
+	ok($model->algebra_holds(bgp(triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/name'), variable('name')), triplepattern(iri('http://example.org/alice'), iri('http://xmlns.com/foaf/knows'), variable('friend'))), $graph), 'algebra_holds(bgp)');
+	ok($model->algebra_holds(bgp(triplepattern(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/name'), variable('name')), triplepattern(iri('http://example.org/eve'), iri('http://xmlns.com/foaf/knows'), variable('friend'))), $graph), '!algebra_holds(bgp)');
+};
+
 done_testing();
