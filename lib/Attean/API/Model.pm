@@ -118,6 +118,23 @@ semantics as C<< get_quads >> with an C<< undef >> graph).
 Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of unique
 subjects and objects present in the specified C<< $graph >>.
 
+=item C<< holds($s, $p, $o, $g) >>
+
+=item C<< holds($triple_pattern) >>
+
+=item C<< holds($quad_pattern) >>
+
+Returns true if the triple/quad pattern matches any data in the model, false
+otherwise.
+
+=item C<< algebra_holds($algebra, $graph) >>
+
+=item C<< algebra_holds($algebra, \@graphs) >>
+
+Returns true if the algebra, evaluated with the supplied default graph(s)
+matches any data in the model, false otherwise. This is equivalent to the
+result of an ASK query over the supplied algebra.
+
 =cut
 
 use Attean::API::Binding;
