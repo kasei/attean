@@ -76,8 +76,8 @@ package Attean::API::TripleStore 0.020 {
 	}
 
 	sub holds {
-	  my $self = shift;
-	  return ($self->count_triples_estimate(@_) > 0)
+		my $self = shift;
+		return ($self->count_triples_estimate(@_) > 0)
 	}
 
 }
