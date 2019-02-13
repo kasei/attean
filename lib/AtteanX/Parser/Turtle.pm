@@ -10,7 +10,7 @@ AtteanX::Parser::Turtle - Turtle RDF Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle version 0.020
+This document describes AtteanX::Parser::Turtle version 0.021
 
 =head1 SYNOPSIS
 
@@ -44,7 +44,7 @@ A boolean indicating whether term values should be canonicalized during parsing.
 
 =cut
 
-package AtteanX::Parser::Turtle 0.020 {
+package AtteanX::Parser::Turtle 0.021 {
 	use Moo;
 	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
 	use utf8;
@@ -143,7 +143,7 @@ serialization is found at the beginning of C<< $bytes >>.
 =cut
 
 	sub parse_term_from_string {
-		carp "parse_term_from_string is deprecated and will be removed in Attean 0.020 (use parse_term_from_bytes instead)";
+		carp "parse_term_from_string is deprecated and will be removed in Attean 0.021 (use parse_term_from_bytes instead)";
 		return shift->parse_term_from_bytes(@_);
 	}
 	

@@ -4,7 +4,7 @@ AtteanX::Store::SimpleTripleStore - SimpleTripleStore, unindexed, in-memory RDF 
 
 =head1 VERSION
 
-This document describes AtteanX::Store::SimpleTripleStore version 0.020
+This document describes AtteanX::Store::SimpleTripleStore version 0.021
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,7 @@ AtteanX::Store::SimpleTripleStore provides an in-memory triple-store.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::SimpleTripleStore 0.020 {
+package AtteanX::Store::SimpleTripleStore 0.021 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);

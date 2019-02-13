@@ -7,7 +7,7 @@ AtteanX::Parser::NTuples - Shared functionality for N-Triples and N-Quads parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTuples version 0.020
+This document describes AtteanX::Parser::NTuples version 0.021
 
 =head1 SYNOPSIS
 
@@ -23,7 +23,7 @@ This document describes AtteanX::Parser::NTuples version 0.020
 
 =cut
 
-package AtteanX::Parser::NTuples 0.020 {
+package AtteanX::Parser::NTuples 0.021 {
 	use utf8;
 	use Moo;
 	use Attean;
@@ -43,7 +43,7 @@ Parses the given C<< $bytes >> and returns a corresponding L<Attean::API::Term> 
 =cut
 
 	sub parse_term_from_string {
-		carp "parse_term_from_string is deprecated and will be removed in Attean 0.020 (use parse_term_from_bytes instead)";
+		carp "parse_term_from_string is deprecated and will be removed in Attean 0.021 (use parse_term_from_bytes instead)";
 		return shift->parse_term_from_bytes(@_);
 	}
 	
