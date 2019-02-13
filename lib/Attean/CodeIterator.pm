@@ -7,7 +7,7 @@ Attean::CodeIterator - Iterator implementation backed by a generator function
 
 =head1 VERSION
 
-This document describes Attean::CodeIterator version 0.020
+This document describes Attean::CodeIterator version 0.021
 
 =head1 SYNOPSIS
 
@@ -52,7 +52,7 @@ that will be returned from the iterator.
 
 =cut
 
-package Attean::CodeIterator 0.020 {
+package Attean::CodeIterator 0.021 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Scalar::Util qw(blessed);
