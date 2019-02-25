@@ -12,7 +12,7 @@ use Test::Modern;
 requires 'create_store';      # create_store( quads => \@quads )
 with 'Test::Attean::StoreCleanup';
 
-test 'mutabletransactionalquadstore lost update' => sub {
+test 'mutabletransactionalquadstore sequential' => sub {
   my $self	= shift;
   my $q1		= quad(iri('s'), iri('p'), dtliteral('35', iri('http://www.w3.org/2001/XMLSchema#integer')), iri('g'));
   my $store	= $self->create_store(quads => [$q1]);
