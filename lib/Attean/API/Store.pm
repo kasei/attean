@@ -219,6 +219,13 @@ package Attean::API::BulkUpdatableStore 0.021 {
 	requires 'end_bulk_updates';
 }
 
+package Attean::API::TransactionalStore 0.021 {
+	use Moo::Role;
+	
+	requires 'begin_transaction';
+	requires 'end_transaction';
+}
+
 1;
 
 __END__
