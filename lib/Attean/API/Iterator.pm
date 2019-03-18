@@ -351,19 +351,65 @@ package Attean::API::ResultOrTermIterator 0.021 {
 	};
 }
 
+package Attean::API::StatementIterator 0.021 {
+	use Moo::Role;
+	use Scalar::Util qw(blessed);
+	requires 'variables';
+
+	sub matching_pattern {
+		my $self	= shift;
+		my @nodes	= @_;
+
+		my %bound;
+		my @pos_names	= $self->variables;
+		foreach my $pos (0 .. $#pos_names) {
+			my $n	= $nodes[ $pos ];
+			if (blessed($n) and $n->does('Attean::API::Variable')) {
+				$n	= undef;
+				$nodes[$pos]	= undef;
+			}
+			if (blessed($n)) {
+				$bound{ $pos_names[$pos] }	= $n;
+			}
+		}
+		
+		return $self->grep(sub {
+			my $q	= shift;
+			foreach my $key (keys %bound) {
+				my $term	= $q->$key();
+				unless ($term->equals( $bound{$key} )) {
+					return 0;
+				}
+			}
+			return 1;
+		});
+	}
+}
+
 package Attean::API::TripleIterator 0.021 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
+	with 'Attean::API::StatementIterator';
+
 	sub as_quads {
 		my $self	= shift;
 		my $graph	= shift;
 		return $self->map(sub { $_->as_quad($graph) }, 'Attean::API::Quad');
+	}
+
+	sub variables {
+		return qw(subject predicate object);
 	}
 }
 
 package Attean::API::QuadIterator 0.021 {
 	use Moo::Role;
 	with 'Attean::API::CanonicalizingBindingIterator';
+	with 'Attean::API::StatementIterator';
+	
+	sub variables {
+		return qw(subject predicate object graph);
+	}
 }
 
 package Attean::API::MixedStatementIterator 0.021 {
