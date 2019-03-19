@@ -46,6 +46,11 @@ package Attean::API::TermOrVariable 0.021 {
 		my ($a, $b)	= @_;
 		return ($a->as_string eq $b->as_string);
 	}
+
+	sub is_bound {
+	  my $self = shift;
+	  return (! $self->does('Attean::API::Variable'));
+	}
 	
 	sub apply_binding {
 		my $self	= shift;
