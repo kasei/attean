@@ -32,8 +32,6 @@ package AtteanX::Store::Simple 0.021 {
 
 	with 'Attean::API::QuadStore';
 
-	my @pos_names	= Attean::API::Quad->variables;
-
 =head1 METHODS
 
 Beyond the methods documented below, this class inherits methods from the
@@ -59,31 +57,9 @@ predicate and objects. Any of the arguments may be undef to match any value.
 	sub get_quads {
 		my $self	= shift;
 		my @nodes	= @_;
-		my %bound;
-		foreach my $pos (0 .. 3) {
-			my $n	= $nodes[ $pos ];
-			if (blessed($n) and $n->does('Attean::API::Variable')) {
-				$n	= undef;
-				$nodes[$pos]	= undef;
-			}
-			if (blessed($n)) {
-				$bound{ $pos_names[$pos] }	= $n;
-			}
-		}
-		
 		my $quads	= $self->quads;
 		my $iter	= Attean::ListIterator->new( values => $quads, item_type => 'Attean::API::Quad' );
-		return $iter->grep(sub {
-			my $q	= shift;
-			foreach my $key (keys %bound) {
-				my $term	= $q->$key();
-				unless ($term->equals( $bound{$key} )) {
-					return 0;
-				}
-			}
-			return 1;
-		});
-		return $iter;
+		return $iter->matching_pattern(@nodes);
 	}
 
 }
