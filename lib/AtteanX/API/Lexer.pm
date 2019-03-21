@@ -7,7 +7,7 @@ AtteanX::API::Lexer - Role defining common functionality for lexers.
 
 =head1 VERSION
 
-This document describes AtteanX::API::Lexer version 0.021
+This document describes AtteanX::API::Lexer version 0.022
 
 =head1 DESCRIPTION
 
@@ -41,7 +41,7 @@ of characters, constant strings, and fixed-length buffers.
 
 =cut
 
-package AtteanX::API::Lexer 0.021 {
+package AtteanX::API::Lexer 0.022 {
 	use strict;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 
@@ -211,7 +211,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams.
+Copyright (c) 2014--2019 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

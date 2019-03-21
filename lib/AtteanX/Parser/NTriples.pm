@@ -4,7 +4,7 @@ AtteanX::Parser::NTriples - N-Triples Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTriples version 0.021
+This document describes AtteanX::Parser::NTriples version 0.022
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ This document describes AtteanX::Parser::NTriples version 0.021
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::NTriples 0.021 {
+package AtteanX::Parser::NTriples 0.022 {
 	use utf8;
 	
 	use Attean;
@@ -93,7 +93,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams. This
+Copyright (c) 2014--2019 Gregory Todd Williams. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

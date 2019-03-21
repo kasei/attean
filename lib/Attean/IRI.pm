@@ -7,7 +7,7 @@ Attean::IRI - RDF Internationalized Resource Identifiers (IRIs)
 
 =head1 VERSION
 
-This document describes Attean::IRI version 0.021
+This document describes Attean::IRI version 0.022
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ and extends the L<IRI> class.
 
 =cut
 
-package Attean::IRI 0.021 {
+package Attean::IRI 0.022 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use IRI 0.005;
@@ -115,7 +115,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams.
+Copyright (c) 2014--2019 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

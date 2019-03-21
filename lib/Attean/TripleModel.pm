@@ -7,7 +7,7 @@ Attean::TripleModel - RDF model backed by a set of triple-stores
 
 =head1 VERSION
 
-This document describes Attean::TripleModel version 0.021
+This document describes Attean::TripleModel version 0.022
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ objects representing the backing triple-store for that graph.
 
 =cut
 
-package Attean::TripleModel 0.021 {
+package Attean::TripleModel 0.022 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
 	use Scalar::Util qw(reftype blessed);
@@ -238,7 +238,7 @@ Attempts to delegate to all the underlying stores if that store consumes Attean:
 	}
 }
 
-package Attean::AddativeTripleModelRole 0.021 {
+package Attean::AddativeTripleModelRole 0.022 {
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef);
 
@@ -302,7 +302,7 @@ Removes the store associated with the given C<< $graph >>.
 }
 
 
-package Attean::MutableTripleModel 0.021 {
+package Attean::MutableTripleModel 0.022 {
 	use Moo;
 	use Types::Standard qw(ArrayRef ConsumerOf HashRef);
 	use Scalar::Util qw(reftype);
@@ -385,7 +385,7 @@ Removes all quads with the given C<< $graph >>.
 	}
 }
 
-package Attean::AddativeTripleModel 0.021 {
+package Attean::AddativeTripleModel 0.022 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef);
@@ -395,7 +395,7 @@ package Attean::AddativeTripleModel 0.021 {
 	with 'Attean::AddativeTripleModelRole';
 }
 
-package Attean::AddativeMutableTripleModel 0.021 {
+package Attean::AddativeMutableTripleModel 0.022 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef);
@@ -427,7 +427,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams.
+Copyright (c) 2014--2019 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

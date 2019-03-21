@@ -7,7 +7,7 @@ Attean::API::Model - RDF Model
 
 =head1 VERSION
 
-This document describes Attean::API::Model version 0.021
+This document describes Attean::API::Model version 0.022
 
 =head1 DESCRIPTION
 
@@ -139,7 +139,7 @@ result of an ASK query over the supplied algebra.
 
 use Attean::API::Binding;
 
-package Attean::API::Model 0.021 {
+package Attean::API::Model 0.022 {
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
 	use URI::Namespace;
@@ -302,7 +302,7 @@ package Attean::API::Model 0.021 {
 }
 
 
-package Attean::API::MutableModel 0.021 {
+package Attean::API::MutableModel 0.022 {
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Encode qw(encode);
@@ -394,21 +394,21 @@ package Attean::API::MutableModel 0.021 {
 }
 
 
-package Attean::API::ETagCacheableModel 0.021 {
+package Attean::API::ETagCacheableModel 0.022 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
-package Attean::API::TimeCacheableModel 0.021 {
+package Attean::API::TimeCacheableModel 0.022 {
 	use Moo::Role;
 	
 	requires 'mtime_for_quads';
 }
 
 
-package Attean::API::BulkUpdatableModel 0.021 {
+package Attean::API::BulkUpdatableModel 0.022 {
 	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';
@@ -453,7 +453,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams.
+Copyright (c) 2014--2019 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

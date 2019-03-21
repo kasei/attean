@@ -7,7 +7,7 @@ Attean::QuadModel - RDF model backed by a quad-store
 
 =head1 VERSION
 
-This document describes Attean::QuadModel version 0.021
+This document describes Attean::QuadModel version 0.022
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ quad-store.
 
 =cut
 
-package Attean::QuadModel 0.021 {
+package Attean::QuadModel 0.022 {
 	use Moo;
 	use Scalar::Util qw(reftype);
 	use namespace::clean;
@@ -123,7 +123,7 @@ Delegates to the underlying store if the store consumes Attean::API::CostPlanner
 }
 
 
-package Attean::MutableQuadModel 0.021 {
+package Attean::MutableQuadModel 0.022 {
 	use Moo;
 	extends 'Attean::QuadModel';
 	
@@ -158,7 +158,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams.
+Copyright (c) 2014--2019 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
