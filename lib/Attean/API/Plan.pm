@@ -8,7 +8,7 @@ Attean::API::Plan - Query plan
 
 =head1 VERSION
 
-This document describes Attean::API::Plan version 0.021
+This document describes Attean::API::Plan version 0.022
 
 =head1 DESCRIPTION
 
@@ -53,7 +53,7 @@ L<Attean::API::Iterator> object.
 
 use Type::Tiny::Role;
 
-package Attean::API::Plan 0.021 {
+package Attean::API::Plan 0.022 {
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(ArrayRef CodeRef Str Object InstanceOf Bool Num Int);
 
@@ -207,7 +207,7 @@ product if this plan performs some form of join.
 	}
 }
 
-package Attean::API::BindingSubstitutionPlan 0.021 {
+package Attean::API::BindingSubstitutionPlan 0.022 {
 	use Moo::Role;
 	with 'Attean::API::Plan';
 	requires 'substitute_impl'; # $code = $plan->impl($model, $binding);
@@ -220,7 +220,7 @@ package Attean::API::BindingSubstitutionPlan 0.021 {
 	}
 }
 
-package Attean::API::UnionScopeVariablesPlan 0.021 {
+package Attean::API::UnionScopeVariablesPlan 0.022 {
 	use Moo::Role;
 
 	with 'Attean::API::Plan';
@@ -240,7 +240,7 @@ package Attean::API::UnionScopeVariablesPlan 0.021 {
 	};
 }
 
-package Attean::API::Plan::Join 0.021 {
+package Attean::API::Plan::Join 0.022 {
 	use Types::Standard qw(CodeRef);
 	use Types::Standard qw(ArrayRef Str ConsumerOf Bool);
 
@@ -278,7 +278,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams.
+Copyright (c) 2014--2019 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

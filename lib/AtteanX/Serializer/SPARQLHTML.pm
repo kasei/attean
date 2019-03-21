@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLHTML - SPARQL Results HTML Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLHTML version 0.021
+This document describes AtteanX::Serializer::SPARQLHTML version 0.022
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::SPARQLHTML version 0.021
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLHTML 0.021 {
+package AtteanX::Serializer::SPARQLHTML 0.022 {
 	use Moo;
 	use Types::Standard qw(Str Bool ArrayRef);
 	use Encode qw(encode);
@@ -197,7 +197,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2018 Gregory Todd Williams. This
+Copyright (c) 2014--2019 Gregory Todd Williams. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
