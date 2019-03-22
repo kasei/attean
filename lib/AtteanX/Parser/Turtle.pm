@@ -128,11 +128,6 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		$self->_parse($l);
 	}
 
-=item C<< parse_term_from_string( $bytes ) >>
-
-This method is deprecated, as the name was misleading.
-Calls should be replaced with C<< parse_term_from_bytes >>.
-	
 =item C<< parse_term_from_bytes ( $bytes, $base ) >>
 
 =item C<< parse_node ( $bytes, $base ) >>
@@ -142,11 +137,6 @@ serialization is found at the beginning of C<< $bytes >>.
 
 =cut
 
-	sub parse_term_from_string {
-		carp "parse_term_from_string is deprecated and will be removed in Attean 0.022 (use parse_term_from_bytes instead)";
-		return shift->parse_term_from_bytes(@_);
-	}
-	
 	sub parse_term_from_bytes {
 		my $self	= shift;
 		unless (ref($self)) {

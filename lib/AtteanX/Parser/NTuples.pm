@@ -31,22 +31,12 @@ package AtteanX::Parser::NTuples 0.022 {
 	use Encode qw(decode);
 	use namespace::clean;
 
-=item C<< parse_term_from_string( $bytes ) >>
-
-This method is deprecated, as the name was misleading.
-Calls should be replaced with C<< parse_term_from_bytes >>.
-	
 =item C<< parse_term_from_bytes( $bytes ) >>
 
 Parses the given C<< $bytes >> and returns a corresponding L<Attean::API::Term> object.
 
 =cut
 
-	sub parse_term_from_string {
-		carp "parse_term_from_string is deprecated and will be removed in Attean 0.022 (use parse_term_from_bytes instead)";
-		return shift->parse_term_from_bytes(@_);
-	}
-	
 	sub parse_term_from_bytes {
 		my $self	= shift;
 		unless (ref($self)) {
