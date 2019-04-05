@@ -10,6 +10,13 @@ use Attean::RDF;
 use Type::Tiny::Role;
 
 {
+  my $model = Attean->get_temporary_model;
+  isa_ok($model, 'Attean::QuadModel');
+  does_ok($model, 'Attean::API::MutableModel');
+}
+
+
+{
 	my $store	= Attean->get_store('Memory')->new();
 	isa_ok($store, 'AtteanX::Store::Memory');
 	my $model	= Attean::MutableQuadModel->new( store => $store );
