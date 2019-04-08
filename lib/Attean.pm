@@ -110,13 +110,13 @@ returns undef.
 		return $self->_get_plugin('stores', shift);
 	}
 
-=item C<< get_temporary_model >> 
+=item C<< temporary_model >> 
 
 Returns a temporary, mutable quad model based on a L<AtteanX::Store::Memory> store.
 
 =cut
 
-	sub get_temporary_model {
+	sub temporary_model {
 	  my $self = shift;
 	  return Attean::MutableQuadModel->new( store => $self->get_store('Memory')->new() )
 	}

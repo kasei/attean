@@ -10,7 +10,7 @@ use Attean::RDF;
 use Type::Tiny::Role;
 
 {
-  my $model = Attean->get_temporary_model;
+  my $model = Attean->temporary_model;
   isa_ok($model, 'Attean::QuadModel');
   does_ok($model, 'Attean::API::MutableModel');
 }
