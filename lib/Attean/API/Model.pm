@@ -83,6 +83,12 @@ Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects that are
 members of the rdf:List with the specified C<< $head >> (and matching
 restricted to only the specified C<< $graph >>).
 
+To check if a certain term is a list, the C<holds> method may be used, for example:
+
+  $model->holds($head, iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#first'), undef, $graph))
+
+will return true if a given term C<$head> is a list.
+
 =item C<< get_sequence( $graph, $head ) >>
 
 Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects that are
