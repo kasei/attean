@@ -7,7 +7,7 @@ Attean::API::Parser - Parser role
 
 =head1 VERSION
 
-This document describes Attean::API::Parser version 0.022
+This document describes Attean::API::Parser version 0.023
 
 =head1 DESCRIPTION
 
@@ -52,7 +52,7 @@ parsing.
 
 use Type::Tiny::Role;
 
-package Attean::API::Parser 0.022 {
+package Attean::API::Parser 0.023 {
 	use Types::Standard qw(CodeRef Bool);
 
 	use Moo::Role;
@@ -89,7 +89,7 @@ C<lazy_iris> attribute.
 	}
 }
 
-package Attean::API::AbbreviatingParser 0.022 {
+package Attean::API::AbbreviatingParser 0.023 {
 	use Types::Standard qw(ConsumerOf InstanceOf Maybe);
 	use URI::NamespaceMap;
 	use Scalar::Util qw(blessed);
@@ -101,7 +101,7 @@ package Attean::API::AbbreviatingParser 0.022 {
 	has 'namespaces'	=> (is => 'ro', isa => Maybe[InstanceOf['URI::NamespaceMap']]);
 }
 
-package Attean::API::PushParser 0.022 {
+package Attean::API::PushParser 0.023 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 
@@ -165,7 +165,7 @@ package Attean::API::PushParser 0.022 {
 	}
 }
 
-package Attean::API::PullParser 0.022 {
+package Attean::API::PullParser 0.023 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 	
@@ -207,7 +207,7 @@ package Attean::API::PullParser 0.022 {
 	}
 }
 
-package Attean::API::AtOnceParser 0.022 {
+package Attean::API::AtOnceParser 0.023 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 	
@@ -268,7 +268,7 @@ package Attean::API::AtOnceParser 0.022 {
 	
 }
 
-package Attean::API::TermParser 0.022 {
+package Attean::API::TermParser 0.023 {
 	# Parser returns objects that conform to Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -278,7 +278,7 @@ package Attean::API::TermParser 0.022 {
 	}
 }
 
-package Attean::API::TripleParser 0.022 {
+package Attean::API::TripleParser 0.023 {
 	# Parser returns objects that conform to Attean::API::Triple
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -288,7 +288,7 @@ package Attean::API::TripleParser 0.022 {
 	}
 }
 
-package Attean::API::QuadParser 0.022 {
+package Attean::API::QuadParser 0.023 {
 	# Parser returns objects that conform to Attean::API::Quad
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -298,7 +298,7 @@ package Attean::API::QuadParser 0.022 {
 	}
 }
 
-package Attean::API::MixedStatementParser 0.022 {
+package Attean::API::MixedStatementParser 0.023 {
 	# Parser returns objects that conform to either Attean::API::Triple or Attean::API::Quad
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -308,7 +308,7 @@ package Attean::API::MixedStatementParser 0.022 {
 	}
 }
 
-package Attean::API::ResultOrTermParser 0.022 {
+package Attean::API::ResultOrTermParser 0.023 {
 	# Parser returns objects that conform to either Attean::API::Result or Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -318,7 +318,7 @@ package Attean::API::ResultOrTermParser 0.022 {
 	}
 }
 
-package Attean::API::ResultParser 0.022 {
+package Attean::API::ResultParser 0.023 {
 	# Parser returns objects that conform to Attean::API::Result
 	use Moo::Role;
 	with 'Attean::API::Parser';

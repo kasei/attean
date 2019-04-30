@@ -4,7 +4,7 @@ AtteanX::Serializer::NQuads - N-Triples Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::NQuads version 0.022
+This document describes AtteanX::Serializer::NQuads version 0.023
 
 =head1 SYNOPSIS
 
@@ -37,7 +37,7 @@ Serializes triples and quads into the RDF 1.1 N-Quads format.
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::NQuads 0.022 {
+package AtteanX::Serializer::NQuads 0.023 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);
