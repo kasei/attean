@@ -173,7 +173,9 @@ Consume and return C<< $length >> characters  from the start of the buffer.
 		my $self	= shift;
 		my $len		= shift;
 		while (length($self->{buffer}) < $len) {
+			my $curlen	= length($self->{buffer});
 			$self->fill_buffer;
+			last if (length($self->{buffer}) == $curlen);
 		}
 	
 		my $word	= substr($self->{buffer}, 0, $len, '');
