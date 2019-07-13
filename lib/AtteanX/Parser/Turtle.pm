@@ -47,6 +47,7 @@ A boolean indicating whether term values should be canonicalized during parsing.
 package AtteanX::Parser::Turtle 0.023 {
 	use Moo;
 	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
+	use Types::Namespace qw( NamespaceMap );
 	use utf8;
 	use Carp qw(carp);
 	use Encode qw(encode);
@@ -74,7 +75,7 @@ Returns true if the parser has a namespace map, false otherwise.
 
 =cut
 
-	has 'namespaces' => (is => 'rw', isa => Maybe[InstanceOf['URI::NamespaceMap']], predicate => 'has_namespaces');
+	has 'namespaces' => (is => 'rw', isa => Maybe[NamespaceMap], predicate => 'has_namespaces');
 	has	'_stack'	=> (
 		is => 'ro',
 		isa => ArrayRef,
