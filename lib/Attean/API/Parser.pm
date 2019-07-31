@@ -91,14 +91,14 @@ C<lazy_iris> attribute.
 
 package Attean::API::AbbreviatingParser 0.023 {
 	use Types::Standard qw(ConsumerOf InstanceOf Maybe);
-	use URI::NamespaceMap;
+	use Types::Namespace qw( NamespaceMap );
 	use Scalar::Util qw(blessed);
 
 	use Moo::Role;
 	
 	with 'Attean::API::Parser';
 	has 'base' 		=> (is => 'rw', isa => ConsumerOf['Attean::API::IRI'], coerce => sub { blessed($_[0]) ? Attean::IRI->new($_[0]->as_string) : Attean::IRI->new($_[0]) }, predicate => 'has_base');
-	has 'namespaces'	=> (is => 'ro', isa => Maybe[InstanceOf['URI::NamespaceMap']]);
+	has 'namespaces'	=> (is => 'ro', isa => Maybe[NamespaceMap]);
 }
 
 package Attean::API::PushParser 0.023 {

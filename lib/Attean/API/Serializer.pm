@@ -108,13 +108,14 @@ package Attean::API::Serializer 0.023 {
 package Attean::API::AbbreviatingSerializer 0.023 {
 	# Serializer that can make use of a base IRI and/or prefix IRI mappings
 	use Types::Standard qw(InstanceOf ConsumerOf Maybe Bool);
+	use Types::Namespace qw( NamespaceMap );
 
 	use Moo::Role;
 
 	with 'Attean::API::Serializer';
 
 	has base		=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], predicate => 'has_base');
-	has namespaces	=> (is => 'ro', isa => Maybe[InstanceOf['URI::NamespaceMap']], predicate => 'has_namespaces');
+	has namespaces	=> (is => 'ro', isa => Maybe[NamespaceMap], predicate => 'has_namespaces');
 	has omit_base => (is => 'ro', isa => Bool, default => 0);
 }
 
