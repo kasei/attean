@@ -2,11 +2,12 @@ package Types::Attean;
 use strict;
 use warnings;
 
-use Type::Library -base, -declare => qw( AtteanIri );
+use Type::Library -base, -declare => qw( AtteanIRI );
 use Types::Standard qw( Str InstanceOf );
-use Types::URI qw();
+use Types::URI qw( Uri Iri );
+use Types::Namespace qw( Namespace );
 
-our $VERSION = '1.08';
+our $VERSION = '0.024';
 
 =head1 NAME
 
@@ -64,27 +65,29 @@ See L<URI::NamespaceMap> for further details about authors, license, etc.
 =cut
 
 __PACKAGE__->add_type(
-	name       => AtteanIri,
+	name       => AtteanIRI,
 	parent     => InstanceOf['Attean::IRI']
 );
 
 
 
 
-# AtteanIri->coercion->add_type_coercions(
-#         Uuid        ,=> q{ do { require IRI; "IRI"->new("urn:uuid:$_") } },
-#         Str         ,=> q{ do { require IRI; "IRI"->new($_) } },
-#         Path        ,=> q{ do { require IRI; my $u = "URI::file"->new($_); "IRI"->new($u->as_string) } },
-#         ScalarRef   ,=> q{ do { require IRI; my $u = "URI"->new("data:"); $u->data($$_); "IRI"->new($u->as_string) } },
-#         HashRef     ,=> q{ do { require IRI; "IRI"->new(URI::FromHash::uri(%$_)) } },
-#         $TrineNode  ,=> q{ do { require IRI; "IRI"->new($_->uri_value) } },
-#         $TrineNS    ,=> q{ do { require IRI; "IRI"->new($_->uri->uri_value) } },
-#         $XmlNS      ,=> q{ do { require IRI; "IRI"->new($_->uri) } },
-#         Uri         ,=> q{ do { require IRI; "IRI"->new($_->as_string) } },
-# );
+AtteanIRI->coercion->add_type_coercions(
+#         Uuid        ,=> q{ do { require Attean::IRI; "Attean::IRI"->new("urn:uuid:$_") } },
+#         Str         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_) } },
+#         Path        ,=> q{ do { require Attean::IRI; my $u = "URI::file"->new($_); "Attean::IRI"->new($u->as_string) } },
+#         ScalarRef   ,=> q{ do { require Attean::IRI; my $u = "URI"->new("data:"); $u->data($$_); "Attean::IRI"->new($u->as_string) } },
+#         HashRef     ,=> q{ do { require Attean::IRI; "Attean::IRI"->new(URI::FromHash::uri(%$_)) } },
+#         $TrineNode  ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri_value) } },
+#         $TrineNS    ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri->uri_value) } },
+#         $XmlNS      ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri) } },
+         Namespace   ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
+         Uri         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
+         Iri         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
+);
 
 Namespace->coercion->add_type_coercions(
-  AtteanIRI ,=> q{ do { require URI::Namespace; "Attean::IRI"->new($_->as_string) } },
+  AtteanIRI ,=> q{ do { require URI::Namespace; "URI::Namespace"->new($_->as_string) } },
 );
 
 require Attean::IRI;
