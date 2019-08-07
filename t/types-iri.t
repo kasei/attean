@@ -26,28 +26,18 @@ my $atteaniri = Attean::IRI->new('http://www.example.net/');
   is($nsuri->as_string, 'http://www.example.net/', "Correct string URI to Namespace");
 }
 
-{
-  my $uri = URI->new('http://www.example.net/');
+_test_to_attean(URI->new('http://www.example.net/'));
+
+_test_to_attean(IRI->new('http://www.example.net/'));
+
+_test_to_attean(URI::Namespace->new('http://www.example.net/'));
+
+sub _test_to_attean {
+  my $uri = shift;
   my $airi = to_AtteanIRI($uri);
   isa_ok($airi, 'Attean::IRI');
-  is("$uri", 'http://www.example.net/', "Correct string URI from Uri");
+  is($airi->as_string, 'http://www.example.net/', 'Correct string URI from ' . ref($uri));
   ok($airi->equals($atteaniri), 'Is the same URI');
 }
-
-{
-  my $iri = IRI->new('http://www.example.net/');
-  my $airi = to_AtteanIRI($iri);
-  isa_ok($airi, 'Attean::IRI');
-  is($airi->as_string, 'http://www.example.net/', "Correct string IRI from Iri");
-  ok($airi->equals($atteaniri), 'Is the same IRI');
-}
-
-{
-  my $nsuri = URI::Namespace->new('http://www.example.net/');
-  my $airi = to_AtteanIRI($nsuri);
-  isa_ok($airi, 'Attean::IRI');
-  is($airi->as_string, 'http://www.example.net/', "Correct string URI from Namespace");
-  ok($airi->equals($atteaniri), 'Is the same URI');
-}
-
+  
 done_testing;
