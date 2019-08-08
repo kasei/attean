@@ -74,7 +74,7 @@ __PACKAGE__->add_type(
 
 AtteanIRI->coercion->add_type_coercions(
 #         Uuid        ,=> q{ do { require Attean::IRI; "Attean::IRI"->new("urn:uuid:$_") } },
-#         Str         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_) } },
+         Str         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_) } },
 #         Path        ,=> q{ do { require Attean::IRI; my $u = "URI::file"->new($_); "Attean::IRI"->new($u->as_string) } },
 #         ScalarRef   ,=> q{ do { require Attean::IRI; my $u = "URI"->new("data:"); $u->data($$_); "Attean::IRI"->new($u->as_string) } },
 #         HashRef     ,=> q{ do { require Attean::IRI; "Attean::IRI"->new(URI::FromHash::uri(%$_)) } },

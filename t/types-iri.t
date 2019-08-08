@@ -32,6 +32,8 @@ _test_to_attean(IRI->new('http://www.example.net/'));
 
 _test_to_attean(URI::Namespace->new('http://www.example.net/'));
 
+_test_to_attean('http://www.example.net/');
+
 sub _test_to_attean {
   my $uri = shift;
   my $airi = to_AtteanIRI($uri);
