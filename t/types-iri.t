@@ -38,6 +38,12 @@ sub _test_to_attean {
   isa_ok($airi, 'Attean::IRI');
   is($airi->as_string, 'http://www.example.net/', 'Correct string URI from ' . ref($uri));
   ok($airi->equals($atteaniri), 'Is the same URI');
+
+  # TODO: Something like this should work too?
+  # my $aciri = Attean::IRI->new($uri); 
+  # isa_ok($aciri, 'Attean::IRI');
+  # is($aciri->as_string, 'http://www.example.net/', 'Correct string URI from ' . ref($uri));
+  # ok($aciri->equals($atteaniri), 'Is the same URI');
 }
   
 done_testing;
