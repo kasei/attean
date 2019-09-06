@@ -12,6 +12,7 @@ license			'perl';
 test_requires	'HTTP::Message::PSGI'		=> 0;
 test_requires	'Regexp::Common'			=> 0;
 test_requires	'Test::Exception'			=> 0;
+test_requires	'Test::Requires'			=> 0;
 test_requires	'Test::LWP::UserAgent'		=> 0;
 test_requires	'Test::More'				=> 0.88;
 test_requires	'XML::Simple'				=> 0;
