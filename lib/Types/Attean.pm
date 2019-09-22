@@ -45,6 +45,8 @@ A class type for L<Attean::IRI>.
 
 Can coerce from L<URI>, L<IRI>, L<URI::Namespace> and strings.
 
+=back
+
 =head1 OTHER COERCIONS
 
 This library can also coerce from C<Attean::IRI> to the C<Namespace> type defined in L<URI::Namespace>.

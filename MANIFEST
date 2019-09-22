@@ -127,6 +127,7 @@ lib/Test/Attean/SPARQLSuite.pm
 lib/Test/Attean/StoreCleanup.pm
 lib/Test/Attean/TimeCacheableQuadStore.pm
 lib/Test/Attean/TripleStore.pm
+lib/Types/Attean.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -137,6 +138,7 @@ t/algebra.t
 t/binding-equality.t
 t/binding.t
 t/cost_planner.t
+t/export-functions.t
 t/expression.t
 t/http-negotiation.t
 t/idp_planner.t
@@ -176,6 +178,7 @@ t/store-simpletriple.t
 t/term-map.t
 t/term.t
 t/treerewrite.t
+t/types-iri.t
 xt/dawg11-memory.t
 xt/pod-coverage.t
 xt/pod.t

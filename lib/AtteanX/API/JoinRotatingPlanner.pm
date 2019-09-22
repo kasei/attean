@@ -9,7 +9,7 @@ AtteanX::API::JoinRotatingPlanner - Query planning role to produce alternative j
 
 =head1 VERSION
 
-This document describes AtteanX::API::JoinRotatingPlanner version 0.023
+This document describes AtteanX::API::JoinRotatingPlanner version 0.024
 
 =head1 DESCRIPTION
 
@@ -35,7 +35,7 @@ plan.
 
 =cut
 
-package AtteanX::API::JoinRotatingPlanner 0.023 {
+package AtteanX::API::JoinRotatingPlanner 0.024 {
 	# Rotate joins like (A⋈B)⋈C to A⋈(B⋈C), with the ability to coalesce B⋈C (e.g. for adjacent BGPs)
 	use Attean;
 	use Attean::RDF;

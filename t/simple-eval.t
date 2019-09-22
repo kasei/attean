@@ -493,4 +493,72 @@ XML
 	}
 }
 
+{
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	{
+		my $data	= <<'END';
+@prefix test: <http://ontologi.es/doap-tests#> .
+@prefix deps: <http://ontologi.es/doap-deps#>.
+@prefix httph:<http://www.w3.org/2007/ont/httph#> .
+@prefix http: <http://www.w3.org/2007/ont/http#> .
+@prefix nfo:  <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#> .
+@prefix :     <http://example.org/test#> .
+
+
+:test_list a test:FixtureTable ;
+    test:fixtures :public_writeread_unauthn_alt .
+
+
+:public_writeread_unauthn_alt a test:AutomatedTest ;
+    test:purpose "More elaborate HTTP vocab for PUT then GET test"@en ;
+    test:test_script <http://example.org/httplist#http_req_res_list_unauthenticated> ;
+    test:params [
+        test:steps (
+            [
+                test:request :public_writeread_unauthn_alt_put_req ;
+                test:response_assertion :public_writeread_unauthn_alt_put_res
+            ]
+            [
+                test:request :public_writeread_unauthn_alt_get_req ;
+                test:response_assertion :public_writeread_unauthn_alt_get_res
+            ]
+        )
+    ] .
+END
+		$model->load_triples('turtle', $graph, $data);
+	}
+	
+	my $active_graph	= $graph;
+	my $test	= URI::Namespace->new('http://ontologi.es/doap-tests#');
+	my $b	= $model->objects(undef, iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#first'))->next();
+	my $t1	= triplepattern($b, iri($test->request->as_string), variable('request'));
+	my $t2	= triplepattern($b, iri($test->response_assertion->as_string), variable('response_assertion'));
+	my $bgp	= bgp($t1, $t2);
+
+	{
+		my $e	= Attean::SimpleQueryEvaluator->new(
+			model => $model,
+			default_graph => $graph,
+			ground_blanks => 0
+		);
+		my $iter = $e->evaluate($bgp, $graph);
+		my @v	= $iter->elements;
+		is(scalar(@v), 2);
+	}
+
+	{
+		my $e	= Attean::SimpleQueryEvaluator->new(
+			model => $model,
+			default_graph => $graph,
+			ground_blanks => 1
+		);
+		my $iter = $e->evaluate($bgp, $graph);
+		my @v	= $iter->elements;
+		is(scalar(@v), 1);
+	}
+}
+
 done_testing();

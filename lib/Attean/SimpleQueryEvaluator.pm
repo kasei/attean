@@ -7,7 +7,7 @@ Attean::SimpleQueryEvaluator - Simple query evaluator
 
 =head1 VERSION
 
-This document describes Attean::SimpleQueryEvaluator version 0.023
+This document describes Attean::SimpleQueryEvaluator version 0.024
 
 =head1 SYNOPSIS
 
@@ -34,14 +34,14 @@ model, and returns a query result.
 use Attean::Algebra;
 use Attean::Expression;
 
-package Attean::SimpleQueryEvaluator 0.023 {
+package Attean::SimpleQueryEvaluator 0.024 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Scalar::Util qw(blessed);
 	use List::Util qw(all any reduce);
-	use Types::Standard qw(ConsumerOf InstanceOf);
+	use Types::Standard qw(ConsumerOf InstanceOf Bool);
 	use URI::Escape;
 	use namespace::clean;
 
@@ -64,6 +64,8 @@ features such as C<< GRAPH ?g {} >>.
 	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 
 	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent'], default => sub { my $ua = LWP::UserAgent->new(); $ua->agent("Attean/$Attean::VERSION " . $ua->_agent); $ua });
+	
+	has 'ground_blanks' => (is => 'rw', isa => Bool, default => 0);
 	
 =back
 
@@ -105,7 +107,7 @@ supplied C<< $active_graph >>.
 					my $q		= $t->as_quad_pattern($active_graph);
 					my @values;
 					foreach my $v ($q->values) {
-						if ($v->does('Attean::API::Blank')) {
+						if (not($self->ground_blanks) and $v->does('Attean::API::Blank')) {
 							unless (exists $blanks{$v->value}) {
 								$blanks{$v->value}	= Attean::Variable->new();
 								push(@new_vars, $blanks{$v->value}->value);
@@ -527,7 +529,7 @@ supplied C<< $active_graph >>.
 	}
 }
 
-package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.023 {
+package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.024 {
 	use Moo;
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);
