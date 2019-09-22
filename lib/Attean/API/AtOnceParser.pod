@@ -4,7 +4,7 @@ Attean::API::AtOnceParser - Role for parsers that natively parse all input befor
 
 =head1 VERSION
 
-This document describes Attean::API::AtOnceParser version 0.023
+This document describes Attean::API::AtOnceParser version 0.024
 
 =head1 DESCRIPTION
 

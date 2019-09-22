@@ -7,7 +7,7 @@ Attean::Result - SPARQL Result
 
 =head1 VERSION
 
-This document describes Attean::Result version 0.023
+This document describes Attean::Result version 0.024
 
 =head1 SYNOPSIS
 
@@ -29,7 +29,7 @@ It conforms to the L<Attean::API::Result|Attean::API::Binding> role.
 
 =cut
 
-package Attean::Result 0.023 {
+package Attean::Result 0.024 {
 	use Moo;
 	use Types::Standard qw(HashRef ConsumerOf);
 	use Attean::API::Binding;

@@ -28,13 +28,28 @@ my:project
 	:bug-database			<https://github.com/kasei/attean/issues> ;
 	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
-	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 , my:v_0-021 , my:v_0-022 , my:v_0-023 ;
+	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 , my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 , my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 , my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 , my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 ;
 	.
+
+my:v_0-024
+	a					:Version ;
+	dc:issued			"2019-09-22"^^xsd:date ;
+	:revision			"0.024" ;
+	dcterms:replaces	my:v_0-023 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add attribute in AbbreviatingSerializer to omit base declaration to have all relative URIs (#135 from @kjetilk)." ],
+			[ a dcs:Update ; rdfs:label "Updates to use namespace types, available in Types::Attean (#129, #137 from @kjetilk)." ],
+			[ a dcs:Update ; rdfs:label "Fixed bug in AtteanX::API::Lexer that caused infinite recursion when finding EOF in the middle of an escape sequence." ],
+			[ a dcs:Update ; rdfs:label "Added ground_blanks attribute to Attean::SimpleQueryEvaluator." ]
+	]
+	.
+
 
 my:v_0-023
 	a					:Version ;
 	dc:issued			"2019-04-30"^^xsd:date ;
-	:revision			"0.023" ;
+	:revision			"0.024" ;
 	dcterms:replaces	my:v_0-022 ;
 	dcs:changeset [
 		dcs:item
