@@ -97,7 +97,6 @@ elements from the referent.
 package Attean::API::Iterator 0.024 {
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(Str Object InstanceOf);
-	use Role::Tiny;
 	use Carp qw(confess);
 
 	use Moo::Role;
@@ -112,30 +111,30 @@ package Attean::API::Iterator 0.024 {
 		my $args	= shift;
 		$self->$orig($args);
 		my $role	= $self->item_type;
-		if (Role::Tiny->is_role($role)) {
+		if (Moo::Role->is_role($role)) {
 			my $check	= sub {
 				my $check = shift;
-				return ($role eq $check or Role::Tiny::does_role($role, $check));
+				return ($role eq $check or Moo::Role::does_role($role, $check));
 			};
 			if ($check->('Attean::API::Quad')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::QuadIterator');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::QuadIterator');
 			} elsif ($check->('Attean::API::Triple')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TripleIterator');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::TripleIterator');
 			} elsif ($check->('Attean::API::TripleOrQuad')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
 			} elsif ($check->('Attean::API::Result')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultIterator');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::ResultIterator');
 				my $vars	= $args->{variables} // confess "Construction of a Attean::API::ResultIterator must include a variables list";
 				$self->variables($vars);
 			} elsif ($check->('Attean::API::Term')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::TermIterator');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::TermIterator');
 			} elsif ($check->('Attean::API::ResultOrTerm')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
 				$self->variables($args->{variables} || []);
 			}
 
 			if ($self->does('Attean::API::RepeatableIterator') and $check->('Attean::API::Binding')) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::CanonicalizingBindingSet');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::CanonicalizingBindingSet');
 			}
 		}
 	};

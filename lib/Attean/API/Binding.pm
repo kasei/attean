@@ -296,7 +296,6 @@ package Attean::API::TripleOrQuad 0.024 {
 }
 
 package Attean::API::TriplePattern 0.024 {
-	use Moo::Role;
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
 

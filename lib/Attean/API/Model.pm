@@ -313,6 +313,7 @@ package Attean::API::MutableModel 0.024 {
 	use LWP::UserAgent;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
+	use Role::Tiny ();
 
 	use Moo::Role;
 	

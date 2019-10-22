@@ -166,6 +166,7 @@ package Attean::API::QuadStore 0.024 {
 }
 
 package Attean::API::MutableQuadStore 0.024 {
+	use Role::Tiny ();
 	use Moo::Role;
 	use Type::Tiny::Role;
 	with 'Attean::API::QuadStore';
