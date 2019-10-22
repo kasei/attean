@@ -151,9 +151,9 @@ package Attean::API::Literal 0.024 {
 		if (my $dt = $self->datatype) {
 			my $type	= $dt->value;
 			if ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::NumericLiteral');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::NumericLiteral');
 			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#dateTime') {
-				Role::Tiny->apply_roles_to_object($self, 'Attean::API::DateTimeLiteral');
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::DateTimeLiteral');
 			}
 		}
 	};

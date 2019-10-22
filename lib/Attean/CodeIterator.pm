@@ -57,6 +57,7 @@ package Attean::CodeIterator 0.024 {
 	use Type::Tiny::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef ArrayRef);
+	use Role::Tiny ();
 	use namespace::clean;
 	
 	with 'Attean::API::Iterator';
