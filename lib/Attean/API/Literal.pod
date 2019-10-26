@@ -4,7 +4,7 @@ Attean::API::Literal - Role representing RDF Literal terms
 
 =head1 VERSION
 
-This document describes Attean::API::Literal version 0.024
+This document describes Attean::API::Literal version 0.025
 
 =head1 SYNOPSIS
 

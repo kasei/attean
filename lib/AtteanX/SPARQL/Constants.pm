@@ -7,7 +7,7 @@ AtteanX::SPARQL::Constants - Constant definitions for use in parsing and seriali
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Constants version 0.024
+This document describes AtteanX::SPARQL::Constants version 0.025
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,7 @@ This document describes AtteanX::SPARQL::Constants version 0.024
 
 =cut
 
-package AtteanX::SPARQL::Constants 0.024 {
+package AtteanX::SPARQL::Constants 0.025 {
 	use v5.14;
 	use warnings;
 	use AtteanX::Parser::Turtle::Constants;

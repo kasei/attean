@@ -4,7 +4,7 @@ Attean::API::Triple - Role representing triples
 
 =head1 VERSION
 
-This document describes Attean::API::Triple version 0.024
+This document describes Attean::API::Triple version 0.025
 
 =head1 SYNOPSIS
 
