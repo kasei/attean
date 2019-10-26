@@ -4,7 +4,7 @@ Attean::API::BulkUpdatableModel - Role representing models that can perform bulk
 
 =head1 VERSION
 
-This document describes Attean::API::BulkUpdatableModel version 0.024
+This document describes Attean::API::BulkUpdatableModel version 0.025
 
 =head1 SYNOPSIS
 

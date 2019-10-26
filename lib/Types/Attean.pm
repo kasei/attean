@@ -7,7 +7,7 @@ use Types::Standard qw( Str InstanceOf );
 use Types::URI qw( Uri Iri );
 use Types::Namespace qw( Namespace );
 
-our $VERSION = '0.024';
+our $VERSION = '0.025';
 
 =head1 NAME
 
