@@ -48,7 +48,11 @@ forth. It builds on L<Types::URI>.
 
 A class type for L<Attean::IRI>.
 
-Can coerce from L<URI>, L<IRI>, L<URI::Namespace> and strings.
+Can coerce from L<URI>, L<IRI>, L<URI::Namespace>,
+L<RDF::Trine::Node::Resource>, L<RDF::Trine::Namespace>,
+L<XML::Namespace> and strings.
+
+Additionally, a C<ScalarRef> can be coerced into a C<data> URI.
 
 =back
 
