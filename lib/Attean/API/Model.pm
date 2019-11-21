@@ -7,7 +7,7 @@ Attean::API::Model - RDF Model
 
 =head1 VERSION
 
-This document describes Attean::API::Model version 0.024
+This document describes Attean::API::Model version 0.025
 
 =head1 DESCRIPTION
 
@@ -145,7 +145,7 @@ result of an ASK query over the supplied algebra.
 
 use Attean::API::Binding;
 
-package Attean::API::Model 0.024 {
+package Attean::API::Model 0.025 {
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
 	use URI::Namespace;
@@ -308,11 +308,12 @@ package Attean::API::Model 0.024 {
 }
 
 
-package Attean::API::MutableModel 0.024 {
+package Attean::API::MutableModel 0.025 {
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
+	use Role::Tiny ();
 
 	use Moo::Role;
 	
@@ -400,21 +401,21 @@ package Attean::API::MutableModel 0.024 {
 }
 
 
-package Attean::API::ETagCacheableModel 0.024 {
+package Attean::API::ETagCacheableModel 0.025 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
-package Attean::API::TimeCacheableModel 0.024 {
+package Attean::API::TimeCacheableModel 0.025 {
 	use Moo::Role;
 	
 	requires 'mtime_for_quads';
 }
 
 
-package Attean::API::BulkUpdatableModel 0.024 {
+package Attean::API::BulkUpdatableModel 0.025 {
 	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';
