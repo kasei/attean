@@ -5,8 +5,7 @@ use warnings;
 use Test::More;
 use Attean;
 use Test::Requires { 'Attean::IRI' => '0.023' };
-use Types::URI qw( to_Uri to_Iri );
-use Types::Namespace qw( to_Namespace );
+use Types::Namespace qw( to_Uri to_Iri to_Namespace );
 use Types::Attean qw(to_AtteanIRI);
 use Attean::IRI;
 use Module::Load::Conditional qw(can_load);
@@ -56,5 +55,5 @@ sub _test_to_attean {
   # is($aciri->as_string, 'http://www.example.net/', 'Correct string URI from ' . ref($uri));
   # ok($aciri->equals($atteaniri), 'Is the same URI');
 }
-  
+
 done_testing;
