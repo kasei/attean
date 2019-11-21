@@ -6,8 +6,6 @@ use Type::Library -base, -declare => qw( AtteanIRI );
 use Types::Standard qw( Str InstanceOf ScalarRef );
 use Types::URI qw( Uri Iri );
 use Types::Namespace qw( Namespace );
-use Types::Path::Tiny  qw( Path );
-use Types::UUID        qw( Uuid );
 
 my $TrineNode = InstanceOf['RDF::Trine::Node::Resource'];
 my $TrineNS   = InstanceOf['RDF::Trine::Namespace'];
@@ -74,8 +72,6 @@ AtteanIRI->coercion->add_type_coercions(
          Namespace   ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
          Uri         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
          Iri         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
-         Uuid        ,=> q{ do { require Attean::IRI; "Attean::IRI"->new("urn:uuid:$_") } },
-         Path        ,=> q{ do { require Attean::IRI; my $u = "URI::file"->new($_); "Attean::IRI"->new($u->as_string) } },
          ScalarRef   ,=> q{ do { require Attean::IRI; my $u = "URI"->new("data:"); $u->data($$_); "Attean::IRI"->new($u->as_string) } },
          $TrineNode  ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri_value) } },
          $TrineNS    ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri->uri_value) } },
