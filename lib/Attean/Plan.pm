@@ -1544,7 +1544,7 @@ package Attean::Plan::OrderBy 0.025 {
 
 =item * L<Attean::Plan::Service>
 
-Evaluates a SPARQL query against a remove endpoint.
+Evaluates a SPARQL query against a remote endpoint.
 
 =cut
 
