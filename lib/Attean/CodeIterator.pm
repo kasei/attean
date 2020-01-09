@@ -7,7 +7,7 @@ Attean::CodeIterator - Iterator implementation backed by a generator function
 
 =head1 VERSION
 
-This document describes Attean::CodeIterator version 0.024
+This document describes Attean::CodeIterator version 0.025
 
 =head1 SYNOPSIS
 
@@ -52,11 +52,12 @@ that will be returned from the iterator.
 
 =cut
 
-package Attean::CodeIterator 0.024 {
+package Attean::CodeIterator 0.025 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Scalar::Util qw(blessed);
 	use Types::Standard qw(CodeRef ArrayRef);
+	use Role::Tiny ();
 	use namespace::clean;
 	
 	with 'Attean::API::Iterator';
