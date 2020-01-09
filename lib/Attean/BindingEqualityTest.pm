@@ -28,6 +28,37 @@ This document describes Attean::BindingEqualityTest version 0.024
 
 =cut
 
+package Attean::BindingEqualityTest::_Iter {
+	sub new {
+		my $class	= shift;
+		my @iters	= @_;
+		my @values	= $class->_materialize([], @iters);
+		return bless(\@values, $class);
+	}
+	
+	sub _materialize {
+		my $class	= shift;
+		my $v		= shift;
+		my @iters	= @_;
+		if (scalar(@iters)) {
+			my $i	= shift(@iters);
+			my @values;
+			while (my $vv = $i->next) {
+				my $prefix	= [@$v, @$vv];
+				push(@values, $class->_materialize($prefix, @iters));
+			}
+			return @values;
+		} else {
+			return $v;
+		}
+	}
+	
+	sub next {
+		my $self	= shift;
+		return shift(@$self);
+	}
+}
+
 package Attean::BindingEqualityTest 0.024 {
 	use v5.14;
 	use warnings;
@@ -37,6 +68,7 @@ package Attean::BindingEqualityTest 0.024 {
 	use Algorithm::Combinatorics qw(permutations);
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
+	use Digest::MD5 qw(md5_hex);
 	use namespace::clean;
 	
 	with 'MooX::Log::Any';
@@ -97,7 +129,7 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 			}
 		}
 	
-		return _find_mapping($self, $ba, $bb);
+		return _find_mapping($self, $ba, $bb, 1);
 	}
 
 =item C<< is_subgraph_of ( $graph1, $graph2 ) >>
@@ -157,8 +189,38 @@ solutions, the solution returned is arbitrary.
 		return _find_mapping($self, $ba, $bb);
 	}
 
+	sub _statement_blank_irisets {
+		my $self	= shift;
+		my @st		= @_;
+		my %blank_ids_b_iris;
+		foreach my $st (@st) {
+			my @iris	= map { $_->value } grep { $_->does('Attean::API::IRI') } $st->values;
+			unless (scalar(@iris)) {
+				push(@iris, '_');
+			}
+			foreach my $n (grep { $_->does('Attean::API::Blank') } $st->values) {
+				foreach my $i (@iris) {
+					$blank_ids_b_iris{$n->value}{$i}++;
+				}
+			}
+		}
+		
+		my %iri_blanks;
+		foreach my $bid (sort keys %blank_ids_b_iris) {
+			my $d	= Digest::MD5->new();
+			foreach my $iri (sort keys %{ $blank_ids_b_iris{$bid} }) {
+				$d->add($iri);
+			}
+			$iri_blanks{$d->hexdigest}{$bid}++;
+		}
+		return \%iri_blanks;
+	}
+	
 	sub _find_mapping {
-		my ($self, $ba, $bb) = @_;
+		my $self	= shift;
+		my $ba		= shift;
+		my $bb		= shift;
+		my $equal	= shift || 0;
 
 		if (scalar(@$ba) == 0) {
 			return {};
@@ -177,12 +239,51 @@ solutions, the solution returned is arbitrary.
 				$blank_ids_b{ $n->value }++;
 			}
 		}
-	
+		
+		
+		my (@ka, @kb);
+		my $kbp;
+		if ($equal) {
+			# if we're testing for equality, and not just finding an injection mapping,
+			# we can avoid unnecessary work by restricting mappings to those where each
+			# permutation only maps blank nodes to other blank nodes that appear in
+			# similar bindings (in this case they appear with all the same IRIs)
+			my $ba_iri_blanks	= $self->_statement_blank_irisets(@$ba);
+		
+			my $bb_iri_blanks	= $self->_statement_blank_irisets(@$bb);
+		
+			my $ba_keys	= join('|', sort keys %$ba_iri_blanks);
+			my $bb_keys	= join('|', sort keys %$bb_iri_blanks);
+			unless ($ba_keys eq $bb_keys) {
+				$self->error("didn't find blank node mapping\n");
+				return 0;
+			}
+			
+			my @iters;
+			foreach my $k (sort keys %$ba_iri_blanks) {
+				unless (scalar(@{[keys %{ $ba_iri_blanks->{$k} }]}) == scalar(@{[keys %{ $bb_iri_blanks->{$k} }]})) {
+					$self->error("didn't find blank node mapping\n");
+					return 0;
+				}
+				push(@ka, keys %{ $ba_iri_blanks->{$k} });
+				push(@kb, keys %{ $bb_iri_blanks->{$k} });
+				my $i		= permutations([keys %{ $bb_iri_blanks->{$k} }]);
+				push(@iters, $i);
+			}
+			
+			if (scalar(@iters) == 1) {
+				$kbp	= shift(@iters);
+			} else {
+				$kbp	= Attean::BindingEqualityTest::_Iter->new(@iters);
+			}
+		} else {
+			@ka		= keys %blank_ids_a;
+			@kb		= keys %blank_ids_b;
+			$kbp	= permutations( \@kb );
+		}
+		
 		my %bb_master	= map { $_->as_string => 1 } @$bb;
 	
-		my @ka	= keys %blank_ids_a;
-		my @kb	= keys %blank_ids_b;
-		my $kbp	= permutations( \@kb );
 		my $count	= 0;
 		MAPPING: while (my $mapping = $kbp->next) {
 			my %mapping_str;
