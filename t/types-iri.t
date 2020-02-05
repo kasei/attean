@@ -5,10 +5,10 @@ use warnings;
 use Test::More;
 use Attean;
 use Test::Requires { 'Attean::IRI' => '0.023' };
-use Types::URI qw( to_Uri to_Iri );
-use Types::Namespace qw( to_Namespace );
+use Types::Namespace qw( to_Uri to_Iri to_Namespace );
 use Types::Attean qw(to_AtteanIRI);
 use Attean::IRI;
+use Module::Load::Conditional qw(can_load);
 
 my $atteaniri = Attean::IRI->new('http://www.example.net/');
 
@@ -34,6 +34,14 @@ _test_to_attean(URI::Namespace->new('http://www.example.net/'));
 
 _test_to_attean('http://www.example.net/');
 
+SKIP: {
+  skip 'RDF::Trine is not installed', 3 unless can_load( modules => { 'RDF::Trine' => 0 });
+  _test_to_attean(RDF::Trine::iri('http://www.example.net/'));
+}
+
+
+
+
 sub _test_to_attean {
   my $uri = shift;
   my $airi = to_AtteanIRI($uri);
@@ -47,5 +55,5 @@ sub _test_to_attean {
   # is($aciri->as_string, 'http://www.example.net/', 'Correct string URI from ' . ref($uri));
   # ok($aciri->equals($atteaniri), 'Is the same URI');
 }
-  
+
 done_testing;

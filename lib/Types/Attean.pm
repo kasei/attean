@@ -3,9 +3,16 @@ use strict;
 use warnings;
 
 use Type::Library -base, -declare => qw( AtteanIRI );
-use Types::Standard qw( Str InstanceOf );
+use Types::Standard qw( Str InstanceOf ScalarRef );
 use Types::URI qw( Uri Iri );
 use Types::Namespace qw( Namespace );
+use Types::Path::Tiny  qw( Path );
+use Types::UUID        qw( Uuid );
+
+my $TrineNode = InstanceOf['RDF::Trine::Node::Resource'];
+my $TrineNS   = InstanceOf['RDF::Trine::Namespace'];
+my $XmlNS     = InstanceOf['XML::Namespace'];
+
 
 our $VERSION = '0.025';
 
@@ -43,7 +50,11 @@ forth. It builds on L<Types::URI>.
 
 A class type for L<Attean::IRI>.
 
-Can coerce from L<URI>, L<IRI>, L<URI::Namespace> and strings.
+Can coerce from L<URI>, L<IRI>, L<URI::Namespace>,
+L<RDF::Trine::Node::Resource>, L<RDF::Trine::Namespace>,
+L<XML::Namespace> and strings.
+
+Additionally, a C<ScalarRef> can be coerced into a C<data> URI.
 
 =back
 
@@ -67,11 +78,14 @@ AtteanIRI->coercion->add_type_coercions(
          Namespace   ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
          Uri         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
          Iri         ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->as_string) } },
+         Uuid        ,=> q{ do { require Attean::IRI; "Attean::IRI"->new("urn:uuid:$_") } },
+         Path        ,=> q{ do { require Attean::IRI; my $u = "URI::file"->new($_); "Attean::IRI"->new($u->as_string) } },
+         ScalarRef   ,=> q{ do { require Attean::IRI; my $u = "URI"->new("data:"); $u->data($$_); "Attean::IRI"->new($u->as_string) } },
+         $TrineNode  ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri_value) } },
+         $TrineNS    ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri->uri_value) } },
+         $XmlNS      ,=> q{ do { require Attean::IRI; "Attean::IRI"->new($_->uri) } },
 );
 
-Namespace->coercion->add_type_coercions(
-  AtteanIRI ,=> q{ do { require URI::Namespace; "URI::Namespace"->new($_->as_string) } },
-);
 
 require Attean::IRI;
 
