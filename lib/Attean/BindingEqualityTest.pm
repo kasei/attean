@@ -243,44 +243,44 @@ solutions, the solution returned is arbitrary.
 		
 		my (@ka, @kb);
 		my $kbp;
-		if ($equal) {
-			# if we're testing for equality, and not just finding an injection mapping,
-			# we can avoid unnecessary work by restricting mappings to those where each
-			# permutation only maps blank nodes to other blank nodes that appear in
-			# similar bindings (in this case they appear with all the same IRIs)
-			my $ba_iri_blanks	= $self->_statement_blank_irisets(@$ba);
-		
-			my $bb_iri_blanks	= $self->_statement_blank_irisets(@$bb);
-		
-			my $ba_keys	= join('|', sort keys %$ba_iri_blanks);
-			my $bb_keys	= join('|', sort keys %$bb_iri_blanks);
-			unless ($ba_keys eq $bb_keys) {
-				$self->error("didn't find blank node mapping\n");
-				return 0;
-			}
-			
-			my @iters;
-			foreach my $k (sort keys %$ba_iri_blanks) {
-				unless (scalar(@{[keys %{ $ba_iri_blanks->{$k} }]}) == scalar(@{[keys %{ $bb_iri_blanks->{$k} }]})) {
-					$self->error("didn't find blank node mapping\n");
-					return 0;
-				}
-				push(@ka, keys %{ $ba_iri_blanks->{$k} });
-				push(@kb, keys %{ $bb_iri_blanks->{$k} });
-				my $i		= permutations([keys %{ $bb_iri_blanks->{$k} }]);
-				push(@iters, $i);
-			}
-			
-			if (scalar(@iters) == 1) {
-				$kbp	= shift(@iters);
-			} else {
-				$kbp	= Attean::BindingEqualityTest::_Iter->new(@iters);
-			}
-		} else {
+# 		if ($equal) {
+# 			# if we're testing for equality, and not just finding an injection mapping,
+# 			# we can avoid unnecessary work by restricting mappings to those where each
+# 			# permutation only maps blank nodes to other blank nodes that appear in
+# 			# similar bindings (in this case they appear with all the same IRIs)
+# 			my $ba_iri_blanks	= $self->_statement_blank_irisets(@$ba);
+# 		
+# 			my $bb_iri_blanks	= $self->_statement_blank_irisets(@$bb);
+# 		
+# 			my $ba_keys	= join('|', sort keys %$ba_iri_blanks);
+# 			my $bb_keys	= join('|', sort keys %$bb_iri_blanks);
+# 			unless ($ba_keys eq $bb_keys) {
+# 				$self->error("didn't find blank node mapping\n");
+# 				return 0;
+# 			}
+# 			
+# 			my @iters;
+# 			foreach my $k (sort keys %$ba_iri_blanks) {
+# 				unless (scalar(@{[keys %{ $ba_iri_blanks->{$k} }]}) == scalar(@{[keys %{ $bb_iri_blanks->{$k} }]})) {
+# 					$self->error("didn't find blank node mapping\n");
+# 					return 0;
+# 				}
+# 				push(@ka, keys %{ $ba_iri_blanks->{$k} });
+# 				push(@kb, keys %{ $bb_iri_blanks->{$k} });
+# 				my $i		= permutations([keys %{ $bb_iri_blanks->{$k} }]);
+# 				push(@iters, $i);
+# 			}
+# 			
+# 			if (scalar(@iters) == 1) {
+# 				$kbp	= shift(@iters);
+# 			} else {
+# 				$kbp	= Attean::BindingEqualityTest::_Iter->new(@iters);
+# 			}
+# 		} else {
 			@ka		= keys %blank_ids_a;
 			@kb		= keys %blank_ids_b;
 			$kbp	= permutations( \@kb );
-		}
+# 		}
 		
 		my %bb_master	= map { $_->as_string => 1 } @$bb;
 	
