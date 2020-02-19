@@ -141,6 +141,13 @@ Returns true if the algebra, evaluated with the supplied default graph(s)
 matches any data in the model, false otherwise. This is equivalent to the
 result of an ASK query over the supplied algebra.
 
+=item C<< evaluate($algebra, [ $default_graph | \@default_graphs ]) >>
+
+Returns an L<Attean::API::Iterator> of L<Attean::Result> objects which result
+from evaluating the given query algebra (e.g. one obtained from parsing a query
+with L<AtteanX::Parser::SPARQL>) with the supplied default graph(s) against data
+in the model.
+
 =cut
 
 use Attean::API::Binding;
@@ -268,6 +275,22 @@ package Attean::API::Model 0.025 {
 		my $union	= Attean::IteratorSequence->new( iterators => [$s, $o], item_type => 'Attean::API::Term' );
 		my %seen;
 		return $union->grep(sub {not($seen{shift->as_string}++)});
+	}
+
+	sub evaluate {
+		my $self 	= shift;
+		my $algebra	= shift || die "No algebra available in evaluate call";
+		my $default_graphs	= shift || die "No default graphs available in evaluate call";
+		$default_graphs	= [$default_graphs] if (blessed($default_graphs));
+		
+		unless (blessed($algebra) and $algebra->does('Attean::API::Algebra')) {
+			die "Unexpected argument to evaluate: " . Dumper($algebra);
+		}
+		
+		my $planner	= Attean::IDPQueryPlanner->new();
+		my $plan	= $planner->plan_for_algebra($algebra, $self, $default_graphs);
+		my $iter	= $plan->evaluate($self);
+		return $iter;
 	}
 
 	sub algebra_holds {
