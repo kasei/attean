@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQL - SPARQL 1.1 Parser.
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQL version 0.025.
+This document describes AtteanX::Parser::SPARQL version 0.026.
 
 =head1 SYNOPSIS
 
@@ -70,7 +70,7 @@ L<Attean::API::AbbreviatingParser>.
 
 =cut
 
-package AtteanX::Parser::SPARQL 0.025;
+package AtteanX::Parser::SPARQL 0.026;
 
 use strict;
 use warnings;
