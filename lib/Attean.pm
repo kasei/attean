@@ -8,9 +8,9 @@ This document describes Attean version 0.025
 
 =head1 SYNOPSIS
 
-  use v5.14;
   use Attean;
   use Attean::RDF qw(iri);
+  
   my $store = Attean->get_store('Memory')->new();
   my $parser = Attean->get_parser('NTriples')->new();
   
@@ -18,13 +18,23 @@ This document describes Attean version 0.025
   my $iter = $parser->parse_iter_from_io(\*STDIN);
   
   # add a graph name to all triples
-  my $quads = $iter->as_quads(iri('http://graph-name/'));
+  my $graph = iri('http://graph-name/');
+  my $quads = $iter->as_quads($graph);
   
   $store->add_iter($quads);
   my $model = Attean::QuadModel->new( store => $store );
   my $iter = $model->get_quads();
   while (my $quad = $iter->next) {
     say $quad->object->ntriples_string;
+  }
+
+  # run a SPARQL query and iterate over the results
+  my $sparql = 'SELECT * WHERE { ?s ?p ?o }';
+  my $s = Attean->get_parser('SPARQL')->new();
+  my ($algebra)	= $s->parse($sparql);
+  my $results = $model->evaluate($algebra, $graph);
+  while (my $r = $results->next) {
+    say $r->as_string;
   }
 
 =head1 DESCRIPTION

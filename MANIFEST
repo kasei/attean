@@ -137,6 +137,7 @@ t/00.load.t
 t/algebra.t
 t/binding-equality.t
 t/binding.t
+t/convenience.t
 t/cost_planner.t
 t/export-functions.t
 t/expression.t
