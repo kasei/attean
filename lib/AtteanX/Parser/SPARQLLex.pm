@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQLLex - SPARQL Lexer
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQLLex version 0.025
+This document describes AtteanX::Parser::SPARQLLex version 0.026
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ This document describes AtteanX::Parser::SPARQLLex version 0.025
 
 =cut
 
-package AtteanX::Parser::SPARQLLex 0.025 {
+package AtteanX::Parser::SPARQLLex 0.026 {
 	use utf8;
 	use Moo;
 	use Attean;
@@ -104,7 +104,7 @@ the SPARQL query/update read from the L<IO::Handle> object C<< $fh >>.
 	}
 }
 
-package AtteanX::Parser::SPARQLLex::Iterator 0.025 {
+package AtteanX::Parser::SPARQLLex::Iterator 0.026 {
 	use utf8;
 	use Moo;
 	use Attean;

@@ -32,8 +32,23 @@ my:project
 							my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 ,
 							my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ,
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
-							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ;
+							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
+							my:v_0-026 ;
 	.
+
+my:v_0-026
+	a					:Version ;
+	dc:issued			"2020-02-20"^^xsd:date ;
+	:revision			"0.026" ;
+	dcterms:replaces	my:v_0-025 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Improve type coercions (#148 from @kjetilk)." ],
+			[ a dcs:Update ; rdfs:label "Fix typo in Attean::Plan::Service POD (#146)." ],
+			[ a dcs:Addition ; rdfs:label "Added Attean::API::Model->evaluate convenience method (#149, #150)." ]
+	]
+	.
+
 
 my:v_0-025
 	a					:Version ;
