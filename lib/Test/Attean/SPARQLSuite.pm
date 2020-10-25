@@ -573,7 +573,7 @@ sub print_results {
 	my $name	= shift;
 	my $results	= shift;
 	$$results	= $$results->materialize;
-	warn "$name:\n";
+	print "$name:\n";
 	my $count	= 1;
 	while (my $r = $$results->next) {
 		printf("%3d %s\n", $count++, $r->as_string);
@@ -598,7 +598,7 @@ sub get_expected_results {
 		my $parser	= Attean->get_parser('SPARQLJSON')->new();
 		my $results	= $parser->parse_iter_from_io($fh)->materialize;
 		my $item	= $results->peek;
-		if ($item->does('Attean::API::Term')) {
+		if (blessed($item) and $item->does('Attean::API::Term')) {
 			if ($self->results) {
 				warn "Expected result: " . $item->as_string . "\n";
 			}
