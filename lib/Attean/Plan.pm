@@ -2213,7 +2213,7 @@ package Attean::Plan::Aggregate 0.026 {
 			# result in an empty result <http://answers.semanticweb.com/questions/17410/semantics-of-sparql-aggregates>
 			
 			my @results;
-			unless (scalar(@group_keys)) {
+			if (scalar(@group_keys) == 0 and scalar(@groups) == 0) {
 				push(@group_keys, '');
 				$row_groups{''}			= [];
 				$group_templates{''}	= {};
