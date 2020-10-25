@@ -547,7 +547,13 @@ from the invocant for every variable name in C<< @keys >>.
 		my $self	= shift;
 		my $class	= ref($self);
 		my $mapper	= shift;
-		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
+		my %values;
+		foreach my $var ($self->variables) {
+			my $term	= $mapper->map($self->value($var));
+			if ($term) {
+				$values{$var}	= $term;
+			}
+		}
 		return $class->new( bindings => \%values );
 	}
 
