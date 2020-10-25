@@ -359,6 +359,14 @@ package Attean::API::NumericLiteral 0.026 {
 			} else {
 				die "Bad lexical form for xsd:integer: '$value'";
 			}
+		} elsif ($type eq 'negativeInteger') {
+			if ($value =~ m/^-(\d+)$/) {
+				my $num		= $2;
+				$num		=~ s/^0+(\d)/$1/;
+				return Attean::Literal->new(value => "-${num}", datatype => 'http://www.w3.org/2001/XMLSchema#negativeInteger');
+			} else {
+				die "Bad lexical form for xsd:integer: '$value'";
+			}
 		} elsif ($type eq 'decimal') {
 			if ($value =~ m/^([-+])?((\d+)([.]\d*)?)$/) {
 				my $sign	= $1 || '';
