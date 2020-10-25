@@ -361,7 +361,7 @@ package Attean::API::NumericLiteral 0.026 {
 			}
 		} elsif ($type eq 'negativeInteger') {
 			if ($value =~ m/^-(\d+)$/) {
-				my $num		= $2;
+				my $num		= $1;
 				$num		=~ s/^0+(\d)/$1/;
 				return Attean::Literal->new(value => "-${num}", datatype => 'http://www.w3.org/2001/XMLSchema#negativeInteger');
 			} else {
