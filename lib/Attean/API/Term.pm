@@ -152,6 +152,8 @@ package Attean::API::Literal 0.026 {
 			my $type	= $dt->value;
 			if ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::NumericLiteral');
+			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::BooleanLiteral');
 			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#dateTime') {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::DateTimeLiteral');
 			}
@@ -306,6 +308,25 @@ package Attean::API::CanonicalizingLiteral 0.026 {
 	requires 'canonicalized_term';
 }
 
+package Attean::API::BooleanLiteral 0.026 {
+	use Scalar::Util qw(blessed looks_like_number);
+
+	use Moo::Role;
+
+	sub canonicalized_term {
+		my $self	= shift;
+		my $value	= $self->value;
+		if ($value =~ m/^(true|false|0|1)$/) {
+			return ($value eq 'true' or $value eq '1')
+				? Attean::Literal->true
+				: Attean::Literal->false;
+		} else {
+			die "Bad lexical form for xsd:boolean: '$value'";
+		}
+	}
+	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
+}
+
 package Attean::API::NumericLiteral 0.026 {
 	use Scalar::Util qw(blessed looks_like_number);
 
@@ -346,7 +367,7 @@ package Attean::API::NumericLiteral 0.026 {
 				my $frac	= $4;
 				$sign		= '' if ($sign eq '+');
 				$num		=~ s/^0+(.)/$1/;
-				$num		=~ s/[.](\d)0+$/.$1/;
+				$num		=~ s/[.](\d+)0+$/.$1/;
 				if ($num =~ /^[.]/) {
 					$num	= "0$num";
 				}
@@ -389,6 +410,14 @@ package Attean::API::NumericLiteral 0.026 {
 			} else {
 				die "Bad lexical form for xsd:float: '$value'";
 			}
+		} elsif ($type eq 'boolean') {
+			if ($value =~ m/^(true|false|0|1)$/) {
+				return ($value eq 'true' or $value eq '1')
+					? Attean::Literal->true
+					: Attean::Literal->false;
+			} else {
+				die "Bad lexical form for xsd:boolean: '$value'";
+			}
 		} elsif ($type eq 'double') {
 			if ($value =~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/) {
 				my $sign	= $1;
@@ -415,6 +444,8 @@ package Attean::API::NumericLiteral 0.026 {
 			} else {
 				die "Bad lexical form for xsd:double: '$value'";
 			}
+		} else {
+			warn "No canonicalization for type $type";
 		}
 		return $self;
 	}

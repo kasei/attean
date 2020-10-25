@@ -77,6 +77,7 @@ sub setup {
 		push(@files, qw(
 			aggregates
 			bind
+			cast
 			bindings
 			construct
 			csv-tsv-res

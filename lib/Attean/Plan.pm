@@ -760,44 +760,55 @@ package Attean::Plan::Extend 0.026 {
 			my $datatype	= $expr->datatype->value;
 			my ($child)	= @{ $expr->children };
 			my $term	= $self->evaluate_expression($model, $child, $r);
+
+			if ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#string$>) {
+				my $value	= $term->value;
+				if ($term->does('Attean::API::IRI')) {
+					return Attean::Literal->new(value => $term->value);
+				} elsif ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+					my $v	= ($value eq 'true' or $value eq '1') ? 'true' : 'false';
+					return Attean::Literal->new(value => $v);
+				} elsif ($term->does('Attean::API::NumericLiteral')) {
+					my $v	= $term->numeric_value();
+					if ($v == int($v)) {
+						return Attean::Literal->new(value => int($v));
+					}
+				}
+				
+				return Attean::Literal->new(value => $value);
+			}
+
 			die "TypeError $op" unless (blessed($term) and $term->does('Attean::API::Literal'));
-			if ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(integer|float|double)>) {
+			if ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(integer|float|double|decimal)>) {
 				my $value	= $term->value;
 				my $num;
 				if ($datatype eq 'http://www.w3.org/2001/XMLSchema#integer') {
 					if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
-						$value	= ($value eq 'true') ? '1' : '0';
+						$value	= ($value eq 'true' or $value eq '1') ? '1' : '0';
 					} elsif ($term->does('Attean::API::NumericLiteral')) {
-						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#double' or (int($value) != $value)) {
-							die "cannot cast to xsd:integer as precision would be lost";
-						} else {
-							$value	= int($value);
-						}
-					} elsif (looks_like_number($value)) {
-						if ($value =~ /[eE]/) {	# double
-							die "cannot to xsd:integer as precision would be lost";
-						} elsif (int($value) != $value) {
-							die "cannot to xsd:integer as precision would be lost";
-						}
+						my $v	= $term->numeric_value();
+						$v		=~ s/[.].*$//;
+						$value	= int($v);
+					} elsif ($value =~ /^[-+]\d+$/) {
+						my ($v) = "$value";
+						$v		=~ s/[.].*$//;
+						$value	= int($v);
 					}
 					$num	= $value;
 				} elsif ($datatype eq 'http://www.w3.org/2001/XMLSchema#decimal') {
 					if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
 						$value	= ($value eq 'true') ? '1' : '0';
 					} elsif ($term->does('Attean::API::NumericLiteral')) {
-						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#double' or (int($value) != $value)) {
-							die "cannot cast to xsd:decimal as precision would be lost";
-						} else {
-							$value	= $term->numeric_value;
-						}
+						$value	= $term->numeric_value;
 					} elsif (looks_like_number($value)) {
 						if ($value =~ /[eE]/) {	# double
 							die "cannot cast to xsd:decimal as precision would be lost";
-						} elsif (int($value) != $value) {
-							die "cannot cast to xsd:decimal as precision would be lost";
 						}
+						$value = +$value;
 					}
-					$num	= $value;
+					$num	= "$value";
+					$num	=~ s/[.]0+$/.0/;
+					$num	=~ s/[.](\d+)0*$/.$1/;
 				} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(float|double)$>) {
 					my $typename	= $1;
 					if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
@@ -811,7 +822,32 @@ package Attean::Plan::Extend 0.026 {
 					}
 					$num	= sprintf("%e", $value);
 				}
-				return Attean::Literal->new(value => $num, datatype => $expr->datatype);
+				my $c	= Attean::Literal->new(value => $num, datatype => $expr->datatype);
+				if (my $term = $c->canonicalized_term()) {
+					return $term;
+				} else {
+					die "Term value is not a valid lexical form for $datatype";
+				}
+			} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#boolean$>) {
+				if ($term->does('Attean::API::NumericLiteral')) {
+					my $value	= $term->numeric_value;
+					return ($value == 0) ? Attean::Literal->false : Attean::Literal->true;
+				} else {
+					my $value	= $term->value;
+					if ($value =~ m/^(true|false|0|1)$/) {
+						return ($value eq 'true' or $value eq '1') ? Attean::Literal->true : Attean::Literal->false;
+					} else {
+						die "Bad lexical form for xsd:boolean: '$value'";
+					}
+				}
+			} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#dateTime$>) {
+				my $value	= $term->value;
+				my $c	= Attean::Literal->new(value => $value, datatype => $expr->datatype);
+				if ($c->does('Attean::API::DateTimeLiteral') and $c->datetime) {
+					return $c;
+				} else {
+					die "Bad lexical form for xsd:dateTime: '$value'";
+				}
 			}
 			$self->log->warn("Cast expression unimplemented for $datatype: " . Dumper($expr));
 		} elsif ($expr->isa('Attean::ValueExpression')) {

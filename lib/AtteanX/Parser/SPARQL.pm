@@ -2023,7 +2023,7 @@ sub _FunctionCall {
 	
 	my @args	= $self->_ArgList;
 
-	if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double)$>) {
+	if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|boolean|string|dateTime)$>) {
 		my $expr	= Attean::CastExpression->new( children => \@args, datatype => $iri );
 		$self->_add_stack( $expr );
 	} else {
@@ -3064,7 +3064,7 @@ sub _IRIrefOrFunction {
 	if ($self->_ArgList_test) {
 		my ($iri)	= splice(@{ $self->{_stack} });
 		my @args	= $self->_ArgList;
-		if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double)$>) {
+		if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|boolean|string|dateTime)$>) {
 			my $expr	= Attean::CastExpression->new( children => \@args, datatype => $iri );
 			$self->_add_stack( $expr );
 		} else {

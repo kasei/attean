@@ -75,8 +75,9 @@ L<Attean::API::Literal> values.
 			my $term	= shift;
 			return $term unless ($term->does('Attean::API::Literal'));
 			
-			if ($term->does('Attean::API::NumericLiteral')) {
-				return $term->canonicalized_term;
+			if ($term->does('Attean::API::CanonicalizingLiteral')) {
+				my $c	= eval { $term->canonicalized_term };
+				return ($@) ? undef : $c;
 			}
 			
 			return $term;
