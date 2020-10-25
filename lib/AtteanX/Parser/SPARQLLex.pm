@@ -162,6 +162,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.026 {
 			q["]	=> '_get_double_literal',
 			q[:]	=> '_get_pname',
 			q[?]	=> '_get_variable',
+			q[$]	=> '_get_variable',
 			q[!]	=> '_get_bang',
 			q[>]	=> '_get_iriref_or_relational',
 			q([)	=> '_get_lbracket_or_anon',
@@ -362,12 +363,22 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.026 {
 
 	sub _get_variable {
 		my $self	= shift;
-		$self->get_char_safe('?');
-		if ($self->buffer =~ /^$r_VARNAME/) {
-			my $name	= $self->read_length($+[0]);
-			return $self->new_token(VAR, $self->start_line, $self->start_column, $name);
+		if (substr($self->buffer, 0, 1) eq '$') {
+			$self->get_char_safe('$');
+			if ($self->buffer =~ /^$r_VARNAME/) {
+				my $name	= $self->read_length($+[0]);
+				return $self->new_token(VAR, $self->start_line, $self->start_column, $name);
+			} else {
+				$self->_throw_error("Invalid variable name");
+			}
 		} else {
-			return $self->new_token(QUESTION, $self->start_line, $self->start_column, '?');
+			$self->get_char_safe('?');
+			if ($self->buffer =~ /^$r_VARNAME/) {
+				my $name	= $self->read_length($+[0]);
+				return $self->new_token(VAR, $self->start_line, $self->start_column, $name);
+			} else {
+				return $self->new_token(QUESTION, $self->start_line, $self->start_column, '?');
+			}
 		}
 	}
 	
