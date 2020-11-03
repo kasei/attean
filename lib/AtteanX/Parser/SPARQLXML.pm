@@ -32,6 +32,8 @@ package AtteanX::Parser::SPARQLXML 0.026 {
 	use XML::SAX::ParserFactory;
 	use Attean;
 	use Moo;
+	use Encode qw(encode);
+	use PerlIO::Layers qw(query_handle);
 	use AtteanX::Parser::SPARQLXML::SAXHandler;
 	
 =item C<< canonical_media_type >>
@@ -77,7 +79,16 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		my $fh		= shift;
 		my $handler	= AtteanX::Parser::SPARQLXML::SAXHandler->new($self->handler);
 		my $p		= XML::SAX::ParserFactory->parser(Handler => $handler);
-		$p->parse_file( $fh );
+		if (query_handle($fh, 'utf8')) {
+			# the filehandle already has utf-8 decoding applied, but the XML
+			# parser is expecting utf-8 *encoded* bytes, so we need to
+			# re-encode the data before parsing.
+			my $string	= do { local($/); <$fh> };
+			my $data	= encode('UTF-8', $string, Encode::FB_CROAK);
+			$p->parse_string($data);
+		} else {
+			$p->parse_file( $fh );
+		}
 	}
 
 =item C<< parse_cb_from_bytes( $data ) >>

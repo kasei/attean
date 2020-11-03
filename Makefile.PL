@@ -33,6 +33,7 @@ requires		'Module::Pluggable'			=> 0;
 requires		'Moo'						=> 2.000002;
 requires		'MooX::Log::Any'			=> 0;
 requires		'namespace::clean'			=> 0;
+requires		'PerlIO::Layers'			=> 0;
 requires		'Role::Tiny'				=> 2.000003;
 requires		'Set::Scalar'				=> 0;
 requires		'Sub::Install'				=> 0;
