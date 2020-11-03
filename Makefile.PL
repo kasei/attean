@@ -22,12 +22,13 @@ perl_version	'5.014';
 requires		'Algorithm::Combinatorics'	=> 0;
 requires		'Data::UUID'				=> 0;
 requires		'DateTime::Format::W3CDTF'	=> 0;
+requires		'Exporter::Tiny'			=> 1.000000;
+requires		'File::Slurp'				=> 0;
 requires		'HTTP::Negotiate'			=> 0;
-requires		'Exporter::Tiny'				=> 1.000000;
 requires		'IRI'						=> 0.005;
 requires		'JSON'						=> 0;
-requires		'LWP::UserAgent'			=> 0;
 requires		'List::MoreUtils'			=> 0;
+requires		'LWP::UserAgent'			=> 0;
 requires		'Math::Cartesian::Product'	=> 1.008;
 requires		'Module::Pluggable'			=> 0;
 requires		'Moo'						=> 2.000002;
@@ -38,17 +39,16 @@ requires		'Role::Tiny'				=> 2.000003;
 requires		'Set::Scalar'				=> 0;
 requires		'Sub::Install'				=> 0;
 requires		'Sub::Util'					=> 1.40;
+requires		'Test::Modern'				=> 0.012;
+requires		'Test::Moose'				=> 0;
+requires		'Test::Roo'					=> 0;
 requires		'Text::CSV'					=> 0;
+requires		'Text::Table'				=> 0;
 requires		'Try::Tiny'					=> 0;
 requires		'Type::Tiny'				=> 0;
 requires		'URI::Escape'				=> 1.36;
 requires		'URI::NamespaceMap'			=> 0.12;
 requires		'XML::SAX'					=> 0;
-requires		'File::Slurp'				=> 0;
-requires		'Test::Moose'				=> 0;
-requires		'Test::Roo'					=> 0;
-requires		'Test::Modern'				=> 0.012;
-requires		'Text::Table'				=> 0;
 
 resources(
 	'homepage'		=> "http://search.cpan.org/dist/Attean/",
