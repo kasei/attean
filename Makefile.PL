@@ -47,6 +47,7 @@ requires		'File::Slurp'				=> 0;
 requires		'Test::Moose'				=> 0;
 requires		'Test::Roo'					=> 0;
 requires		'Test::Modern'				=> 0.012;
+requires		'Text::Table'				=> 0;
 
 resources(
 	'homepage'		=> "http://search.cpan.org/dist/Attean/",
