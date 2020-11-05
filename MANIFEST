@@ -110,6 +110,7 @@ lib/AtteanX/Serializer/SPARQLHTML.pm
 lib/AtteanX/Serializer/SPARQLJSON.pm
 lib/AtteanX/Serializer/SPARQLTSV.pm
 lib/AtteanX/Serializer/SPARQLXML.pm
+lib/AtteanX/Serializer/TextTable.pm
 lib/AtteanX/Serializer/Turtle.pm
 lib/AtteanX/Serializer/TurtleTokens.pm
 lib/AtteanX/SPARQL/Constants.pm
