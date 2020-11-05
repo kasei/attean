@@ -28,7 +28,7 @@ my $block_size	= 25;
 my $short		= 0;
 my %namespaces;
 my $in_format	= 'GUESS';
-my $out_format	= 'STRING';
+my $out_format	= 'TextTable';
 my $result	= GetOptions ("short" => \$short, "list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in_format, "out=s" => \$out_format, "define=s" => \%namespaces, "D=s" => \%namespaces);
 
 if ($list) {
@@ -68,7 +68,7 @@ while (defined(my $file = shift)) {
 	} else {
 		$parser		= Attean->get_parser($in)->new(namespaces => $map);
 	}
-	if ($out eq 'STRING') {
+	if (uc($out) eq 'STRING') {
 		parse_to_string($parser, $fh);
 	} else {
 		my $sclass		= Attean->get_serializer($out) || die "*** No serializer found for format $out\n";
