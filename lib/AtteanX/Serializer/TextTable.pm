@@ -68,7 +68,6 @@ L<IO::Handle> object C<< $fh >>.
 		my $iter	= shift;
 		
 		my @vars;
-		warn $iter;
 		if ($iter->does('Attean::API::ResultOrTermIterator')) {
 			@vars	= @{ $iter->variables };
 		} elsif ($iter->does('Attean::API::TripleIterator')) {
