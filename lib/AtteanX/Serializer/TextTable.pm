@@ -4,7 +4,7 @@ AtteanX::Serializer::TextTable - SPARQL Results TSV Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::TextTable version 0.026
+This document describes AtteanX::Serializer::TextTable version 0.027
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ This document describes AtteanX::Serializer::TextTable version 0.026
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::TextTable 0.026 {
+package AtteanX::Serializer::TextTable 0.027 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);
@@ -67,12 +67,19 @@ L<IO::Handle> object C<< $fh >>.
 		my $io		= shift;
 		my $iter	= shift;
 		
-		my @vars	= @{ $iter->variables };
-		my $tb = Text::Table->new(@vars);
+		my @vars;
+		if ($iter->does('Attean::API::ResultOrTermIterator')) {
+			@vars	= @{ $iter->variables };
+		} elsif ($iter->does('Attean::API::TripleIterator')) {
+			@vars	= qw(subject predicate object);
+		} else {
+			@vars	= qw(subject predicate object graph);
+		}
 		
+		my $tb = Text::Table->new(@vars);
 		my @rows;
 		while (my $t = $iter->next()) {
-			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } map { $t->value($_) } @vars;
+			my @strings	= map { blessed($_) ? $_->as_string : '' } map { eval { $t->value($_) } } @vars;
 			push(@rows, \@strings);
 		}
 		$tb->load(@rows);

@@ -33,8 +33,28 @@ my:project
 							my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ,
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
-							my:v_0-026 ;
+							my:v_0-026 , my:v_0-027 ;
 	.
+
+my:v_0-027
+	a					:Version ;
+	dc:issued			"2020-11-06"^^xsd:date ;
+	:revision			"0.027" ;
+	dcterms:replaces	my:v_0-026 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add canonicalization support for xsd:negativeInteger." ],
+			[ a dcs:Addition ; rdfs:label "Added TextTable SPARQL results serializer." ],
+			[ a dcs:Update ; rdfs:label "Fix evaluation of aggregates over empty groups." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of utf-8 encoding in AtteanX::Parser::SPARQLXML." ],
+			[ a dcs:Update ; rdfs:label "Fix SPARQL lexer to accept variables using the $ sigil." ],
+			[ a dcs:Update ; rdfs:label "Improve Attean::API::Result->apply_map handling of unbound variables." ],
+			[ a dcs:Update ; rdfs:label "Improve handling of XPath Constructor (casting) functions." ],
+			[ a dcs:Update ; rdfs:label "Improve Test::Attean::SPARQLSuite." ],
+			[ a dcs:Update ; rdfs:label "Update module metadata URLs (#155 from @szabgab)." ]
+	]
+	.
+
 
 my:v_0-026
 	a					:Version ;
