@@ -83,7 +83,10 @@ L<Attean::API::QuadIterator>.
 				}
 			}
 		}
-		if (scalar(@iters) <= 1) {
+		
+		if (scalar(@iters) == 0) {
+			return Attean::ListIterator->new(values => [], item_type => 'Attean::API::Quad');
+		} elsif (scalar(@iters) == 1) {
 			return shift(@iters);
 		} else {
 			return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type );
