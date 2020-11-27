@@ -424,10 +424,10 @@ sub query_eval_test {
 	if ($self->debug) {
 		warn "### test     : " . $test->value . "\n";
 		warn "# sparql     : $q\n";
-		warn "# data       : " . ($data->value =~ s#file://##r) if (blessed($data));
-		warn "# graph data : " . ($_->value =~ s#file://##r) for (@gdata);
-		warn "# result     : " . ($result->value =~ s#file://##r);
-		warn "# requires   : " . ($req->value =~ s#file://##r) if (blessed($req));
+		warn "# data       : " . ($data->value =~ s#file://##r) . "\n" if (blessed($data));
+		warn "# graph data : " . ($_->value =~ s#file://##r) . "\n" for (@gdata);
+		warn "# result     : " . ($result->value =~ s#file://##r) . "\n";
+		warn "# requires   : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
 	}
 	
 STRESS:	foreach (1 .. $count) {

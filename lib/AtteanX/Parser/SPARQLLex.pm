@@ -224,8 +224,17 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.027 {
 		unless (length($self->buffer)) {
 			my $line	= $self->file->getline;
 			if (defined($line)) {
-				$line		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
-				$line		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
+				no warnings 'uninitialized';
+				$line		=~ s{\\(?:(?:u([0-9A-Fa-f]{4}))|(?:U([0-9A-Fa-f]{8})))}{
+					my $h			= $1 . $2;
+					my $codepoint	= hex($h);
+					if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+						die "Unicode surrogate U+$h is illegal in UTF-8";
+					}
+					chr($codepoint);
+				}ge;
+# 				$line		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
+# 				$line		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
 				$self->{buffer}	.= $line;
 			}
 		}

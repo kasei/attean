@@ -112,6 +112,17 @@ use Types::Standard qw(Int);
 }
 
 {
+	note('ListIterator[Term]->uniq');
+	my $value	= 0;
+	my $iter	= Attean::ListIterator->new(values => [map { Attean::Literal->integer($_) } (1, 1, 2, 3, 2, 4, 4, 5, 4, 4, 4)], item_type => 'Attean::API::Term');
+	my $uniq	= $iter->uniq();
+	does_ok($uniq, 'Attean::API::Iterator');
+	is($uniq->item_type, 'Attean::API::Term', 'expected item_type');
+	my @elements	= map { int($_->value) } $uniq->elements();
+	is_deeply(\@elements, [1,2,3,4,5]);
+}
+
+{
 	note('CodeIterator[Int] slice');
 	my $value	= 0;
 	my $code	= sub { return ++$value };
@@ -151,6 +162,18 @@ use Types::Standard qw(Int);
 	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <default> .', 'expected triple coerced to quad');
 	is($quads->next->as_string, '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <graph> .', 'expected quad');
 	is($iter->next, undef, 'expected eof');
+}
+
+{
+	note('ListIterator[Mixed]->uniq');
+	my $t	= triple(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'));
+	my $q	= quad(blank('eve'), iri('http://xmlns.com/foaf/0.1/name'), literal('Eve'), iri('graph'));
+	my $iter	= Attean::ListIterator->new(values => [$t, $q, $t, $q, $t], item_type => 'Attean::API::TripleOrQuad');
+	my $uniq	= $iter->uniq();
+	does_ok($uniq, 'Attean::API::Iterator');
+	is($uniq->item_type, 'Attean::API::TripleOrQuad', 'expected item_type');
+	my @elements	= map { $_->as_string } $uniq->elements();
+	is_deeply(\@elements, ['_:eve <http://xmlns.com/foaf/0.1/name> "Eve" .', '_:eve <http://xmlns.com/foaf/0.1/name> "Eve" <graph> .']);
 }
 
 {
