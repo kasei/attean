@@ -14,7 +14,7 @@ use HTTP::Request;
 use HTTP::Response;
 use HTTP::Message::PSGI;
 use Data::Dumper;
-use Encode qw(encode);
+use Encode qw(encode encode_utf8);
 use Getopt::Long;
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
@@ -182,6 +182,7 @@ sub syntax_test {
 	$base					= "file://${base}";
 	warn "Loading SPARQL query from file $filename" if ($self->debug);
 	my $sparql				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
+	my $bytes	= encode_utf8($sparql);
 
 	if ($self->debug) {
 		my $q			= $sparql;
@@ -197,7 +198,7 @@ sub syntax_test {
 		$parser->update(1);
 	}
 	if ($is_pos_query or $is_pos_update) {
-		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
+		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= blessed($query);
 		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
@@ -206,7 +207,7 @@ sub syntax_test {
 			fail("syntax $namevalue; $filename: $@");
 		}
 	} elsif ($is_neg_query or $is_neg_update) {
-		my ($query)	= eval { $parser->parse_list_from_bytes($sparql) };
+		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= $@ ? 1 : 0;
 		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
@@ -497,11 +498,12 @@ sub get_actual_results {
 	my $model		= shift;
 	my $sparql		= shift;
 	my $base		= shift;
+	my $bytes	= encode_utf8($sparql);
 
 	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
 	my $algebra;
 	eval {
-		($algebra)	= $s->parse_list_from_bytes($sparql);
+		($algebra)	= $s->parse_list_from_bytes($bytes);
 	};
 	if ($@) {
 		warn "Failed to parse query $filename: $@";
