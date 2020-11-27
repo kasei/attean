@@ -7,6 +7,7 @@ no warnings 'redefine';
 no warnings 'once';
 
 binmode(\*STDERR, ':encoding(utf8)');
+binmode(\*STDOUT, ':encoding(utf8)');
 
 use autodie;
 use Test::Roo;
