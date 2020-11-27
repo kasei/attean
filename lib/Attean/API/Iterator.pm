@@ -92,27 +92,6 @@ C<< $limit >> elements of the referent.
 Returns a new L<Attean::API::RepeatableIterator> object containing all the
 elements from the referent.
 
-=head2 Methods on Roles Supporting Stringification
-
-For iterators over roles that provide an C<as_string> method, extra methods
-are provided. These iterators are:
-
-Attean::API::ResultOrTermIterator
-Attean::API::StatementIterator
-Attean::API::MixedStatementIterator
-Attean::API::ResultIterator
-Attean::API::TermIterator
-
-They provide the following methods:
-
-=over 4
-
-=item C<< uniq >>
-
-Returns a new iterator providing unique results (based on the stringified value of the underlying elements).
-
-=back
-
 =cut
 
 package Attean::API::Iterator 0.027 {
@@ -501,6 +480,27 @@ package Attean::API::TermIterator 0.027 {
 1;
 
 __END__
+
+=back
+
+=head2 Methods on Roles Supporting Stringification
+
+For iterators over roles that provide an C<as_string> method, extra methods
+are provided. These iterators are:
+
+Attean::API::ResultOrTermIterator
+Attean::API::StatementIterator
+Attean::API::MixedStatementIterator
+Attean::API::ResultIterator
+Attean::API::TermIterator
+
+They provide the following methods:
+
+=over 4
+
+=item C<< uniq >>
+
+Returns a new iterator providing unique results (based on the stringified value of the underlying elements).
 
 =back
 
