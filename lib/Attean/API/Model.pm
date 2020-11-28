@@ -101,11 +101,19 @@ Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
 subjects of quads matching the supplied pattern (using the same matching
 semantics as C<< get_quads >>).
 
+The objects returned will not necessarily be unique. It will instead be
+equivalent to calling C<< get_quads >> and accessing C<< $quad->subject >>
+for each C<< $quad >> value returned by the iterator. For an iterator of unique
+subjects, use C<< $model->subjects->uniq >>.
+
 =item C<< predicates( $subject, $object, $graph ) >>
 
 Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
 predicates of quads matching the supplied pattern (using the same matching
 semantics as C<< get_quads >> with an C<< undef >> predicate).
+
+The objects returned will not necessarily be unique
+(see the note for C<< subjects >> above).
 
 =item C<< objects( $subject, $predicate, $graph ) >>
 
@@ -113,11 +121,17 @@ Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
 objects of quads matching the supplied pattern (using the same matching
 semantics as C<< get_quads >> with an C<< undef >> object).
 
+The objects returned will not necessarily be unique
+(see the note for C<< subjects >> above).
+
 =item C<< graphs( $subject, $predicate, $object ) >>
 
 Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects of all
 graphs of quads matching the supplied pattern (using the same matching
 semantics as C<< get_quads >> with an C<< undef >> graph).
+
+The objects returned will not necessarily be unique
+(see the note for C<< subjects >> above).
 
 =item C<< graph_nodes( $graph ) >>
 
