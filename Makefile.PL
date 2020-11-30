@@ -20,7 +20,7 @@ test_requires	'XML::Simple'				=> 0;
 perl_version	'5.014';
 
 requires		'Algorithm::Combinatorics'	=> 0;
-requires		'Data::UUID'				=> 0;
+requires		'UUID::Tiny'				=> 0;
 requires		'DateTime::Format::W3CDTF'	=> 0;
 requires		'Exporter::Tiny'			=> 1.000000;
 requires		'File::Slurp'				=> 0;

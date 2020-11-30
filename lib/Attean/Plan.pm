@@ -706,7 +706,7 @@ expressions, binding the produced values to new variables.
 package Attean::Plan::Extend 0.027 {
 	use Moo;
 	use Encode;
-	use Data::UUID;
+	use UUID::Tiny ':std';
 	use URI::Escape;
 	use Data::Dumper;
 	use I18N::LangTags;
@@ -1230,12 +1230,10 @@ package Attean::Plan::Extend 0.027 {
 				my $seconds	= int($offset);
 				return Attean::Literal->new(value => sprintf('%s%02d:%02d', $minus, $hours, $minutes));
 			} elsif ($func eq 'UUID') {
-				my $u		= Data::UUID->new();
-				my $uuid	= 'urn:uuid:' . $u->to_string( $u->create() );
+				my $uuid	= 'urn:uuid:' . uc(uuid_to_string(create_uuid()));
 				return Attean::IRI->new(value => $uuid);
 			} elsif ($func eq 'STRUUID') {
-				my $u		= Data::UUID->new();
-				return Attean::Literal->new(value => $u->to_string( $u->create() ));
+				return Attean::Literal->new(value => uc(uuid_to_string(create_uuid())));
 			} elsif ($func eq 'BNODE') {
 				if (scalar(@{ $expr->children })) {
 					my $string	= $self->evaluate_expression($model, $expr->children->[0], $r);
@@ -2029,7 +2027,7 @@ package Attean::Plan::Exists 0.027 {
 package Attean::Plan::Aggregate 0.027 {
 	use Moo;
 	use Encode;
-	use Data::UUID;
+	use UUID::Tiny ':std';
 	use URI::Escape;
 	use I18N::LangTags;
 	use POSIX qw(ceil floor);

@@ -36,6 +36,22 @@ my:project
 							my:v_0-026 , my:v_0-027 ;
 	.
 
+my:v_0-028
+	a					:Version ;
+	dc:issued			"2020-11-XX"^^xsd:date ;
+	:revision			"0.028" ;
+	dcterms:replaces	my:v_0-027 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add uniq method on iterators over objects with an as_string method." ],
+			[ a dcs:Update ; rdfs:label "Improve documentation about statement projection accessors (e.g. subjects) not being unique (#152)." ],
+			[ a dcs:Update ; rdfs:label "Fix utf8 handling of syntax tests in dawg test harness." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean::QuadModel->get_quads when called with an empty term set in some position." ],
+			[ a dcs:Update ; rdfs:label "Remove AtteanX::Store::DBI which was not a real DBI store and was accidentally checked-in (#134)." ]
+	]
+	.
+
+
 my:v_0-027
 	a					:Version ;
 	dc:issued			"2020-11-06"^^xsd:date ;

@@ -46,7 +46,7 @@ package Attean::TermMap 0.027 {
 	use Moo;
 	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;
-	use Data::UUID;
+	use UUID::Tiny ':std';
 	use namespace::clean;
 	
 	with 'Attean::Mapper';
@@ -99,8 +99,8 @@ Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.
 			my $id		= $term->value;
 			return $map{$id} if (defined($map{$id}));
 			
-			my $uuid	= Data::UUID->new->create_hex;
-			my $new		= Attean::Blank->new( $uuid );
+			my $uuid	= unpack('H*', create_uuid());
+			my $new		= Attean::Blank->new( 'b' . $uuid );
 			$map{$id}	= $new;
 			return $new;
 		});

@@ -37,7 +37,6 @@ None.
 package Attean::TreeRewriter 0.027 {
 	use Moo;
 	use Types::Standard qw(CodeRef ArrayRef Str);
-	use Data::UUID;
 	use Scalar::Util qw(blessed refaddr);
 	use namespace::clean;
 	with 'MooX::Log::Any';

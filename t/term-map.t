@@ -44,7 +44,7 @@ subtest 'short blank node label mapping' => sub {
 subtest 'UUID blank node label mapping' => sub {
 	my $mapper			= Attean::TermMap->uuid_blank_map;
 	my $bindings_mapper	= $mapper->binding_mapper;
-	my $uuid_blank		= qr/^_:0x[0-9A-Za-z]{32}$/;
+	my $uuid_blank		= qr/^_:b[0-9A-Za-z]{32}$/;
 	{
 		note('Mapping Iterator<Term>');
 		my $iter	= Attean::ListIterator->new(values => [blank('a'), blank('zzz')], item_type => 'Attean::API::Term');
