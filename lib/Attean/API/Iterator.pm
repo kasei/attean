@@ -313,6 +313,13 @@ package Attean::API::RepeatableIterator 0.027 {
 		return $self;
 	}
 
+	sub size {
+		my $self	= shift;
+		my @elements	= $self->elements;
+		warn 'RepeatableIterator->size';
+		return scalar(@elements);
+	}
+	
 	with 'Attean::API::Iterator';
 }
 
