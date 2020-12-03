@@ -24,9 +24,9 @@ my:project
 	:programming-language	"Perl" ;
 	:created				"2014-09-27"^^xsd:date ;
 	:maintainer				my:developer ;
-	:homepage				<http://search.cpan.org/dist/Attean/> ;
+	:homepage				<https://metacpan.org/release/Attean/> ;
 	:bug-database			<https://github.com/kasei/attean/issues> ;
-	doap:download-page		<http://search.cpan.org/dist/Attean/> ;
+	doap:download-page		<https://metacpan.org/release/Attean/> ;
 	doap:download-mirror	<http://kasei.us/code/files/> ;
 	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 ,
 							my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 ,
@@ -38,7 +38,7 @@ my:project
 
 my:v_0-028
 	a					:Version ;
-	dc:issued			"2020-11-XX"^^xsd:date ;
+	dc:issued			"2020-11-02"^^xsd:date ;
 	:revision			"0.028" ;
 	dcterms:replaces	my:v_0-027 ;
 	dcs:changeset [
@@ -47,7 +47,10 @@ my:v_0-028
 			[ a dcs:Update ; rdfs:label "Improve documentation about statement projection accessors (e.g. subjects) not being unique (#152)." ],
 			[ a dcs:Update ; rdfs:label "Fix utf8 handling of syntax tests in dawg test harness." ],
 			[ a dcs:Update ; rdfs:label "Fix Attean::QuadModel->get_quads when called with an empty term set in some position." ],
-			[ a dcs:Update ; rdfs:label "Remove AtteanX::Store::DBI which was not a real DBI store and was accidentally checked-in (#134)." ]
+			[ a dcs:Update ; rdfs:label "Remove AtteanX::Store::DBI which was not a real DBI store and was accidentally checked-in (#134)." ],
+			[ a dcs:Update ; rdfs:label "Switch UUID dependency from Data::UUID to UUID::Tiny (#145)." ],
+			[ a dcs:Update ; rdfs:label "Added Attean::API::RepeatableIterator->size method (#89)." ]
+			
 	]
 	.
 

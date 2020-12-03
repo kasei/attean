@@ -4,7 +4,7 @@ Attean::API::TermSerializer - Role for serializers of L<Attean::API::Term> objec
 
 =head1 VERSION
 
-This document describes Attean::API::TermSerializer version 0.027
+This document describes Attean::API::TermSerializer version 0.028
 
 =head1 DESCRIPTION
 
