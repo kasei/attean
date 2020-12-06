@@ -406,6 +406,19 @@ package Attean::API::MutableModel 0.028 {
 		}
 	}
 	
+	sub load_triples_from_io {
+		my $self	= shift;
+		my $format	= shift;
+		my $class	= Attean->get_parser($format) || die "Failed to load parser for '$format'";
+		my $parser	= $class->new() || die "Failed to construct parser for '$format'";
+		while (scalar(@_)) {
+			my ($graph, $fh)	= splice(@_, 0, 2);
+			my $iter	= $parser->parse_iter_from_io($fh);
+			my $quads	= $iter->as_quads($graph);
+			$self->add_iter($quads);
+		}
+	}
+	
 	sub add_iter {
 		my $self	= shift;
 		my $iter	= shift;
@@ -460,7 +473,7 @@ package Attean::API::BulkUpdatableModel 0.028 {
 	requires 'begin_bulk_updates';
 	requires 'end_bulk_updates';
 	
-	around [qw(load_triples add_iter add_list)] => sub {
+	around [qw(load_triples load_triples_from_io add_iter add_list)] => sub {
 		my $orig	= shift;
 		my $self	= shift;
 		$self->begin_bulk_updates();

@@ -65,6 +65,12 @@ Parses the serialized triples contained in the string C<$data> using the
 C<$format> parser (see L<Attean/get_parser>). Triples resulting from parsing
 are turned into quads using the C<$graph> identifier, and added to the model.
 
+=item C<< load_triples_from_io( $format, $graph => $data ) >>
+
+Parses the serialized triples read from the filehandle C<$io> using the
+C<$format> parser (see L<Attean/get_parser>). Triples resulting from parsing
+are turned into quads using the C<$graph> identifier, and added to the model.
+
 =item C<< add_iter( $iter ) >>
 
 Adds all the quads from the L<Attean::API::QuadIterator> C<$iter> to the model.
