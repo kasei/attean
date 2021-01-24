@@ -136,6 +136,8 @@ Returns a temporary, mutable quad model based on a L<AtteanX::Store::Memory> sto
 
 =item C<< get_serializer( $NAME ) >>
 
+=item C<< get_serializer( filename => $FILENAME ) >>
+
 =item C<< get_serializer( media_type => $MEDIA_TYPE ) >>
 
 Attempts to find a L<Attean::API::Serializer> serializer class with the given
@@ -150,11 +152,24 @@ returns undef.
 	sub get_serializer {
 		my $self	= shift;
 		my $role	= 'Attean::API::Serializer';
-		return $self->_get_plugin('serializers', shift, $role) if (scalar(@_) == 1);
+
+		if (scalar(@_) == 1) {
+			my $name	= shift;
+			my $p		= $self->_get_plugin('serializers', $name, $role);
+			return $p if $p;
+			
+			foreach my $type (qw'filename media_type') {
+				my $p	= $self->get_serializer($type => $name);
+				return $p if $p;
+			}
+			return;
+		}
 		my $type	= shift;
-		my %method	= (media_type => 'media_types');
+		my %method	= (filename => 'file_extensions', media_type => 'media_types');
 		if (my $method = $method{ $type }) {
 			my $value	= shift;
+			$value	=~ s/^.*[.]// if ($type eq 'filename');
+			$value	=~ s/;.*$// if ($type eq 'media_type');
 			foreach my $p ($self->serializers()) {
 				if (can_load( modules => { $p => 0 })) {
 					next unless ($p->does($role));
@@ -187,7 +202,19 @@ returns undef.
 	sub get_parser {
 		my $self	= shift;
 		my $role	= 'Attean::API::Parser';
-		return $self->_get_plugin('parsers', shift, $role) if (scalar(@_) == 1);
+		
+		if (scalar(@_) == 1) {
+			my $name	= shift;
+			my $p		= $self->_get_plugin('parsers', $name, $role);
+			return $p if $p;
+			
+			foreach my $type (qw'filename media_type') {
+				my $p	= $self->get_parser($type => $name);
+				return $p if $p;
+			}
+			return;
+		}
+		
 		my $type	= shift;
 		my %method	= (filename => 'file_extensions', media_type => 'media_types');
 		if (my $method = $method{ $type }) {
