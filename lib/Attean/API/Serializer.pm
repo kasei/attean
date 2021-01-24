@@ -179,8 +179,9 @@ package Attean::API::ResultSerializer 0.028 {
 		if (scalar(@_)) {
 			@vars	= $_[0]->variables;
 		}
+		
 		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type->role, variables => \@vars );
-		return $self->serialize_list_to_io($io, $iter);
+		return $self->serialize_iter_to_io($io, $iter);
 	};
 	
 	around 'serialize_list_to_bytes' => sub {
