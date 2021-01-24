@@ -43,6 +43,7 @@ package AtteanX::Serializer::TextTable 0.028 {
 	use Text::Table;
 	use namespace::clean;
 
+	my @rule			= qw(- +);
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/plain');
 
 =item C<< media_types >>
@@ -78,14 +79,28 @@ L<IO::Handle> object C<< $fh >>.
 			@vars	= qw(subject predicate object graph);
 		}
 		
-		my $tb = Text::Table->new(@vars);
+		my @headers			= (\q"| ");
+		push(@headers, map { $_ => \q" | " } @vars);
+		pop	@headers;
+		push @headers => (\q" |");
+
+		my $table = Text::Table->new(@headers);
+
+		my @rule			= qw(- +);
 		my @rows;
 		while (my $t = $iter->next()) {
 			my @strings	= map { blessed($_) ? $_->as_string : '' } map { eval { $t->value($_) } } @vars;
 			push(@rows, \@strings);
 		}
-		$tb->load(@rows);
-		print {$io} $tb;
+		$table->load(@rows);
+		
+		print {$io} join('',
+				$table->rule(@rule),
+				$table->title,
+				$table->rule(@rule),
+				map({ $table->body($_) } 0 .. @rows),
+				$table->rule(@rule)
+			);
 	}
 	
 =item C<< serialize_iter_to_bytes( $iterator ) >>
@@ -101,15 +116,29 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my $iter	= shift;
 		
 		my @vars	= @{ $iter->variables };
-		my $tb = Text::Table->new(@vars);
+
+
+		my @headers			= (\q"| ");
+		push(@headers, map { $_ => \q" | " } @vars);
+		pop	@headers;
+		push @headers => (\q" |");
+
+		my $table = Text::Table->new(@headers);
 		
 		my @rows;
 		while (my $t = $iter->next()) {
 			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } map { $t->value($_) } @vars;
 			push(@rows, \@strings);
 		}
-		$tb->load(@rows);
-		my $data	= $tb->table();
+		$table->load(@rows);
+
+		my $data	= join('',
+				$table->rule(@rule),
+				$table->title,
+				$table->rule(@rule),
+				map({ $table->body($_) } 0 .. @rows),
+				$table->rule(@rule)
+			);
 		return encode('UTF-8', $data);
 	}
 
