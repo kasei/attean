@@ -54,6 +54,8 @@ Returns a list of media types that identify the format produced by this serializ
 	sub media_types {
 		return [qw(text/plain)];
 	}
+
+	sub file_extensions { return [qw(txt)] };
 	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 

@@ -58,6 +58,8 @@ Returns a list of media types that identify the format produced by this serializ
 		return [qw(application/n-triples text/plain)];
 	}
 
+	sub file_extensions { return [qw(nt)] };
+	
 	with 'Attean::API::TripleSerializer';
 	with 'Attean::API::AppendableSerializer';
 }

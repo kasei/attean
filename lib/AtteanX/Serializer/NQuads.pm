@@ -58,6 +58,9 @@ Returns a list of media types that identify the format produced by this serializ
 		return [qw(application/n-quads)];
 	}
 
+
+	sub file_extensions { return [qw(nq)] };
+
 	with 'Attean::API::MixedStatementSerializer';
 	with 'Attean::API::AppendableSerializer';
 }

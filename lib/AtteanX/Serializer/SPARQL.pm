@@ -55,13 +55,13 @@ package AtteanX::Serializer::SPARQL 0.028 {
 	sub media_types {
 		return [qw(application/sparql-query)];
 	}
+
+	sub file_extensions { return [qw(rq ru)] };
 	
 	sub handled_type {
 		state $ITEM_TYPE = Type::Tiny::Role->new(role => 'AtteanX::SPARQL::Token');
 		return $ITEM_TYPE;
 	}
-
-	sub file_extensions { return [qw(rq)] }
 
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 

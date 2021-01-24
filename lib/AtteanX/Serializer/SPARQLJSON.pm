@@ -54,6 +54,8 @@ Returns a list of media types that identify the format produced by this serializ
 		return [qw(application/sparql-results+json)];
 	}
 
+	sub file_extensions { return [qw(srj json)] };
+
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 
 Serializes the L<Attean::API::Binding> objects from C<< $iterator >> to the

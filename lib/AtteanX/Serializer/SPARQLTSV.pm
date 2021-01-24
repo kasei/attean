@@ -53,6 +53,8 @@ Returns a list of media types that identify the format produced by this serializ
 	sub media_types {
 		return [qw(text/tab-separated-values)];
 	}
+
+	sub file_extensions { return [qw(tsv)] };
 	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 

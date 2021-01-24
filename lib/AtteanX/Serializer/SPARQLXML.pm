@@ -53,6 +53,8 @@ Returns a list of media types that identify the format produced by this serializ
 	sub media_types {
 		return [qw(application/sparql-results+xml)];
 	}
+
+	sub file_extensions { return [qw(srx xml)] };
 	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 
