@@ -22,6 +22,8 @@ Serializes triples and quads into the RDF 1.1 N-Quads format.
 
 =item C<< canonical_media_type >>
 
+=item C<< file_extensions >>
+
 =back
 
 =head1 METHODS
@@ -58,6 +60,12 @@ Returns a list of media types that identify the format produced by this serializ
 		return [qw(application/n-quads)];
 	}
 
+
+=item C<< file_extensions >>
+
+Returns a list of file extensions associated with the serialized format.
+
+=cut
 
 	sub file_extensions { return [qw(nq)] };
 

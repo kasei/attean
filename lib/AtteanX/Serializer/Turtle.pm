@@ -65,6 +65,12 @@ package AtteanX::Serializer::Turtle 0.028 {
 		return $ITEM_TYPE;
 	}
 
+=item C<< file_extensions >>
+
+Returns a list of file extensions associated with the serialized format.
+
+=cut
+
 	sub file_extensions { return [qw(ttl)] }
 
 	has 'serializer' => (is => 'rw', isa => InstanceOf['AtteanX::Serializer::TurtleTokens']);

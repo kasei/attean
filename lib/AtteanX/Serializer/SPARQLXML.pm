@@ -22,6 +22,8 @@ This document describes AtteanX::Serializer::SPARQLXML version 0.028
 
 =item C<< canonical_media_type >>
 
+=item C<< file_extensions >>
+
 =back
 
 =head1 METHODS
@@ -53,6 +55,12 @@ Returns a list of media types that identify the format produced by this serializ
 	sub media_types {
 		return [qw(application/sparql-results+xml)];
 	}
+
+=item C<< file_extensions >>
+
+Returns a list of file extensions associated with the serialized format.
+
+=cut
 
 	sub file_extensions { return [qw(srx xml)] };
 	

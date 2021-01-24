@@ -56,6 +56,12 @@ package AtteanX::Serializer::SPARQL 0.028 {
 		return [qw(application/sparql-query)];
 	}
 
+=item C<< file_extensions >>
+
+Returns a list of file extensions associated with the serialized format.
+
+=cut
+
 	sub file_extensions { return [qw(rq ru)] };
 	
 	sub handled_type {

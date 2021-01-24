@@ -26,6 +26,8 @@ This document describes AtteanX::Serializer::RDFXML version 0.028
 
 =item C<< file_extensions >>
 
+=item C<< file_extensions >>
+
 =back
 
 =head1 METHODS
@@ -49,6 +51,12 @@ package AtteanX::Serializer::RDFXML 0.028 {
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/rdf+xml');
 	has '_rev' => (is => 'rw', isa => HashRef, init_arg => undef, default => sub { +{} });
 	has 'scoped_namespaces' => (is => 'rw', init_arg => undef);
+
+=item C<< file_extensions >>
+
+Returns a list of file extensions associated with the serialized format.
+
+=cut
 
 	sub file_extensions { return [qw(rdf xml)] }
 	
