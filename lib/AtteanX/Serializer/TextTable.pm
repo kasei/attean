@@ -37,7 +37,7 @@ use warnings;
 
 package AtteanX::Serializer::TextTable 0.028 {
 	use Moo;
-	use Types::Standard qw(Str ArrayRef);
+	use Types::Standard qw(Str Bool ArrayRef);
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use Attean::ListIterator;
@@ -47,6 +47,7 @@ package AtteanX::Serializer::TextTable 0.028 {
 
 	my @rule			= qw(- +);
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/plain');
+	has 'number_rows' => (is => 'rw', isa => Bool, default => 0);
 
 =item C<< media_types >>
 
@@ -86,9 +87,14 @@ L<IO::Handle> object C<< $fh >>.
 		} else {
 			@vars	= qw(subject predicate object graph);
 		}
-		
+
+		my @header_names	= @vars;
+		if ($self->number_rows) {
+			unshift(@header_names, '#');
+		}
+
 		my @headers			= (\q"| ");
-		push(@headers, map { $_ => \q" | " } @vars);
+		push(@headers, map { $_ => \q" | " } @header_names);
 		pop	@headers;
 		push @headers => (\q" |");
 
@@ -96,8 +102,12 @@ L<IO::Handle> object C<< $fh >>.
 
 		my @rule			= qw(- +);
 		my @rows;
+		my $row	= 1;
 		while (my $t = $iter->next()) {
 			my @strings	= map { blessed($_) ? $_->as_string : '' } map { eval { $t->value($_) } } @vars;
+			if ($self->number_rows) {
+				unshift(@strings, $row++);
+			}
 			push(@rows, \@strings);
 		}
 		$table->load(@rows);
@@ -124,18 +134,25 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my $iter	= shift;
 		
 		my @vars	= @{ $iter->variables };
-
+		my @header_names	= @vars;
+		if ($self->number_rows) {
+			unshift(@header_names, '#');
+		}
 
 		my @headers			= (\q"| ");
-		push(@headers, map { $_ => \q" | " } @vars);
+		push(@headers, map { $_ => \q" | " } @header_names);
 		pop	@headers;
 		push @headers => (\q" |");
 
 		my $table = Text::Table->new(@headers);
 		
 		my @rows;
+		my $row	= 1;
 		while (my $t = $iter->next()) {
 			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } map { $t->value($_) } @vars;
+			if ($self->number_rows) {
+				unshift(@strings, $row++);
+			}
 			push(@rows, \@strings);
 		}
 		$table->load(@rows);

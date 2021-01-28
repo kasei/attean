@@ -26,10 +26,11 @@ my $push		= 0;
 my $list		= 0;
 my $block_size	= 25;
 my $short		= 0;
+my $number_rows	= 0;
 my %namespaces;
 my $in_format	= 'GUESS';
 my $out_format	= 'TextTable';
-my $result	= GetOptions ("short" => \$short, "list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in_format, "out=s" => \$out_format, "define=s" => \%namespaces, "D=s" => \%namespaces);
+my $result	= GetOptions ("number" => \$number_rows, "short" => \$short, "list" => \$list, "verbose" => \$verbose, "block=i" => \$block_size, "pull" => \$pull, "push" => \$push, "in=s" => \$in_format, "out=s" => \$out_format, "define=s" => \%namespaces, "D=s" => \%namespaces);
 
 if ($list) {
 	say "Parsers:";
@@ -72,7 +73,7 @@ while (defined(my $file = shift)) {
 		parse_to_string($parser, $fh);
 	} else {
 		my $sclass		= Attean->get_serializer($out) || die "*** No serializer found for format $out\n";
-		my $serializer	= $sclass->new(namespaces => $map);
+		my $serializer	= $sclass->new(namespaces => $map, number_rows => $number_rows);
 
 		try {
 			if ($pull) {
