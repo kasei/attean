@@ -88,6 +88,9 @@ while (defined(my $file = shift)) {
 			} elsif ($parser->does('Attean::API::PushParser')) {
 				warn "# Push parsing\n" if ($verbose);
 				push_transcode($parser, $serializer, $fh, $out_io);
+			} else {
+				warn "# All-at-once parsing\n" if ($verbose);
+				pull_transcode($parser, $serializer, $fh, $out_io);
 			}
 		} catch {
 			my $e	= $_;
