@@ -11,10 +11,10 @@
 @prefix my:			<http://purl.org/NET/cpan-uri/dist/Attean/> .
 
 <>
-	dc:title			"Chagnes for Attean" ;
+	dc:title			"Changes for Attean" ;
+	dc:description		"Changes for Attean" ;
 	dc:subject			my:project ;
 	dc:creator			my:developer ;
-	dc:description		"Changes for Attean" ;
 	.
 
 my:project
@@ -26,15 +26,32 @@ my:project
 	:maintainer				my:developer ;
 	:homepage				<https://metacpan.org/release/Attean/> ;
 	:bug-database			<https://github.com/kasei/attean/issues> ;
-	doap:download-page		<https://metacpan.org/release/Attean/> ;
-	doap:download-mirror	<http://kasei.us/code/files/> ;
+	:download-page			<https://metacpan.org/release/Attean/> ;
+	:download-mirror		<http://kasei.us/code/files/> ;
 	:release				my:v_0-001 , my:v_0-002 , my:v_0-003 , my:v_0-004 , my:v_0-005 ,
 							my:v_0-006 , my:v_0-007 , my:v_0-008 , my:v_0-009 , my:v_0-010 ,
 							my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ,
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
-							my:v_0-026 , my:v_0-027 ;
+							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 ;
 	.
+
+my:v_0-029
+	a					:Version ;
+	dc:issued			"2021-02-01"^^xsd:date ;
+	:revision			"0.029" ;
+	dcterms:replaces	my:v_0-028 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Added -n CLI argument to attean_parse to allow numbering of results." ],
+			[ a dcs:Addition ; rdfs:label "Add Attean::API::MutableModel->load_triples_from_io (#157)." ],
+			[ a dcs:Update ; rdfs:label "Updated AtteanX::Serializer::TextTable to print table borders and  rules." ],
+			[ a dcs:Update ; rdfs:label "Update Attean get_parser and get_serializer to allow searching file extensions and media types for 1-arg calls." ],
+			[ a dcs:Update ; rdfs:label "Updated Attean::API::Serializer to require file_extensions." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in Attean::API::ResultSerializer->serialize_list_to_io." ]
+	]
+	.
+
 
 my:v_0-028
 	a					:Version ;
@@ -629,4 +646,15 @@ my:v_0-001
 		dcs:item
 			[ a dcs:Addition ; rdfs:label "Initial release." ]
 	]
+	.
+
+
+my:developer
+	a               foaf:Person ;
+	foaf:name       "Gregory Todd Williams" ;
+	foaf:homepage   <http://kasei.us/> ;
+	foaf:page		<https://metacpan.org/author/GWILLIAMS> , <https://github.com/kasei/> ;
+	foaf:page       <http://search.cpan.org/~gwilliams/> ;
+	foaf:mbox       <mailto:gwilliams@cpan.org> ;
+	<http://www.w3.org/2002/07/owl#sameAs> <http://purl.org/NET/cpan-uri/person/gwilliams> ;
 	.

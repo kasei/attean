@@ -4,7 +4,7 @@ AtteanX::Serializer::TurtleTokens - Turtle Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::TurtleTokens version 0.028
+This document describes AtteanX::Serializer::TurtleTokens version 0.029
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ This document describes AtteanX::Serializer::TurtleTokens version 0.028
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::TurtleTokens 0.028 {
+package AtteanX::Serializer::TurtleTokens 0.029 {
 	use Moo;
 	use Data::Dumper;
 	use Encode qw(encode);

@@ -7,7 +7,7 @@ Attean::QueryPlanner - Query planner
 
 =head1 VERSION
 
-This document describes Attean::QueryPlanner version 0.028
+This document describes Attean::QueryPlanner version 0.029
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ use Attean::Algebra;
 use Attean::Plan;
 use Attean::Expression;
 
-package Attean::QueryPlanner 0.028 {
+package Attean::QueryPlanner 0.029 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;

@@ -7,7 +7,7 @@ Attean::BindingEqualityTest - Test for equality of binding sets with bnode isomo
 
 =head1 VERSION
 
-This document describes Attean::BindingEqualityTest version 0.028
+This document describes Attean::BindingEqualityTest version 0.029
 
 =head1 SYNOPSIS
 
@@ -59,7 +59,7 @@ package Attean::BindingEqualityTest::_Iter {
 	}
 }
 
-package Attean::BindingEqualityTest 0.028 {
+package Attean::BindingEqualityTest 0.029 {
 	use v5.14;
 	use warnings;
 	use Moo;
