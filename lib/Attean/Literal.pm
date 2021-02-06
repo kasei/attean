@@ -7,7 +7,7 @@ Attean::Literal - RDF Literals
 
 =head1 VERSION
 
-This document describes Attean::Literal version 0.029
+This document describes Attean::Literal version 0.030
 
 =head1 SYNOPSIS
 
@@ -48,7 +48,7 @@ Returns true if the literal has a language tag, false otherwise.
 
 =cut
 
-package Attean::Literal 0.029 {
+package Attean::Literal 0.030 {
 	use Moo;
 	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;

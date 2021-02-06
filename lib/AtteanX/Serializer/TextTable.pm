@@ -4,7 +4,7 @@ AtteanX::Serializer::TextTable - SPARQL Results TSV Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::TextTable version 0.029
+This document describes AtteanX::Serializer::TextTable version 0.030
 
 =head1 SYNOPSIS
 
@@ -35,7 +35,7 @@ This document describes AtteanX::Serializer::TextTable version 0.029
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::TextTable 0.029 {
+package AtteanX::Serializer::TextTable 0.030 {
 	use Moo;
 	use Types::Standard qw(Str Bool ArrayRef);
 	use Encode qw(encode);
@@ -65,7 +65,7 @@ Returns a list of file extensions associated with the serialized format.
 
 =cut
 
-	sub file_extensions { return [qw(txt)] };
+	sub file_extensions { return [qw(txt text)] };
 	
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 

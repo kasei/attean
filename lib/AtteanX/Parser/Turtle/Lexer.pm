@@ -7,7 +7,7 @@ AtteanX::Parser::Turtle::Lexer - Tokenizer for parsing Turtle, TriG, and N-Tripl
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::Turtle::Lexer version 0.029
+This document describes AtteanX::Parser::Turtle::Lexer version 0.030
 
 =head1 SYNOPSIS
 
@@ -23,7 +23,7 @@ This document describes AtteanX::Parser::Turtle::Lexer version 0.029
 
 =cut
 
-package AtteanX::Parser::Turtle::Lexer 0.029 {
+package AtteanX::Parser::Turtle::Lexer 0.030 {
 	use AtteanX::Parser::Turtle::Constants;
 	use v5.14;
 	use strict;

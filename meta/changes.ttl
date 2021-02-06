@@ -33,8 +33,20 @@ my:project
 							my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ,
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
-							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 ;
+							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ;
 	.
+
+my:v_0-030
+	a					:Version ;
+	dc:issued			"2021-02-06"^^xsd:date ;
+	:revision			"0.030" ;
+	dcterms:replaces	my:v_0-029 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Fix bug in attean_parse for parsers that are not either pull or push parsers." ]
+	]
+	.
+
 
 my:v_0-029
 	a					:Version ;

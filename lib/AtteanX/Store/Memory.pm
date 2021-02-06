@@ -4,7 +4,7 @@ AtteanX::Store::Memory - Simple in-memory RDF store
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Memory version 0.029
+This document describes AtteanX::Store::Memory version 0.030
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,7 @@ AtteanX::Store::Memory provides an in-memory quad-store.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Memory 0.029 {
+package AtteanX::Store::Memory 0.030 {
 use Moo;
 use Type::Tiny::Role;
 use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
