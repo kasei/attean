@@ -34,6 +34,12 @@ produced by this serializer.
 Returns a L<Type::Tiny> object representing the type of items that are consumed
 during serialization.
 
+=item C<< file_extensions >>
+
+Returns an ARRAY reference of file extensions commonly associated with the
+media types supported by the serializer (and returned by C<< media_types >>).
+File extensions should NOT include a leading dot.
+
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 
 Serializes the elements from the L<Attean::API::Iterator> C<< $iterator >> to
@@ -104,6 +110,8 @@ package Attean::API::Serializer 0.030 {
 		my $iter	= Attean::ListIterator->new( values => [@_], item_type => $self->handled_type->role );
 		return $self->serialize_iter_to_bytes($iter);
 	}
+	
+	sub file_extensions { return [] }
 }
 
 package Attean::API::AbbreviatingSerializer 0.030 {

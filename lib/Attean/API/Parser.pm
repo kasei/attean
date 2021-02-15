@@ -48,6 +48,12 @@ to this parser.
 Returns a L<Type::Tiny> object representing the type of items that result from
 parsing.
 
+=item C<< file_extensions >>
+
+Returns an ARRAY reference of file extensions commonly associated with the
+media types supported by the parser (and returned by C<< media_types >>).
+File extensions should NOT include a leading dot.
+
 =cut
 
 use Type::Tiny::Role;
