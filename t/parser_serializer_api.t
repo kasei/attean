@@ -2,8 +2,6 @@ use v5.14;
 use autodie;
 use utf8;
 use Test::Modern;
-use Test::Exception;
-use Digest::SHA qw(sha1_hex);
 
 use Attean;
 use Attean::RDF;
