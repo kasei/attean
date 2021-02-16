@@ -93,6 +93,8 @@ C<lazy_iris> attribute.
 		}
 		return Attean::IRI->new(%args);
 	}
+	
+	sub file_extensions { return [] }
 }
 
 package Attean::API::AbbreviatingParser 0.030 {
