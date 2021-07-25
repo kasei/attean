@@ -87,6 +87,24 @@ subtest 'turtle numeric U escaping' => sub {
 	is($t->value, 'o');
 };
 
+subtest 'pre-defined base IRI' => sub {
+	my $base	= iri('http://example.org/base/');
+	my $parser	= Attean->get_parser('Turtle')->new( base => $base );
+
+	my $resolved_term	= $parser->parse_term_from_bytes('<test>');
+	is($resolved_term->value, 'http://example.org/base/test');
+
+	my $absolute_term	= $parser->parse_term_from_bytes('<tag:test>');
+	is($absolute_term->value, 'tag:test');
+	
+	my $iter	= $parser->parse_iter_from_bytes('<subj> </pred> <obj/value> .');
+	does_ok($iter, 'Attean::API::Iterator');
+	my $t = $iter->next;
+	is($t->subject->value, 'http://example.org/base/subj');
+	is($t->predicate->value, 'http://example.org/pred');
+	is($t->object->value, 'http://example.org/base/obj/value');
+};
+
 done_testing();
 
 sub expect {

@@ -78,4 +78,24 @@ END
 	like($subj->value, qr/^foo/, 'bnode prefix');
 };
 
+subtest 'pre-defined base IRI' => sub {
+	my $base	= iri('http://example.org/base/');
+	my $parser	= Attean->get_parser('RDFXML')->new( base => $base );
+
+	my $content	= <<"END";
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:eg="http://example.org/">
+
+ <rdf:Description rdf:ID="subj">
+ 	<eg:pred rdf:resource="obj/value" />
+ </rdf:Description>
+</rdf:RDF>
+END
+	my $iter	= $parser->parse_iter_from_bytes($content);
+	does_ok($iter, 'Attean::API::Iterator');
+	my $t = $iter->next;
+	is($t->subject->value, 'http://example.org/base/#subj');
+	is($t->object->value, 'http://example.org/base/obj/value');
+};
+
 done_testing();

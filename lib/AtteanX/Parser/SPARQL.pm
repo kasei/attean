@@ -12,17 +12,17 @@ This document describes AtteanX::Parser::SPARQL version 0.030.
 =head1 SYNOPSIS
 
  use AtteanX::Parser::SPARQL;
- my $algbrea = AtteanX::Parser::SPARQL->parse($sparql, $base_uri);
+ my $algbrea = AtteanX::Parser::SPARQL->parse($sparql);
  # or:
  my $parser	= AtteanX::Parser::SPARQL->new();
- my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
+ my ($algebra) = $parser->parse_list_from_bytes($sparql);
  
  # or to allow parsing of SPARQL 1.1 Updates:
  
- my $algbrea = AtteanX::Parser::SPARQL->parse_update($sparql, $base_uri);
+ my $algbrea = AtteanX::Parser::SPARQL->parse_update($sparql);
  # or:
  my $parser = AtteanX::Parser::SPARQL->new(update => 1);
- my ($algebra) = $parser->parse_list_from_bytes($sparql, $base_uri);
+ my ($algebra) = $parser->parse_list_from_bytes($sparql);
  
 =head1 DESCRIPTION
 
@@ -213,6 +213,7 @@ sub parse_nodes {
 	my $l		= $self->_configure_lexer( $p->parse_iter_from_bytes(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
+	$self->build({base => $self->baseURI});
 	
 	my @nodes;
 	while ($self->_peek_token) {
@@ -1621,7 +1622,7 @@ sub _SubSelect {
 		my $triples								= $self->_push_pattern_container();
 		local($self->{build})					= { triples => $triples};
 		if ($self->{baseURI}) {
-			$self->{build}{base}	= $self->{baseURI};
+			$self->{build}{base}				= $self->{baseURI};
 		}
 		
 		$self->_expected_token(KEYWORD, 'SELECT');

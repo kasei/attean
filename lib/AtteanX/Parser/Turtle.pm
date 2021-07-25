@@ -14,13 +14,26 @@ This document describes AtteanX::Parser::Turtle version 0.030
 
 =head1 SYNOPSIS
 
- use AtteanX::Parser::Turtle;
- my $parser	= AtteanX::Parser::Turtle->new( handler => sub {...} );
- $parser->parse_cb_from_io( $fh, $base_uri );
+ use Attean;
+ my $parser	= AtteanX::Parser::Turtle->new( handler => sub {...}, base => $base_iri );
+ 
+ # Parse data from a file-handle and handle triples in the 'handler' callback
+ $parser->parse_cb_from_io( $fh );
+ 
+ # Parse the given byte-string, and return an iterator of triples
+ my $iter = $parser->parse_iter_from_bytes('<s> <p> 1, 2, 3 .');
+ while (my $triple = $iter->next) {
+   print $triple->as_string;
+ }
 
 =head1 DESCRIPTION
 
 This module implements a parser for the Turtle RDF format.
+
+=head1 ROLES
+
+This class consumes L<Attean::API::Parser>, L<Attean::API::PushParser>,
+<Attean::API::AbbreviatingParser>, and <Attean::API::TripleParser>.
 
 =head1 ATTRIBUTES
 
@@ -129,9 +142,9 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		$self->_parse($l);
 	}
 
-=item C<< parse_term_from_bytes ( $bytes, $base ) >>
+=item C<< parse_term_from_bytes ( $bytes ) >>
 
-=item C<< parse_node ( $bytes, $base ) >>
+=item C<< parse_node ( $bytes ) >>
 
 Returns the Attean::API::Term object corresponding to the node whose N-Triples
 serialization is found at the beginning of C<< $bytes >>.
@@ -152,7 +165,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		my %args	= @_;
 	
 		open(my $fh, '<:encoding(UTF-8)', \$string);
-		my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+		my $l	= AtteanX::Parser::Turtle::Lexer->new(file => $fh, %args);
 		my $t = $self->_next_nonws($l);
 		my $node	= $self->_object($l, $t);
 		return $node;

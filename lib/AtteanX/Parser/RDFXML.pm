@@ -9,12 +9,28 @@ This document describes AtteanX::Parser::RDFXML version 0.030
 =head1 SYNOPSIS
 
  use Attean;
- my $parser = Attean->get_parser('RDFXML')->new();
- $parser->parse_list_from_io( $fh );
+ my $parser = Attean->get_parser('RDFXML')->new(base => $base_iri);
+
+ use AtteanX::Parser::Turtle;
+ my $parser	= AtteanX::Parser::Turtle->new( handler => sub {...}, base => $base_iri );
+ 
+ # Parse data from a file-handle and handle triples in the 'handler' callback
+ $parser->parse_cb_from_io( $fh );
+ 
+ # Parse the given byte-string, and return an iterator of triples
+ my $iter = $parser->parse_iter_from_bytes('<rdf:RDF>...</rdf:RDF>');
+ while (my $triple = $iter->next) {
+   print $triple->as_string;
+ }
 
 =head1 DESCRIPTION
 
-...
+This module implements a parser for the RDF/XML format.
+
+=head1 ROLES
+
+This class consumes L<Attean::API::Parser>, L<Attean::API::PushParser>,
+<Attean::API::AbbreviatingParser>, and <Attean::API::TripleParser>.
 
 =head1 ATTRIBUTES
 

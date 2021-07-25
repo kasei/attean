@@ -15,7 +15,7 @@ This document describes AtteanX::Parser::NTuples version 0.030
 
 =head1 DESCRIPTION
 
-...
+This module provides a base class for RDF formats N-Triples and N-Quads.
 
 =head1 METHODS
 

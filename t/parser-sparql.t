@@ -177,6 +177,20 @@ subtest 'parse error' => sub {
 	
 };
 
+subtest 'pre-defined base IRI' => sub {
+	my $base	= iri('http://example.org/base/');
+	my $parser	= Attean->get_parser('SPARQL')->new( base => $base );
+
+	my ($resolved_term)	= $parser->parse_nodes('<test>');
+	is($resolved_term->value, 'http://example.org/base/test');
+
+	my ($algebra)	= $parser->parse_list_from_bytes('ASK { <subj> </pred> <obj/value> }');
+	my $string		= $algebra->as_string;
+	like($string, qr{http://example.org/base/subj});
+	like($string, qr{http://example.org/pred});
+	like($string, qr{http://example.org/base/obj/value});
+};
+
 subtest 'parse_cb_from_bytes' => sub {
 	my $cb	= sub {
 		my $a	= shift;

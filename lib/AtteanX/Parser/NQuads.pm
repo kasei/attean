@@ -13,11 +13,24 @@ This document describes AtteanX::Parser::NQuads version 0.030
 
  use Attean;
  my $parser = Attean->get_parser('NQuads')->new();
+
+ # Parse data from a file-handle and handle quads in the 'handler' callback
  $parser->parse_cb_from_io( $fh );
+ 
+ # Parse the given byte-string, and return an iterator of quads
+ my $iter = $parser->parse_iter_from_bytes('<http://example.org/subject> <tag:example.org:predicate> "object" <http://example.org/graph> .');
+ while (my $quad = $iter->next) {
+   print $quad->as_string;
+ }
 
 =head1 DESCRIPTION
 
-...
+This module implements a parser for the N-Quads format.
+
+=head1 ROLES
+
+This class consumes L<Attean::API::Parser>, L<Attean::API::PullParser>
+and <Attean::API::MixedStatementParser>.
 
 =head1 METHODS
 

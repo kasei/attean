@@ -10,11 +10,24 @@ This document describes AtteanX::Parser::NTriples version 0.030
 
  use Attean;
  my $parser = Attean->get_parser('NTriples')->new();
+
+ # Parse data from a file-handle and handle triples in the 'handler' callback
  $parser->parse_cb_from_io( $fh );
+ 
+ # Parse the given byte-string, and return an iterator of triples
+ my $iter = $parser->parse_iter_from_bytes('<http://example.org/subject> <tag:example.org:predicate> "object" .');
+ while (my $triple = $iter->next) {
+   print $triple->as_string;
+ }
 
 =head1 DESCRIPTION
 
-...
+This module implements a parser for the N-Triples format.
+
+=head1 ROLES
+
+This class consumes L<Attean::API::Parser>, L<Attean::API::PullParser>
+and <Attean::API::TripleParser>.
 
 =head1 METHODS
 
