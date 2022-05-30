@@ -50,7 +50,7 @@ package Attean::ValueExpression 0.030 {
 	with 'Attean::API::SPARQLSerializable';
 	with 'Attean::API::Expression';
 
-	has 'value' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable']);
+	has 'value' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariableOrTriplePattern']);
 
 	sub arity { return 0 }
 	sub BUILDARGS {

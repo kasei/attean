@@ -44,6 +44,7 @@ package Attean::Variable 0.030 {
 
 	with 'Attean::API::Variable';
 	with 'Attean::API::TermOrVariable';
+	with 'Attean::API::TermOrVariableOrTriplePattern';
 	
 	around BUILDARGS => sub {
 		my $orig 	= shift;

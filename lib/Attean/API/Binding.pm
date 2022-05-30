@@ -206,6 +206,9 @@ package Attean::API::TripleOrQuadPattern 0.030 {
 			}
 		}
 		
+		if (scalar(@_) % 2) {
+			Carp::cluck;
+		}
 		my %args	= @_;
 		foreach my $k ($class->variables) {
 			if (not(exists $args{$k}) or not($args{$k})) {
@@ -344,7 +347,7 @@ package Attean::API::TriplePattern 0.030 {
 	requires 'predicate';
 	requires 'object';
 
-	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
+	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding', 'Attean::API::TermOrVariableOrTriplePattern';
 }
 
 package Attean::API::Triple 0.030 {
@@ -379,7 +382,7 @@ package Attean::API::Triple 0.030 {
 		return Attean::Quad->new($self->values, $graph);
 	}
 
-	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding';
+	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding', 'Attean::API::TermOrVariableOrTriplePattern';
 }
 
 package Attean::API::QuadPattern 0.030 {

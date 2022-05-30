@@ -88,6 +88,62 @@ package Attean::API::TermOrVariable 0.030 {
 	}
 }
 
+package Attean::API::TermOrVariableOrTriplePattern 0.030 {
+	use Scalar::Util qw(blessed);
+	use Sub::Install;
+	use Sub::Util qw(set_subname);
+
+	use Moo::Role;
+
+	with 'Attean::API::SPARQLSerializable';
+
+	sub equals {
+		my ($a, $b)	= @_;
+		return ($a->as_string eq $b->as_string);
+	}
+
+	sub is_bound {
+	  my $self = shift;
+	  return (! $self->does('Attean::API::Variable'));
+	}
+	
+	sub apply_binding {
+		my $self	= shift;
+		my $class	= ref($self);
+		my $bind	= shift;
+		if ($self->does('Attean::API::Variable')) {
+			my $name	= $self->value;
+			my $replace	= $bind->value($name);
+			if (defined($replace) and blessed($replace)) {
+				return $replace;
+			} else {
+				return $self;
+			}
+		} else {
+			return $self;
+		}
+	}
+
+	BEGIN {
+		my %types	= (
+			variable	=> 'Variable',
+			blank		=> 'Blank',
+			literal		=> 'Literal',
+			resource	=> 'IRI',
+			iri			=> 'IRI',
+			pattern		=> 'TriplePattern'
+		);
+		while (my ($name, $role) = each(%types)) {
+			my $method	= "is_$name";
+			my $code	= sub { return shift->does("Attean::API::$role") };
+			Sub::Install::install_sub({
+				code	=> set_subname($method, $code),
+				as		=> $method
+			});
+		}
+	}
+}
+
 package Attean::Mapper 0.030 {
 	use Moo::Role;
 	requires 'map'; # my $that = $object->map($this)

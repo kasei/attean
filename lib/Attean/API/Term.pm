@@ -45,6 +45,7 @@ package Attean::API::Term 0.030 {
 	use Moo::Role;
 	
 	with 'Attean::API::TermOrVariable', 'Attean::API::ResultOrTerm';
+	with 'Attean::API::TermOrVariableOrTriplePattern';
 	
 	requires 'value'; # => (is => 'ro', isa => 'Str', required => 1);
 	requires 'ntriples_string';
@@ -117,6 +118,7 @@ package Attean::API::Literal 0.030 {
 	
 	with 'Attean::API::Term';
 	with 'Attean::API::SPARQLSerializable';
+	with 'Attean::API::TermOrVariableOrTriplePattern';
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });

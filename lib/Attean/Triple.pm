@@ -56,6 +56,11 @@ package Attean::TriplePattern 0.030 {
 		# TODO: deprecate this in favor of as_quad_pattern() provided by Attean::API::TriplePattern
 		return $self->as_quad_pattern($graph);
 	}
+	
+	sub ntriples_string {
+		my $self	= shift;
+		return join(' ', '<<', (map { $self->$_()->ntriples_string() } qw(subject predicate object)), '>>');
+	}
 }
 
 package Attean::Triple 0.030 {

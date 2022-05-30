@@ -113,7 +113,6 @@ sub fast_constructor {
 		semicolon	=> [SEMICOLON, ';'],
 		hathat		=> [HATHAT, '^^'],
 
-
 		lbrace		=> [LBRACE, '{'],
 		rbrace		=> [RBRACE, '}'],
 		op_andand	=> [ANDAND, '&&'],
@@ -133,6 +132,12 @@ sub fast_constructor {
 		question	=> [QUESTION, '?'],
 		slash		=> [SLASH, '/'],
 		star		=> [STAR, '*'],
+
+		ltlt		=> [LTLT, '<<'],
+		gtgt		=> [GTGT, '>>'],
+		lannot		=> [LANNOT, '{|'],
+		rannot		=> [RANNOT, '|}'],
+		
 	);
 	for my $name (keys %tokens) {
 		my ($type, $value)	= @{ $tokens{ $name } };
