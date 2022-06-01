@@ -811,6 +811,11 @@ subtest 'Update sequence' => sub {
 	ws_is($s, 'DELETE DATA { <s> <p> "o" . } ; INSERT DATA { <s> <q> "o" . }', 'update sequence');
 };
 
+subtest 'SPARQL-star' => sub {
+	my $s	= Attean->get_parser('SPARQL')->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { << ?s a foaf:Person >> foaf:believedBy <http://kasei.us/about/#greg> }")->as_sparql;
+	ws_is($s, 'SELECT * WHERE{ << ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> >> <http://xmlns.com/foaf/0.1/believedBy> <http://kasei.us/about/#greg> . }');
+};
+
 subtest 'Regressions' => sub {
 	{
 		my $s	= Attean->get_parser('SPARQL')->parse('SELECT * WHERE { SERVICE <http://exmple.org/sparql> {} }')->as_sparql;

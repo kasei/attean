@@ -338,7 +338,13 @@ package Attean::API::TriplePattern 0.030 {
 		my $self	= shift;
 		my @tokens;
 		foreach my $t ($self->values) {
-			push(@tokens, $t->sparql_tokens->elements);
+			if ($t->does('Attean::API::TriplePattern')) {
+				push(@tokens, AtteanX::SPARQL::Token->ltlt);
+				push(@tokens, $t->sparql_tokens->elements);
+				push(@tokens, AtteanX::SPARQL::Token->gtgt);
+			} else {
+				push(@tokens, $t->sparql_tokens->elements);
+			}
 		}
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}
