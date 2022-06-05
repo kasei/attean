@@ -104,6 +104,8 @@ Returns true if the term has a true SPARQL "effective boolean value", false othe
 		}
 		return $string;
 	}
+
+	with 'Attean::API::TermOrTriple';
 }
 
 package Attean::API::Literal 0.030 {
@@ -547,7 +549,8 @@ package Attean::API::Blank 0.030 {
 	use Moo::Role;
 	
 	sub ebv { return 1; }
-	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
+	with 'Attean::API::Term', 'Attean::API::BlankOrIRI', 'Attean::API::BlankOrIRIOrTriple';
+;
 	with 'Attean::API::SPARQLSerializable';
 	
 	sub sparql_tokens {
@@ -574,7 +577,7 @@ package Attean::API::IRI 0.030 {
 	use Moo::Role;
 	
 	sub ebv { return 1; }
-	with 'Attean::API::Term', 'Attean::API::BlankOrIRI';
+	with 'Attean::API::Term', 'Attean::API::BlankOrIRI', 'Attean::API::BlankOrIRIOrTriple';
 	with 'Attean::API::SPARQLSerializable';
 	
 	sub sparql_tokens {

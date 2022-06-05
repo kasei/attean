@@ -47,12 +47,12 @@ package AtteanX::SPARQL::Constants 0.030 {
 			SLASH
 			STAR
 			VAR
-			GTGT
-			LTLT
-			LANNOT
-			RANNOT
 			decrypt_constant
 		);
+# 			GTGT
+# 			LTLT
+# 			LANNOT
+# 			RANNOT
 		@EXPORT = (@AtteanX::Parser::Turtle::Constants::EXPORT, @LOCAL_TYPES);
 	};
 	use base 'Exporter';

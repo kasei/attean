@@ -80,7 +80,6 @@ current line and column of the input data.
 		']'	=> RBRACKET,
 		'('	=> LPAREN,
 		')'	=> RPAREN,
-		'{'	=> LBRACE,
 		'}'	=> RBRACE,
 		','	=> COMMA,
 		'='	=> EQUALS,
@@ -89,7 +88,10 @@ current line and column of the input data.
 	my %METHOD_TOKEN	= (
 	# 	q[#]	=> '_get_comment',
 		q[@]	=> '_get_keyword',
-		q[<]	=> '_get_iriref',
+		q[<]	=> '_get_iriref_or_ltlt',
+		q[>]	=> '_get_gtgt',
+		q[|]	=> '_get_rannot',
+		q[{]	=> '_get_lbrace_or_lannot',
 		q[_]	=> '_get_bnode',
 		q[']	=> '_get_single_literal',
 		q["]	=> '_get_double_literal',
@@ -185,9 +187,36 @@ Returns the next token present in the input.
 		}
 	}
 
-	sub _get_iriref {
+	sub _get_gtgt {
+		my $self	= shift;
+		$self->read_word('>>');
+		return $self->new_token(GTGT, $self->start_line, $self->start_column, '>>');
+	}
+	
+	sub _get_lbrace_or_lannot {
+		my $self	= shift;
+		$self->get_char_safe(q[{]);
+		if ($self->buffer =~ /^\|/o) {
+			$self->get_char_safe(q[|]);
+			return $self->new_token(LANNOT, $self->start_line, $self->start_column, '{|');
+		}
+		return $self->new_token(LBRACE, $self->start_line, $self->start_column, '{');
+	}
+	
+	sub _get_rannot {
+		my $self	= shift;
+		$self->read_word('|}');
+		return $self->new_token(RANNOT, $self->start_line, $self->start_column, '|}');
+	}
+	
+	sub _get_iriref_or_ltlt {
 		my $self	= shift;
 		$self->get_char_safe(q[<]);
+		if ($self->buffer =~ /^</o) {
+			$self->get_char_safe(q[<]);
+			return $self->new_token(LTLT, $self->start_line, $self->start_column, '<<');
+		}
+		
 		if ($self->buffer =~ m/^[\x23-\x3d\x3f-\x5a\x5d-\x7e]*>/o) {
 			my $iri	.= $self->read_length($+[0]);
 			chop($iri);

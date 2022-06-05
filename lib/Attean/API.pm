@@ -31,6 +31,15 @@ package Attean::API::ResultOrTerm 0.030 {
 
 package Attean::API::BlankOrIRI 0.030 {
 	use Moo::Role;
+	with 'Attean::API::Term', 'Attean::API::BlankOrIRIOrTriple';
+}
+
+package Attean::API::BlankOrIRIOrTriple 0.030 {
+	use Moo::Role;
+}
+
+package Attean::API::TermOrTriple 0.030 {
+	use Moo::Role;
 }
 
 package Attean::API::TermOrVariable 0.030 {

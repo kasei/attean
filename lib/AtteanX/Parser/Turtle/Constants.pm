@@ -55,6 +55,10 @@ package AtteanX::Parser::Turtle::Constants 0.030 {
 			STRING3S
 			TURTLEBASE
 			TURTLEPREFIX
+			GTGT
+			LTLT
+			LANNOT
+			RANNOT
 			WS
 			decrypt_constant
 		)

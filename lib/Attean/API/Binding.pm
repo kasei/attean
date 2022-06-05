@@ -361,9 +361,9 @@ package Attean::API::Triple 0.030 {
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		my %map	= (
-			subject		=> 'Attean::API::BlankOrIRI',
+			subject		=> 'Attean::API::BlankOrIRIOrTriple',
 			predicate	=> 'Attean::API::IRI',
-			object		=> 'Attean::API::Term'
+			object		=> 'Attean::API::TermOrTriple'
 		);
 		foreach my $method (keys %map) {
 			my $role	= $map{$method};
@@ -389,6 +389,8 @@ package Attean::API::Triple 0.030 {
 	}
 
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding', 'Attean::API::TermOrVariableOrTriplePattern';
+	with 'Attean::API::BlankOrIRIOrTriple';
+	with 'Attean::API::TermOrTriple';
 }
 
 package Attean::API::QuadPattern 0.030 {

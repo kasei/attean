@@ -134,6 +134,24 @@ sub fast_constructor {
 	}
 }
 
+=item C<< as_string >>
+
+Returns a string description of the token including the token type and any
+associated values.
+
+=cut
+
+sub as_string {
+	my $self	= shift;
+	my $type	= decrypt_constant($self->type);
+	my @args	= @{ $self->args };
+	if (scalar(@args)) {
+		return "$type(" . join(', ', @args) . ")";
+	} else {
+		return $type;
+	}
+}
+
 __PACKAGE__->meta->make_immutable;
 
 1;
