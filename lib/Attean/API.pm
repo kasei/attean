@@ -106,11 +106,6 @@ package Attean::API::TermOrVariableOrTriplePattern 0.030 {
 
 	with 'Attean::API::SPARQLSerializable';
 
-	sub equals {
-		my ($a, $b)	= @_;
-		return ($a->as_string eq $b->as_string);
-	}
-
 	sub is_bound {
 	  my $self = shift;
 	  return (! $self->does('Attean::API::Variable'));

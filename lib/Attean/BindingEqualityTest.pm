@@ -109,6 +109,17 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 		if (scalar(@$nba) != scalar(@$nbb)) {
 			my $nbac	= scalar(@$nba);
 			my $nbbc	= scalar(@$nbb);
+			
+# 			warn "====================================================\n";
+# 			warn "BindingEqualityTest count of non-blank statements didn't match:\n";
+# 			warn "-------- a\n";
+# 			foreach my $t (@$nba) {
+# 				warn $t->as_string . "\n";
+# 			}
+# 			warn "-------- b\n";
+# 			foreach my $t (@$nbb) {
+# 				warn $t->as_string . "\n";
+# 			}
 			$self->error("count of non-blank statements didn't match ($nbac != $nbbc)");
 			return 0;
 		}
@@ -118,13 +129,23 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 			$self->error("count of blank statements didn't match ($bac != $bbc)");
 			return 0;
 		}
-	
+		
 		for ($nba, $nbb) {
 			@$_	= sort map { $_->as_string } @$_;
 		}
-	
+		
 		foreach my $i (0 .. $#{ $nba }) {
 			unless ($nba->[$i] eq $nbb->[$i]) {
+# 				warn "====================================================\n";
+# 				warn "BindingEqualityTest non-blank statements didn't match:\n";
+# 				warn "-------- a\n";
+# 				foreach my $t (@$nba) {
+# 					warn $t . "\n";
+# 				}
+# 				warn "-------- b\n";
+# 				foreach my $t (@$nbb) {
+# 					warn $t . "\n";
+# 				}
 				$self->error("non-blank triples don't match:\n" . Dumper($nba->[$i], $nbb->[$i]));
 				return 0;
 			}
@@ -223,20 +244,30 @@ solutions, the solution returned is arbitrary.
 		my $bb		= shift;
 		my $equal	= shift || 0;
 
+# 		warn "########### _find_mapping:\n";
+# 		warn "============ A\n";
+# 		foreach my $t (@$ba) {
+# 			warn $t->as_string . "\n";
+# 		}
+# 		warn "============ B\n";
+# 		foreach my $t (@$bb) {
+# 			warn $t->as_string . "\n";
+# 		}
+
 		if (scalar(@$ba) == 0) {
 			return {};
 		}
 	
 		my %blank_ids_a;
 		foreach my $st (@$ba) {
-			foreach my $n (grep { $_->does('Attean::API::Blank') } $st->values) {
+			foreach my $n ($st->blanks) {
 				$blank_ids_a{ $n->value }++;
 			}
 		}
 
 		my %blank_ids_b;
 		foreach my $st (@$bb) {
-			foreach my $n (grep { $_->does('Attean::API::Blank') } $st->values) {
+			foreach my $n ($st->blanks) {
 				$blank_ids_b{ $n->value }++;
 			}
 		}
@@ -283,7 +314,8 @@ solutions, the solution returned is arbitrary.
 			$kbp	= permutations( [shuffle @kb] );
 # 		}
 		
-		my %bb_master	= map { $_->as_string => 1 } @$bb;
+		my $canon_map	= Attean::TermMap->canonicalization_map;
+		my %bb_master	= map { $_->apply_map($canon_map)->as_string => 1 } @$bb;
 	
 		my $count	= 0;
 		MAPPING: while (my $mapping = $kbp->next) {
@@ -298,19 +330,33 @@ solutions, the solution returned is arbitrary.
 			my %bb	= %bb_master;
 			foreach my $st (@$ba) {
 				my $mapped_st	= $st->apply_map($mapper)->as_string;
+# 				warn ">>>>>>>\n";
+# 				warn "-> " . $st->as_string . "\n";
+# 				warn "-> " . $mapped_st . "\n";
 				$self->log->trace("checking for '$mapped_st' in " . Dumper(\%bb));
 				if ($bb{ $mapped_st }) {
 					$self->log->trace("Found mapping for binding: " . Dumper($mapped_st));
 					delete $bb{ $mapped_st };
 				} else {
 					$self->log->trace("No mapping found for binding: " . Dumper($mapped_st));
+# 					warn "No mapping found for binding: " . Dumper($mapped_st);
+# 					warn Dumper(\%bb);
 					next MAPPING;
 				}
 			}
 			$self->error("found mapping: " . Dumper(\%mapping_str));
 			return \%mapping_str;
 		}
-	
+		
+# 		warn "didn't find blank node mapping:\n";
+# 		warn "============ A\n";
+# 		foreach my $t (@$ba) {
+# 			warn $t->as_string . "\n";
+# 		}
+# 		warn "============ B\n";
+# 		foreach my $t (@$bb) {
+# 			warn $t->as_string . "\n";
+# 		}
 		$self->error("didn't find blank node mapping\n");
 		return 0;
 	}

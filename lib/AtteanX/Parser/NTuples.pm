@@ -199,6 +199,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				return Attean::Literal->new($value);
 			}
 		} else {
+			Carp::cluck;
 			die qq[Not valid N-Triples node start character '$char' at line $lineno, near "$_[0]"];
 		}
 	}

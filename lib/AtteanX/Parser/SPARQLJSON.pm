@@ -86,36 +86,51 @@ package AtteanX::Parser::SPARQLJSON 0.030 {
 				my %data;
 				foreach my $v (@$vars) {
 					if (defined(my $value = $b->{ $v })) {
-						my $type	= $value->{type};
-						if ($type eq 'uri') {
-							my $data	= $value->{value};
-							$data{ $v }	= $self->new_iri( value => $data );
-						} elsif ($type eq 'bnode') {
-							my $data	= $value->{value};
-							$data{ $v }	= Attean::Blank->new( $data );
-						} elsif ($type eq 'literal') {
-							my $data	= $value->{value};
-							if (my $lang = $value->{'xml:lang'}) {
-								$data{ $v }	= Attean::Literal->new( value => $data, language => $lang );
-							} elsif (my $dt = $value->{'datatype'}) {
-								my $iri		= $self->new_iri(value => $dt);
-								$data{ $v }	= Attean::Literal->new( value => $data, datatype => $iri );
-							} else {
-								$data{ $v }	= Attean::Literal->new( $data );
-							}
-						} elsif ($type eq 'typed-literal') {
-							my $data	= $value->{value};
-							my $dt		= $value->{datatype};
-							my $iri		= $self->new_iri(value => $dt);
-							$data{ $v }	= Attean::Literal->new( value => $data, datatype => $iri );
-						} else {
-							die "Unknown node type $type during parsing of SPARQL JSON Results";
-						}
+						$data{ $v }	= $self->decode_node($value);
 					}
 				}
 				push(@results, Attean::Result->new( bindings => \%data ));
 			}
 			return @results;
+		}
+	}
+	
+=item C<< decode_node( \%value ) >>
+
+=cut
+
+	sub decode_node {
+		my $self	= shift;
+		my $value	= shift;
+		my $type	= $value->{type};
+		if ($type eq 'uri') {
+			my $data	= $value->{value};
+			return $self->new_iri( value => $data );
+		} elsif ($type eq 'bnode') {
+			my $data	= $value->{value};
+			return Attean::Blank->new( $data );
+		} elsif ($type eq 'literal') {
+			my $data	= $value->{value};
+			if (my $lang = $value->{'xml:lang'}) {
+				return Attean::Literal->new( value => $data, language => $lang );
+			} elsif (my $dt = $value->{'datatype'}) {
+				my $iri		= $self->new_iri(value => $dt);
+				return Attean::Literal->new( value => $data, datatype => $iri );
+			} else {
+				return Attean::Literal->new( $data );
+			}
+		} elsif ($type eq 'typed-literal') {
+			my $data	= $value->{value};
+			my $dt		= $value->{datatype};
+			my $iri		= $self->new_iri(value => $dt);
+			return Attean::Literal->new( value => $data, datatype => $iri );
+		} elsif ($type eq 'triple') {
+			my $s		= $self->decode_node($value->{value}{subject});
+			my $p		= $self->decode_node($value->{value}{predicate});
+			my $o		= $self->decode_node($value->{value}{object});
+			return Attean::Triple->new( $s, $p, $o );
+		} else {
+			die "Unknown node type $type during parsing of SPARQL JSON Results";
 		}
 	}
 

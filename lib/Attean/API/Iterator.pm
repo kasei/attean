@@ -316,7 +316,6 @@ package Attean::API::RepeatableIterator 0.030 {
 	sub size {
 		my $self	= shift;
 		my @elements	= $self->elements;
-		warn 'RepeatableIterator->size';
 		return scalar(@elements);
 	}
 	
@@ -381,29 +380,26 @@ package Attean::API::StatementIterator 0.030 {
 	sub matching_pattern {
 		my $self	= shift;
 		my @nodes	= @_;
+		
+		if (scalar(@nodes) == 1 and $nodes[0]->does('Attean::API::QuadPattern')) {
+			my $pattern	= $nodes[0];
+			@nodes	= $pattern->values;
+		}
 
 		my %bound;
 		my @pos_names	= $self->variables;
 		foreach my $pos (0 .. $#pos_names) {
 			my $n	= $nodes[ $pos ];
-			if (blessed($n) and $n->does('Attean::API::Variable')) {
-				$n	= undef;
-				$nodes[$pos]	= undef;
-			}
 			if (blessed($n)) {
 				$bound{ $pos_names[$pos] }	= $n;
 			}
 		}
 		
+		my $pattern	= Attean::QuadPattern->new( %bound );
 		return $self->grep(sub {
 			my $q	= shift;
-			foreach my $key (keys %bound) {
-				my $term	= $q->$key();
-				unless ($term->equals( $bound{$key} )) {
-					return 0;
-				}
-			}
-			return 1;
+			my $binding	= $pattern->unify($q);
+			return $binding ? 1 : 0;
 		});
 	}
 }

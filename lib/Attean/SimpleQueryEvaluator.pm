@@ -104,20 +104,7 @@ supplied C<< $active_graph >>.
 				my @new_vars;
 				my %blanks;
 				foreach my $t (@triples) {
-					my $q		= $t->as_quad_pattern($active_graph);
-					my @values;
-					foreach my $v ($q->values) {
-						if (not($self->ground_blanks) and $v->does('Attean::API::Blank')) {
-							unless (exists $blanks{$v->value}) {
-								$blanks{$v->value}	= Attean::Variable->new();
-								push(@new_vars, $blanks{$v->value}->value);
-							}
-							push(@values, $blanks{$v->value});
-						} else {
-							push(@values, $v);
-						}
-					}
-					push(@iters, $self->model->get_bindings( @values ));
+					push(@iters, $self->evaluate_pattern($t, $active_graph, \@new_vars, \%blanks));
 				}
 				while (scalar(@iters) > 1) {
 					my ($lhs, $rhs)	= splice(@iters, 0, 2);
@@ -147,6 +134,10 @@ supplied C<< $active_graph >>.
 				foreach my $var (@extends) {
 					my $expr	= $extends{ $var };
 					my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
+					if ($val->does('Attean::API::Binding')) {
+						# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+						$val	= $val->ground($r);
+					}
 # 					warn "Extend error: $@" if ($@);
 					$r	= Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
 				}
@@ -162,6 +153,7 @@ supplied C<< $active_graph >>.
 				return ($t ? $t->ebv : 0);
 			});
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
+			local($Attean::API::Binding::ALLOW_IRI_COMPARISON)	= 1;
 			my $iter	= $self->evaluate( $child, $active_graph );
 			my @rows	= $iter->elements;
 			my @cmps	= @{ $algebra->comparators };
@@ -173,7 +165,17 @@ supplied C<< $active_graph >>.
 				my $c	= 0;
 				foreach my $i (0 .. $#cmps) {
 					my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
-					$c		= $av ? $av->compare($bv) : 1;
+					# Mirrors code in Attean::Plan::OrderBy->sort_rows
+					if (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
+						$c	= 1;
+					} elsif (blessed($bv) and $bv->does('Attean::API::Binding') and (not(defined($av)) or not($av->does('Attean::API::Binding')))) {
+						$c	= -1;
+					} else {
+						$c		= eval { $av ? $av->compare($bv) : 1 };
+						if ($@) {
+							$c	= 1;
+						}
+					}
 					$c		*= -1 if ($dirs[$i] == 0);
 					last unless ($c == 0);
 				}
@@ -370,7 +372,7 @@ supplied C<< $active_graph >>.
 					return $self->evaluate(shift(@paths), $active_graph)->map(sub { shift->project_complement(@new_vars) });
 				}
 			} elsif ($path->isa('Attean::Algebra::ZeroOrMorePath') or $path->isa('Attean::Algebra::OneOrMorePath')) {
-				if ($s->does('Attean::API::Term') and $o->does('Attean::API::Variable')) {
+				if ($s->does('Attean::API::TermOrTriple') and $o->does('Attean::API::Variable')) {
 					my $v	= {};
 					if ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
 						$self->_ALP($active_graph, $s, $child, $v);
@@ -395,7 +397,7 @@ supplied C<< $active_graph >>.
 					}
 					my %vars	= map { $_ => 1 } ($s->value, $o->value);
 					return Attean::ListIterator->new(variables => [keys %vars], values => \@results, item_type => 'Attean::API::Result');
-				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::Term')) {
+				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::TermOrTriple')) {
 					my $pp	= Attean::Algebra::InversePath->new( children => [$child] );
 					my $p	= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
 					return $self->evaluate($p, $active_graph);
@@ -436,7 +438,12 @@ supplied C<< $active_graph >>.
 			$iter		= $iter->limit($algebra->limit) if ($algebra->limit >= 0);
 			return $iter;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
-			return Attean::IteratorSequence->new( iterators => [map { $self->evaluate($_, $active_graph) } @children], item_type => 'Attean::API::Result', variables => [$algebra->in_scope_variables] );
+			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @children;
+			return Attean::IteratorSequence->new(
+				iterators => [$lhs, $rhs],
+				item_type => 'Attean::API::Result',
+				variables => [$algebra->in_scope_variables]
+			);
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
 			my $iter	= $self->evaluate($child, $active_graph);
 			my $result	= $iter->next;
@@ -444,6 +451,7 @@ supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 			my $iter		= $self->evaluate($child, $active_graph);
 			my $patterns	= $algebra->triples;
+			use Data::Dumper;
 			my %seen;
 			return Attean::CodeIterator->new(
 				generator => sub {
@@ -453,8 +461,14 @@ supplied C<< $active_graph >>.
 					my $mapper	= Attean::TermMap->rewrite_map(\%mapping);
 					my @triples;
 					PATTERN: foreach my $p (@$patterns) {
-						my @terms	= $p->apply_map($mapper)->values;
-						next PATTERN unless all { $_->does('Attean::API::Term') } @terms;
+						my @terms	= map {
+							($_->does('Attean::API::TriplePattern'))
+								? $_->as_triple
+								: $_
+						} $p->apply_map($mapper)->values;
+						unless (all { $_->does('Attean::API::TermOrTriple') } @terms) {
+							next PATTERN;
+						}
 						push(@triples, Attean::Triple->new(@terms));
 					}
 					return @triples;
@@ -468,6 +482,42 @@ supplied C<< $active_graph >>.
 		die "Unimplemented algebra evaluation for: $algebra";
 	}
 
+	
+=item C<< evaluate_pattern( $pattern, $active_graph, \@new_vars, \%blanks ) >>
+
+Returns an L<Attean::API::Iterator> object with results produced by evaluating
+the triple- or quad-pattern C<< $pattern >> against the evaluator's
+C<< model >>, using the supplied C<< $active_graph >>.
+
+If the C<< ground_blanks >> option is false, replaces blank nodes in the
+pattern with fresh variables before evaluation, and populates C<< %blanks >>
+with pairs ($variable_name => $variable_node). Each new variable is also
+appended to C<< @new_vars >> as it is created.
+
+=cut
+
+	sub evaluate_pattern {
+		my $self			= shift;
+		my $t				= shift;
+		my $active_graph	= shift || Carp::confess "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
+		my $new_vars		= shift;
+		my $blanks			= shift;
+		my $q				= $t->as_quad_pattern($active_graph);
+		my @values;
+		foreach my $v ($q->values) {
+			if (not($self->ground_blanks) and $v->does('Attean::API::Blank')) {
+				unless (exists $blanks->{$v->value}) {
+					$blanks->{$v->value}	= Attean::Variable->new();
+					push(@$new_vars, $blanks->{$v->value}->value);
+				}
+				push(@values, $blanks->{$v->value});
+			} else {
+				push(@values, $v);
+			}
+		}
+		return $self->model->get_bindings( @values );
+	}
+	
 	sub _ALP {
 		my $self	= shift;
 		my $graph	= shift;
@@ -500,8 +550,8 @@ supplied C<< $active_graph >>.
 		my $s		= shift;
 		my $o		= shift;
 		my $graph	= shift;
-		my $s_term	= ($s->does('Attean::API::Term'));
-		my $o_term	= ($o->does('Attean::API::Term'));
+		my $s_term	= ($s->does('Attean::API::TermOrTriple'));
+		my $o_term	= ($o->does('Attean::API::TermOrTriple'));
 		if ($s_term and $o_term) {
 			my @r;
 			push(@r, Attean::Result->new()) if ($s->equals($o));
@@ -634,8 +684,13 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.030 {
 				return sub {
 					my ($r, %args)	= @_;
 					($lhs, $rhs)	= map { $_->($r, %args) } ($lhsi, $rhsi);
-					for ($lhs, $rhs) { die "TypeError $op" unless (blessed($_) and $_->does('Attean::API::Term')); }
-					my $ok	= ($lhs->equals($rhs));
+					for ($lhs, $rhs) { die "TypeError $op" unless (blessed($_) and $_->does('Attean::API::TermOrTriple')); }
+					my $ok;
+					if ($lhs->does('Attean::API::Binding')) {
+						$ok	= $lhs->equals($rhs);
+					} else {
+						$ok	= $lhs->equals($rhs);
+					}
 					$ok		= not($ok) if ($op eq '!=');
 					return $ok ? $true : $false;
 				}
@@ -643,7 +698,11 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.030 {
 				return sub {
 					my ($r, %args)	= @_;
 					($lhs, $rhs)	= map { $_->($r, %args) } ($lhsi, $rhsi);
-					for ($lhs, $rhs) { die "TypeError $op" unless $_->does('Attean::API::Term'); }
+					for ($lhs, $rhs) {
+						die "TypeError $op" unless $_->does('Attean::API::TermOrTriple');
+						die "TypeError $op" if ($_->does('Attean::API::IRI')); # comparison of IRIs is only defined for `ORDER BY`, not for general expressions
+					}
+					
 					my $c	= ($lhs->compare($rhs));
 					return $true if (($c < 0 and ($op =~ /<=?/)) or ($c > 0 and ($op =~ />=?/)) or ($c == 0 and ($op =~ /=/)));
 					return $false;
@@ -653,7 +712,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.030 {
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
 			my $func		= $expr->operator;
 			my @children	= map { $self->impl($_, $active_graph) } @{ $expr->children };
-			my %type_roles		= qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral);
+			my %type_roles		= qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral TRIPLE Triple);
 			my %type_classes	= qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal);
 			return sub {
 				my ($r, %args)	= @_;
@@ -684,6 +743,10 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.030 {
 				my @operands	= map { $_->( $r, %args ) } @children;
 				if ($func =~ /^(STR)$/) {
 					return $type_classes{$1}->new($operands[0]->value);
+				} elsif ($func =~ /^(SUBJECT|PREDICATE|OBJECT)$/) {
+					my $pos	= lc($func);
+					my $term	= $operands[0]->$pos();
+					return $term;
 				} elsif ($func =~ /^([UI]RI)$/) {
 					my @base	= $expr->has_base ? (base => $expr->base) : ();
 					return $type_classes{$1}->new(value => $operands[0]->value, @base);
@@ -898,9 +961,17 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.030 {
 				} elsif ($func eq 'SAMETERM') {
 					my ($a, $b)	= @operands;
 					die "TypeError: SAMETERM" unless (blessed($operands[0]) and blessed($operands[1]));
-					return $false if ($a->compare($b));
-					return ($a->value eq $b->value) ? $true : $false;
-				} elsif ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC)$/) {
+					if ($a->compare($b)) {
+						return $false;
+					}
+					if ($a->does('Attean::API::Binding')) {
+						my $ok	= ($a->sameTerms($b));
+						return $ok ? $true : $false;
+					} else {
+						my $ok	= ($a->value eq $b->value);
+						return $ok ? $true : $false;
+					}
+				} elsif ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
 					return $operands[0]->does("Attean::API::$type_roles{$1}") ? $true : $false;
 				} elsif ($func eq 'REGEX') {
 					my ($value, $pattern)	= map { $_->value } @operands;

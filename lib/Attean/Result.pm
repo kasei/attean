@@ -45,6 +45,17 @@ Returns the HASH reference containing the variable bindings for this result.
 
 	has 'bindings' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::TermOrTriple']], default => sub { +{} });
 
+# 	sub BUILD {
+# 		my $self	= shift;
+# 		my $args	= shift;
+# 		use Data::Dumper;
+# 		my $b		= $args->{bindings};
+# 		my $keys	= [keys %$b];
+# 		if (scalar(@$keys) == 2) {
+# 			Carp::cluck 'NEW RESULT CONSTRUCTED with variables ' . Dumper($keys);
+# 		}
+# 	}
+	
 =item C<< value( $name ) >>
 
 Returns the term object bound to the C<< $name >>d variable, or undef if the

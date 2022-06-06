@@ -104,8 +104,120 @@ package Attean::API::Binding 0.030 {
 	
 	sub has_blanks {
 		my $self	= shift;
-		my @blanks	= grep { $_->does('Attean::API::Blank') } $self->values;
-		return scalar(@blanks);
+		foreach my $term ($self->values) {
+			return 1 if ($term->does('Attean::API::Blank'));
+			if ($term->does('Attean::API::Binding')) {
+				return 1 if ($term->has_blanks);
+			}
+		}
+		return 0;
+	}
+	
+=item C<< sameTerms( $other ) >>
+
+=cut
+
+	sub sameTerms {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($other->does('Attean::API::Binding'));
+		my @variables	= sort $self->variables;
+		my @other_vars	= sort $other->variables;
+		return 0 unless (scalar(@variables) == scalar(@other_vars));
+		foreach my $i (0 .. $#variables) {
+			return 0 unless $variables[$i] eq $other_vars[$i];
+		}
+		
+		foreach my $v (@variables) {
+			my $value		= $self->value($v);
+			my $other_value	= $other->value($v);
+			if ($value->does('Attean::API::Binding')) {
+				return 0 unless $value->sameTerms($other_value);
+			} else {
+				return 0 unless ($value->equals($other_value));
+			}
+		}
+		return 1;
+	}
+	
+=item C<< equals( $other )
+
+=cut
+
+	sub equals {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($other->does('Attean::API::Binding'));
+		my @variables	= sort $self->variables;
+		my @other_vars	= sort $other->variables;
+		unless (scalar(@variables) == scalar(@other_vars)) {
+			return 0;
+		}
+		foreach my $i (0 .. $#variables) {
+			unless ($variables[$i] eq $other_vars[$i]) {
+				return 0;
+			}
+		}
+		
+		foreach my $v (@variables) {
+			my $value		= $self->value($v);
+			my $other_value	= $other->value($v);
+			if ($value->does('Attean::API::Binding')) {
+				unless ($value->equals($other_value)) {
+					return 0;
+				}
+			} else {
+				unless (0 == $value->compare($other_value)) {
+					return 0;
+				}
+			}
+		}
+		return 1;
+	}
+	
+=item C<< blanks >>
+
+Returns all the values in this mapping (recursively, if any values are embedded
+bindings) that are blank nodes.
+
+=cut
+
+	sub blanks {
+		my $self	= shift;
+		my %nodes;
+		foreach my $term ($self->values) {
+			if ($term->does('Attean::API::Blank')) {
+				$nodes{ $term->value }	= $term;
+			}
+			if ($term->does('Attean::API::Binding')) {
+				foreach my $b ($term->blanks) {
+					$nodes{ $b->value }	= $b;
+				}
+			}
+		}
+		return CORE::values %nodes;
+	}
+	
+=item C<< referenced_variables >>
+
+Returns a list of the names of any variable values that are referenced in this
+binding (recursively, if any values are embedded bindings).
+
+=cut
+
+	sub referenced_variables {
+		my $self	= shift;
+		my %vars;
+		foreach my $v ($self->values) {
+			if ($v->does('Attean::API::Variable')) {
+				$vars{$v->value}++;
+			} elsif ($v->does('Attean::API::Binding')) {
+				foreach my $name ($v->referenced_variables) {
+					$vars{$name}++;
+				}
+			}
+		}
+		return keys %vars;
 	}
 	
 =item C<< is_ground >>
@@ -158,7 +270,10 @@ C<< $binding >>.
 		my %data;
 		foreach my $k ($self->variables) {
 			my $v	= $self->value($k);
-			if ($v->does('Attean::API::Variable')) {
+			if ($v->does('Attean::API::TriplePattern')) {
+				my $replace	= $v->apply_bindings($bind);
+				$data{ $k }	= $replace;
+			} elsif ($v->does('Attean::API::Variable')) {
 				my $name	= $v->value;
 				my $replace	= $bind->value($name);
 				if (defined($replace) and blessed($replace)) {
@@ -224,7 +339,15 @@ package Attean::API::TripleOrQuadPattern 0.030 {
 		my $self	= shift;
 		my $class	= ref($self);
 		my $mapper	= shift;
-		my %values	= map { $_ => $mapper->map($self->value($_)) } $self->variables;
+		my %values;
+		foreach my $pos ($self->variables) {
+			my $value	= $self->value($pos);
+			if ($value->does('Attean::API::Binding')) {
+				$values{$pos}	= $value->apply_map($mapper);
+			} else {
+				$values{$pos}	= $mapper->map($value);
+			}
+		}
 		return $class->new( %values );
 	}
 	
@@ -257,7 +380,70 @@ package Attean::API::TripleOrQuadPattern 0.030 {
 		my ($t)		= @$triples;
 		return $t;
 	}
+
+	sub ground {
+		my $self	= shift;
+		my $result	= shift;
+		
+		my %bindings;
+		my @vars	= $self->variables();
+		foreach my $pos (@vars) {
+			my $pp	= $self->$pos();
+			if ($pp->does('Attean::API::Variable')) {
+				$bindings{ $pos }	= $result->value($pp->value);
+			} elsif ($pp->does('Attean::API::TriplePattern')) {
+				my $sub_ground	= $pp->ground($result);
+				$bindings{ $pos }	= $sub_ground;
+			} else {
+				$bindings{ $pos }	= $pp;
+			}
+		}
+		
+		return scalar(@vars) == 3
+			? Attean::Triple->new( %bindings )
+			: Attean::Quad->new( %bindings );
+	}
 	
+	sub unify {
+		my $self	= shift;
+		my $quad	= shift;
+		my %binding;
+		foreach my $pos ($self->variables) {
+			my $pp	= $self->$pos();
+			my $qp	= $quad->$pos();
+			if ($pp->does('Attean::API::Variable')) {
+				if (my $already = $binding{ $pp->value }) {
+					return unless $already->equals($qp);
+				}
+				$binding{ $pp->value }	= $qp;
+			} elsif ($pp->does('Attean::API::TriplePattern')) {
+				return unless ($qp->does('Attean::API::Triple'));
+				my $sub_binding	= $pp->unify($qp);
+				return unless $sub_binding;
+				my $bkeys	= Set::Scalar->new(keys %binding);
+				my $sbkeys	= Set::Scalar->new($sub_binding->variables);
+				my $i		= $bkeys->intersection($sbkeys);
+				for my $key ($i->elements) {
+					# variable bound in multiple places with different values
+					return unless ($binding{$key}->equals($sub_binding->value($key)));
+				}
+				my $mapping	= {$sub_binding->mapping};
+				@binding{ keys %$mapping }	= values %$mapping;
+			} else {
+				# bound position doesn't match
+				use Data::Dumper;
+				if ($pp->does('Attean::API::QuadPattern')) {
+					Carp::cluck 'XXX unify: ' . Dumper($self);
+				}
+				
+				return unless ($pp->equals($qp));
+			}
+		}
+		
+# 		warn 'final mapping: ' . Dumper(\%binding);
+		return Attean::Result->new( bindings => \%binding );
+	}
+
 =item C<< parse ( $string ) >>
 
 Returns a triple or quad pattern object using the variables and/or terms
@@ -359,6 +545,7 @@ package Attean::API::TriplePattern 0.030 {
 }
 
 package Attean::API::Triple 0.030 {
+	use Scalar::Util qw(blessed);
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -388,6 +575,48 @@ package Attean::API::Triple 0.030 {
 		my $self	= shift;
 		my $graph	= shift;
 		return Attean::Quad->new($self->values, $graph);
+	}
+
+	sub ntriples_string {
+		my $self	= shift;
+		my @values	= $self->values;
+		return join(' ', '<<', (map { $_->ntriples_string } @values), '>>');
+	}
+
+	sub compare {
+		my ($a, $b)	= @_;
+		return 1 unless blessed($b);
+		if (not $b->does('Attean::API::Triple')) {
+			# this is a type-error for equality testing, but special handling is needed in calling code for ORDER BY in which Triples sort last (after literals)
+			die "TypeError: cannot compare an RDF-star triple and a non-triple";
+		}
+		
+		foreach my $pos ($a->variables) {
+			my $at	= $a->$pos();
+			my $bt	= $b->$pos();
+			my $c	= $at->compare($bt);
+			
+			# If they are equal, continue. otherwise check if either term is an IRI.
+			# This is because term equality is defined for IRIs, but < and > isn't.
+			next unless ($c);
+			
+			unless ($Attean::API::Binding::ALLOW_IRI_COMPARISON) {
+				for ($at, $bt) {
+					if ($_->does('Attean::API::IRI')) {
+	# 					Carp::cluck "TypeError comparison of IRI " . $at->ntriples_string . " <=> " . $bt->ntriples_string . "\n";
+	# 					last;
+						die "TypeError comparison of IRI" if ($_->does('Attean::API::IRI')); # comparison of IRIs is only defined for `ORDER BY`, not for general expressions
+					}
+				}
+			}
+
+			if ($c) {
+				return $c;
+			}
+		}
+		
+		return 0;
+# 		return $a->ntriples_string cmp $b->ntriples_string;
 	}
 
 	with 'Attean::API::TriplePattern', 'Attean::API::TripleOrQuad', 'Attean::API::Binding', 'Attean::API::TermOrVariableOrTriplePattern';
@@ -562,9 +791,14 @@ from the invocant for every variable name in C<< @keys >>.
 		my $mapper	= shift;
 		my %values;
 		foreach my $var ($self->variables) {
-			my $term	= $mapper->map($self->value($var));
-			if ($term) {
-				$values{$var}	= $term;
+			my $value	= $self->value($var);
+			if ($value->does('Attean::API::Binding')) {
+				$values{$var}	= $value->apply_map($mapper);
+			} else {
+				my $term	= $mapper->map($value);
+				if ($term) {
+					$values{$var}	= $term;
+				}
 			}
 		}
 		return $class->new( bindings => \%values );

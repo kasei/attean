@@ -30,7 +30,7 @@ package AtteanX::Store::Simple 0.030 {
 	use Scalar::Util qw(refaddr reftype blessed);
 	use namespace::clean;
 
-	with 'Attean::API::QuadStore';
+	with 'Attean::API::QuadStore', 'Attean::API::RDFStarStore';
 
 =head1 METHODS
 

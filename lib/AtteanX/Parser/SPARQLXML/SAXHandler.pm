@@ -48,6 +48,7 @@ my %has_end;
 my %result_count;
 my %result_handlers;
 my %config;
+my %triples;
 
 my %expecting_string	= map { $_ => 1 } qw(boolean bnode uri literal);
 
@@ -87,6 +88,10 @@ sub start_element {
 	unshift( @{ $tagstack{ $addr } }, [$tag, $el] );
 	if ($expecting_string{ $tag }) {
 		$strings{ $addr }	= '';
+	}
+	
+	if ($tag eq 'triple') {
+		push(@{ $triples{ $addr } }, {});
 	}
 }
 
@@ -147,6 +152,19 @@ sub end_element {
 		} else {
 			$values{ $addr }	= Attean::Literal->new( value => $string );
 		}
+	} elsif ($tag eq 'subject') {
+		my $value	= delete( $values{ $addr } );
+		$triples{ $addr }[-1]{$tag}	= $value;
+	} elsif ($tag eq 'predicate') {
+		my $value	= delete( $values{ $addr } );
+		$triples{ $addr }[-1]{$tag}	= $value;
+	} elsif ($tag eq 'object') {
+		my $value	= delete( $values{ $addr } );
+		$triples{ $addr }[-1]{$tag}	= $value;
+	} elsif ($tag eq 'triple') {
+		my $data	= pop(@{ $triples{ $addr } });
+		my $t	= Attean::Triple->new( %{ $data } );
+		$values{ $addr }	= $t;
 	}
 }
 

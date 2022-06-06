@@ -215,23 +215,24 @@ returns undef.
 			return;
 		}
 		
-		my $type	= shift;
-		my %method	= (filename => 'file_extensions', media_type => 'media_types');
-		if (my $method = $method{ $type }) {
-			my $value	= shift;
-			$value	=~ s/^.*[.]// if ($type eq 'filename');
-			$value	=~ s/;.*$// if ($type eq 'media_type');
-			foreach my $p ($self->parsers()) {
-				if (can_load( modules => { $p => 0 })) {
-					next unless ($p->can('does') and $p->does($role));
-					my @exts	= @{ $p->$method() };
-					return $p if (any { $value eq $_ } @exts);
+		while (my $type = shift) {
+			my %method	= (filename => 'file_extensions', media_type => 'media_types');
+			if (my $method = $method{ $type }) {
+				my $value	= shift;
+				$value	=~ s/^.*[.]// if ($type eq 'filename');
+				$value	=~ s/;.*$// if ($type eq 'media_type');
+				foreach my $p ($self->parsers()) {
+					if (can_load( modules => { $p => 0 })) {
+						next unless ($p->can('does') and $p->does($role));
+						my @exts	= @{ $p->$method() };
+						return $p if (any { $value eq $_ } @exts);
+					}
 				}
+			} else {
+				die "Not a valid constraint in get_parser call: $type";
 			}
-			return;
-		} else {
-			die "Not a valid constraint in get_parser call: $type";
 		}
+		return;
 	}
 	
 	{

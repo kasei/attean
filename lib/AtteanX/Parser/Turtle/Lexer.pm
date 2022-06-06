@@ -151,6 +151,9 @@ Returns the next token present in the input.
 				} elsif ($self->buffer =~ /^PREFIX(?!:)\b/io) {
 					$self->read_length(6);
 					return $self->new_token(PREFIX, $start_line, $start_column);
+				} elsif ($self->buffer =~ /^GRAPH(?!:)\b/io) {
+					$self->read_length(5);
+					return $self->new_token(GRAPH, $start_line, $start_column);
 				} else {
 					return $self->_get_pname;
 				}

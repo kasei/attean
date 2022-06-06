@@ -43,6 +43,7 @@ package AtteanX::Parser::Turtle::Constants 0.030 {
 			LBRACE
 			LBRACKET
 			LPAREN
+			GRAPH
 			PREFIX
 			PREFIXNAME
 			RBRACE

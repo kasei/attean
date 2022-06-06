@@ -77,10 +77,10 @@ while (defined(my $file = shift)) {
 
 		try {
 			if ($pull) {
-				warn "# Pull parsing\n" if ($verbose);
+				warn "# Forced pull parsing\n" if ($verbose);
 				pull_transcode($parser, $serializer, $fh, $out_io);
 			} elsif ($push) {
-				warn "# Push parsing\n" if ($verbose);
+				warn "# Forced push parsing\n" if ($verbose);
 				push_transcode($parser, $serializer, $fh, $out_io);
 			} elsif ($parser->does('Attean::API::PullParser')) {
 				warn "# Pull parsing\n" if ($verbose);
@@ -144,6 +144,7 @@ sub push_transcode {
 	my $out_io		= shift;
 	warn "Push parser\n" if ($verbose);
 	if ($serializer->does('Attean::API::AppendableSerializer')) {
+		warn "- serializer is appendable\n" if ($verbose);
 		my $count	= 0;
 		my $start	= [gettimeofday];
 		my @queue;

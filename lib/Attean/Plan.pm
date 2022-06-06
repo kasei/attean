@@ -753,7 +753,7 @@ package Attean::Plan::Extend 0.030 {
 
 		state $true			= Attean::Literal->true;
 		state $false		= Attean::Literal->false;
-		state $type_roles	= { qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral) };
+		state $type_roles	= { qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral TRIPLE Triple) };
 		state $type_classes	= { qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal) };
 		
 		if ($expr->isa('Attean::CastExpression')) {
@@ -946,7 +946,7 @@ package Attean::Plan::Extend 0.030 {
 			}
 			
 			my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-			if ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC)$/) {
+			if ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
 				my $role	= "Attean::API::$type_roles->{$1}";
 				my $t		= shift(@terms);
 				my $ok		= (blessed($t) and $t->does($role));
@@ -1246,7 +1246,27 @@ package Attean::Plan::Extend 0.030 {
 				} else {
 					return Attean::Blank->new();
 				}
+			} elsif ($func eq 'SAMETERM') {
+				my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my ($a, $b)	= @operands;
+				die "TypeError: SAMETERM" unless (blessed($operands[0]) and blessed($operands[1]));
+				if ($a->compare($b)) {
+					return $false;
+				}
+				if ($a->does('Attean::API::Binding')) {
+					my $ok	= ($a->sameTerms($b));
+					return $ok ? $true : $false;
+				} else {
+					my $ok	= ($a->value eq $b->value);
+					return $ok ? $true : $false;
+				}
+			} elsif ($func =~ /^(SUBJECT|PREDICATE|OBJECT)$/) {
+				my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my $pos	= lc($func);
+				my $term	= $operands[0]->$pos();
+				return $term;
 			} else {
+				warn "Expression evaluation unimplemented: " . $expr->as_string;
 				$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
 				die "Expression evaluation unimplemented: " . $expr->as_string;
 			}
@@ -1311,7 +1331,12 @@ package Attean::Plan::Extend 0.030 {
 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
 									next ROW;
 								}
-					
+								
+								if ($term->does('Attean::API::Binding')) {
+									# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+									$term	= $term->ground($r);
+								}
+								
 								$row{ $var }	= $term;
 							}
 						}
@@ -1515,6 +1540,7 @@ sorting is applied.
 package Attean::Plan::OrderBy 0.030 {
 	use Moo;
 	use Types::Standard qw(HashRef ArrayRef InstanceOf Bool Str);
+	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -1536,6 +1562,7 @@ package Attean::Plan::OrderBy 0.030 {
 		my $vars		= shift;
 		my $ascending	= shift;
 		my $rows		= shift;
+		local($Attean::API::Binding::ALLOW_IRI_COMPARISON)	= 1;
 		my @sorted		= map { $_->[0] } sort {
 			my ($ar, $avalues)	= @$a;
 			my ($br, $bvalues)	= @$b;
@@ -1543,7 +1570,18 @@ package Attean::Plan::OrderBy 0.030 {
 			foreach my $i (0 .. $#{ $vars }) {
 				my $ascending	= $ascending->{ $vars->[$i] };
 				my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
-				$c		= $av ? $av->compare($bv) : 1;
+
+				# Mirrors code in Attean::SimpleQueryEvaluator->evaluate
+				if (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
+					$c	= 1;
+				} elsif (blessed($bv) and $bv->does('Attean::API::Binding') and (not(defined($av)) or not($av->does('Attean::API::Binding')))) {
+					$c	= -1;
+				} else {
+					$c		= eval { $av ? $av->compare($bv) : 1 };
+					if ($@) {
+						$c	= 1;
+					}
+				}
 				$c		*= -1 unless ($ascending);
 				last unless ($c == 0);
 			}

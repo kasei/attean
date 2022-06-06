@@ -626,7 +626,7 @@ package Attean::Algebra::BGP 0.030 {
 		my $self	= shift;
 		my $set		= Set::Scalar->new();
 		foreach my $t (@{ $self->triples }) {
-			my @vars	= map { $_->value } grep { $_->does('Attean::API::Variable') } $t->values;
+			my @vars	= $t->referenced_variables();
 			$set->insert(@vars);
 		}
 		return $set->elements;

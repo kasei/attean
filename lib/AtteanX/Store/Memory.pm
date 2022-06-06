@@ -26,11 +26,13 @@ use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
 use Encode;
 use Set::Scalar;
 use Digest::SHA;
+use Data::Dumper;
 use List::Util qw(first);
 use Scalar::Util qw(refaddr reftype blessed);
 use Math::Cartesian::Product;
 use namespace::clean;
 
+with 'Attean::API::RDFStarStore';
 with 'Attean::API::MutableQuadStore';
 with 'Attean::API::QuadStore';
 with 'Attean::API::ETagCacheableQuadStore';
@@ -102,13 +104,37 @@ sub get_quads {
 }
 
 sub _get_quads {
-	my $self	= shift;
-	my @nodes	= @_;
-	my $bound	= 0;
-	my %bound;
+	my $self		= shift;
+	my @nodes		= @_;
+	my @pos_names	= Attean::QuadPattern->variables;
 	
+	my %pattern_bound;
 	foreach my $pos (0 .. 3) {
 		my $n	= $nodes[ $pos ];
+		$pattern_bound{ $pos_names[$pos] }	= $n;
+	}
+	
+	# create a quadpattern that includes any embedded triple patterns (RDF-star)
+	my $pattern	= Attean::QuadPattern->new(%pattern_bound);
+
+	my %bound;
+	my $bound	= 0;
+	my %embedded_triple_vars;
+	my $seen_embedded_triple	= 0;
+	foreach my $pos (0 .. 3) {
+		my $n	= $nodes[ $pos ];
+		if (blessed($n) and $n->does('Attean::API::TriplePattern')) {
+			# replace embedded triple patterns with variables.
+			# the quads that match with the new variables will be filtered
+			# in post-processing below to ensure that they also match the
+			# embedded triple patterns.
+			$seen_embedded_triple	= 1;
+			my $v	= Attean::Variable->new();
+			$embedded_triple_vars{$v->value}	= $n;
+			$nodes[$pos]	= $v;
+			$n				= $v;
+		}
+		
 		if (blessed($n) and $n->does('Attean::API::Variable')) {
 			$n	= undef;
 			$nodes[$pos]	= undef;
@@ -131,7 +157,7 @@ sub _get_quads {
 			$i++;
 			return $st;
 		};
-		return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' );
+		return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' )->matching_pattern($pattern);
 	}
 	
 	my $match_set;
@@ -180,7 +206,7 @@ sub _get_quads {
 		my $st	= $self->statements->[ $e ];
 		return $st;
 	};
-	return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' );
+	return Attean::CodeIterator->new( generator => $sub, item_type => 'Attean::API::Quad' )->matching_pattern($pattern);
 }
 
 =item C<< get_graphs >>

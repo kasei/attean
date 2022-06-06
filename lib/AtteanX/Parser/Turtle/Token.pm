@@ -64,6 +64,7 @@ use Types::Standard qw(ArrayRef Str);
 use List::MoreUtils qw(zip);
 use Sub::Util qw(set_subname);
 use AtteanX::Parser::Turtle::Constants;
+use Sub::Install;
 use namespace::clean;
 
 our $VERSION	= 0.030;

@@ -204,7 +204,8 @@ package Attean::API::Literal 0.030 {
 	sub compare {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
-		return 1 unless ($b->does('Attean::API::Literal'));
+		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
+		return -1 if ($b->does('Attean::API::Binding'));
 		my $c	= ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
 		return $c;
 	}
@@ -339,7 +340,8 @@ package Attean::API::NumericLiteral 0.030 {
 	sub compare {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
-		return 1 unless ($b->does('Attean::API::Literal'));
+		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
+		return -1 if ($b->does('Attean::API::Binding'));
 		if ($b->does('Attean::API::NumericLiteral')) {
 			return $a->numeric_value <=> $b->numeric_value;
 		} else {
@@ -594,7 +596,7 @@ package Attean::API::IRI 0.030 {
 	sub compare {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
-		return -1 if ($b->does('Attean::API::Literal'));
+		return -1 if ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
 		return 1 unless ($b->does('Attean::API::IRI'));
 		return ($a->value cmp $b->value);
 	}

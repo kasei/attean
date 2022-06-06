@@ -17,7 +17,9 @@ subtest 'triple-pattern subject' => sub {
 	my $q		= $parser->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { << ?s a foaf:Person >> foaf:believedBy <http://kasei.us/about/#greg> }");
 	does_ok($q, 'Attean::API::Algebra');
 	isa_ok($q, 'Attean::Algebra::Query');
-	my $s		= $q->child;
+	my $p		= $q->child;
+	isa_ok($p, 'Attean::Algebra::Project');
+	my $s		= $p->child;
 	isa_ok($s, 'Attean::Algebra::BGP');
 	my $triples	= $s->triples();
 	is(scalar(@$triples), 1, 'number of triples');
@@ -33,7 +35,9 @@ subtest 'triple-pattern object' => sub {
 	my $q		= $parser->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { <http://kasei.us/about/#greg> foaf:believes << ?s a foaf:Person >> }");
 	does_ok($q, 'Attean::API::Algebra');
 	isa_ok($q, 'Attean::Algebra::Query');
-	my $s		= $q->child;
+	my $p		= $q->child;
+	isa_ok($p, 'Attean::Algebra::Project');
+	my $s		= $p->child;
 	isa_ok($s, 'Attean::Algebra::BGP');
 	my $triples	= $s->triples();
 	is(scalar(@$triples), 1, 'number of triples');

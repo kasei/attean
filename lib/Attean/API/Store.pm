@@ -220,6 +220,12 @@ package Attean::API::BulkUpdatableStore 0.030 {
 	requires 'end_bulk_updates';
 }
 
+package Attean::API::RDFStarStore 0.030 {
+	use Moo::Role;
+	
+	with 'Attean::API::Store';
+}
+
 1;
 
 __END__

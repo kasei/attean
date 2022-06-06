@@ -172,6 +172,7 @@ package Attean::API::Model 0.030 {
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(uniq);
+	use Math::Cartesian::Product;
 	use Data::Dumper;
 
 	use Moo::Role;
@@ -185,24 +186,55 @@ package Attean::API::Model 0.030 {
 		my $self	= shift;
 		my @nodes	= @_;
 		my @pos		= Attean::API::Quad->variables;
-		my %vars;
+# 		my %vars;
+		my %bound;
+		my %projected_vars;
 		foreach my $i (0 .. $#nodes) {
 			my $n	= $nodes[$i];
-			if (blessed($n) and $n->isa('Attean::Variable')) {
+			$bound{ $pos[ $i ] }	= $n;
+			if (blessed($n) and $n->does('Attean::API::Binding')) {
+				foreach my $v ($n->referenced_variables) {
+					$projected_vars{ $v }++;
+				}
+			} elsif (blessed($n) and $n->isa('Attean::Variable')) {
 				my $name	= $n->value;
-				$vars{ $pos[ $i ] }	= $name;
+# 				$vars{ $pos[ $i ] }	= $name;
+				$projected_vars{ $name }++;
 			}
 		}
+		
+		my @patterns;
+		cartesian {
+			my %bound;
+			foreach my $i (0 .. $#_) {
+				my $n	= $_[$i];
+				$bound{ $pos[ $i ] }	= $n;
+			}
+			push(@patterns, Attean::QuadPattern->new( %bound ));
+		} map { ref($_) eq 'ARRAY' ? $_ : [$_] } @nodes;
+		
 		my $quads		= $self->get_quads(@nodes);
 		unless (blessed($quads)) {
 			return Attean::ListIterator->new(values => [], item_type => 'Attean::API::Result', variables => []);
 		}
 		return $quads->map(sub {
 			my $q			= shift;
-			return unless blessed($q);
-			my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
-			return Attean::Result->new( bindings => \%bindings );
-		}, 'Attean::API::Result', variables => [values %vars]);
+# 			warn 'model got quad: ' . $q->as_string . "\n";
+			foreach my $pattern (@patterns) {
+# 				warn 'model using pattern: ' . $pattern->as_string . "\n";
+				if (my $b = $pattern->unify($q)) {
+# 					warn 'unified binding: ' . $b->as_string;
+					my $g	= $pattern->ground($b);
+# 					warn "get_bindings unification: " . $b->as_string;
+# 					warn "get_bindings ground: " . $g->as_string;
+# 					warn 'project vars: ' . Dumper([keys %projected_vars]);
+					my $p	= $b->project(keys %projected_vars);
+# 					warn "get_bindings result: " . $p->as_string;
+					return $p;
+				}
+			}
+			return;
+		}, 'Attean::API::Result', variables => [keys %projected_vars]);
 	}
 	
 	requires 'count_quads';
@@ -259,6 +291,7 @@ package Attean::API::Model 0.030 {
 	}
 
 	{
+		# auto-generate methods subjects, predicates, objects, and graphs
 		my @pos		= Attean::API::Quad->variables;
 		my %pos		= map { $pos[$_] => $_ } (0 .. $#pos);
 		for my $method (@pos) {
@@ -267,6 +300,7 @@ package Attean::API::Model 0.030 {
 				my @nodes	= @_;
 				$#nodes		= 3;
 				splice(@nodes, $pos{$method}, 0, undef);
+				$#nodes		= 3;
 				my $iter	= $self->get_quads(@nodes);
 				my $nodes	= $iter->map(
 					sub { $_->$method() },
@@ -376,7 +410,7 @@ package Attean::API::MutableModel 0.030 {
 			my $resp	= $ua->get($url);
 			if ($resp->is_success) {
 				my $ct		= $resp->header('Content-Type');
-				my $pclass = Attean->get_parser( media_type => $ct ) // Attean->get_parser('ntriples');
+				my $pclass = Attean->get_parser( media_type => $ct, filename => $url ) // Attean->get_parser('ntriples');
 				if ($pclass) {
 					my $p		= $pclass->new(base => iri($url));
 					my $str		= $resp->decoded_content;
@@ -487,6 +521,13 @@ package Attean::API::BulkUpdatableModel 0.030 {
 		$self->end_bulk_updates();
 	};
 }
+
+package Attean::API::RDFStarModel 0.030 {
+	use Moo::Role;
+
+	with 'Attean::API::Model';
+}
+
 
 
 1;
