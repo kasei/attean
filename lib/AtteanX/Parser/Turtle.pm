@@ -366,31 +366,8 @@ serialization is found at the beginning of C<< $bytes >>.
 		if ($type == LTLT) {
 			$subj	= $self->_quotedTriple($l);
 		} elsif ($type == LBRACKET) {
-			$subj	= Attean::Blank->new();
-			my $t	= $self->_next_nonws($l);
-			if ($t->type != RBRACKET) {
-				$self->_unget_token($t);
-				$self->_predicateObjectList( $l, $subj );
-				$t	= $self->_get_token_type($l, RBRACKET);
-			}
-		} elsif ($type == LPAREN) {
-			my $t	= $self->_next_nonws($l);
-			if ($t->type == RPAREN) {
-				$subj	= Attean::IRI->new(value => "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", lazy => 1);
-			} else {
-				$subj	= Attean::Blank->new();
-				my @objects	= $self->_object($l, $t);
-			
-				while (1) {
-					my $t	= $self->_next_nonws($l);
-					if ($t->type == RPAREN) {
-						last;
-					} else {
-						push(@objects, $self->_object($l, $t));
-					}
-				}
-				$self->_assert_list($subj, @objects);
-			}
+			$self->_get_token_type($l, RBRACKET);
+			return Attean::Blank->new();
 		} elsif (not($type==IRI or $type==PREFIXNAME or $type==BNODE)) {
 			$self->_throw_error("Expecting resource or bnode but got " . decrypt_constant($type), $t, $l);
 		} else {
@@ -408,38 +385,9 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $type	= $t->type;
 		if ($type == LTLT) {
 			$obj	= $self->_quotedTriple($l);
-		} elsif ($type==LBRACKET) {
-			$obj	= Attean::Blank->new();
-			my $t	= $self->_next_nonws($l);
-			unless ($t) {
-				$self->_throw_error("Expecting object but got only opening bracket", $tcopy, $l);
-			}
-			if ($t->type != RBRACKET) {
-				$self->_unget_token($t);
-				$self->_predicateObjectList( $l, $obj );
-				$t	= $self->_get_token_type($l, RBRACKET);
-			}
-		} elsif ($type == LPAREN) {
-			my $t	= $self->_next_nonws($l);
-			unless ($t) {
-				$self->_throw_error("Expecting object but got only opening paren", $tcopy, $l);
-			}
-			if ($t->type == RPAREN) {
-				$obj	= Attean::IRI->new(value => "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", lazy => 1);
-			} else {
-				$obj	= Attean::Blank->new();
-				my @objects	= $self->_object($l, $t);
-			
-				while (1) {
-					my $t	= $self->_next_nonws($l);
-					if ($t->type == RPAREN) {
-						last;
-					} else {
-						push(@objects, $self->_object($l, $t));
-					}
-				}
-				$self->_assert_list($obj, @objects);
-			}
+		} elsif ($type == LBRACKET) {
+			$self->_get_token_type($l, RBRACKET);
+			return Attean::Blank->new();
 		} elsif (not($type==IRI or $type==PREFIXNAME or $type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN)) {
 			$self->_throw_error("Expecting object but got " . decrypt_constant($type), $t, $l);
 		} else {
@@ -582,7 +530,9 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $tcopy	= $t;
 		my $obj;
 		my $type	= $t->type;
-		if ($type==LBRACKET) {
+		if ($type==LTLT) {
+			return $self->_quotedTriple($l);
+		} elsif ($type==LBRACKET) {
 			$obj	= Attean::Blank->new();
 			my $t	= $self->_next_nonws($l);
 			unless ($t) {

@@ -733,9 +733,9 @@ package Attean::Algebra::Path 0.030 {
 
 	with 'Attean::API::Algebra', 'Attean::API::NullaryQueryTree';
 
-	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
+	has 'subject' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariableOrTriplePattern'], required => 1);
 	has 'path' => (is => 'ro', isa => ConsumerOf['Attean::API::PropertyPath'], required => 1);
-	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
+	has 'object' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariableOrTriplePattern'], required => 1);
 
 	sub in_scope_variables {
 		my $self	= shift;

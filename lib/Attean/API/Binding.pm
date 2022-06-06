@@ -116,7 +116,8 @@ Returns tue is all the bound values consume L<Attean::API::Term>, false otherwis
 
 	sub is_ground {
 		my $self	= shift;
-		my @bad	= grep { not($_->does('Attean::API::Term')) } $self->values;
+		my @non_terms	= grep { not($_->does('Attean::API::Term')) } $self->values;
+		my @bad			= grep { not($_->does('Attean::API::Binding') and $_->is_ground) } @non_terms;
 		return (scalar(@bad) == 0);
 	}
 	
@@ -326,7 +327,8 @@ package Attean::API::TriplePattern 0.030 {
 		unless ($self->is_ground) {
 			die "Not a ground triple: " . $self->as_string;
 		}
-		return Attean::Triple->new($self->values);
+		my @terms	= map { $_->does('Attean::API::TriplePattern') ? $_->as_triple : $_ } $self->values;
+		return Attean::Triple->new(@terms);
 	}
 	
 	sub apply_triple {

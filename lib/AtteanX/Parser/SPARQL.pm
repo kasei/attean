@@ -1857,7 +1857,14 @@ sub _InlineDataClause {
 	
 	$self->_expected_token(RBRACE);
 	
-	my @vbs		= map { my %d; @d{ map { $_->value } @vars } = @$_; Attean::Result->new(bindings => \%d) } @rows;
+	my @vbs;
+	foreach my $row (@rows) {
+		my %d;
+		# Turn triple patterns into ground triples.
+		@d{ map { $_->value } @vars } = map { $_->does('Attean::API::TriplePattern') ? $_->as_triple : $_ } @$row;
+		my $result	= Attean::Result->new(bindings => \%d);
+		push(@vbs, $result);
+	}
 	my $table	= Attean::Algebra::Table->new( variables => \@vars, rows => \@vbs );
 	$self->_add_stack( ['Attean::Algebra::Table', $table] );
 	
@@ -2234,7 +2241,7 @@ sub _Object {
 	if ($self->_optional_token(LANNOT)) {
 		######################## TODO: SPARQL-star annotation syntax
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyListNotEmpty;
+		$self->_PropertyListNotEmptyPath;
 		my (@list)	= splice(@{ $self->{_stack} });
 		my $obj	= AtteanX::Parser::SPARQL::ObjectWrapper->new( value => $s, annotations => \@list);
 		$self->_add_stack($obj);
@@ -2929,6 +2936,10 @@ sub _ExprVarOrTerm {
 	} else {
 		# TODO: this should prevent use of bnodes
 		$self->_GraphTerm;
+		my $term		= ${ $self->{_stack} }[-1];
+		if ($term->does('Attean::API::Blank')) {
+			croak "Expecting (non-blank) RDF term but found blank";
+		}
 	}
 }
 
@@ -3298,6 +3309,14 @@ sub _QuotedTP {
 	$self->_expected_token(GTGT);
 	
 	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
+	
+	if ($self->{__data_pattern}) {
+		foreach my $term ($s, $o) {
+			if ($term->does('Attean::API::Blank')) {
+				croak "Expecting (non-blank) RDF term  in quoted triple, but found blank";
+			}
+		}
+	}
 
 	$self->_add_stack( $self->__new_statement( $s, $p, $o ) );
 }
@@ -3307,12 +3326,6 @@ sub _QuotedTriple {
 	#'<<' DataValueTerm Verb DataValueTerm '>>'
 	local($self->{__data_pattern})	= 1;
 	$self->_QuotedTP();
-	$self->_expected_token(LTLT);
-	$self->_expected_token(GTGT);
-	
-	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
-
-	$self->_add_stack( $self->__new_statement( $s, $p, $o ) );
 }
 
 # [69] BlankNode ::= BLANK_NODE_LABEL | ANON
@@ -3565,6 +3578,10 @@ sub __new_statement {
 	my $o		= shift;
 	my $annot;
 	if ($o->isa('AtteanX::Parser::SPARQL::ObjectWrapper')) {
+		if (reftype($p) eq 'ARRAY' and $p->[0] eq 'PATH') {
+			# this is actually a property path, for which annotations (stored in the ObjectWrapper) are forbidden
+			croak "Syntax error: Cannot use SPARQL-star annotation syntax on a property path";
+		}
 		$annot	= $o->annotations;
 		$o		= $o->value;
 	}
