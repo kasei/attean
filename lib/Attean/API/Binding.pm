@@ -140,7 +140,7 @@ package Attean::API::Binding 0.030 {
 		return 1;
 	}
 	
-=item C<< equals( $other )
+=item C<< equals( $other ) >>
 
 =cut
 
