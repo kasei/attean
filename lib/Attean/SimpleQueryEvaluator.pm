@@ -115,7 +115,13 @@ supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
 			my %seen;
 			my $iter	= $self->evaluate( $child, $active_graph );
-			return $iter->grep(sub { return not($seen{ shift->as_string }++); });
+			return $iter->grep(sub {
+				my $r	= shift;
+				my $str	= $r->as_string;
+				my $ok	= not($seen{ $str }) ? 1 : 0;
+				$seen{ $str }++;
+				return $ok;
+			});
 		} elsif ($algebra->isa('Attean::Algebra::Extend')) {
 			my $child	= $algebra;
 			my @extends;
@@ -431,7 +437,7 @@ supplied C<< $active_graph >>.
 				my $r	= shift;
 				my $b	= { map { my $t	= $r->value($_); $t	? ($_ => $t) : () } @vars };
 				return Attean::Result->new( bindings => $b );
-			}); #->debug('Project result');
+			}, undef, variables => \@vars); #->debug('Project result');
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
 			my $iter	= $self->evaluate( $child, $active_graph );
 			$iter		= $iter->offset($algebra->offset) if ($algebra->offset > 0);

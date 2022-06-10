@@ -128,7 +128,6 @@ package Attean::API::Iterator 0.030 {
 				$self->variables($vars);
 			} elsif ($check->('Attean::API::Term')) {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::TermIterator');
-				Moo::Role->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
 			} elsif ($check->('Attean::API::ResultOrTerm')) {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::ResultOrTermIterator');
 				$self->variables($args->{variables} || []);
@@ -360,12 +359,7 @@ package Attean::API::ResultOrTermIterator 0.030 {
 		Attean::CodeIterator->new(
 			item_type => $iter->item_type,
 			generator => sub {
-				while (1) {
-					my $item	= $iter->next();
-					return unless defined($item);
-					local($_)	= $item;
-					return $item if ($block->($item));
-				}
+				return $iter->next();
 			},
 			variables => $self->variables,
 		);
