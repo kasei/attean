@@ -232,7 +232,7 @@ package Attean::FunctionExpression 0.031 {
 
 package Attean::AggregateExpression 0.031 {
 	use Moo;
-	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf);
+	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf Maybe);
 	use Types::Common::String qw(UpperCaseStr);
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -246,9 +246,10 @@ package Attean::AggregateExpression 0.031 {
 		return $args;
 	};
 	sub BUILD {
-		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE RANK)];
+		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE RANK CUSTOM)];
 		$type->assert_valid(shift->operator);
 	}
+	has 'custom_iri'	=> (is => 'ro', isa => Maybe[Str]);
 	has 'operator'		=> (is => 'ro', isa => UpperCaseStr, coerce => UpperCaseStr->coercion, required => 1);
 	has 'scalar_vars'	=> (is => 'ro', isa => HashRef, default => sub { +{} });
 	has 'distinct'		=> (is => 'ro', isa => Bool, default => 0);

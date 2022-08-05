@@ -210,7 +210,10 @@ either upon seeing a DOT, or reaching the end of the string.
 sub parse_nodes {
 	my $self	= shift;
 	my $p 		= AtteanX::Parser::SPARQLLex->new();
-	my $l		= $self->_configure_lexer( $p->parse_iter_from_bytes(@_) );
+	my $bytes	= shift;
+	my %args	= @_;
+	my $commas	= $args{'commas'} || 0;
+	my $l		= $self->_configure_lexer( $p->parse_iter_from_bytes($bytes) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
 	$self->build({base => $self->baseURI});
@@ -222,6 +225,11 @@ sub parse_nodes {
 		} else {
 			$self->_GraphNode;
 		}
+		
+		if ($commas) {
+			$self->_optional_token(COMMA);
+		}
+		
 		push(@nodes, splice(@{ $self->{_stack} }));
 		if ($self->_test_token(DOT)) {
 			$self->log->notice('DOT seen in string, stopping here');
@@ -1246,7 +1254,7 @@ sub __GroupByVar {
 		$self->_expected_token(RPAREN);
 		
 	} elsif ($self->_IRIref_test) {
-		$$self->_FunctionCall;
+		$self->_FunctionCall;
 	} elsif ($self->_BuiltInCall_test) {
 		$self->_BuiltInCall;
 	} else {
@@ -2062,6 +2070,9 @@ sub _FunctionCall {
 	my $self	= shift;
 	$self->_IRIref;
 	my ($iri)	= splice(@{ $self->{_stack} });
+	if (my $func = Attean->get_global_aggregate($iri)) {
+	
+	}
 	
 	my @args	= $self->_ArgList;
 
@@ -2988,8 +2999,16 @@ sub _BrackettedExpression {
 
 sub _Aggregate {
 	my $self	= shift;
-	my $t		= $self->_expected_token(KEYWORD);
-	my $op		= $t->value;
+	
+	my $op;
+	my $custom_agg_iri;
+	if (scalar(@_)) {
+		$custom_agg_iri		= shift->value;
+		$op	= 'CUSTOM';
+	} else {
+		my $t	= $self->_expected_token(KEYWORD);
+		$op		= $t->value;
+	}
 	$self->_expected_token(LPAREN);
 	my $distinct	= 0;
 	if ($self->_optional_token(KEYWORD, 'DISTINCT')) {
@@ -3030,6 +3049,7 @@ sub _Aggregate {
 					children	=> [@expr],
 					scalar_vars	=> \%options,
 					variable	=> $var,
+					custom_iri	=> $custom_agg_iri
 				);
 	$self->{build}{__aggregate}{ $name }	= [ $var, $agg ];
 	my $expr	= Attean::ValueExpression->new(value => $var);
@@ -3163,6 +3183,10 @@ sub _IRIrefOrFunction {
 	$self->_IRIref;
 	if ($self->_ArgList_test) {
 		my ($iri)	= splice(@{ $self->{_stack} });
+		if (my $func = Attean->get_global_aggregate($iri->value)) {
+			# special-case: treat this as an aggregate invocation instead of a scalar function call, since there is a custom aggregate registered
+			return $self->_Aggregate($iri);
+		}
 		my @args	= $self->_ArgList;
 		if ($iri->value =~ m<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|boolean|string|dateTime)$>) {
 			my $expr	= Attean::CastExpression->new( children => \@args, datatype => $iri );

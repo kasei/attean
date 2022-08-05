@@ -722,6 +722,7 @@ package Attean::Plan::Extend 0.031 {
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
 	
+	
 	sub plan_as_string {
 		my $self	= shift;
 		my @strings	= map { sprintf('?%s ← %s', $_, $self->expressions->{$_}->as_string) } keys %{ $self->expressions };
@@ -1265,6 +1266,14 @@ package Attean::Plan::Extend 0.031 {
 				my $pos	= lc($func);
 				my $term	= $operands[0]->$pos();
 				return $term;
+			} elsif ($func eq 'INVOKE') {
+				my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				my $furi		= shift(@operands)->value;
+				my $func		= Attean->get_global_function($furi);
+				unless (ref($func)) {
+					die "No extension registered for <$furi>";
+				}
+				return $func->(@operands);
 			} else {
 				warn "Expression evaluation unimplemented: " . $expr->as_string;
 				$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
@@ -2184,6 +2193,22 @@ package Attean::Plan::Aggregate 0.031 {
 			}
 			my $string	= join($sep, @values);
 			return Attean::Literal->new(value => $string);
+		} elsif ($op eq 'CUSTOM') {
+			my $iri	= $expr->custom_iri;
+			my $data	= Attean->get_global_aggregate($iri);
+			unless ($data) {
+				die "No extension aggregate registered for <$iri>";
+			}
+			my $start	= $data->{'start'};
+			my $process	= $data->{'process'};
+			my $finalize	= $data->{'finalize'};
+
+			my $thunk	= $start->();
+			foreach my $r (@$rows) {
+				my $t	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+				$process->($thunk, $t);
+			}
+			return $finalize->($thunk);
 		}
 		die "$op not implemented";
 	}

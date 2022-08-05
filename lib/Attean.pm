@@ -429,6 +429,41 @@ currently undefined.
 		my @sorted	= sort { $media_types{$b} <=> $media_types{$a} } keys %media_types;
 		return join(',', @sorted);
 	}
+	
+	
+	our %global_functions;
+	sub register_global_function {
+		my $class	= shift;
+		my %args	= @_;
+		foreach my $uri (keys %args) {
+			my $func	= $args{ $uri };
+			$global_functions{ $uri }	= $func;
+		}
+	}
+
+	sub get_global_function {
+		my $class	= shift;
+		my $uri		= shift;
+		return $global_functions{ $uri };
+	}
+	
+	our %global_aggregates;
+	sub register_global_aggregate {
+		my $class	= shift;
+		my %args	= @_;
+		foreach my $uri (keys %args) {
+			my $funcs	= $args{ $uri };
+			$global_aggregates{ $uri }	= $funcs;
+		}
+	}
+
+	sub get_global_aggregate {
+		my $class	= shift;
+		my $uri		= shift;
+		return $global_aggregates{ $uri };
+	}
+	
+	
 }
 
 1;
