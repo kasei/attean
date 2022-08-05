@@ -202,6 +202,60 @@ subtest 'parse_cb_from_bytes' => sub {
 	$p->parse_cb_from_io($fh);
 };
 
+subtest 'SPARQL 1.2 HINT syntax' => sub {
+	my $sparql	= <<"END";
+PREFIX : <http://example.org/>
+SELECT * WHERE {
+	HINT(:impl :joinType "Ordered")
+    ?p
+    	:name ?name ;
+        :school ?school ;
+        :age ?age
+        .
+}
+END
+
+	open(my $fh, '<:encoding(UTF-8)', \$sparql);
+	my $l		= AtteanX::Parser::SPARQLLex->new();
+	my $iter	= $l->parse_iter_from_io($fh);
+
+	expect($iter->next, KEYWORD, ['PREFIX']);
+	expect($iter->next, PREFIXNAME, [':']);
+	expect($iter->next, IRI, ['http://example.org/']);
+	expect($iter->next, KEYWORD, ['SELECT']);
+	expect($iter->next, STAR, ['*'],);
+	expect($iter->next, KEYWORD, ['WHERE']);
+	expect($iter->next, LBRACE, ['{'],);
+	expect($iter->next, KEYWORD, ['HINT'], 'hint keyword');
+	expect($iter->next, LPAREN, ['(']);
+};
+
+subtest 'SPARQL 1.2 HINT algebra' => sub {
+	my $sparql	= <<"END";
+PREFIX : <http://example.org/>
+SELECT * WHERE {
+	HINT(:impl :joinType "Ordered")
+    ?p
+    	:name ?name ;
+        :school ?school ;
+        :age ?age
+        .
+}
+END
+
+	my $a	= eval { AtteanX::Parser::SPARQL->parse($sparql) };
+	does_ok($a, 'Attean::API::Algebra');
+
+	my ($bgp)		= $a->subpatterns_of_type('Attean::Algebra::BGP');
+	my $hints		= $bgp->hints;
+	is(scalar(@$hints), 1, 'number of hints');
+	my $hint		= shift(@$hints);
+	is(scalar(@$hint), 3, 'count of terms in hint');
+	is($hint->[0]->value, 'http://example.org/impl', 'first term of HINT');
+	is($hint->[1]->value, 'http://example.org/joinType', 'second term of HINT');
+	is($hint->[2]->value, 'Ordered', 'third term of HINT');
+};
+
 done_testing();
 
 sub expect {

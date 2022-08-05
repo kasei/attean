@@ -255,7 +255,6 @@ sub _parse {
 	$self->_RW_Query();
 	delete $build->{star};
 	my $data								= $build;
-#	$data->{triples}						= $self->_pop_pattern_container();
 	return $data;
 }
 
@@ -689,7 +688,8 @@ sub __ModifyTemplate {
 	if ($self->_TriplesBlock_test) {
 		$self->_push_pattern_container;
 		$self->_TriplesBlock;
-		my ($bgp)	= @{ $self->_pop_pattern_container };
+		(my $cont, undef)	= $self->_pop_pattern_container; # ignore hints in a modify template
+		my ($bgp)	= @{ $cont };
 		my @triples	= @{ $bgp->triples };
 		if ($graph) {
 			@triples	= map { $_->as_quad_pattern($graph) } @triples;
@@ -1164,10 +1164,11 @@ sub _TriplesWhereClause {
 	}
 	$self->_expected_token(RBRACE);
 	
-	my $cont		= $self->_pop_pattern_container;
+	my ($cont, $hints)		= $self->_pop_pattern_container;
 	$self->{build}{construct_triples}	= $cont->[0];
 	
 	my $pattern	= $self->_new_join(@$cont);
+	$pattern->hints($hints);
 	$self->_add_patterns( $pattern );
 }
 
@@ -1544,11 +1545,12 @@ sub _GroupGraphPatternSub {
 		my $t	= $self->_peek_token;
 		last if (refaddr($t) == refaddr($cur));
 	}
-	my $cont		= $self->_pop_pattern_container;
+	my ($cont, $hints)		= $self->_pop_pattern_container;
 
 	my @filters		= splice(@{ $self->{filters} });
 	my @patterns;
 	my $pattern		= $self->_new_join(@$cont);
+	$pattern->hints($hints);
 	if (@filters) {
 		while (my $f = shift @filters) {
 			$pattern	= Attean::Algebra::Filter->new( children => [$pattern], expression => $f );
@@ -1560,10 +1562,12 @@ sub _GroupGraphPatternSub {
 sub __handle_GraphPatternNotTriples {
 	my $self	= shift;
 	my $data	= shift;
+	return unless ($data);
 	my ($class, @args)	= @$data;
 	if ($class =~ /^Attean::Algebra::(LeftJoin|Minus)$/) {
-		my $cont	= $self->_pop_pattern_container;
+		my ($cont, $hints)	= $self->_pop_pattern_container;
 		my $ggp		= $self->_new_join(@$cont);
+		$ggp->hints($hints);
 		$self->_push_pattern_container;
 		# my $ggp	= $self->_remove_pattern();
 		unless ($ggp) {
@@ -1576,8 +1580,9 @@ sub __handle_GraphPatternNotTriples {
  		my ($table)	= @args;
 		$self->_add_patterns( $table );
 	} elsif ($class eq 'Attean::Algebra::Extend') {
-		my $cont	= $self->_pop_pattern_container;
+		my ($cont, $hints)	= $self->_pop_pattern_container;
 		my $ggp		= $self->_new_join(@$cont);
+		$ggp->hints($hints);
 		$self->_push_pattern_container;
 		# my $ggp	= $self->_remove_pattern();
 		unless ($ggp) {
@@ -1758,8 +1763,9 @@ sub _TriplesBlock {
 	my $self	= shift;
 	$self->_push_pattern_container;
 	$self->__TriplesBlock;
-	my $triples		= $self->_pop_pattern_container;
+	my ($triples, $hints)		= $self->_pop_pattern_container;
 	my $bgp			= $self->__new_bgp( @$triples );
+	$bgp->hints($hints);
 	$self->_add_patterns( $bgp );
 }
 
@@ -1791,7 +1797,7 @@ sub _GraphPatternNotTriples_test {
 	my $t	= $self->_peek_token;
 	return unless ($t);
 	return 0 unless ($t->type == KEYWORD);
-	return ($t->value =~ qr/^(VALUES|BIND|SERVICE|MINUS|OPTIONAL|GRAPH)$/i);
+	return ($t->value =~ qr/^(VALUES|BIND|SERVICE|MINUS|OPTIONAL|GRAPH|HINT)$/i);
 }
 
 sub _GraphPatternNotTriples {
@@ -1804,6 +1810,8 @@ sub _GraphPatternNotTriples {
 		$self->_MinusGraphPattern;
 	} elsif ($self->_test_token(KEYWORD, 'BIND')) {
 		$self->_Bind;
+	} elsif ($self->_test_token(KEYWORD, 'HINT')) {
+		$self->_Hint;
 	} elsif ($self->_test_token(KEYWORD, 'OPTIONAL')) {
 		$self->_OptionalGraphPattern;
 	} elsif ($self->_test_token(LBRACE)) {
@@ -1877,6 +1885,27 @@ sub _Bind {
 	$self->_add_stack( ['Attean::Algebra::Extend', $var, $expr] );
 }
 
+sub _Hint {
+	my $self	= shift;
+	$self->_expected_token(KEYWORD, 'HINT');
+	my $terms	= $self->_HintTerms();
+	$self->_add_hint($terms);
+}
+
+sub _HintTerms {
+	my $self	= shift;
+	
+	$self->_expected_token(LPAREN);
+	
+	my @terms;
+	while ($self->_BindingValue_test) {
+		$self->_BindingValue;
+		push(@terms, splice(@{ $self->{_stack} }));
+	}
+	$self->_expected_token(RPAREN);
+	return \@terms;
+}
+
 sub _ServiceGraphPattern {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD, 'SERVICE');
@@ -1905,8 +1934,9 @@ sub __close_bgp_with_filters {
 	my $self	= shift;
 	my @filters		= splice(@{ $self->{filters} });
 	if (@filters) {
-		my $cont	= $self->_pop_pattern_container;
+		my ($cont, $hints)	= $self->_pop_pattern_container;
 		my $ggp		= $self->_new_join(@$cont);
+		$ggp->hints($hints);
 		$self->_push_pattern_container;
 		# my $ggp	= $self->_remove_pattern();
 		unless ($ggp) {
@@ -2083,7 +2113,7 @@ sub _ConstructTemplate {
 	}
 
 	$self->_expected_token(RBRACE);
-	my $cont	= $self->_pop_pattern_container;
+	(my $cont, undef)	= $self->_pop_pattern_container; # ignore hints in a construct template
 	$self->{build}{construct_triples}	= $cont;
 }
 
@@ -3534,17 +3564,25 @@ sub _peek_pattern {
 	return $pattern;
 }
 
+sub _add_hint {
+	my $self	= shift;
+	my $hints	= shift;
+	push( @{ $self->{ _pattern_container_hints_stack }[0] }, $hints );
+}
+
 sub _push_pattern_container {
 	my $self	= shift;
 	my $cont	= [];
 	unshift( @{ $self->{ _pattern_container_stack } }, $cont );
+	unshift( @{ $self->{ _pattern_container_hints_stack } }, [] );
 	return $cont;
 }
 
 sub _pop_pattern_container {
 	my $self	= shift;
+	my $hints	= shift( @{ $self->{ _pattern_container_hints_stack } } );
 	my $cont	= shift( @{ $self->{ _pattern_container_stack } } );
-	return $cont;
+	return ($cont, $hints);
 }
 
 sub _add_stack {

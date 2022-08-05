@@ -419,8 +419,10 @@ package Attean::API::SPARQLQuerySerializable 0.031 {
 
 package Attean::API::Algebra 0.031 {
 	use Moo::Role;
-
+	use Types::Standard qw(ArrayRef ConsumerOf);
+	
 	with 'Attean::API::SPARQLSerializable';
+	has 'hints' => (is => 'rw', isa => ArrayRef[ArrayRef[ConsumerOf['Attean::API::Term']]], default => sub { [] });
 	
 	requires 'as_sparql';
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
