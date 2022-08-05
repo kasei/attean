@@ -4,7 +4,7 @@ Attean::RDF - Utility package for exporting shorthand functions for constructing
 
 =head1 VERSION
 
-This document describes Attean::RDF version 0.030
+This document describes Attean::RDF version 0.031
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ by default).
 
 =cut
 
-package Attean::RDF 0.030 {
+package Attean::RDF 0.031 {
 	use v5.14;
 	use warnings;
 
@@ -181,7 +181,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

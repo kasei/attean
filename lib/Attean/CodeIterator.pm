@@ -7,7 +7,7 @@ Attean::CodeIterator - Iterator implementation backed by a generator function
 
 =head1 VERSION
 
-This document describes Attean::CodeIterator version 0.030
+This document describes Attean::CodeIterator version 0.031
 
 =head1 SYNOPSIS
 
@@ -52,7 +52,7 @@ that will be returned from the iterator.
 
 =cut
 
-package Attean::CodeIterator 0.030 {
+package Attean::CodeIterator 0.031 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Scalar::Util qw(blessed);
@@ -114,7 +114,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

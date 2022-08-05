@@ -7,7 +7,7 @@ Attean::IDPQueryPlanner - Iterative dynamic programming query planner
 
 =head1 VERSION
 
-This document describes Attean::IDPQueryPlanner version 0.030
+This document describes Attean::IDPQueryPlanner version 0.031
 
 =head1 SYNOPSIS
 
@@ -36,7 +36,7 @@ iterative dynamic programming approach.
 
 =cut
 
-package Attean::IDPQueryPlanner 0.030 {
+package Attean::IDPQueryPlanner 0.031 {
 	use Moo;
 	use namespace::clean;
 	
@@ -65,7 +65,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

@@ -7,7 +7,7 @@ Attean::QueryPlanner - Query planner
 
 =head1 VERSION
 
-This document describes Attean::QueryPlanner version 0.030
+This document describes Attean::QueryPlanner version 0.031
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ use Attean::Algebra;
 use Attean::Plan;
 use Attean::Expression;
 
-package Attean::QueryPlanner 0.030 {
+package Attean::QueryPlanner 0.031 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -1019,7 +1019,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

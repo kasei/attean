@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.030
+This document describes Attean::API::Binding version 0.031
 
 =head1 DESCRIPTION
 
@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.030 {
+package Attean::API::Binding 0.031 {
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
 
@@ -289,7 +289,7 @@ C<< $binding >>.
 	}
 }
 
-package Attean::API::TripleOrQuadPattern 0.030 {
+package Attean::API::TripleOrQuadPattern 0.031 {
 	use Encode qw(encode);
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
@@ -469,7 +469,7 @@ parsed from C<< $string >> in SPARQL syntax.
 	}
 }
 
-package Attean::API::TripleOrQuad 0.030 {
+package Attean::API::TripleOrQuad 0.031 {
 	use List::MoreUtils qw(any);
 	use Carp;
 
@@ -485,7 +485,7 @@ package Attean::API::TripleOrQuad 0.030 {
 	}
 }
 
-package Attean::API::TriplePattern 0.030 {
+package Attean::API::TriplePattern 0.031 {
 	use List::MoreUtils qw(zip);
 	use Scalar::Util qw(blessed);
 
@@ -544,7 +544,7 @@ package Attean::API::TriplePattern 0.030 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding', 'Attean::API::TermOrVariableOrTriplePattern';
 }
 
-package Attean::API::Triple 0.030 {
+package Attean::API::Triple 0.031 {
 	use Scalar::Util qw(blessed);
 	use Moo::Role;
 	
@@ -624,7 +624,7 @@ package Attean::API::Triple 0.030 {
 	with 'Attean::API::TermOrTriple';
 }
 
-package Attean::API::QuadPattern 0.030 {
+package Attean::API::QuadPattern 0.031 {
 	use Scalar::Util qw(blessed);
 	use List::MoreUtils qw(zip);
 
@@ -681,7 +681,7 @@ package Attean::API::QuadPattern 0.030 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.030 {
+package Attean::API::Quad 0.031 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -708,7 +708,7 @@ package Attean::API::Quad 0.030 {
 }
 
 
-package Attean::API::Result 0.030 {
+package Attean::API::Result 0.031 {
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(HashRef);
 
@@ -828,7 +828,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

@@ -4,7 +4,7 @@ AtteanX::Store::Simple - Simple, unindexed, in-memory RDF store
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Simple version 0.030
+This document describes AtteanX::Store::Simple version 0.031
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,7 @@ AtteanX::Store::Simple provides an in-memory quad-store.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Simple 0.030 {
+package AtteanX::Store::Simple 0.031 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
@@ -81,7 +81,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams. This
+Copyright (c) 2014--2022 Gregory Todd Williams. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

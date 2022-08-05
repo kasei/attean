@@ -7,7 +7,7 @@ Attean::API::Parser - Parser role
 
 =head1 VERSION
 
-This document describes Attean::API::Parser version 0.030
+This document describes Attean::API::Parser version 0.031
 
 =head1 DESCRIPTION
 
@@ -58,7 +58,7 @@ File extensions should NOT include a leading dot.
 
 use Type::Tiny::Role;
 
-package Attean::API::Parser 0.030 {
+package Attean::API::Parser 0.031 {
 	use Types::Standard qw(CodeRef Bool);
 
 	use Moo::Role;
@@ -97,7 +97,7 @@ C<lazy_iris> attribute.
 	sub file_extensions { return [] }
 }
 
-package Attean::API::AbbreviatingParser 0.030 {
+package Attean::API::AbbreviatingParser 0.031 {
 	use Types::Standard qw(ConsumerOf InstanceOf Maybe);
 	use Types::Namespace qw( NamespaceMap );
 	use Scalar::Util qw(blessed);
@@ -109,7 +109,7 @@ package Attean::API::AbbreviatingParser 0.030 {
 	has 'namespaces'	=> (is => 'ro', isa => Maybe[NamespaceMap]);
 }
 
-package Attean::API::PushParser 0.030 {
+package Attean::API::PushParser 0.031 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 
@@ -173,7 +173,7 @@ package Attean::API::PushParser 0.030 {
 	}
 }
 
-package Attean::API::PullParser 0.030 {
+package Attean::API::PullParser 0.031 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 	
@@ -215,7 +215,7 @@ package Attean::API::PullParser 0.030 {
 	}
 }
 
-package Attean::API::AtOnceParser 0.030 {
+package Attean::API::AtOnceParser 0.031 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 	
@@ -276,7 +276,7 @@ package Attean::API::AtOnceParser 0.030 {
 	
 }
 
-package Attean::API::TermParser 0.030 {
+package Attean::API::TermParser 0.031 {
 	# Parser returns objects that conform to Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -286,7 +286,7 @@ package Attean::API::TermParser 0.030 {
 	}
 }
 
-package Attean::API::TripleParser 0.030 {
+package Attean::API::TripleParser 0.031 {
 	# Parser returns objects that conform to Attean::API::Triple
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -296,7 +296,7 @@ package Attean::API::TripleParser 0.030 {
 	}
 }
 
-package Attean::API::QuadParser 0.030 {
+package Attean::API::QuadParser 0.031 {
 	# Parser returns objects that conform to Attean::API::Quad
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -306,7 +306,7 @@ package Attean::API::QuadParser 0.030 {
 	}
 }
 
-package Attean::API::MixedStatementParser 0.030 {
+package Attean::API::MixedStatementParser 0.031 {
 	# Parser returns objects that conform to either Attean::API::Triple or Attean::API::Quad
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -316,7 +316,7 @@ package Attean::API::MixedStatementParser 0.030 {
 	}
 }
 
-package Attean::API::ResultOrTermParser 0.030 {
+package Attean::API::ResultOrTermParser 0.031 {
 	# Parser returns objects that conform to either Attean::API::Result or Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -326,7 +326,7 @@ package Attean::API::ResultOrTermParser 0.030 {
 	}
 }
 
-package Attean::API::ResultParser 0.030 {
+package Attean::API::ResultParser 0.031 {
 	# Parser returns objects that conform to Attean::API::Result
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -357,7 +357,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

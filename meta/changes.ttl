@@ -36,6 +36,22 @@ my:project
 							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ;
 	.
 
+my:v_0-031
+	a					:Version ;
+	dc:issued			"2022-08-04"^^xsd:date ;
+	:revision			"0.031" ;
+	dcterms:replaces	my:v_0-030 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add support for parsing and evaluating SPARQL-star queries." ],
+			[ a dcs:Addition ; rdfs:label "Add initial implementation for TriG-star parser." ],
+			[ a dcs:Update ; rdfs:label "Update Turtle, SPARQL-XML, and SPARQL-JSON parsers to support RDF-star." ],
+			[ a dcs:Update ; rdfs:label "Update docs and add tests for handling of base URIs in parsers (#158)." ],
+			[ a dcs:Update ; rdfs:label "Improve implementation, docs, and tests for accessing parsers and serializers by file extension." ]
+	]
+	.
+
+
 my:v_0-030
 	a					:Version ;
 	dc:issued			"2021-02-06"^^xsd:date ;

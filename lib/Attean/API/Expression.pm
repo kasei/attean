@@ -7,7 +7,7 @@ Attean::API::Expression - SPARQL expressions
 
 =head1 VERSION
 
-This document describes Attean::API::Expression version 0.030
+This document describes Attean::API::Expression version 0.031
 
 =head1 DESCRIPTION
 
@@ -65,7 +65,7 @@ Returns a string serialization of the expression object.
 
 =cut
 
-package Attean::API::Expression 0.030 {
+package Attean::API::Expression 0.031 {
 	use Types::Standard qw(Str);
 
 	use Moo::Role;
@@ -100,7 +100,7 @@ package Attean::API::Expression 0.030 {
 	}
 }
 
-package Attean::API::UnaryExpression 0.030 {
+package Attean::API::UnaryExpression 0.031 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 
@@ -140,7 +140,7 @@ package Attean::API::UnaryExpression 0.030 {
 	}
 }
 
-package Attean::API::BinaryExpression 0.030 {
+package Attean::API::BinaryExpression 0.031 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 
@@ -189,7 +189,7 @@ package Attean::API::BinaryExpression 0.030 {
 	}
 }
 
-package Attean::API::NaryExpression 0.030 {
+package Attean::API::NaryExpression 0.031 {
 	use Moo::Role;
 	with 'Attean::API::Expression', 'Attean::API::QueryTree';
 	sub as_string {
@@ -209,7 +209,7 @@ package Attean::API::NaryExpression 0.030 {
 	}
 }
 
-package Attean::API::AggregateExpression 0.030 {
+package Attean::API::AggregateExpression 0.031 {
 	use Moo::Role;
 	requires 'operator';
 	requires 'scalar_vars';
@@ -250,7 +250,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

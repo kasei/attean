@@ -7,7 +7,7 @@ Attean::Quad - RDF Quads
 
 =head1 VERSION
 
-This document describes Attean::Quad version 0.030
+This document describes Attean::Quad version 0.031
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ This class consumes L<Attean::API::Quad>.
 
 =cut
 
-package Attean::QuadPattern 0.030 {
+package Attean::QuadPattern 0.031 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
@@ -54,7 +54,7 @@ package Attean::QuadPattern 0.030 {
 	with 'Attean::API::QuadPattern';
 }
 
-package Attean::Quad 0.030 {
+package Attean::Quad 0.031 {
 	use Moo;
 	use Attean::API::Binding;
 	
@@ -96,7 +96,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

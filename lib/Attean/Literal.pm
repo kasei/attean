@@ -7,7 +7,7 @@ Attean::Literal - RDF Literals
 
 =head1 VERSION
 
-This document describes Attean::Literal version 0.030
+This document describes Attean::Literal version 0.031
 
 =head1 SYNOPSIS
 
@@ -48,7 +48,7 @@ Returns true if the literal has a language tag, false otherwise.
 
 =cut
 
-package Attean::Literal 0.030 {
+package Attean::Literal 0.031 {
 	use Moo;
 	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;
@@ -177,7 +177,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

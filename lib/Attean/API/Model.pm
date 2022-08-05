@@ -7,7 +7,7 @@ Attean::API::Model - RDF Model
 
 =head1 VERSION
 
-This document describes Attean::API::Model version 0.030
+This document describes Attean::API::Model version 0.031
 
 =head1 DESCRIPTION
 
@@ -166,7 +166,7 @@ in the model.
 
 use Attean::API::Binding;
 
-package Attean::API::Model 0.030 {
+package Attean::API::Model 0.031 {
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
 	use URI::Namespace;
@@ -379,7 +379,7 @@ package Attean::API::Model 0.030 {
 }
 
 
-package Attean::API::MutableModel 0.030 {
+package Attean::API::MutableModel 0.031 {
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Encode qw(encode);
@@ -485,21 +485,21 @@ package Attean::API::MutableModel 0.030 {
 }
 
 
-package Attean::API::ETagCacheableModel 0.030 {
+package Attean::API::ETagCacheableModel 0.031 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
-package Attean::API::TimeCacheableModel 0.030 {
+package Attean::API::TimeCacheableModel 0.031 {
 	use Moo::Role;
 	
 	requires 'mtime_for_quads';
 }
 
 
-package Attean::API::BulkUpdatableModel 0.030 {
+package Attean::API::BulkUpdatableModel 0.031 {
 	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';
@@ -522,7 +522,7 @@ package Attean::API::BulkUpdatableModel 0.030 {
 	};
 }
 
-package Attean::API::RDFStarModel 0.030 {
+package Attean::API::RDFStarModel 0.031 {
 	use Moo::Role;
 
 	with 'Attean::API::Model';
@@ -551,7 +551,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

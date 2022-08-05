@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQL - SPARQL 1.1 Parser.
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQL version 0.030.
+This document describes AtteanX::Parser::SPARQL version 0.031.
 
 =head1 SYNOPSIS
 
@@ -70,7 +70,7 @@ L<Attean::API::AbbreviatingParser>.
 
 =cut
 
-package AtteanX::Parser::SPARQL 0.030;
+package AtteanX::Parser::SPARQL 0.031;
 
 use strict;
 use warnings;
@@ -3806,7 +3806,7 @@ sub _token_error {
 	croak $message;
 }
 
-package AtteanX::Parser::SPARQL::ObjectWrapper 0.030;
+package AtteanX::Parser::SPARQL::ObjectWrapper 0.031;
 
 use strict;
 use warnings;
@@ -3840,7 +3840,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams.
+Copyright (c) 2014--2022 Gregory Todd Williams.
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 

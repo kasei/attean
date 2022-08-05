@@ -4,7 +4,7 @@ AtteanX::Parser::RDFXML - RDF/XML Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::RDFXML version 0.030
+This document describes AtteanX::Parser::RDFXML version 0.031
 
 =head1 SYNOPSIS
 
@@ -57,7 +57,7 @@ A string prefix for identifiers generated for blank nodes.
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::RDFXML 0.030 {
+package AtteanX::Parser::RDFXML 0.031 {
 	use Moo;
 	use Types::Standard qw(Str Object);
 	use Attean;
@@ -742,7 +742,7 @@ Gregory Todd Williams  C<< <gwilliams@cpan.org> >>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014--2020 Gregory Todd Williams. This
+Copyright (c) 2014--2022 Gregory Todd Williams. This
 program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
