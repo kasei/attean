@@ -1587,7 +1587,7 @@ sub __handle_GraphPatternNotTriples {
 	} elsif ($class eq 'Attean::Algebra::Table') {
  		my ($table)	= @args;
 		$self->_add_patterns( $table );
-	} elsif ($class eq 'Attean::Algebra::Extend') {
+	} elsif ($class =~ /^Attean::Algebra::(Extend|Explode)$/) {
 		my ($cont, $hints)	= $self->_pop_pattern_container;
 		my $ggp		= $self->_new_join(@$cont);
 		$ggp->hints($hints);
@@ -1601,7 +1601,7 @@ sub __handle_GraphPatternNotTriples {
 		if (exists $in_scope{ $var->value }) {
 			croak "Syntax error: BIND used with variable already in scope";
 		}
-		my $bind	= Attean::Algebra::Extend->new( children => [$ggp], variable => $var, expression => $expr );
+		my $bind	= $class->new( children => [$ggp], variable => $var, expression => $expr );
 		$self->_add_patterns( $bind );
 	} elsif ($class eq 'Attean::Algebra::Service') {
 		my ($endpoint, $pattern, $silent)	= @args;
@@ -1805,7 +1805,7 @@ sub _GraphPatternNotTriples_test {
 	my $t	= $self->_peek_token;
 	return unless ($t);
 	return 0 unless ($t->type == KEYWORD);
-	return ($t->value =~ qr/^(VALUES|BIND|SERVICE|MINUS|OPTIONAL|GRAPH|HINT)$/i);
+	return ($t->value =~ qr/^(VALUES|BIND|EXPLODE|SERVICE|MINUS|OPTIONAL|GRAPH|HINT)$/i);
 }
 
 sub _GraphPatternNotTriples {
@@ -1818,6 +1818,8 @@ sub _GraphPatternNotTriples {
 		$self->_MinusGraphPattern;
 	} elsif ($self->_test_token(KEYWORD, 'BIND')) {
 		$self->_Bind;
+	} elsif ($self->_test_token(KEYWORD, 'EXPLODE')) {
+		$self->_Explode;
 	} elsif ($self->_test_token(KEYWORD, 'HINT')) {
 		$self->_Hint;
 	} elsif ($self->_test_token(KEYWORD, 'OPTIONAL')) {
@@ -1891,6 +1893,13 @@ sub _Bind {
 	$self->_expected_token(KEYWORD, 'BIND');
 	my ($var, $expr)	= $self->_BrackettedAliasExpression;
 	$self->_add_stack( ['Attean::Algebra::Extend', $var, $expr] );
+}
+
+sub _Explode {
+	my $self	= shift;
+	$self->_expected_token(KEYWORD, 'EXPLODE');
+	my ($var, $expr)	= $self->_BrackettedAliasExpression;
+	$self->_add_stack( ['Attean::Algebra::Explode', $var, $expr] );
 }
 
 sub _Hint {

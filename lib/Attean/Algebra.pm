@@ -421,6 +421,55 @@ package Attean::Algebra::Extend 0.032 {
 	}
 }
 
+=item * L<Attean::Algebra::Explode>
+
+=cut
+
+package Attean::Algebra::Explode 0.031 {
+	use AtteanX::SPARQL::Constants;
+	use AtteanX::SPARQL::Token;
+	use Moo;
+	use Types::Standard qw(ConsumerOf);
+	use namespace::clean;
+	
+	sub in_scope_variables {
+		my $self	= shift;
+		my ($child)	= @{ $self->children };
+		my @vars	= $child->in_scope_variables;
+		return Set::Scalar->new(@vars, $self->variable->value)->elements;
+	}
+	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
+
+	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Explode { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
+	}
+	sub tree_attributes { return qw(variable expression) };
+	sub sparql_tokens {
+		my $self	= shift;
+		my $explode	= AtteanX::SPARQL::Token->keyword('EXPLODE');
+		my $as		= AtteanX::SPARQL::Token->keyword('AS');
+		my $l		= AtteanX::SPARQL::Token->lparen;
+		my $r		= AtteanX::SPARQL::Token->rparen;
+		my ($child)	= @{ $self->children };
+		my $var		= $self->variable;
+		my $expr	= $self->expression;
+		
+		my @tokens;
+		push(@tokens, $child->sparql_tokens->elements);
+		push(@tokens, $explode);
+		push(@tokens, $l);
+		push(@tokens, $expr->sparql_tokens->elements);
+		push(@tokens, $as);
+		push(@tokens, $var->sparql_tokens->elements);
+		push(@tokens, $r);
+		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
+	}
+}
+
 =item * L<Attean::Algebra::Minus>
 
 =cut

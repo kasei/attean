@@ -38,6 +38,7 @@ package Attean::SimpleQueryEvaluator 0.032 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
+	use AtteanX::Functions::CompositeLists;
 	use LWP::UserAgent;
 	use Scalar::Util qw(blessed);
 	use List::Util qw(all any reduce);
@@ -152,7 +153,7 @@ supplied C<< $active_graph >>.
 				foreach my $var (@extends) {
 					my $expr	= $extends{ $var };
 					my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
-					if ($val->does('Attean::API::Binding')) {
+					if (blessed($val) and $val->does('Attean::API::Binding')) {
 						# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
 						$val	= $val->ground($r);
 					}
@@ -161,6 +162,38 @@ supplied C<< $active_graph >>.
 				}
 				return $r;
 			});
+		} elsif ($algebra->isa('Attean::Algebra::Explode')) {
+			my $expr			= $algebra->expression;
+			my $var				= $algebra->variable->value;
+
+			my ($child)			= @{ $algebra->children };
+			my $iter				= $self->evaluate( $child, $active_graph );
+			my @results;
+			while (my $r = $iter->next) {
+				my %extension;
+				my %row_cache;
+				my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
+				die 'TypeError' unless ($val->does('Attean::API::Literal'));
+				my $dt	= $val->datatype;
+				die 'TypeError' unless ($dt->value eq $AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
+				my $lex	= $val->value;
+				substr($lex, 0, 1, '');
+				substr($lex, -1, 1, '');
+				my $p	= Attean->get_parser('SPARQL')->new();
+				my @nodes	= $p->parse_nodes($lex, commas => 1);
+				foreach my $val (@nodes) {
+					if ($val->does('Attean::API::Binding')) {
+						# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+						$val	= $val->ground($r);
+					}
+	# 					warn "Explode error: $@" if ($@);
+					my $new	= Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
+					push(@results, $new);
+				}
+			}
+			my %vars = map { $_ => 1 } $iter->variables;
+			$vars{$var}++;
+			return Attean::ListIterator->new(variables => [keys %vars], values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			# TODO: Merge adjacent filter evaluation so that they can share a row_cache hash (as is done for Extend above)
 			my $expr	= $algebra->expression;
@@ -488,7 +521,7 @@ supplied C<< $active_graph >>.
 			my $vars	= [map { $_->value } @{ $algebra->variables }];
 			return Attean::ListIterator->new(variables => $vars, values => $algebra->rows, item_type => 'Attean::API::Result');
 		}
-		die "Unimplemented algebra evaluation for: $algebra";
+		die "Unimplemented simple algebra evaluation for: $algebra";
 	}
 
 	
@@ -611,7 +644,8 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 		my $active_graph	= shift;
 		my $row_cache		= shift || {};
 		my $impl			= $self->impl($expr, $active_graph);
-		return eval { $impl->($row, row_cache => $row_cache) };
+		my $result			= eval { $impl->($row, row_cache => $row_cache) };
+		return $result;
 	}
 	
 	sub impl {
@@ -729,7 +763,8 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 			
 				if ($func eq 'IF') {
 					my $term	= $children[0]->( $r, %args );
-					return ($term->ebv) ? $children[1]->( $r, %args ) : $children[2]->( $r, %args );
+					my $ebv		= $term->ebv;
+					return $ebv ? $children[1]->( $r, %args ) : $children[2]->( $r, %args );
 				} elsif ($func eq 'IN' or $func eq 'NOTIN') {
 					($true, $false)	= ($false, $true) if ($func eq 'NOTIN');
 					my $child	= shift(@children);
@@ -757,6 +792,12 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 					my $term	= $operands[0]->$pos();
 					return $term;
 				} elsif ($func =~ /^([UI]RI)$/) {
+					my $operand	= $operands[0];
+					if ($operand->does('Attean::API::Literal')) {
+						if ($operand->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string') {
+							die "TypeError: ${func} called with a datatyped-literal other than xsd:string";
+						}
+					}
 					my @base	= $expr->has_base ? (base => $expr->base) : ();
 					return $type_classes{$1}->new(value => $operands[0]->value, @base);
 				} elsif ($func eq 'BNODE') {
