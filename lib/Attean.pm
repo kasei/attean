@@ -432,6 +432,10 @@ currently undefined.
 	
 	
 	our %global_functions;
+
+=item C<< register_global_function( %uri_to_func ) >>
+
+=cut
 	sub register_global_function {
 		my $class	= shift;
 		my %args	= @_;
@@ -441,6 +445,9 @@ currently undefined.
 		}
 	}
 
+=item C<< get_global_function( $uri ) >>
+
+=cut
 	sub get_global_function {
 		my $class	= shift;
 		my $uri		= shift;
@@ -448,6 +455,10 @@ currently undefined.
 	}
 	
 	our %global_aggregates;
+
+=item C<< register_global_aggregate( %uri_to_hash ) >>
+
+=cut
 	sub register_global_aggregate {
 		my $class	= shift;
 		my %args	= @_;
@@ -457,6 +468,9 @@ currently undefined.
 		}
 	}
 
+=item C<< get_global_aggregate( $uri ) >>
+
+=cut
 	sub get_global_aggregate {
 		my $class	= shift;
 		my $uri		= shift;
