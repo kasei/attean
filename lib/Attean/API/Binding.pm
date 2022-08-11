@@ -310,7 +310,7 @@ package Attean::API::TripleOrQuadPattern 0.031 {
 				my $k	= $names[$i];
 				my $v	= $args[$i];
 				unless (defined($v)) {
-					$args[$i]	= variable($k);
+					$args[$i]	= Attean::RDF::variable($k);
 				}
 			}
 			my %args;
@@ -328,7 +328,7 @@ package Attean::API::TripleOrQuadPattern 0.031 {
 		my %args	= @_;
 		foreach my $k ($class->variables) {
 			if (not(exists $args{$k}) or not($args{$k})) {
-				$args{$k}	= variable($k);
+				$args{$k}	= Attean::RDF::variable($k);
 			}
 		}
 		
