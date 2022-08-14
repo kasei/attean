@@ -7,7 +7,7 @@ AtteanX::Parser::NTuples - Shared functionality for N-Triples and N-Quads parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTuples version 0.031
+This document describes AtteanX::Parser::NTuples version 0.032
 
 =head1 SYNOPSIS
 
@@ -23,7 +23,7 @@ This module provides a base class for RDF formats N-Triples and N-Quads.
 
 =cut
 
-package AtteanX::Parser::NTuples 0.031 {
+package AtteanX::Parser::NTuples 0.032 {
 	use utf8;
 	use Moo;
 	use Attean;

@@ -4,7 +4,7 @@ Attean::API::TriplePattern - Role representing triple patterns
 
 =head1 VERSION
 
-This document describes Attean::API::TriplePattern version 0.031
+This document describes Attean::API::TriplePattern version 0.032
 
 =head1 SYNOPSIS
 

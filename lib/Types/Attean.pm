@@ -14,7 +14,7 @@ my $TrineNS   = InstanceOf['RDF::Trine::Namespace'];
 my $XmlNS     = InstanceOf['XML::Namespace'];
 
 
-our $VERSION = '0.031';
+our $VERSION = '0.032';
 
 =head1 NAME
 

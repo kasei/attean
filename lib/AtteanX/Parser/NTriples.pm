@@ -4,7 +4,7 @@ AtteanX::Parser::NTriples - N-Triples Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTriples version 0.031
+This document describes AtteanX::Parser::NTriples version 0.032
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ and <Attean::API::TripleParser>.
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::NTriples 0.031 {
+package AtteanX::Parser::NTriples 0.032 {
 	use utf8;
 	
 	use Attean;

@@ -7,7 +7,7 @@ Attean::QuadModel - RDF model backed by a quad-store
 
 =head1 VERSION
 
-This document describes Attean::QuadModel version 0.031
+This document describes Attean::QuadModel version 0.032
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ quad-store.
 
 =cut
 
-package Attean::QuadModel 0.031 {
+package Attean::QuadModel 0.032 {
 	use Moo;
 	use Scalar::Util qw(reftype);
 	use namespace::clean;
@@ -126,7 +126,7 @@ Delegates to the underlying store if the store consumes Attean::API::CostPlanner
 }
 
 
-package Attean::MutableQuadModel 0.031 {
+package Attean::MutableQuadModel 0.032 {
 	use Moo;
 	extends 'Attean::QuadModel';
 	

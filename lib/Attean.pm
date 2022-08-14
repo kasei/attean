@@ -4,7 +4,7 @@ Attean - A Semantic Web Framework
 
 =head1 VERSION
 
-This document describes Attean version 0.031	
+This document describes Attean version 0.032	
 
 =head1 SYNOPSIS
 
@@ -51,7 +51,7 @@ Semantic Web (RDF and SPARQL) data.
 package Attean {
 	use v5.14;
 	use warnings;
-	our $VERSION	= '0.031';
+	our $VERSION	= '0.032';
 	use Attean::API;
 	
 	use Attean::Blank;

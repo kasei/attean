@@ -33,8 +33,21 @@ my:project
 							my:v_0-011 , my:v_0-012 , my:v_0-013 , my:v_0-014 , my:v_0-015 ,
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
-							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ;
+							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
+							my:v_0-031 , my:v_0-032 ;
 	.
+
+my:v_0-032
+	a					:Version ;
+	dc:issued			"2022-08-14"^^xsd:date ;
+	:revision			"0.032" ;
+	dcterms:replaces	my:v_0-031 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Fix for bug caused by newly added TermOrVariableOrTriplePattern role." ]
+	]
+	.
+
 
 my:v_0-031
 	a					:Version ;
