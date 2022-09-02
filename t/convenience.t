@@ -6,7 +6,6 @@ use warnings;
 no warnings 'redefine';
 
 use Encode;
-use Test::LWP::UserAgent;
 use Attean parsers => ['Turtle'];
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;

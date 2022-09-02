@@ -33,11 +33,12 @@ methods that consume the L<Attean::API::CostPlanner> role.
 =cut
 
 package Attean::API::QueryPlanner 0.032 {
-	use Types::Standard qw(CodeRef);
+	use Types::Standard qw(CodeRef Object);
 
 	use Moo::Role;
 	
 	requires 'plan_for_algebra'; # plan_for_algebra($algebra, $model, \@default_graphs)
+	has 'request_signer' => (is => 'rw', isa => Object);
 }
 
 package Attean::API::CostPlanner 0.032 {

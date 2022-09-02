@@ -41,8 +41,9 @@ package Attean::SimpleQueryEvaluator 0.032 {
 	use LWP::UserAgent;
 	use Scalar::Util qw(blessed);
 	use List::Util qw(all any reduce);
-	use Types::Standard qw(ConsumerOf InstanceOf Bool);
+	use Types::Standard qw(ConsumerOf InstanceOf Bool Object);
 	use URI::Escape;
+	use Attean::SPARQLClient;
 	use namespace::clean;
 
 =item C<< model >>
@@ -64,6 +65,17 @@ features such as C<< GRAPH ?g {} >>.
 	has 'default_graph'	=> (is => 'ro', isa => ConsumerOf['Attean::API::IRI'], required => 1);
 
 	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent'], default => sub { my $ua = LWP::UserAgent->new(); $ua->agent("Attean/$Attean::VERSION " . $ua->_agent); $ua });
+	
+=item C<< request_signer >>
+
+If set, used to modify HTTP::Request objects used in evaluating SERVICE calls
+before the request is made. This may be used to, for example, add cryptographic
+signature headers to the request. The modification is performed by calling
+C<< $request_signer->sign( $request ) >>.
+
+=cut
+
+	has 'request_signer' => (is => 'rw', isa => Object);
 	
 	has 'ground_blanks' => (is => 'rw', isa => Bool, default => 0);
 	
@@ -192,23 +204,14 @@ supplied C<< $active_graph >>.
 			my $endpoint	= $algebra->endpoint->value;
 			my ($pattern)	= @{ $algebra->children };
 			my $sparql		= Attean::Algebra::Project->new( variables => [ map { variable($_) } $pattern->in_scope_variables ], children => [ $pattern ] )->as_sparql;
-			my $url			= $endpoint . '?query=' . uri_escape($sparql); # TODO: fix for cases where $endpoint already contains query parameters
-			my $ua			= $self->user_agent;
-			my $req			= HTTP::Request->new('GET', $url );
-			my $response	= $ua->request($req);
-			if (blessed($response) and $response->is_success) {
-				my $type	= $response->header('Content-Type');
-				my $pclass	= Attean->get_parser(media_type => $type) or die "No parser for media type: $type";
-				my $parser	= $pclass->new();
-				my $xml		= $response->decoded_content;
-				my $bytes	= encode('UTF-8', $xml, Encode::FB_CROAK);
-				return $parser->parse_iter_from_bytes($bytes);
-			} elsif ($algebra->silent) {
-				my $b	= Attean::Result->new( bindings => {} );
-				return Attean::ListIterator->new(variables => [], values => [$b], item_type => 'Attean::API::Result');
-			} else {
-				die "Service error: " . $response->status_line;
-			}
+			my $silent		= $algebra->silent;
+			my $client		= Attean::SPARQLClient->new(
+				endpoint => $endpoint,
+				silent => $silent,
+				user_agent => $self->user_agent,
+				request_signer => $self->request_signer,
+			);
+			return $client->query($sparql);
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
 			my $graph	= $algebra->graph;
 			return $self->evaluate($child, $graph) if ($graph->does('Attean::API::Term'));

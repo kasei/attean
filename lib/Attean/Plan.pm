@@ -1631,7 +1631,11 @@ Evaluates a SPARQL query against a remote endpoint.
 
 package Attean::Plan::Service 0.032 {
 	use Moo;
-	use Types::Standard qw(ConsumerOf Bool Str);
+	use Types::Standard qw(ConsumerOf Bool Str InstanceOf);
+	use Encode qw(encode);
+	use Scalar::Util qw(blessed);
+	use URI::Escape;
+	use Attean::SPARQLClient;
 	use namespace::clean;
 
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
@@ -1639,6 +1643,8 @@ package Attean::Plan::Service 0.032 {
 	has 'endpoint' => (is => 'ro', isa => ConsumerOf['Attean::API::TermOrVariable'], required => 1);
 	has 'silent' => (is => 'ro', isa => Bool, default => 0);
 	has 'sparql' => (is => 'ro', isa => Str, required => 1);
+	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent']);
+	has 'request_signer' => (is => 'rw');
 
 	sub plan_as_string {
 		my $self	= shift;
@@ -1651,7 +1657,20 @@ package Attean::Plan::Service 0.032 {
 	sub impl {
 		my $self	= shift;
 		my $model	= shift;
-		die __PACKAGE__ . " unimplemented";
+
+		my $endpoint	= $self->endpoint->value;
+		my $sparql		= $self->sparql;
+		my $silent		= $self->silent;
+		my %args		= (
+			endpoint		=> $endpoint,
+			silent			=> $silent,
+			request_signer	=> $self->request_signer,
+		);
+		$args{user_agent}	= $self->user_agent if ($self->user_agent);
+		my $client		= Attean::SPARQLClient->new(%args);
+		return sub {
+			return $client->query($sparql);
+		};
 	}
 }
 

@@ -45,7 +45,6 @@ package Attean::QueryPlanner 0.032 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
-	use LWP::UserAgent;
 	use Scalar::Util qw(blessed reftype);
 	use List::Util qw(reduce);
 	use List::MoreUtils qw(all any);
@@ -339,7 +338,15 @@ the supplied C<< $active_graph >>.
 			my $silent		= $algebra->silent;
 			my $sparql		= sprintf('SELECT * WHERE { %s }', $child->as_sparql);
 			my @vars		= $child->in_scope_variables;
-			my $plan		= Attean::Plan::Service->new( endpoint => $endpoint, silent => $silent, sparql => $sparql, distinct => 0, in_scope_variables => \@vars, ordered => [] );
+			my $plan		= Attean::Plan::Service->new(
+				request_signer => $self->request_signer,
+				endpoint => $endpoint,
+				silent => $silent,
+				sparql => $sparql,
+				distinct => 0,
+				in_scope_variables => \@vars,
+				ordered => []
+			);
 			return $plan;
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
 			my $limit	= $algebra->limit;
