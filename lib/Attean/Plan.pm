@@ -715,13 +715,13 @@ package Attean::Plan::Extend 0.032 {
 	use Digest::MD5 qw(md5_hex);
 	use Scalar::Util qw(blessed looks_like_number);
 	use List::MoreUtils qw(uniq all);
-	use Types::Standard qw(ConsumerOf InstanceOf HashRef);
+	use Types::Standard qw(ConsumerOf ArrayRef InstanceOf HashRef);
 	use namespace::clean;
 
 	with 'MooX::Log::Any';
 	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
 	has 'expressions' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
-	
+	has 'active_graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
 	
 	sub plan_as_string {
 		my $self	= shift;
@@ -1273,7 +1273,8 @@ package Attean::Plan::Extend 0.032 {
 				unless (ref($func)) {
 					die "No extension registered for <$furi>";
 				}
-				return $func->(@operands);
+				my $r	= eval { $func->($model, $self->active_graphs, @operands) };
+				return $r;
 			} else {
 				warn "Expression evaluation unimplemented: " . $expr->as_string;
 				$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
@@ -2107,6 +2108,7 @@ package Attean::Plan::Aggregate 0.032 {
 	with 'Attean::API::Plan', 'Attean::API::UnaryQueryTree';
 	has 'aggregates' => (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Expression']], required => 1);
 	has 'groups' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Expression']], required => 1);
+	has 'active_graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
 	
 	sub plan_as_string {
 		my $self	= shift;
@@ -2222,7 +2224,7 @@ package Attean::Plan::Aggregate 0.032 {
 			my $process	= $data->{'process'};
 			my $finalize	= $data->{'finalize'};
 
-			my $thunk	= $start->();
+			my $thunk	= $start->($model, $self->active_graphs);
 			foreach my $r (@$rows) {
 				my $t	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
 				$process->($thunk, $t);

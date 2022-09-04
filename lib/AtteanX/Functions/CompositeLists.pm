@@ -35,18 +35,31 @@ package AtteanX::Functions::CompositeLists 0.032 {
 
 =cut
 	sub stringSplit {
+		my $model			= shift;
+		my $active_graph	= shift;
 		my $string	= shift;
 		my $pattern	= shift;
 		my @parts	= map { literal($_) } split(quotemeta($pattern->value), $string->value);
 		return list_to_lex(@parts);
 	}
 	
+=item C<< listCreate(@list) >>
+
+=cut
+	sub listCreate {
+		my $model			= shift;
+		my $active_graph	= shift;
+		return list_to_lex(@_);
+	}
+
 =item C<< listGet($list, $pos) >>
 
 =cut
 	sub listGet {
-		my $l	= shift;
-		my $pos	= shift;
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $l		= shift;
+		my $pos		= shift;
 		die 'TypeError' unless ($l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
 		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
@@ -63,6 +76,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 
 =cut
 	sub sequence  {
+		my $model			= shift;
+		my $active_graph	= shift;
 		my $start	= 1;
 		my $end		= 1;
 		if (scalar(@_) == 2) {
@@ -106,6 +121,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 
 =cut
 	sub zip {
+		my $model			= shift;
+		my $active_graph	= shift;
 		my $lhs		= shift;
 		my $rhs		= shift;
 		my @lhs_nodes	= lex_to_list($lhs);
@@ -125,6 +142,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 
 =cut
 	sub listCreate_agg_start {
+		my $model			= shift;
+		my $active_graph	= shift;
 		return {
 			values => []
 		};
@@ -149,16 +168,28 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		return dtliteral($lex, $LIST_TYPE_IRI);
 	}
 
+=item C<< list_from_head($head) >>
+
+=cut
+	sub list_from_head {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $head			= shift;
+		my $list			= $model->get_list($active_graph, $head);
+		return list_to_lex($list->elements);
+	}
+
 =item C<< register() >>
 
 =cut
 	sub register {
 		Attean->register_global_function(
 			'http://example.org/listGet' => \&listGet,
-			'http://example.org/listCreate' => \&list_to_lex,
+			'http://example.org/listCreate' => \&listCreate,
 			'http://example.org/sequence' => \&sequence,
 			'http://example.org/zip' => \&zip,
 			'http://example.org/split' => \&stringSplit,
+			'http://example.org/list_from_head' => \&list_from_head,
 		);
 
 		Attean->register_global_aggregate(

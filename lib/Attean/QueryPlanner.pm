@@ -217,7 +217,7 @@ the supplied C<< $active_graph >>.
 					my @vars		= ($var);
 					my @inscope		= ($var, @{ $plan->in_scope_variables });
 					my @pvars		= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
-					my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $ordered);
+					my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $ordered, active_graphs => $active_graphs);
 					my $filtered	= Attean::Plan::EBVFilter->new(children => [$extend], variable => $var, distinct => 0, ordered => $ordered);
 					my $proj		= $self->new_projection($filtered, $distinct, @{ $plan->in_scope_variables });
 					push(@plans, $proj);
@@ -244,7 +244,7 @@ the supplied C<< $active_graph >>.
 				} else {
 					my @vars	= (@{ $plan->in_scope_variables }, keys %$exprs);
 					my @pvars	= map { Attean::Variable->new($_) } @{ $plan->in_scope_variables };
-					my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, ordered => $plan->ordered);
+					my $extend	= Attean::Plan::Extend->new(children => [$plan], expressions => $exprs, distinct => 0, ordered => $plan->ordered, active_graphs => $active_graphs);
 					my $ordered	= Attean::Plan::OrderBy->new(children => [$extend], variables => $svars, ascending => $ascending, distinct => 0, ordered => \@cmps);
 					my $proj	= $self->new_projection($ordered, $distinct, @{ $plan->in_scope_variables });
 					push(@plans, $proj);
@@ -306,7 +306,7 @@ the supplied C<< $active_graph >>.
 					my %exprs	= ($gvar => Attean::ValueExpression->new(value => $graph));
 					# TODO: rewrite $child pattern here to replace any occurrences of the variable $gvar to $graph
 					my @plans	= map {
-						Attean::Plan::Extend->new(children => [$_], expressions => \%exprs, distinct => 0, ordered => $_->ordered);
+						Attean::Plan::Extend->new(children => [$_], expressions => \%exprs, distinct => 0, ordered => $_->ordered, active_graphs => $active_graphs);
 					} $self->plans_for_algebra($child, $model, [$graph], $default_graphs, %args);
 					push(@branches, \@plans);
 				}
@@ -375,7 +375,7 @@ the supplied C<< $active_graph >>.
 
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
-				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $plan->ordered);
+				my $extend		= Attean::Plan::Extend->new(children => [$plan], expressions => \%exprs, distinct => 0, ordered => $plan->ordered, active_graphs => $active_graphs);
 				push(@plans, $extend);
 			}
 			return @plans;
@@ -389,7 +389,7 @@ the supplied C<< $active_graph >>.
 			}
 			my @plans;
 			foreach my $plan ($self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args)) {
-				my $extend		= Attean::Plan::Aggregate->new(children => [$plan], aggregates => \%exprs, groups => $groups, distinct => 0, ordered => []);
+				my $extend		= Attean::Plan::Aggregate->new(children => [$plan], aggregates => \%exprs, groups => $groups, distinct => 0, ordered => [], active_graphs => $active_graphs);
 				push(@plans, $extend);
 			}
 			return @plans;

@@ -1032,7 +1032,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 					unless (ref($func)) {
 						die "No extension registered for <$furi>";
 					}
-					return $func->(@operands);
+					return $func->($self->evaluator->model, $active_graph, @operands);
 				}
 				die "Unimplemented FunctionExpression evaluation: " . $expr->operator;
 			};
@@ -1129,7 +1129,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 				my $impl	= $self->impl($child, $active_graph);
 				return sub {
 					my ($rows, %args)	= @_;
-					my $thunk	= $start->();
+					my $thunk	= $start->($self->evaluator->model, $active_graph);
 					foreach my $r (@$rows) {
 						my $t	= $impl->( $r, %args );
 						$process->($thunk, $t);

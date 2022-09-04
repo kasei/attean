@@ -34,6 +34,11 @@ sub simple_eval {
 	return $results;
 }
 
+my %eval_types	= (
+	'simple eval' => \&simple_eval,
+	'plan eval' => \&plan_eval,
+);
+
 subtest 'listGet' => sub {
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
@@ -50,7 +55,8 @@ SELECT * WHERE {
 }
 END
 
-	foreach my $evalfunc (\&simple_eval, \&plan_eval) {
+	while (my ($name, $evalfunc) = each(%eval_types)) {
+		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
 		is($row->value('e1')->numeric_value, 1);
@@ -70,14 +76,15 @@ SELECT * WHERE {
 	BIND(ex:listCreate(1, 2, 'c', 4) AS ?list)
 }
 END
-	foreach my $evalfunc (\&simple_eval, \&plan_eval) {
+	while (my ($name, $evalfunc) = each(%eval_types)) {
+		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
 		is($row->value('list')->value, '("1"^^<http://www.w3.org/2001/XMLSchema#integer>,"2"^^<http://www.w3.org/2001/XMLSchema#integer>,"c","4"^^<http://www.w3.org/2001/XMLSchema#integer>)');
 	}
 };
 
-subtest 'listCreate' => sub {
+subtest 'listAgg' => sub {
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
@@ -88,10 +95,53 @@ SELECT (ex:listAgg(?v) AS ?aggList) WHERE {
 	VALUES ?v { 1 2 'c' 4 }
 }
 END
-	foreach my $evalfunc (\&simple_eval, \&plan_eval) {
+	while (my ($name, $evalfunc) = each(%eval_types)) {
+		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
 		is($row->value('aggList')->value, '("1"^^<http://www.w3.org/2001/XMLSchema#integer>,"2"^^<http://www.w3.org/2001/XMLSchema#integer>,"c","4"^^<http://www.w3.org/2001/XMLSchema#integer>)');
+	}
+};
+
+subtest 'sequence' => sub {
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	
+	my $sparql	= <<"END";
+PREFIX ex: <http://example.org/>
+SELECT * WHERE {
+	BIND(ex:sequence(3) AS ?list_3)       # [1,3]
+	BIND(ex:sequence(3, 5) AS ?list_3_5)  # [3,5]
+}
+END
+	while (my ($name, $evalfunc) = each(%eval_types)) {
+		note($name);
+		my $results		= $evalfunc->($sparql, $model, $graph);
+		my $row			= $results->next;
+		is($row->value('list_3')->value, '("1"^^<http://www.w3.org/2001/XMLSchema#integer>,"2"^^<http://www.w3.org/2001/XMLSchema#integer>,"3"^^<http://www.w3.org/2001/XMLSchema#integer>)');
+		is($row->value('list_3_5')->value, '("3"^^<http://www.w3.org/2001/XMLSchema#integer>,"4"^^<http://www.w3.org/2001/XMLSchema#integer>,"5"^^<http://www.w3.org/2001/XMLSchema#integer>)');
+	}
+};
+
+subtest 'list_from_head' => sub {
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	$model->load_triples('turtle', $graph, qq[<http://example.org/s> <http://example.org/p> ("a" "b" "c") .]);
+	
+	my $sparql	= <<"END";
+PREFIX ex: <http://example.org/>
+SELECT * WHERE {
+	<http://example.org/s> <http://example.org/p> ?head .
+	BIND(ex:list_from_head(?head) AS ?list)
+}
+END
+	while (my ($name, $evalfunc) = each(%eval_types)) {
+		note($name);
+		my $results		= $evalfunc->($sparql, $model, $graph);
+		my $row			= $results->next;
+		is($row->value('list')->value, '("a","b","c")');
 	}
 };
 
