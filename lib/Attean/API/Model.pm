@@ -7,7 +7,7 @@ Attean::API::Model - RDF Model
 
 =head1 VERSION
 
-This document describes Attean::API::Model version 0.032
+This document describes Attean::API::Model version 0.033
 
 =head1 DESCRIPTION
 
@@ -166,7 +166,7 @@ in the model.
 
 use Attean::API::Binding;
 
-package Attean::API::Model 0.032 {
+package Attean::API::Model 0.033 {
 	use Sub::Install;
 	use Sub::Util qw(set_subname);
 	use URI::Namespace;
@@ -379,7 +379,7 @@ package Attean::API::Model 0.032 {
 }
 
 
-package Attean::API::MutableModel 0.032 {
+package Attean::API::MutableModel 0.033 {
 	use Attean::RDF;
 	use LWP::UserAgent;
 	use Encode qw(encode);
@@ -485,21 +485,21 @@ package Attean::API::MutableModel 0.032 {
 }
 
 
-package Attean::API::ETagCacheableModel 0.032 {
+package Attean::API::ETagCacheableModel 0.033 {
 	use Moo::Role;
 	
 	requires 'etag_value_for_quads';
 }
 
 
-package Attean::API::TimeCacheableModel 0.032 {
+package Attean::API::TimeCacheableModel 0.033 {
 	use Moo::Role;
 	
 	requires 'mtime_for_quads';
 }
 
 
-package Attean::API::BulkUpdatableModel 0.032 {
+package Attean::API::BulkUpdatableModel 0.033 {
 	use Moo::Role;
 	
 	with 'Attean::API::MutableModel';
@@ -522,7 +522,7 @@ package Attean::API::BulkUpdatableModel 0.032 {
 	};
 }
 
-package Attean::API::RDFStarModel 0.032 {
+package Attean::API::RDFStarModel 0.033 {
 	use Moo::Role;
 
 	with 'Attean::API::Model';

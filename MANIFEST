@@ -78,6 +78,7 @@ lib/Attean/QueryPlanner.pm
 lib/Attean/RDF.pm
 lib/Attean/Result.pm
 lib/Attean/SimpleQueryEvaluator.pm
+lib/Attean/SPARQLClient.pm
 lib/Attean/TermMap.pm
 lib/Attean/TreeRewriter.pm
 lib/Attean/Triple.pm

@@ -7,7 +7,7 @@ AtteanX::Parser::NQuads - N-Quads Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NQuads version 0.032
+This document describes AtteanX::Parser::NQuads version 0.033
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ and <Attean::API::MixedStatementParser>.
 
 =cut
 
-package AtteanX::Parser::NQuads 0.032 {
+package AtteanX::Parser::NQuads 0.033 {
 	use utf8;
 	
 	use Attean;

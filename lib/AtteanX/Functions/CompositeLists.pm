@@ -8,7 +8,7 @@ AtteanX::Functions::CompositeLists - Functions and aggregates to work with compo
 
 =head1 VERSION
 
-This document describes AtteanX::Functions::CompositeLists version 0.032
+This document describes AtteanX::Functions::CompositeLists version 0.033
 
 =head1 SYNOPSIS
 
@@ -24,7 +24,7 @@ composite list datatypes.
 
 =cut
 
-package AtteanX::Functions::CompositeLists 0.032 {
+package AtteanX::Functions::CompositeLists 0.033 {
 
 	use Attean;
 	use Attean::RDF;
