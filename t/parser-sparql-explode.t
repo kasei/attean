@@ -45,9 +45,9 @@ sub evaluations {
 subtest 'EXPLODE value' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
-	EXPLODE(ex:sequence(10) AS ?x)
+	EXPLODE(cdt:sequence(10) AS ?x)
 }
 END
 	my $algebra	= $parser->parse($sparql);
@@ -60,6 +60,7 @@ END
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	foreach my $evalfunc (evaluations()) {
+		note('starting test with new evaluation function...');
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my @rows		= $results->elements;
 		is(scalar(@rows), 10, 'expected explode cardinality');
@@ -70,9 +71,9 @@ END
 subtest 'EXPLODE extension' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
-	BIND(ex:sequence(10) AS ?list)
+	BIND(cdt:sequence(10) AS ?list)
 	EXPLODE(?list AS ?x)
 }
 END
@@ -86,6 +87,7 @@ END
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	foreach my $evalfunc (evaluations()) {
+		note('starting test with new evaluation function...');
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my @rows		= $results->elements;
 		is(scalar(@rows), 10, 'expected explode cardinality');
@@ -103,15 +105,15 @@ END
 subtest 'EXPLODE extension zip pairs' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT ?x ?y WHERE {
 	# correlate two sequences, returning matching elements as (?x, ?y)
-	BIND(ex:sequence(5) AS ?list_x)
-	BIND(ex:sequence(101, 105) AS ?list_y)
-	BIND(ex:zip(?list_x, ?list_y) AS ?zipped)
+	BIND(cdt:sequence(5) AS ?list_x)
+	BIND(cdt:sequence(101, 105) AS ?list_y)
+	BIND(cdt:zip(?list_x, ?list_y) AS ?zipped)
 	EXPLODE(?zipped AS ?pair)
-	BIND(ex:listGet(?pair, 0) AS ?x)
-	BIND(ex:listGet(?pair, 1) AS ?y)
+	BIND(cdt:get(?pair, 0) AS ?x)
+	BIND(cdt:get(?pair, 1) AS ?y)
 }
 END
 	my $algebra	= $parser->parse($sparql);
@@ -122,6 +124,7 @@ END
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	foreach my $evalfunc (evaluations()) {
+		note('starting test with new evaluation function...');
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my @rows		= $results->elements;
 		is(scalar(@rows), 5, 'expected explode cardinality');

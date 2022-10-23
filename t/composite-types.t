@@ -39,19 +39,19 @@ my %eval_types	= (
 	'plan eval' => \&plan_eval,
 );
 
-subtest 'listGet' => sub {
+subtest 'cdt:get' => sub {
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://example.org/graph');
-	$model->load_triples('turtle', $graph, qq[_:a <p> "(1,'b',3)"^^<${AtteanX::Functions::CompositeLists::LIST_TYPE_IRI}> .]);
+	$model->load_triples('turtle', $graph, qq[_:a <p> "[1,'b',3]"^^<${AtteanX::Functions::CompositeLists::LIST_TYPE_IRI}> .]);
 	
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
 	?s ?p ?o .
-	BIND(ex:listGet(?o, 0) AS ?e1)
-	BIND(ex:listGet(?o, 1) AS ?e2)
-	BIND(ex:listGet(?o, 2) AS ?e3)
+	BIND(cdt:get(?o, 0) AS ?e1)
+	BIND(cdt:get(?o, 1) AS ?e2)
+	BIND(cdt:get(?o, 2) AS ?e3)
 }
 END
 
@@ -71,16 +71,16 @@ subtest 'listCreate' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
-	BIND(ex:listCreate(1, 2, 'c', 4) AS ?list)
+	BIND(cdt:listCreate(1, 2, 'c', 4) AS ?list)
 }
 END
 	while (my ($name, $evalfunc) = each(%eval_types)) {
 		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
-		is($row->value('list')->value, '("1"^^<http://www.w3.org/2001/XMLSchema#integer>,"2"^^<http://www.w3.org/2001/XMLSchema#integer>,"c","4"^^<http://www.w3.org/2001/XMLSchema#integer>)');
+		is($row->value('list')->value, '[1,2,"c",4]');
 	}
 };
 
@@ -90,8 +90,8 @@ subtest 'listAgg' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
-SELECT (ex:listAgg(?v) AS ?aggList) WHERE {
+PREFIX cdt: <http://example.org/cdt/>
+SELECT (cdt:listAgg(?v) AS ?aggList) WHERE {
 	VALUES ?v { 1 2 'c' 4 }
 }
 END
@@ -99,7 +99,7 @@ END
 		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
-		is($row->value('aggList')->value, '("1"^^<http://www.w3.org/2001/XMLSchema#integer>,"2"^^<http://www.w3.org/2001/XMLSchema#integer>,"c","4"^^<http://www.w3.org/2001/XMLSchema#integer>)');
+		is($row->value('aggList')->value, '[1,2,"c",4]');
 	}
 };
 
@@ -109,18 +109,18 @@ subtest 'sequence' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
-	BIND(ex:sequence(3) AS ?list_3)       # [1,3]
-	BIND(ex:sequence(3, 5) AS ?list_3_5)  # [3,5]
+	BIND(cdt:sequence(3) AS ?list_3)       # [1,3]
+	BIND(cdt:sequence(3, 5) AS ?list_3_5)  # [3,5]
 }
 END
 	while (my ($name, $evalfunc) = each(%eval_types)) {
 		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
-		is($row->value('list_3')->value, '("1"^^<http://www.w3.org/2001/XMLSchema#integer>,"2"^^<http://www.w3.org/2001/XMLSchema#integer>,"3"^^<http://www.w3.org/2001/XMLSchema#integer>)');
-		is($row->value('list_3_5')->value, '("3"^^<http://www.w3.org/2001/XMLSchema#integer>,"4"^^<http://www.w3.org/2001/XMLSchema#integer>,"5"^^<http://www.w3.org/2001/XMLSchema#integer>)');
+		is($row->value('list_3')->value, '[1,2,3]');
+		is($row->value('list_3_5')->value, '[3,4,5]');
 	}
 };
 
@@ -131,17 +131,17 @@ subtest 'list_from_head' => sub {
 	$model->load_triples('turtle', $graph, qq[<http://example.org/s> <http://example.org/p> ("a" "b" "c") .]);
 	
 	my $sparql	= <<"END";
-PREFIX ex: <http://example.org/>
+PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
 	<http://example.org/s> <http://example.org/p> ?head .
-	BIND(ex:list_from_head(?head) AS ?list)
+	BIND(cdt:list_from_head(?head) AS ?list)
 }
 END
 	while (my ($name, $evalfunc) = each(%eval_types)) {
 		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
-		is($row->value('list')->value, '("a","b","c")');
+		is($row->value('list')->value, '["a","b","c"]');
 	}
 };
 
