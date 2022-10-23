@@ -415,7 +415,10 @@ package Attean::API::MutableModel 0.032 {
 					my $p		= $pclass->new(base => iri($url));
 					my $str		= $resp->decoded_content;
 					my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
-					my $iter	= $p->parse_iter_from_bytes( $bytes );
+					my $iter	= eval { $p->parse_iter_from_bytes( $bytes ) };
+					if ($@) {
+						die "Failed to parse URL $url: $@";
+					}
 					$self->add_iter($iter->as_quads($graph));
 				} else {
 					die "No parser found for content type $ct: $url";
