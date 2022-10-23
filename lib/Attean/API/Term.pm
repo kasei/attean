@@ -160,6 +160,8 @@ package Attean::API::Literal 0.032 {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::BooleanLiteral');
 			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#dateTime') {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::DateTimeLiteral');
+			} elsif (my $role = Attean->get_datatype_role($type)) {
+				Moo::Role->apply_roles_to_object($self, $role);
 			}
 		}
 	};
