@@ -477,6 +477,29 @@ currently undefined.
 		return $global_aggregates{ $uri };
 	}
 	
+	our %datatype_roles;
+
+=item C<< register_datatype_role( %uri_to_role ) >>
+
+=cut
+	sub register_datatype_role {
+		my $class	= shift;
+		my %args	= @_;
+		foreach my $uri (keys %args) {
+			my $func	= $args{ $uri };
+			$datatype_roles{ $uri }	= $func;
+		}
+	}
+
+=item C<< get_datatype_role( $uri ) >>
+
+=cut
+	sub get_datatype_role {
+		my $class	= shift;
+		my $uri		= shift;
+		return $datatype_roles{ $uri };
+	}
+	
 	
 }
 
