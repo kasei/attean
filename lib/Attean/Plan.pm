@@ -889,7 +889,8 @@ package Attean::Plan::Extend 0.032 {
 				return $false;
 			} elsif ($op eq '=') {
 				my ($lhs, $rhs)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return $lhs->equals($rhs) ? $true : $false; # TODO: this may not be using value-space comparision for numerics...
+				my $eq	= $lhs->equals($rhs);
+				return $eq ? $true : $false; # TODO: this may not be using value-space comparision for numerics...
 			} elsif ($op eq '!=') {
 				my ($lhs, $rhs)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				return not($lhs->equals($rhs)) ? $true : $false; # TODO: this may not be using value-space comparision for numerics...
@@ -944,6 +945,10 @@ package Attean::Plan::Extend 0.032 {
 				}
 # 				warn "    no value\n";
 				return;
+			} elsif ($func eq 'BOUND') {
+				my ($child)	= @{ $expr->children };
+				my ($term)	= eval { $self->evaluate_expression($model, $child, $r) };
+				return blessed($term) ? $true : $false;
 			}
 			
 			my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
@@ -1273,8 +1278,12 @@ package Attean::Plan::Extend 0.032 {
 				unless (ref($func)) {
 					die "No extension registered for <$furi>";
 				}
-				my $r	= eval { $func->($model, $self->active_graphs, @operands) };
-				return $r;
+				my $rr	= eval { $func->($model, $self->active_graphs, @operands) };
+				if ($@) {
+# 					warn "INVOKE error: $@" if $@;
+					return $r;
+				}
+				return $rr;
 			} else {
 				warn "Expression evaluation unimplemented: " . $expr->as_string;
 				$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
