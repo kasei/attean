@@ -463,7 +463,7 @@ currently undefined.
 	{
 		our %global_functional_forms;
 
-=item C<< register_global_function( %uri_to_func ) >>
+=item C<< register_global_functional_form( %uri_to_func ) >>
 
 =cut
 		sub register_global_functional_form {
@@ -475,7 +475,7 @@ currently undefined.
 			}
 		}
 
-=item C<< get_global_function( $uri ) >>
+=item C<< get_global_functional_form( $uri ) >>
 
 =cut
 		sub get_global_functional_form {
