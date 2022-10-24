@@ -431,76 +431,112 @@ currently undefined.
 	}
 	
 	
-	our %global_functions;
+	# Global registry for extension functions that can be invoked via BIND, FILTER, etc.
+	{
+		our %global_functions;
 
 =item C<< register_global_function( %uri_to_func ) >>
 
 =cut
-	sub register_global_function {
-		my $class	= shift;
-		my %args	= @_;
-		foreach my $uri (keys %args) {
-			my $func	= $args{ $uri };
-			$global_functions{ $uri }	= $func;
+		sub register_global_function {
+			my $class	= shift;
+			my %args	= @_;
+			foreach my $uri (keys %args) {
+				my $func	= $args{ $uri };
+				$global_functions{ $uri }	= $func;
+			}
 		}
-	}
 
 =item C<< get_global_function( $uri ) >>
 
 =cut
-	sub get_global_function {
-		my $class	= shift;
-		my $uri		= shift;
-		return $global_functions{ $uri };
+		sub get_global_function {
+			my $class	= shift;
+			my $uri		= shift;
+			return $global_functions{ $uri };
+		}
 	}
 	
-	our %global_aggregates;
+	# Global registry for extension "functional forms" that can be invoked via BIND, FILTER, etc.
+	# These differ from extension "functions" in that they can be passed undef values as arguments
+	# for expressions whose evaluation resulted in an error.
+	{
+		our %global_functional_forms;
+
+=item C<< register_global_function( %uri_to_func ) >>
+
+=cut
+		sub register_global_functional_form {
+			my $class	= shift;
+			my %args	= @_;
+			foreach my $uri (keys %args) {
+				my $func	= $args{ $uri };
+				$global_functional_forms{ $uri }	= $func;
+			}
+		}
+
+=item C<< get_global_function( $uri ) >>
+
+=cut
+		sub get_global_functional_form {
+			my $class	= shift;
+			my $uri		= shift;
+			return $global_functional_forms{ $uri };
+		}
+	}
+	
+	# Global registry for extension aggregates
+	{
+		our %global_aggregates;
 
 =item C<< register_global_aggregate( %uri_to_hash ) >>
 
 =cut
-	sub register_global_aggregate {
-		my $class	= shift;
-		my %args	= @_;
-		foreach my $uri (keys %args) {
-			my $funcs	= $args{ $uri };
-			$global_aggregates{ $uri }	= $funcs;
+		sub register_global_aggregate {
+			my $class	= shift;
+			my %args	= @_;
+			foreach my $uri (keys %args) {
+				my $funcs	= $args{ $uri };
+				$global_aggregates{ $uri }	= $funcs;
+			}
 		}
-	}
 
 =item C<< get_global_aggregate( $uri ) >>
 
 =cut
-	sub get_global_aggregate {
-		my $class	= shift;
-		my $uri		= shift;
-		return $global_aggregates{ $uri };
+		sub get_global_aggregate {
+			my $class	= shift;
+			my $uri		= shift;
+			return $global_aggregates{ $uri };
+		}
 	}
 	
-	our %datatype_roles;
+	# Global registry for extension datatypes.
+	# When literals of this datatype are constructed, they will have the registered Moo role applied to them.
+	{
+		our %datatype_roles;
 
 =item C<< register_datatype_role( %uri_to_role ) >>
 
 =cut
-	sub register_datatype_role {
-		my $class	= shift;
-		my %args	= @_;
-		foreach my $uri (keys %args) {
-			my $func	= $args{ $uri };
-			$datatype_roles{ $uri }	= $func;
+		sub register_datatype_role {
+			my $class	= shift;
+			my %args	= @_;
+			foreach my $uri (keys %args) {
+				my $func	= $args{ $uri };
+				$datatype_roles{ $uri }	= $func;
+			}
 		}
-	}
 
 =item C<< get_datatype_role( $uri ) >>
 
 =cut
-	sub get_datatype_role {
-		my $class	= shift;
-		my $uri		= shift;
-		return $datatype_roles{ $uri };
+		sub get_datatype_role {
+			my $class	= shift;
+			my $uri		= shift;
+			return $datatype_roles{ $uri };
+		}
 	}
-	
-	
 }
 
 1;

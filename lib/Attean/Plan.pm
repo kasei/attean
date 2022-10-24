@@ -854,7 +854,11 @@ package Attean::Plan::Extend 0.032 {
 		} elsif ($expr->isa('Attean::ValueExpression')) {
 			my $node	= $expr->value;
 			if ($node->does('Attean::API::Variable')) {
-				return $r->value($node->value);
+				my $value	= $r->value($node->value);
+				unless (blessed($value)) {
+					die "Variable " . $node->as_string . " is unbound";
+				}
+				return $value;
 			} else {
 				return $node;
 			}
@@ -951,343 +955,354 @@ package Attean::Plan::Extend 0.032 {
 				return blessed($term) ? $true : $false;
 			}
 			
-			my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-			if ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
-				my $role	= "Attean::API::$type_roles->{$1}";
-				my $t		= shift(@terms);
-				my $ok		= (blessed($t) and $t->does($role));
-				return $ok ? $true : $false;
-			} elsif ($func eq 'REGEX') {
-				my ($string, $pattern, $flags)	= @terms;
-# 				my ($string, $pattern, $flags)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				# TODO: ensure that $string is a literal
-				($string, $pattern, $flags)	= map { blessed($_) ? $_->value : '' } ($string, $pattern, $flags);
-				my $re;
-				if ($flags =~ /i/) {
-					$re	= qr/$pattern/i;
-				} else {
-					$re	= qr/$pattern/;
-				}
-				return ($string =~ $re) ? $true : $false;
-			} elsif ($func =~ /^(NOT)?IN$/) {
-				my $ok			= ($func eq 'IN') ? $true : $false;
-				my $notok		= ($func eq 'IN') ? $false : $true;
-# 				my @children	= @{ $expr->children };
-				my ($term, @children)	= @terms;
-# 				my ($term)		= $self->evaluate_expression($model, shift(@children), $r);
-# 				foreach my $child (@{ $expr->children }) {
-				foreach my $value (@children) {
-# 					my $value	= $self->evaluate_expression($model, $child, $r);
-					if ($term->equals($value)) {
-						return $ok;
+			if ($func eq 'INVOKE') {
+				my @children	= @{ $expr->children };
+				my $furi		= $self->evaluate_expression($model, shift(@children), $r)->value;
+				if (my $func = Attean->get_global_function($furi)) {
+					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @children;
+					my $rr	= eval { $func->($model, $self->active_graphs, @operands) };
+					if ($@) {
+						warn "INVOKE error: $@" if $@;
+						return $r;
 					}
-				}
-				return $notok;
-			} elsif ($func eq 'NOW') {
-				my $dt		= DateTime->now;
-				my $value	= DateTime::Format::W3CDTF->new->format_datetime( $dt );
-				return Attean::Literal->new(value => $value, datatype => 'http://www.w3.org/2001/XMLSchema#dateTime');
-			} elsif ($func eq 'STR') {
-				my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return Attean::Literal->new(value => $term->value);
-			} elsif ($func =~ /^[UI]RI$/) { # IRI URI
-				my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return Attean::IRI->new(value => $term->value, base => $expr->base);
-			} elsif ($func eq 'ABS') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value		= abs($string->numeric_value);
-				return Attean::Literal->new(value => $value, datatype => $string->datatype);
-			} elsif ($func eq 'ROUND') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value		= $string->numeric_value;
-				my $mult	= 1;
-				if ($value < 0) {
-					$mult	= -1;
-					$value	= -$value;
-				}
-				my $round	= $mult * POSIX::floor($value + 0.50000000000008);
-				return Attean::Literal->new(value => $round, datatype => $string->datatype);
-			} elsif ($func eq 'CEIL') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value		= ceil($string->numeric_value);
-				return Attean::Literal->new(value => $value, datatype => $string->datatype);
-			} elsif ($func eq 'FLOOR') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value		= floor($string->numeric_value);
-				return Attean::Literal->new(value => $value, datatype => $string->datatype);
-			} elsif ($func eq 'CONCAT') {
-				my @strings		= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-# 				die "CONCAT called with terms that are not argument compatible" unless ($strings[0]->argument_compatible(@strings));
-				my %args;
-				if (my $l = $strings[0]->language) {
-					$args{language}	= $l;
-				} else {
-					my $dt	= $strings[0]->datatype;
-					if ($dt->value eq '') {
-						$args{datatype}	= 'http://www.w3.org/2001/XMLSchema#string';
+					return $rr;
+				} elsif (my $fform = Attean->get_global_functional_form($furi)) {
+					my @operands	= map { eval { $self->evaluate_expression($model, $_, $r) } } @children;
+					my $rr	= eval { $fform->($model, $self->active_graphs, @operands) };
+					if ($@) {
+						warn "INVOKE error: $@" if $@;
+						return $r;
 					}
-				}
-				foreach my $s (@strings) {
-					die unless ($s->does('Attean::API::Literal'));
-					die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>));
-					if (my $l2 = $s->language) {
-						if (my $l1 = $args{language}) {
-							if ($l1 ne $l2) {
-								delete $args{language};
-							}
-						}
-					} else {
-						delete $args{language};
-					}
-				}
-				my $c	= Attean::Literal->new(value => join('', map { $_->value } @strings), %args);
-				return $c;
-			} elsif ($func eq 'DATATYPE') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				die unless ($string->does('Attean::API::Literal'));
-				return $string->datatype;
-			} elsif ($func eq 'LANG') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				die unless ($string->does('Attean::API::Literal'));
-				my $value		= $string->language // '';
-				return Attean::Literal->new(value => $value);
-			} elsif ($func eq 'LANGMATCHES') {
-				my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $lang	= $term->value;
-				my $match	= $pat->value;
-				if ($match eq '*') {
-					# """A language-range of "*" matches any non-empty language-tag string."""
-					return $lang ? $true : $false;
+					return $rr;
 				} else {
-					return (I18N::LangTags::is_dialect_of( $lang, $match )) ? $true : $false;
-				}
-				
-			} elsif ($func eq 'ENCODE_FOR_URI') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return Attean::Literal->new(value => uri_escape_utf8($string->value));
-			} elsif ($func =~ /^[LU]CASE$/) {
-				my $term		= shift(@terms);
-				my $value		= ($func eq 'LCASE') ? lc($term->value) : uc($term->value);
-				return Attean::Literal->new(value => $value, $term->construct_args);
-			} elsif ($func eq 'STRLANG') {
-				my ($term, $lang)	= @terms;
-				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
-				die if ($term->language);
-				return Attean::Literal->new(value => $term->value, language => $lang->value);
-			} elsif ($func eq 'STRDT') {
-				my ($term, $dt)	= @terms;
-				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
-				die if ($term->language);
-# 				my ($term, $dt)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return Attean::Literal->new(value => $term->value, datatype => $dt->value);
-			} elsif ($func eq 'REPLACE') {
-				my ($term, $pat, $rep)	= @terms;
-				die unless ($term->does('Attean::API::Literal'));
-				die unless ($term->language or $term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
-# 				my ($term, $pat, $rep)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value	= $term->value;
-				my $pattern	= $pat->value;
-				my $replace	= $rep->value;
-				die 'REPLACE() called with unsafe ?{} match pattern' if (index($pattern, '(?{') != -1 or index($pattern, '(??{') != -1);
-				die 'REPLACE() called with unsafe ?{} replace pattern' if (index($replace, '(?{') != -1 or index($replace, '(??{') != -1);
-
-				$replace	=~ s/\\/\\\\/g;
-				$replace	=~ s/\$(\d+)/\$$1/g;
-				$replace	=~ s/"/\\"/g;
-				$replace	= qq["$replace"];
-				no warnings 'uninitialized';
-				$value	=~ s/$pattern/"$replace"/eeg;
-			# 	warn "==> " . Dumper($value);
-				return Attean::Literal->new(value => $value, $term->construct_args);
-			} elsif ($func eq 'SUBSTR') {
-				my ($term, @args)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $value	= $term->value;
-				my @nums;
-				foreach my $i (0 .. $#args) {
-					my $argnum	= $i + 2;
-					my $arg		= $args[ $i ];
-					push(@nums, $arg->numeric_value);
-				}
-				$nums[0]--;
-				my $substring	= (scalar(@nums) > 1) ? substr($value, $nums[0], $nums[1]) : substr($value, $nums[0]);
-				return Attean::Literal->new(value => $substring, $term->construct_args);
-			} elsif ($func eq 'CONTAINS') {
-				my ($term, $pattern)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				if ($term->has_language and $pattern->has_language) {
-					if ($term->literal_value_language ne $pattern->literal_value_language) {
-						die "CONTAINS called with literals of different languages";
-					}
-				}
-				my ($string, $pat)	= map { $_->value } ($term, $pattern);
-				my $pos		= index($string, $pat);
-				return ($pos >= 0) ? $true : $false;
-			} elsif ($func eq 'STRSTARTS') {
-				my (@terms)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my ($string, $pat)	= map { $_->value } @terms;
-				return (substr($string, 0, length($pat)) eq $pat) ? $true : $false;
-			} elsif ($func eq 'STRENDS') {
-				my (@terms)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my ($string, $pat)	= map { $_->value } @terms;
-				return (substr($string, length($string) - length($pat)) eq $pat) ? $true : $false;
-			} elsif ($func eq 'STRAFTER') {
-				my ($term, $pat)	= @terms;
-				die "STRAFTER called without a literal" unless ($term->does('Attean::API::Literal'));
-				die "STRAFTER called without a plain literal" unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
-				die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
-				# TODO: check that the terms are argument compatible
-				my $value	= $term->value;
-				my $match	= $pat->value;
-				my $i		= index($value, $match, 0);
-				if ($i < 0) {
-					return Attean::Literal->new(value => '');
-				} else {
-					return Attean::Literal->new(value => substr($value, $i+length($match)), $term->construct_args);
-				}
-			} elsif ($func eq 'STRBEFORE') {
-				my ($term, $pat)	= @terms;
-				die "STRBEFORE called without a literal" unless ($term->does('Attean::API::Literal'));
-				die "STRBEFORE called without a plain literal" unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
-				die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
-				# TODO: check that the terms are argument compatible
-				my $value	= $term->value;
-				my $match	= $pat->value;
-				my $i		= index($value, $match, 0);
-				if ($i < 0) {
-					return Attean::Literal->new(value => '');
-				} else {
-					return Attean::Literal->new(value => substr($value, 0, $i), $term->construct_args);
-				}
-			} elsif ($func eq 'STRLEN') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return Attean::Literal->new(value => length($string->value), datatype => 'http://www.w3.org/2001/XMLSchema#integer');
-			} elsif ($func eq 'MD5') {
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $bytes		= encode('UTF-8', $string->value, Encode::FB_CROAK);
-				return Attean::Literal->new(value => md5_hex($bytes));
-			} elsif ($func =~ /^SHA(\d+)$/) {
-				my $sha	= Digest::SHA->new($1);
-				my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $bytes		= encode('UTF-8', $string->value, Encode::FB_CROAK);
-				$sha->add($bytes);
-				return Attean::Literal->new(value => $sha->hexdigest);
-			} elsif ($func eq 'RAND') {
-				return Attean::Literal->new(value => rand(), datatype => 'http://www.w3.org/2001/XMLSchema#double');
-			} elsif ($func =~ /^(YEAR|MONTH|DAY|HOUR|MINUTE)S?$/) {
-				my $method	= lc($1);
-				my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $dt		= $term->datetime;
-				return Attean::Literal->new(value => $dt->$method(), datatype => 'http://www.w3.org/2001/XMLSchema#integer');
-			} elsif ($func eq 'SECONDS') {
-				my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $dt		= $term->datetime;
-				return Attean::Literal->new(value => $dt->second, datatype => 'http://www.w3.org/2001/XMLSchema#decimal');
-			} elsif ($func eq 'TIMEZONE') {
-				my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $dt		= $term->datetime;
-				my $tz		= $dt->time_zone;
-				die "TIMEZONE called with a dateTime without a timezone" if ($tz->is_floating);
-				my $offset	= $tz->offset_for_datetime( $dt );
-				my $minus	= '';
-				if ($offset < 0) {
-					$minus	= '-';
-					$offset	= -$offset;
-				}
-
-				my $duration	= "${minus}PT";
-				if ($offset >= 60*60) {
-					my $h	= int($offset / (60*60));
-					$duration	.= "${h}H" if ($h > 0);
-					$offset	= $offset % (60*60);
-				}
-				if ($offset >= 60) {
-					my $m	= int($offset / 60);
-					$duration	.= "${m}M" if ($m > 0);
-					$offset	= $offset % 60;
-				}
-				my $s	= int($offset);
-				$duration	.= "${s}S" if ($s > 0 or $duration eq 'PT');
-			
-				return Attean::Literal->new(value => $duration, datatype => 'http://www.w3.org/2001/XMLSchema#dayTimeDuration');
-			} elsif ($func eq 'TZ') {
-				my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $dt		= $term->datetime;
-				my $tz		= $dt->time_zone;
-				return Attean::Literal->new(value =>'') if ($tz->is_floating);
-				return Attean::Literal->new('Z') if ($tz->is_utc);
-				my $offset	= $tz->offset_for_datetime( $dt );
-				my $hours	= 0;
-				my $minutes	= 0;
-				my $minus	= '+';
-				if ($offset < 0) {
-					$minus	= '-';
-					$offset	= -$offset;
-				}
-
-				if ($offset >= 60*60) {
-					$hours	= int($offset / (60*60));
-					$offset	= $offset % (60*60);
-				}
-				if ($offset >= 60) {
-					$minutes	= int($offset / 60);
-					$offset	= $offset % 60;
-				}
-				my $seconds	= int($offset);
-				return Attean::Literal->new(value => sprintf('%s%02d:%02d', $minus, $hours, $minutes));
-			} elsif ($func eq 'UUID') {
-				my $uuid	= 'urn:uuid:' . uc(uuid_to_string(create_uuid()));
-				return Attean::IRI->new(value => $uuid);
-			} elsif ($func eq 'STRUUID') {
-				return Attean::Literal->new(value => uc(uuid_to_string(create_uuid())));
-			} elsif ($func eq 'BNODE') {
-				if (scalar(@{ $expr->children })) {
-					my $string	= $self->evaluate_expression($model, $expr->children->[0], $r);
-					my $value	= $string->value;
-					my $b		= (exists $r->eval_stash->{'sparql:bnode'}{$value})
-								? $r->eval_stash->{'sparql:bnode'}{$value}
-								: Attean::Blank->new();
-					$r->eval_stash->{'sparql:bnode'}{$value}	= $b;
-					return $b;
-				} else {
-					return Attean::Blank->new();
-				}
-			} elsif ($func eq 'SAMETERM') {
-				my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my ($a, $b)	= @operands;
-				die "TypeError: SAMETERM" unless (blessed($operands[0]) and blessed($operands[1]));
-				if ($a->compare($b)) {
-					return $false;
-				}
-				if ($a->does('Attean::API::Binding')) {
-					my $ok	= ($a->sameTerms($b));
-					return $ok ? $true : $false;
-				} else {
-					my $ok	= ($a->value eq $b->value);
-					return $ok ? $true : $false;
-				}
-			} elsif ($func =~ /^(SUBJECT|PREDICATE|OBJECT)$/) {
-				my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $pos	= lc($func);
-				my $term	= $operands[0]->$pos();
-				return $term;
-			} elsif ($func eq 'INVOKE') {
-				my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				my $furi		= shift(@operands)->value;
-				my $func		= Attean->get_global_function($furi);
-				unless (ref($func)) {
 					die "No extension registered for <$furi>";
 				}
-				my $rr	= eval { $func->($model, $self->active_graphs, @operands) };
-				if ($@) {
-# 					warn "INVOKE error: $@" if $@;
-					return $r;
-				}
-				return $rr;
 			} else {
-				warn "Expression evaluation unimplemented: " . $expr->as_string;
-				$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
-				die "Expression evaluation unimplemented: " . $expr->as_string;
+				my @terms	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				if ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
+					my $role	= "Attean::API::$type_roles->{$1}";
+					my $t		= shift(@terms);
+					my $ok		= (blessed($t) and $t->does($role));
+					return $ok ? $true : $false;
+				} elsif ($func eq 'REGEX') {
+					my ($string, $pattern, $flags)	= @terms;
+	# 				my ($string, $pattern, $flags)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					# TODO: ensure that $string is a literal
+					($string, $pattern, $flags)	= map { blessed($_) ? $_->value : '' } ($string, $pattern, $flags);
+					my $re;
+					if ($flags =~ /i/) {
+						$re	= qr/$pattern/i;
+					} else {
+						$re	= qr/$pattern/;
+					}
+					return ($string =~ $re) ? $true : $false;
+				} elsif ($func =~ /^(NOT)?IN$/) {
+					my $ok			= ($func eq 'IN') ? $true : $false;
+					my $notok		= ($func eq 'IN') ? $false : $true;
+	# 				my @children	= @{ $expr->children };
+					my ($term, @children)	= @terms;
+	# 				my ($term)		= $self->evaluate_expression($model, shift(@children), $r);
+	# 				foreach my $child (@{ $expr->children }) {
+					foreach my $value (@children) {
+	# 					my $value	= $self->evaluate_expression($model, $child, $r);
+						if ($term->equals($value)) {
+							return $ok;
+						}
+					}
+					return $notok;
+				} elsif ($func eq 'NOW') {
+					my $dt		= DateTime->now;
+					my $value	= DateTime::Format::W3CDTF->new->format_datetime( $dt );
+					return Attean::Literal->new(value => $value, datatype => 'http://www.w3.org/2001/XMLSchema#dateTime');
+				} elsif ($func eq 'STR') {
+					my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return Attean::Literal->new(value => $term->value);
+				} elsif ($func =~ /^[UI]RI$/) { # IRI URI
+					my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return Attean::IRI->new(value => $term->value, base => $expr->base);
+				} elsif ($func eq 'ABS') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $value		= abs($string->numeric_value);
+					return Attean::Literal->new(value => $value, datatype => $string->datatype);
+				} elsif ($func eq 'ROUND') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $value		= $string->numeric_value;
+					my $mult	= 1;
+					if ($value < 0) {
+						$mult	= -1;
+						$value	= -$value;
+					}
+					my $round	= $mult * POSIX::floor($value + 0.50000000000008);
+					return Attean::Literal->new(value => $round, datatype => $string->datatype);
+				} elsif ($func eq 'CEIL') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $value		= ceil($string->numeric_value);
+					return Attean::Literal->new(value => $value, datatype => $string->datatype);
+				} elsif ($func eq 'FLOOR') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $value		= floor($string->numeric_value);
+					return Attean::Literal->new(value => $value, datatype => $string->datatype);
+				} elsif ($func eq 'CONCAT') {
+					my @strings		= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+	# 				die "CONCAT called with terms that are not argument compatible" unless ($strings[0]->argument_compatible(@strings));
+					my %args;
+					if (my $l = $strings[0]->language) {
+						$args{language}	= $l;
+					} else {
+						my $dt	= $strings[0]->datatype;
+						if ($dt->value eq '') {
+							$args{datatype}	= 'http://www.w3.org/2001/XMLSchema#string';
+						}
+					}
+					foreach my $s (@strings) {
+						die unless ($s->does('Attean::API::Literal'));
+						die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>));
+						if (my $l2 = $s->language) {
+							if (my $l1 = $args{language}) {
+								if ($l1 ne $l2) {
+									delete $args{language};
+								}
+							}
+						} else {
+							delete $args{language};
+						}
+					}
+					my $c	= Attean::Literal->new(value => join('', map { $_->value } @strings), %args);
+					return $c;
+				} elsif ($func eq 'DATATYPE') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					die unless ($string->does('Attean::API::Literal'));
+					return $string->datatype;
+				} elsif ($func eq 'LANG') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					die unless ($string->does('Attean::API::Literal'));
+					my $value		= $string->language // '';
+					return Attean::Literal->new(value => $value);
+				} elsif ($func eq 'LANGMATCHES') {
+					my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $lang	= $term->value;
+					my $match	= $pat->value;
+					if ($match eq '*') {
+						# """A language-range of "*" matches any non-empty language-tag string."""
+						return $lang ? $true : $false;
+					} else {
+						return (I18N::LangTags::is_dialect_of( $lang, $match )) ? $true : $false;
+					}
+				
+				} elsif ($func eq 'ENCODE_FOR_URI') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return Attean::Literal->new(value => uri_escape_utf8($string->value));
+				} elsif ($func =~ /^[LU]CASE$/) {
+					my $term		= shift(@terms);
+					my $value		= ($func eq 'LCASE') ? lc($term->value) : uc($term->value);
+					return Attean::Literal->new(value => $value, $term->construct_args);
+				} elsif ($func eq 'STRLANG') {
+					my ($term, $lang)	= @terms;
+					die unless ($term->does('Attean::API::Literal'));
+					die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
+					die if ($term->language);
+					return Attean::Literal->new(value => $term->value, language => $lang->value);
+				} elsif ($func eq 'STRDT') {
+					my ($term, $dt)	= @terms;
+					die unless ($term->does('Attean::API::Literal'));
+					die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
+					die if ($term->language);
+	# 				my ($term, $dt)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return Attean::Literal->new(value => $term->value, datatype => $dt->value);
+				} elsif ($func eq 'REPLACE') {
+					my ($term, $pat, $rep)	= @terms;
+					die unless ($term->does('Attean::API::Literal'));
+					die unless ($term->language or $term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
+	# 				my ($term, $pat, $rep)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $value	= $term->value;
+					my $pattern	= $pat->value;
+					my $replace	= $rep->value;
+					die 'REPLACE() called with unsafe ?{} match pattern' if (index($pattern, '(?{') != -1 or index($pattern, '(??{') != -1);
+					die 'REPLACE() called with unsafe ?{} replace pattern' if (index($replace, '(?{') != -1 or index($replace, '(??{') != -1);
+
+					$replace	=~ s/\\/\\\\/g;
+					$replace	=~ s/\$(\d+)/\$$1/g;
+					$replace	=~ s/"/\\"/g;
+					$replace	= qq["$replace"];
+					no warnings 'uninitialized';
+					$value	=~ s/$pattern/"$replace"/eeg;
+				# 	warn "==> " . Dumper($value);
+					return Attean::Literal->new(value => $value, $term->construct_args);
+				} elsif ($func eq 'SUBSTR') {
+					my ($term, @args)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $value	= $term->value;
+					my @nums;
+					foreach my $i (0 .. $#args) {
+						my $argnum	= $i + 2;
+						my $arg		= $args[ $i ];
+						push(@nums, $arg->numeric_value);
+					}
+					$nums[0]--;
+					my $substring	= (scalar(@nums) > 1) ? substr($value, $nums[0], $nums[1]) : substr($value, $nums[0]);
+					return Attean::Literal->new(value => $substring, $term->construct_args);
+				} elsif ($func eq 'CONTAINS') {
+					my ($term, $pattern)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					if ($term->has_language and $pattern->has_language) {
+						if ($term->literal_value_language ne $pattern->literal_value_language) {
+							die "CONTAINS called with literals of different languages";
+						}
+					}
+					my ($string, $pat)	= map { $_->value } ($term, $pattern);
+					my $pos		= index($string, $pat);
+					return ($pos >= 0) ? $true : $false;
+				} elsif ($func eq 'STRSTARTS') {
+					my (@terms)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my ($string, $pat)	= map { $_->value } @terms;
+					return (substr($string, 0, length($pat)) eq $pat) ? $true : $false;
+				} elsif ($func eq 'STRENDS') {
+					my (@terms)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my ($string, $pat)	= map { $_->value } @terms;
+					return (substr($string, length($string) - length($pat)) eq $pat) ? $true : $false;
+				} elsif ($func eq 'STRAFTER') {
+					my ($term, $pat)	= @terms;
+					die "STRAFTER called without a literal" unless ($term->does('Attean::API::Literal'));
+					die "STRAFTER called without a plain literal" unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+					die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
+					# TODO: check that the terms are argument compatible
+					my $value	= $term->value;
+					my $match	= $pat->value;
+					my $i		= index($value, $match, 0);
+					if ($i < 0) {
+						return Attean::Literal->new(value => '');
+					} else {
+						return Attean::Literal->new(value => substr($value, $i+length($match)), $term->construct_args);
+					}
+				} elsif ($func eq 'STRBEFORE') {
+					my ($term, $pat)	= @terms;
+					die "STRBEFORE called without a literal" unless ($term->does('Attean::API::Literal'));
+					die "STRBEFORE called without a plain literal" unless ($term->language or $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+					die "$func arguments are not term compatible: " . join(', ', map { $_->as_string } @terms) unless ($term->argument_compatible($pat));
+					# TODO: check that the terms are argument compatible
+					my $value	= $term->value;
+					my $match	= $pat->value;
+					my $i		= index($value, $match, 0);
+					if ($i < 0) {
+						return Attean::Literal->new(value => '');
+					} else {
+						return Attean::Literal->new(value => substr($value, 0, $i), $term->construct_args);
+					}
+				} elsif ($func eq 'STRLEN') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return Attean::Literal->new(value => length($string->value), datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+				} elsif ($func eq 'MD5') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $bytes		= encode('UTF-8', $string->value, Encode::FB_CROAK);
+					return Attean::Literal->new(value => md5_hex($bytes));
+				} elsif ($func =~ /^SHA(\d+)$/) {
+					my $sha	= Digest::SHA->new($1);
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $bytes		= encode('UTF-8', $string->value, Encode::FB_CROAK);
+					$sha->add($bytes);
+					return Attean::Literal->new(value => $sha->hexdigest);
+				} elsif ($func eq 'RAND') {
+					return Attean::Literal->new(value => rand(), datatype => 'http://www.w3.org/2001/XMLSchema#double');
+				} elsif ($func =~ /^(YEAR|MONTH|DAY|HOUR|MINUTE)S?$/) {
+					my $method	= lc($1);
+					my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $dt		= $term->datetime;
+					return Attean::Literal->new(value => $dt->$method(), datatype => 'http://www.w3.org/2001/XMLSchema#integer');
+				} elsif ($func eq 'SECONDS') {
+					my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $dt		= $term->datetime;
+					return Attean::Literal->new(value => $dt->second, datatype => 'http://www.w3.org/2001/XMLSchema#decimal');
+				} elsif ($func eq 'TIMEZONE') {
+					my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $dt		= $term->datetime;
+					my $tz		= $dt->time_zone;
+					die "TIMEZONE called with a dateTime without a timezone" if ($tz->is_floating);
+					my $offset	= $tz->offset_for_datetime( $dt );
+					my $minus	= '';
+					if ($offset < 0) {
+						$minus	= '-';
+						$offset	= -$offset;
+					}
+
+					my $duration	= "${minus}PT";
+					if ($offset >= 60*60) {
+						my $h	= int($offset / (60*60));
+						$duration	.= "${h}H" if ($h > 0);
+						$offset	= $offset % (60*60);
+					}
+					if ($offset >= 60) {
+						my $m	= int($offset / 60);
+						$duration	.= "${m}M" if ($m > 0);
+						$offset	= $offset % 60;
+					}
+					my $s	= int($offset);
+					$duration	.= "${s}S" if ($s > 0 or $duration eq 'PT');
+			
+					return Attean::Literal->new(value => $duration, datatype => 'http://www.w3.org/2001/XMLSchema#dayTimeDuration');
+				} elsif ($func eq 'TZ') {
+					my ($term)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $dt		= $term->datetime;
+					my $tz		= $dt->time_zone;
+					return Attean::Literal->new(value =>'') if ($tz->is_floating);
+					return Attean::Literal->new('Z') if ($tz->is_utc);
+					my $offset	= $tz->offset_for_datetime( $dt );
+					my $hours	= 0;
+					my $minutes	= 0;
+					my $minus	= '+';
+					if ($offset < 0) {
+						$minus	= '-';
+						$offset	= -$offset;
+					}
+
+					if ($offset >= 60*60) {
+						$hours	= int($offset / (60*60));
+						$offset	= $offset % (60*60);
+					}
+					if ($offset >= 60) {
+						$minutes	= int($offset / 60);
+						$offset	= $offset % 60;
+					}
+					my $seconds	= int($offset);
+					return Attean::Literal->new(value => sprintf('%s%02d:%02d', $minus, $hours, $minutes));
+				} elsif ($func eq 'UUID') {
+					my $uuid	= 'urn:uuid:' . uc(uuid_to_string(create_uuid()));
+					return Attean::IRI->new(value => $uuid);
+				} elsif ($func eq 'STRUUID') {
+					return Attean::Literal->new(value => uc(uuid_to_string(create_uuid())));
+				} elsif ($func eq 'BNODE') {
+					if (scalar(@{ $expr->children })) {
+						my $string	= $self->evaluate_expression($model, $expr->children->[0], $r);
+						my $value	= $string->value;
+						my $b		= (exists $r->eval_stash->{'sparql:bnode'}{$value})
+									? $r->eval_stash->{'sparql:bnode'}{$value}
+									: Attean::Blank->new();
+						$r->eval_stash->{'sparql:bnode'}{$value}	= $b;
+						return $b;
+					} else {
+						return Attean::Blank->new();
+					}
+				} elsif ($func eq 'SAMETERM') {
+					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my ($a, $b)	= @operands;
+					die "TypeError: SAMETERM" unless (blessed($operands[0]) and blessed($operands[1]));
+					if ($a->compare($b)) {
+						return $false;
+					}
+					if ($a->does('Attean::API::Binding')) {
+						my $ok	= ($a->sameTerms($b));
+						return $ok ? $true : $false;
+					} else {
+						my $ok	= ($a->value eq $b->value);
+						return $ok ? $true : $false;
+					}
+				} elsif ($func =~ /^(SUBJECT|PREDICATE|OBJECT)$/) {
+					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					my $pos	= lc($func);
+					my $term	= $operands[0]->$pos();
+					return $term;
+				} else {
+					warn "Expression evaluation unimplemented: " . $expr->as_string;
+					$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
+					die "Expression evaluation unimplemented: " . $expr->as_string;
+				}
 			}
 		} elsif ($expr->isa('Attean::ExistsPlanExpression')) {
 			my $plan	= $expr->plan;
