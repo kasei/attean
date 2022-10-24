@@ -339,6 +339,12 @@ package Attean::API::NumericLiteral 0.032 {
 
 	use Moo::Role;
 
+	sub equals {
+		my ($a, $b)	= @_;
+		return 0 unless ($b->does('Attean::API::NumericLiteral'));
+		return $a->numeric_value == $b->numeric_value;
+	}
+
 	sub compare {
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
