@@ -131,11 +131,7 @@ package Attean::API::Binding 0.032 {
 		foreach my $v (@variables) {
 			my $value		= $self->value($v);
 			my $other_value	= $other->value($v);
-			if ($value->does('Attean::API::Binding')) {
-				return 0 unless $value->sameTerms($other_value);
-			} else {
-				return 0 unless ($value->equals($other_value));
-			}
+			return 0 unless $value->sameTerms($other_value);
 		}
 		return 1;
 	}

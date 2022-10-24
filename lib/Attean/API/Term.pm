@@ -61,6 +61,7 @@ Returns true if the term has a true SPARQL "effective boolean value", false othe
 
 	requires 'ebv';
 	requires 'compare';
+	requires 'sameTerms';
 	
 	sub __ntriples_string {
 		my $self	= shift;
@@ -210,6 +211,19 @@ package Attean::API::Literal 0.032 {
 		return -1 if ($b->does('Attean::API::Binding'));
 		my $c	= ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
 		return $c;
+	}
+	
+=item C<< sameTerms( $other ) >>
+
+=cut
+
+	sub sameTerms {
+		my $lhs	= shift;
+		my $rhs	= shift;
+		return 0 unless ($rhs->does('Attean::API::Literal'));
+		return 0 unless ($lhs->value eq $rhs->value);
+		return 0 unless ($lhs->datatype->value eq $rhs->datatype->value);
+		return 1;
 	}
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -575,6 +589,18 @@ package Attean::API::Blank 0.032 {
 		return -1 unless ($b->does('Attean::API::Blank'));
 		return ($a->value cmp $b->value);
 	}
+
+=item C<< sameTerms( $other ) >>
+
+=cut
+
+	sub sameTerms {
+		my $lhs	= shift;
+		my $rhs	= shift;
+		return 0 unless ($rhs->does('Attean::API::Blank'));
+		return 0 unless ($lhs->value eq $rhs->value);
+		return 1;
+	}
 }
 
 package Attean::API::IRI 0.032 {
@@ -609,6 +635,18 @@ package Attean::API::IRI 0.032 {
 		return ($a->value cmp $b->value);
 	}
 	
+=item C<< sameTerms( $other ) >>
+
+=cut
+
+	sub sameTerms {
+		my $lhs	= shift;
+		my $rhs	= shift;
+		return 0 unless ($rhs->does('Attean::API::IRI'));
+		return 0 unless ($lhs->value eq $rhs->value);
+		return 1;
+	}
+
 	sub _ntriples_string {
 		my $self	= shift;
 		return sprintf('<%s>', $self->__ntriples_string);
