@@ -185,7 +185,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my $model			= shift;
 		my $active_graph	= shift;
 		my $literal			= eval { list_to_lex(@_) };
-		warn $@ if $@;
+		warn "cdt:List constructor error: $@" if $@;
 		return $literal;
 	}
 
@@ -302,6 +302,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my @nodes	= lex_to_list($l);
 		
 		foreach my $n (@nodes) {
+			next unless (defined($n)); # null list elements cannot be tested for with CONTAINS
 			return Attean::Literal->true if ($n->equals($term));
 		}
 		return Attean::Literal->false;
@@ -321,6 +322,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my @nodes	= lex_to_list($l);
 		
 		foreach my $n (@nodes) {
+			next unless (defined($n)); # null list elements cannot be tested for with CONTAINSTERM
 			if ($n->compare($term)) {
 				next;
 			}
@@ -434,8 +436,11 @@ package AtteanX::Functions::CompositeLists 0.032 {
 			"${CDT_BASE}List"	=> 'AtteanX::Functions::CompositeLists::ListLiteral'
 		);
 		
-		Attean->register_global_function(
+		Attean->register_global_functional_form(
 			"${CDT_BASE}List" => \&listCreate,
+			"${CDT_BASE}listCreate" => \&listCreate,
+		);
+		Attean->register_global_function(
 			"${CDT_BASE}get" => \&listGet,
 			"${CDT_BASE}subseq" => \&listSubseq,
 			"${CDT_BASE}size" => \&listSize,
@@ -445,7 +450,6 @@ package AtteanX::Functions::CompositeLists 0.032 {
 			"${CDT_BASE}contains" => \&listContains,
 			"${CDT_BASE}concat" => \&listConcat,
 			"${CDT_BASE}containsTerm" => \&listContainsTerm,
-			"${CDT_BASE}listCreate" => \&listCreate,
 			"${CDT_BASE}sequence" => \&sequence,
 			"${CDT_BASE}zip" => \&zip,
 			"${CDT_BASE}split" => \&stringSplit,
