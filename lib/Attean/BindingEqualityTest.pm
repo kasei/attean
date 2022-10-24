@@ -373,6 +373,9 @@ containing blank nodes and bindings without any blank nodes, respectively.
 		my $iter	= shift;
 		my (@blanks, @nonblanks);
 		while (my $st = $iter->next) {
+			unless ($st->does('Attean::API::Binding')) {
+				die "Unexpected non-binding value found in BindingEqualityTest: " . $st->as_string;
+			}
 			if ($st->has_blanks) {
 				push(@blanks, $st);
 			} else {
