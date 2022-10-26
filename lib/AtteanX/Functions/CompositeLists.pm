@@ -195,12 +195,13 @@ package AtteanX::Functions::CompositeLists 0.032 {
 	sub listGet {
 		my $model			= shift;
 		my $active_graph	= shift;
-		my $l		= shift;
-		my $pos		= shift;
+		my $l				= shift;
+		my $pos				= shift;
 		die 'TypeError' unless ($l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
 		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
 		my @nodes	= lex_to_list($l);
+		die 'TypeError' unless ($pos->does('Attean::API::NumericLiteral') and $pos->datatype->value eq 'http://www.w3.org/2001/XMLSchema#integer');
 		my $i		= int($pos->value);
 		return $nodes[$i];
 	}
@@ -212,6 +213,9 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my $model			= shift;
 		my $active_graph	= shift;
 		my $l				= shift;
+		foreach my $term (@_) {
+			die 'TypeError' unless ($term->does('Attean::API::NumericLiteral') and $term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#integer');
+		}
 		my $pos				= shift;
 		my @len				= @_;
 		die 'TypeError' unless ($l->does('Attean::API::Literal'));
@@ -474,31 +478,33 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 	sub equals {
 		my $lhs	= shift;
 		my $rhs	= shift;
-		my $lhs_size	= AtteanX::Functions::CompositeLists::listSize(undef, undef, $lhs);
-		my $rhs_size	= AtteanX::Functions::CompositeLists::listSize(undef, undef, $rhs);
+		my $lhs_size	= AtteanX::Functions::CompositeLists::listSize(undef, undef, $lhs)->value;
+		my $rhs_size	= AtteanX::Functions::CompositeLists::listSize(undef, undef, $rhs)->value;
 		return Attean::Literal->false unless ($lhs_size == $rhs_size);
 		foreach my $i (0 .. $lhs_size-1) {
-			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, $i);
-			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, $i);
+			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i));
+			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i));
+			unless (blessed($li) and blessed($ri)) {
+				die 'TypeError';
+			}
 			return Attean::Literal->false unless $li->equals($ri);
 		}
 		return Attean::Literal->true;
 	}
 	
-	sub compare {
-		die "TRIED TO COMPARE LIST LITERAL";
-		my ($a, $b)	= @_;
-		return 1 unless blessed($b);
-		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
-		return -1 if ($b->does('Attean::API::Binding'));
-		if ($b->does('Attean::API::NumericLiteral')) {
-			return $a->numeric_value <=> $b->numeric_value;
-		} else {
-			return 1;
-# 			Attean::API::Literal::compare($a, $b);
-		}
-	}
-
+# 	sub compare {
+# 		my ($a, $b)	= @_;
+# 		return 1 unless blessed($b);
+# 		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
+# 		return -1 if ($b->does('Attean::API::Binding'));
+# 		if ($b->does('Attean::API::NumericLiteral')) {
+# 			return $a->numeric_value <=> $b->numeric_value;
+# 		} else {
+# 			return 1;
+# # 			Attean::API::Literal::compare($a, $b);
+# 		}
+# 	}
+# 
 # 	sub canonicalized_term {
 # 		my $self	= shift;
 # 		my $value	= $self->value;
