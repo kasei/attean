@@ -962,15 +962,15 @@ package Attean::Plan::Extend 0.032 {
 					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @children;
 					my $rr	= eval { $func->($model, $self->active_graphs, @operands) };
 					if ($@) {
-						warn "INVOKE error: $@" if $@;
-						return $r;
+# 						warn "INVOKE error: $@" if $@;
+						return;
 					}
 					return $rr;
 				} elsif (my $fform = Attean->get_global_functional_form($furi)) {
-					my @operands	= map { eval { $self->evaluate_expression($model, $_, $r) } } @children;
+					my @operands	= map { eval { $self->evaluate_expression($model, $_, $r) } || undef } @children;
 					my $rr	= eval { $fform->($model, $self->active_graphs, @operands) };
 					if ($@) {
-						warn "INVOKE error: $@" if $@;
+# 						warn "INVOKE error: $@" if $@;
 						return $r;
 					}
 					return $rr;
@@ -1283,9 +1283,6 @@ package Attean::Plan::Extend 0.032 {
 					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 					my ($a, $b)	= @operands;
 					die "TypeError: SAMETERM" unless (blessed($operands[0]) and blessed($operands[1]));
-					if ($a->compare($b)) {
-						return $false;
-					}
 					if ($a->does('Attean::API::Binding')) {
 						my $ok	= ($a->sameTerms($b));
 						return $ok ? $true : $false;
@@ -1353,15 +1350,15 @@ package Attean::Plan::Extend 0.032 {
 				variables => $iter_variables,
 				generator => sub {
 					ROW: while (my $r = $iter->next) {
-# 						warn 'Extend Row -------------------------------> ' . $r->as_string;
+# 						warn 'Extend Row -------------------------------> ' . $r->as_string . "\n";
 						my %row	= map { $_ => $r->value($_) } $r->variables;
 						foreach my $var (keys %exprs) {
 							my $expr	= $exprs{$var};
-# 							warn "-> $var => "  . $expr->as_string;
+# 							warn "-> $var => "  . $expr->as_string . "\n";
 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-# 							warn $@ if ($@);
+# 							warn "EXTEND expression evaluation error: $@" if ($@);
 							if (blessed($term)) {
-# 								warn "===> " . $term->as_string;
+# 								warn "===> " . $term->as_string . "\n";
 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
 									next ROW;
 								}

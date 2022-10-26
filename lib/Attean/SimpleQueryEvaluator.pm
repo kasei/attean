@@ -790,7 +790,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 						my @operands	= map { $_->( $r, %args ) } @children;
 						return $f->($self->evaluator->model, $active_graph, @operands);
 					} elsif (my $fform = Attean->get_global_functional_form($furi)) {
-						my @operands	= map { eval { $_->( $r, %args ) } } @children;
+						my @operands	= map { eval { $_->( $r, %args ) } || undef } @children;
 						return $fform->($self->evaluator->model, $active_graph, @operands);
 					} else {
 						die "No extension registered for <$furi>";
