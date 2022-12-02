@@ -2102,7 +2102,11 @@ package Attean::Plan::Exists 0.032 {
 		my ($impl)	= map { $_->impl($model) } @{ $self->children };
 		return sub {
 			my $iter	= $impl->();
-			my $term	= ($iter->next) ? Attean::Literal->true : Attean::Literal->false;
+			my $result	= $iter->next;
+# 			if ($result) {
+# 				warn "EXISTS: " . $result->as_string;
+# 			}
+			my $term	= $result ? Attean::Literal->true : Attean::Literal->false;
 			return Attean::ListIterator->new(values => [$term], item_type => 'Attean::API::Term');
 		}
 	}

@@ -151,6 +151,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 				my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
 				$s->serialize_iter_to_io($io, $iter);
 			} else {
+				my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+				$s->serialize_iter_to_io($io, $iter);
 				print {$io} "null";
 			}
 		}
@@ -202,7 +204,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
 		my @nodes	= lex_to_list($l);
 		die 'TypeError' unless ($pos->does('Attean::API::NumericLiteral') and $pos->datatype->value eq 'http://www.w3.org/2001/XMLSchema#integer');
-		my $i		= int($pos->value);
+		my $i		= int($pos->value) - 1; # cdt:get is 1-based, while the array index below is 0-based
+		die 'Unexpected non-positive get index' unless ($i >= 0);
 		return $nodes[$i];
 	}
 
@@ -223,9 +226,17 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
 		my @nodes		= lex_to_list($l);
 		my $start		= int($pos->value);
+		die 'Unexpected non-positive subseq start argument' unless ($start > 0);
 		my @length		= map { int($_->value) } @len;
+		if (scalar(@length)) {
+			my $end	= $start + $length[0];
+			die 'Subseq start+length is beyond the end of the array' if ($end > (1+scalar(@nodes)));
+		}
 		my @orig		= @nodes;
-		my @seq			= splice(@nodes, $start-1, @length);
+		
+		my $from	= $start-1;
+		my $to		= scalar(@length) ? ($from + $length[0] - 1) : $#nodes;
+		my @seq		= @nodes[$from .. $to];
 		return list_to_lex(@seq);
 	}
 
@@ -288,6 +299,9 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my $dt	= $l->datatype;
 		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
 		my @nodes	= lex_to_list($l);
+		unless (scalar(@nodes)) {
+			die 'cdt:tail called on an empty list';
+		}
 		shift(@nodes);
 		return list_to_lex(@nodes);
 	}
@@ -300,9 +314,9 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my $active_graph	= shift;
 		my $l				= shift;
 		my $term			= shift;
-		die 'TypeError' unless ($l->does('Attean::API::Literal'));
+		die 'TypeError: Not a literal' unless ($l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
-		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
+		die 'TypeError: Not a cdt:List' unless ($dt->value eq $LIST_TYPE_IRI);
 		my @nodes	= lex_to_list($l);
 		
 		foreach my $n (@nodes) {
@@ -478,18 +492,30 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 	sub equals {
 		my $lhs	= shift;
 		my $rhs	= shift;
-		my $lhs_size	= AtteanX::Functions::CompositeLists::listSize(undef, undef, $lhs)->value;
-		my $rhs_size	= AtteanX::Functions::CompositeLists::listSize(undef, undef, $rhs)->value;
-		return Attean::Literal->false unless ($lhs_size == $rhs_size);
+# 		warn "LIST EQUALS?";
+# 		warn "- " . $lhs->as_string . "\n";
+# 		warn "- " . $rhs->as_string . "\n";
+		return 0 unless ($rhs->does('Attean::API::Literal') and $rhs->datatype->value eq $AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
+		my $lhs_size	= eval { AtteanX::Functions::CompositeLists::listSize(undef, undef, $lhs)->value };
+		return 0 if ($@);
+ 		my $rhs_size	= eval { AtteanX::Functions::CompositeLists::listSize(undef, undef, $rhs)->value };
+		return 0 if ($@);
+		return 0 unless ($lhs_size == $rhs_size);
+		
+		my $seen_error	= 0;
 		foreach my $i (0 .. $lhs_size-1) {
-			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i));
-			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i));
+			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i+1));
+			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i+1));
 			unless (blessed($li) and blessed($ri)) {
-				die 'TypeError';
+				$seen_error++;
+				next;
 			}
-			return Attean::Literal->false unless $li->equals($ri);
+			return 0 unless ($li->equals($ri));
 		}
-		return Attean::Literal->true;
+		if ($seen_error) {
+			die 'TypeError';
+		}
+		return 1;
 	}
 	
 # 	sub compare {
