@@ -13,8 +13,9 @@ use AtteanX::SPARQL::Constants;
 use Attean::SimpleQueryEvaluator;
 use Type::Tiny::Role;
 use AtteanX::Functions::CompositeLists;
-
+use AtteanX::Functions::CompositeMaps;
 AtteanX::Functions::CompositeLists->register();
+AtteanX::Functions::CompositeMaps->register();
 
 sub plan_eval {
 	my $sparql			= shift;
@@ -112,8 +113,8 @@ SELECT ?x ?y WHERE {
 	BIND(cdt:sequence(101, 105) AS ?list_y)
 	BIND(cdt:zip(?list_x, ?list_y) AS ?zipped)
 	EXPLODE(?zipped AS ?pair)
-	BIND(cdt:get(?pair, 0) AS ?x)
-	BIND(cdt:get(?pair, 1) AS ?y)
+	BIND(cdt:get(?pair, 1) AS ?x)
+	BIND(cdt:get(?pair, 2) AS ?y)
 }
 END
 	my $algebra	= $parser->parse($sparql);

@@ -26,6 +26,8 @@ composite list datatypes.
 
 package AtteanX::Functions::CompositeLists::TurtleLexerWithNull {
 	use Moo;
+	use AtteanX::Parser::Turtle;
+	use AtteanX::SPARQL::Constants;
 	extends 'AtteanX::Parser::Turtle::Lexer';
 
 	sub get_token {
@@ -42,6 +44,10 @@ package AtteanX::Functions::CompositeLists::TurtleLexerWithNull {
 
 			my $c	= $self->peek_char();
 			return unless (defined($c));
+			if ($c eq ':') {
+				$self->read_length(1);
+				return AtteanX::Parser::Turtle::Token->fast_constructor(PREFIXNAME, -1, -1, -1, -1, [':']);
+			}
 			if ($self->buffer =~ /^null\b/) {
 				$self->read_length($+[0]);
 				return 1;
@@ -74,12 +80,22 @@ package AtteanX::Functions::CompositeLists 0.032 {
 				push(@nodes, undef);
 			} else {
 				next if ($t->type == COMMA);
+				next if ($t->type == PREFIXNAME and $t->value eq ':'); # COLON
 				
-				if ($t->type == LBRACKET) {
-					my @subnodes	= _recursive_lexer_list_parse($p, $lexer);
-					push(@nodes, list_to_lex(@subnodes));
+				if ($t->type == LBRACE) {
+					my $hash		= _recursive_lexer_list_parse($p, $lexer);
+					push(@nodes, AtteanX::Functions::CompositeMaps::map_to_lex(%$hash));
+				} elsif ($t->type == RBRACE) {
+					my %hash;
+					while (my ($k, $v) = splice(@nodes, 0, 2)) {
+						$hash{ $k->as_string }	= $v;
+					}
+					return \%hash;
+				} elsif ($t->type == LBRACKET) {
+					my $subnodes	= _recursive_lexer_list_parse($p, $lexer);
+					push(@nodes, list_to_lex(@$subnodes));
 				} elsif ($t->type == RBRACKET) {
-					return @nodes;
+					return \@nodes;
 				} else {
 					push(@nodes, $p->_object($lexer, $t));
 				}
@@ -113,7 +129,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		eval {
 			my $t = $p->_next_nonws($lexer);
 			if ($t->type == LBRACKET) {
-				push(@nodes, _recursive_lexer_list_parse($p, $lexer));
+				push(@nodes, @{_recursive_lexer_list_parse($p, $lexer)});
 			}
 # 			while (my $t = $p->_next_nonws($lexer)) {
 # 				
@@ -321,7 +337,9 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		
 		foreach my $n (@nodes) {
 			next unless (defined($n)); # null list elements cannot be tested for with CONTAINS
-			return Attean::Literal->true if ($n->equals($term));
+			my $equals	= eval { $n->equals($term) };
+# 			warn $@ if ($@);
+			return Attean::Literal->true if ($equals);
 		}
 		return Attean::Literal->false;
 	}

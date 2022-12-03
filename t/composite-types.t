@@ -10,8 +10,10 @@ use Attean parsers => ['Turtle'];
 use Attean::RDF;
 use Attean::SimpleQueryEvaluator;
 use AtteanX::Functions::CompositeLists;
+use AtteanX::Functions::CompositeMaps;
 
 AtteanX::Functions::CompositeLists->register();
+AtteanX::Functions::CompositeMaps->register();
 
 sub plan_eval {
 	my $sparql			= shift;
@@ -49,9 +51,54 @@ subtest 'cdt:get' => sub {
 PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
 	?s ?p ?o .
-	BIND(cdt:get(?o, 0) AS ?e1)
-	BIND(cdt:get(?o, 1) AS ?e2)
-	BIND(cdt:get(?o, 2) AS ?e3)
+	BIND(cdt:get(?o, 1) AS ?e1)
+	BIND(cdt:get(?o, 2) AS ?e2)
+	BIND(cdt:get(?o, 3) AS ?e3)
+}
+END
+
+	foreach my $name (reverse sort keys %eval_types) {
+		my $evalfunc	= $eval_types{$name};
+		note($name);
+		my $results		= $evalfunc->($sparql, $model, $graph);
+		my $row			= $results->next;
+		is($row->value('e1')->numeric_value, 1);
+		is($row->value('e2')->value, 'b');
+		is($row->value('e3')->numeric_value, 3);
+	}
+};
+
+subtest 'mapCreate' => sub {
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	
+	my $sparql	= <<"END";
+PREFIX cdt: <http://example.org/cdt/>
+SELECT * WHERE {
+	BIND(cdt:mapCreate(1, 2, 'c', 4) AS ?map)
+}
+END
+	while (my ($name, $evalfunc) = each(%eval_types)) {
+		note($name);
+		my $results		= $evalfunc->($sparql, $model, $graph);
+		my $row			= $results->next;
+		is($row->value('map')->value, '{1:2,"c":4}');
+	}
+};
+
+subtest 'mapGet' => sub {
+	my $store	= Attean->get_store('Memory')->new();
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	my $graph	= Attean::IRI->new('http://example.org/graph');
+	$model->load_triples('turtle', $graph, qq[_:a <p> "{1: 2,'three': 4}"^^<${AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI}> .]);
+	
+	my $sparql	= <<"END";
+PREFIX cdt: <http://example.org/cdt/>
+SELECT * WHERE {
+	?s ?p ?o .
+	BIND(cdt:mapGet(?o, 1) AS ?e1)
+	BIND(cdt:mapGet(?o, 'three') AS ?e2)
 }
 END
 
@@ -59,9 +106,8 @@ END
 		note($name);
 		my $results		= $evalfunc->($sparql, $model, $graph);
 		my $row			= $results->next;
-		is($row->value('e1')->numeric_value, 1);
-		is($row->value('e2')->value, 'b');
-		is($row->value('e3')->numeric_value, 3);
+		is($row->value('e1')->numeric_value, 2);
+		is($row->value('e2')->numeric_value, 4);
 	}
 };
 

@@ -39,6 +39,7 @@ package Attean::SimpleQueryEvaluator 0.032 {
 	use Encode qw(encode);
 	use Attean::RDF;
 	use AtteanX::Functions::CompositeLists;
+	use AtteanX::Functions::CompositeMaps;
 	use LWP::UserAgent;
 	use Scalar::Util qw(blessed);
 	use List::Util qw(all any reduce);
