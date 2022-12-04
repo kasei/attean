@@ -67,14 +67,19 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 	use AtteanX::Serializer::TurtleTokens;
 	use AtteanX::Parser::Turtle;
 	use AtteanX::SPARQL::Constants;
+	use AtteanX::Functions::CompositeLists;
 	
 	our $CDT_BASE		= 'http://example.org/cdt/';
 	our $MAP_TYPE_IRI	= "${CDT_BASE}Map";
 
-	sub _recursive_lexer_map_parse {
+	# Assume the opening token of the cdt has already been consumed.
+	# Return either a HASH or ARRAY reference, depending on the closing token.
+	# Does not validate the lexical form with respect to balanced cdt tokens.
+	sub _recursive_lexer_parse_cdt {
 		my $p		= shift;
 		my $lexer	= shift;
 		my @nodes;
+		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
 		while (my $t = $p->_next_nonws($lexer)) {
 			if ($t and not blessed($t)) {
 				# this is the special value returned from our lexer subclass that indicates a null values
@@ -84,17 +89,23 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 				next if ($t->type == PREFIXNAME and $t->value eq ':'); # COLON
 				
 				if ($t->type == LBRACE) {
-					my $hash		= _recursive_lexer_map_parse($p, $lexer);
+					my $hash		= _recursive_lexer_parse_cdt($p, $lexer);
 					push(@nodes, AtteanX::Functions::CompositeMaps::map_to_lex(%$hash));
 				} elsif ($t->type == RBRACE) {
 					my %hash;
 					while (my ($k, $v) = splice(@nodes, 0, 2)) {
-						$hash{ $k->as_string }	= $v;
+						my @tokens;
+						push(@tokens, $k->sparql_tokens->elements);
+						my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+						my $bytes	= $s->serialize_iter_to_bytes($iter);
+						my $key_string	= decode_utf8($bytes);
+						
+						$hash{ $key_string }	= $v;
 					}
 					return \%hash;
 				} elsif ($t->type == LBRACKET) {
-					my $subnodes	= _recursive_lexer_map_parse($p, $lexer);
-					push(@nodes, [AtteanX::Functions::CompositeLists::list_to_lex(@$subnodes)]);
+					my $subnodes	= _recursive_lexer_parse_cdt($p, $lexer);
+					push(@nodes, AtteanX::Functions::CompositeLists::list_to_lex(@$subnodes));
 				} elsif ($t->type == RBRACKET) {
 					return \@nodes;
 				} else {
@@ -131,7 +142,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		eval {
 			my $t = $p->_next_nonws($lexer);
 			if ($t->type == LBRACE) {
-				my $hash	= _recursive_lexer_map_parse($p, $lexer);
+				my $hash	= _recursive_lexer_parse_cdt($p, $lexer);
     			push(@nodes, %$hash);
 			}
 		};

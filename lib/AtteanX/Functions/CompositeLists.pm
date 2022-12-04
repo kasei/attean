@@ -66,44 +66,10 @@ package AtteanX::Functions::CompositeLists 0.032 {
 	use AtteanX::Serializer::TurtleTokens;
 	use AtteanX::Parser::Turtle;
 	use AtteanX::SPARQL::Constants;
+	use AtteanX::Functions::CompositeMaps;
 	
 	our $CDT_BASE		= 'http://example.org/cdt/';
 	our $LIST_TYPE_IRI	= "${CDT_BASE}List";
-
-	sub _recursive_lexer_list_parse {
-		my $p		= shift;
-		my $lexer	= shift;
-		my @nodes;
-		while (my $t = $p->_next_nonws($lexer)) {
-			if ($t and not blessed($t)) {
-				# this is the special value returned from our lexer subclass that indicates a null values
-				push(@nodes, undef);
-			} else {
-				next if ($t->type == COMMA);
-				next if ($t->type == PREFIXNAME and $t->value eq ':'); # COLON
-				
-				if ($t->type == LBRACE) {
-					my $hash		= _recursive_lexer_list_parse($p, $lexer);
-					push(@nodes, AtteanX::Functions::CompositeMaps::map_to_lex(%$hash));
-				} elsif ($t->type == RBRACE) {
-					my %hash;
-					while (my ($k, $v) = splice(@nodes, 0, 2)) {
-						$hash{ $k->as_string }	= $v;
-					}
-					return \%hash;
-				} elsif ($t->type == LBRACKET) {
-					my $subnodes	= _recursive_lexer_list_parse($p, $lexer);
-					push(@nodes, list_to_lex(@$subnodes));
-				} elsif ($t->type == RBRACKET) {
-					return \@nodes;
-				} else {
-					push(@nodes, $p->_object($lexer, $t));
-				}
-			}
-		}
-
-		die 'unexpected end of list literal lexical form';
-	}
 
 =item C<< lex_to_list($literal) >>
 
@@ -129,7 +95,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		eval {
 			my $t = $p->_next_nonws($lexer);
 			if ($t->type == LBRACKET) {
-				push(@nodes, @{_recursive_lexer_list_parse($p, $lexer)});
+				push(@nodes, @{AtteanX::Functions::CompositeMaps::_recursive_lexer_parse_cdt($p, $lexer)});
 			}
 # 			while (my $t = $p->_next_nonws($lexer)) {
 # 				
