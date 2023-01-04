@@ -222,23 +222,21 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		return list_to_lex(@seq);
 	}
 
-=item C<< listConcat($list, $pos) >>
+=item C<< listConcat(@lists) >>
 
 =cut
 	sub listConcat {
 		my $model			= shift;
 		my $active_graph	= shift;
-		my $lhs				= shift;
-		my $rhs				= shift;
-		foreach my $l ($lhs, $rhs) {
+		my @lists			= @_;
+		my @nodes;
+		foreach my $l (@lists) {
 			die 'TypeError' unless ($l->does('Attean::API::Literal'));
 			my $dt	= $l->datatype;
 			die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
+			push(@nodes, lex_to_list($l));
 		}
-		my @nodes	= (
-			lex_to_list($lhs),
-			lex_to_list($rhs),
-		);
+		
 		return list_to_lex(@nodes);
 	}
 
