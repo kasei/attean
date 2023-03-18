@@ -965,16 +965,27 @@ sub __SelectVars {
 }
 
 sub _BrackettedAliasExpression {
-	my $self	= shift;
+	my $self				= shift;
+	my $allow_multiple_vars	= shift || 0;
 	$self->_expected_token(LPAREN);
 	$self->_Expression;
 	my ($expr)	= splice(@{ $self->{_stack} });
 	$self->_expected_token(KEYWORD, 'AS');
 	$self->_Var;
 	my ($var)	= splice(@{ $self->{_stack} });
-	$self->_expected_token(RPAREN);
 	
-	return ($var, $expr);
+	if ($allow_multiple_vars) {
+		my @vars	= ($var);
+		while ($self->_optional_token(COMMA)) {
+			$self->_Var;
+			push( @vars, splice(@{ $self->{_stack} }));
+		}
+		$self->_expected_token(RPAREN);
+		return (\@vars, $expr);
+	} else {
+		$self->_expected_token(RPAREN);
+		return ($var, $expr);
+	}
 }
 
 sub __SelectVar_test {
@@ -1587,7 +1598,26 @@ sub __handle_GraphPatternNotTriples {
 	} elsif ($class eq 'Attean::Algebra::Table') {
  		my ($table)	= @args;
 		$self->_add_patterns( $table );
-	} elsif ($class =~ /^Attean::Algebra::(Extend|Explode)$/) {
+	} elsif ($class =~ /^Attean::Algebra::Unfold$/) {
+		my ($cont, $hints)	= $self->_pop_pattern_container;
+		my $ggp		= $self->_new_join(@$cont);
+		$ggp->hints($hints);
+		$self->_push_pattern_container;
+		# my $ggp	= $self->_remove_pattern();
+		unless ($ggp) {
+			$ggp	= Attean::Algebra::BGP->new();
+		}
+		my @vars	= @{ $args[0] };
+		my $expr	= $args[1];
+		foreach my $var (@vars) {
+			my %in_scope	= map { $_ => 1 } $ggp->in_scope_variables;
+			if (exists $in_scope{ $var->value }) {
+				croak "Syntax error: BIND used with variable already in scope";
+			}
+		}
+		my $bind	= $class->new( children => [$ggp], variables => \@vars, expression => $expr );
+		$self->_add_patterns( $bind );
+	} elsif ($class =~ /^Attean::Algebra::Extend$/) {
 		my ($cont, $hints)	= $self->_pop_pattern_container;
 		my $ggp		= $self->_new_join(@$cont);
 		$ggp->hints($hints);
@@ -1805,7 +1835,7 @@ sub _GraphPatternNotTriples_test {
 	my $t	= $self->_peek_token;
 	return unless ($t);
 	return 0 unless ($t->type == KEYWORD);
-	return ($t->value =~ qr/^(VALUES|BIND|EXPLODE|SERVICE|MINUS|OPTIONAL|GRAPH|HINT)$/i);
+	return ($t->value =~ qr/^(VALUES|BIND|UNFOLD|SERVICE|MINUS|OPTIONAL|GRAPH|HINT)$/i);
 }
 
 sub _GraphPatternNotTriples {
@@ -1818,8 +1848,8 @@ sub _GraphPatternNotTriples {
 		$self->_MinusGraphPattern;
 	} elsif ($self->_test_token(KEYWORD, 'BIND')) {
 		$self->_Bind;
-	} elsif ($self->_test_token(KEYWORD, 'EXPLODE')) {
-		$self->_Explode;
+	} elsif ($self->_test_token(KEYWORD, 'UNFOLD')) {
+		$self->_Unfold;
 	} elsif ($self->_test_token(KEYWORD, 'HINT')) {
 		$self->_Hint;
 	} elsif ($self->_test_token(KEYWORD, 'OPTIONAL')) {
@@ -1895,11 +1925,11 @@ sub _Bind {
 	$self->_add_stack( ['Attean::Algebra::Extend', $var, $expr] );
 }
 
-sub _Explode {
+sub _Unfold {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'EXPLODE');
-	my ($var, $expr)	= $self->_BrackettedAliasExpression;
-	$self->_add_stack( ['Attean::Algebra::Explode', $var, $expr] );
+	$self->_expected_token(KEYWORD, 'UNFOLD');
+	my ($var, $expr)	= $self->_BrackettedAliasExpression(1);
+	$self->_add_stack( ['Attean::Algebra::Unfold', $var, $expr] );
 }
 
 sub _Hint {

@@ -421,41 +421,41 @@ package Attean::Algebra::Extend 0.032 {
 	}
 }
 
-=item * L<Attean::Algebra::Explode>
+=item * L<Attean::Algebra::Unfold>
 
 =cut
 
-package Attean::Algebra::Explode 0.031 {
+package Attean::Algebra::Unfold 0.031 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use Moo;
-	use Types::Standard qw(ConsumerOf);
+	use Types::Standard qw(ArrayRef ConsumerOf);
 	use namespace::clean;
 	
 	sub in_scope_variables {
 		my $self	= shift;
 		my ($child)	= @{ $self->children };
 		my @vars	= $child->in_scope_variables;
-		return Set::Scalar->new(@vars, $self->variable->value)->elements;
+		return Set::Scalar->new(@vars, map { $_->value } @{ $self->variables })->elements;
 	}
 	with 'Attean::API::Algebra', 'Attean::API::UnaryQueryTree';
 
-	has 'variable' => (is => 'ro', isa => ConsumerOf['Attean::API::Variable'], required => 1);
+	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
 	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
 
 	sub algebra_as_string {
 		my $self	= shift;
-		return sprintf('Explode { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
+		return sprintf('Unfold { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
 	}
-	sub tree_attributes { return qw(variable expression) };
+	sub tree_attributes { return qw(variables expression) };
 	sub sparql_tokens {
 		my $self	= shift;
-		my $explode	= AtteanX::SPARQL::Token->keyword('EXPLODE');
+		my $explode	= AtteanX::SPARQL::Token->keyword('UNFOLD');
 		my $as		= AtteanX::SPARQL::Token->keyword('AS');
 		my $l		= AtteanX::SPARQL::Token->lparen;
 		my $r		= AtteanX::SPARQL::Token->rparen;
 		my ($child)	= @{ $self->children };
-		my $var		= $self->variable;
+		my @vars	= @{ $self->variables };
 		my $expr	= $self->expression;
 		
 		my @tokens;
@@ -464,7 +464,13 @@ package Attean::Algebra::Explode 0.031 {
 		push(@tokens, $l);
 		push(@tokens, $expr->sparql_tokens->elements);
 		push(@tokens, $as);
-		push(@tokens, $var->sparql_tokens->elements);
+		foreach my $i (0 .. $#vars) {
+			my $var	= $vars[$i];
+			if ($i > 0) {
+				push(@tokens, AtteanX::SPARQL::Token->comma);
+			}
+			push(@tokens, $var->sparql_tokens->elements);
+		}
 		push(@tokens, $r);
 		return Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::SPARQL::Token' );
 	}

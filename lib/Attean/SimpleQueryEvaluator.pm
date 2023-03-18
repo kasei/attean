@@ -163,9 +163,14 @@ supplied C<< $active_graph >>.
 				}
 				return $r;
 			});
-		} elsif ($algebra->isa('Attean::Algebra::Explode')) {
+		} elsif ($algebra->isa('Attean::Algebra::Unfold')) {
 			my $expr			= $algebra->expression;
-			my $var				= $algebra->variable->value;
+			my @vars			= map { $_->value } @{ $algebra->variables };
+			my ($first, $second);
+    		$first	= $vars[0];
+			if (scalar(@vars) == 2) {
+				$second	= $vars[1];
+			}
 
 			my ($child)			= @{ $algebra->children };
 			my $iter				= $self->evaluate( $child, $active_graph );
@@ -174,26 +179,60 @@ supplied C<< $active_graph >>.
 				my %extension;
 				my %row_cache;
 				my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
-				die 'TypeError' unless ($val->does('Attean::API::Literal'));
 				my $dt	= $val->datatype;
-				die 'TypeError' unless ($dt->value eq $AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
-				my $lex	= $val->value;
-				substr($lex, 0, 1, '');
-				substr($lex, -1, 1, '');
-				my $p	= Attean->get_parser('SPARQL')->new();
-				my @nodes	= $p->parse_nodes($lex, commas => 1);
-				foreach my $val (@nodes) {
-					if ($val->does('Attean::API::Binding')) {
-						# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
-						$val	= $val->ground($r);
+				if ($dt->value eq $AtteanX::Functions::CompositeLists::LIST_TYPE_IRI) {
+					my @nodes	= AtteanX::Functions::CompositeLists::lex_to_list($val);
+					foreach my $i (0 .. $#nodes) {
+						my $val	= $nodes[$i];
+						my %bindings;
+						if (defined($val)) {
+							if ($val->does('Attean::API::Binding')) {
+								# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+								$val	= $val->ground($r);
+							}
+			# 					warn "Unfold error: $@" if ($@);
+							$bindings{$first}	= $val if ($val);
+						}
+					
+						if (defined($second)) {
+							$bindings{$second}	= Attean::Literal->integer(1+$i);
+						}
+						my $new	= Attean::Result->new( bindings => \%bindings )->join($r);
+						push(@results, $new);
 					}
-	# 					warn "Explode error: $@" if ($@);
-					my $new	= Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
-					push(@results, $new);
+				} elsif ($dt->value eq $AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI) {
+					my @nodes	= AtteanX::Functions::CompositeMaps::lex_to_map($val);
+					# The namespace map here is used to correctly parse maps with boolean keys like `{true:1}`
+					my $p		= AtteanX::Parser::Turtle->new();
+					while (my ($key_string, $val) = splice(@nodes, 0, 2)) {
+						my $key	= $p->parse_node($key_string); # TODO: this mistakes "true:4" as an attempted prefixname, not a key-value pair
+						my %bindings;
+						if (defined($first)) {
+							if ($key->does('Attean::API::Binding')) {
+								# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+								$key	= $key->ground($r);
+							}
+			# 					warn "Unfold error: $@" if ($@);
+							$bindings{$first}	= $key if ($key);
+						}
+
+						if (defined($second)) {
+							if (blessed($val) and $val->does('Attean::API::Binding')) {
+								# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+								$val	= $val->ground($r);
+							}
+			# 					warn "Unfold error: $@" if ($@);
+							$bindings{$second}	= $val if ($val);
+						}
+					
+						my $new	= Attean::Result->new( bindings => \%bindings )->join($r);
+						push(@results, $new);
+					}
 				}
 			}
 			my %vars = map { $_ => 1 } $iter->variables;
-			$vars{$var}++;
+			$vars{$first}++;
+			$vars{$second}++ if defined($second);
 			return Attean::ListIterator->new(variables => [keys %vars], values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			# TODO: Merge adjacent filter evaluation so that they can share a row_cache hash (as is done for Extend above)

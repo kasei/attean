@@ -43,19 +43,19 @@ sub evaluations {
 # 	return (\&simple_eval, \&plan_eval);
 }
 
-subtest 'EXPLODE value' => sub {
+subtest 'UNFOLD value' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
 PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
-	EXPLODE(cdt:sequence(10) AS ?x)
+	UNFOLD(cdt:sequence(10) AS ?x)
 }
 END
 	my $algebra	= $parser->parse($sparql);
 	does_ok($algebra, 'Attean::API::Algebra');
 	isa_ok($algebra, 'Attean::Algebra::Query');
-	my ($e)		= $algebra->subpatterns_of_type('Attean::Algebra::Explode');
-	isa_ok($e, 'Attean::Algebra::Explode');
+	my ($e)		= $algebra->subpatterns_of_type('Attean::Algebra::Unfold');
+	isa_ok($e, 'Attean::Algebra::Unfold');
 
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
@@ -69,20 +69,20 @@ END
 	
 };
 
-subtest 'EXPLODE extension' => sub {
+subtest 'UNFOLD extension' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
 PREFIX cdt: <http://example.org/cdt/>
 SELECT * WHERE {
 	BIND(cdt:sequence(10) AS ?list)
-	EXPLODE(?list AS ?x)
+	UNFOLD(?list AS ?x)
 }
 END
 	my $algebra	= $parser->parse($sparql);
 	does_ok($algebra, 'Attean::API::Algebra');
 	isa_ok($algebra, 'Attean::Algebra::Query');
-	my ($e)		= $algebra->subpatterns_of_type('Attean::Algebra::Explode');
-	isa_ok($e, 'Attean::Algebra::Explode');
+	my ($e)		= $algebra->subpatterns_of_type('Attean::Algebra::Unfold');
+	isa_ok($e, 'Attean::Algebra::Unfold');
 
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
@@ -103,7 +103,7 @@ END
 	
 };
 
-subtest 'EXPLODE extension zip pairs' => sub {
+subtest 'UNFOLD extension zip pairs' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
 PREFIX cdt: <http://example.org/cdt/>
@@ -112,7 +112,7 @@ SELECT ?x ?y WHERE {
 	BIND(cdt:sequence(5) AS ?list_x)
 	BIND(cdt:sequence(101, 105) AS ?list_y)
 	BIND(cdt:zip(?list_x, ?list_y) AS ?zipped)
-	EXPLODE(?zipped AS ?pair)
+	UNFOLD(?zipped AS ?pair)
 	BIND(cdt:get(?pair, 1) AS ?x)
 	BIND(cdt:get(?pair, 2) AS ?y)
 }

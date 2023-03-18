@@ -43,6 +43,9 @@ package AtteanX::Functions::CompositeMaps::TurtleLexerWithNull {
 				next;
 			}
 
+			my $start_column	= $self->column;
+			my $start_line		= $self->line;
+
 			my $c	= $self->peek_char();
 			return unless (defined($c));
 			if ($c eq ':') {
@@ -52,6 +55,9 @@ package AtteanX::Functions::CompositeMaps::TurtleLexerWithNull {
 			if ($self->buffer =~ /^null\b/) {
 				$self->read_length($+[0]);
 				return 1;
+			} elsif ($self->buffer =~ /^(true|false)\b/) {
+				my $bool	= $self->read_length($+[0]);
+				return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
 			}
 			return $self->SUPER::get_token();
 		}
@@ -109,7 +115,8 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 				} elsif ($t->type == RBRACKET) {
 					return \@nodes;
 				} else {
-					push(@nodes, $p->_object($lexer, $t));
+					my $t	= $p->_object($lexer, $t);
+					push(@nodes, $t);
 				}
 			}
 		}
@@ -162,7 +169,8 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		open(my $io, '>', \$bytes);
 		my $first	= 1;
 		
-		while (my ($key, $value) = splice(@terms, 0, 2)) {
+		my $p		= AtteanX::Parser::Turtle->new();
+		while (my ($key_string, $value) = splice(@terms, 0, 2)) {
 			unless ($first) {
 				my @tokens;
 				push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(COMMA, -1, -1, -1, -1, [',']));
@@ -171,9 +179,13 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 				$s->serialize_iter_to_io($io, $iter);
 			}
 			$first	= 0;
-			print {$io} $key;
-			
+
 			my @tokens;
+			my $key	= $p->parse_node($key_string);
+
+			push(@tokens, $key->sparql_tokens->elements);
+			push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(WS, -1, -1, -1, -1, [' ']));
+
     		push(@tokens, AtteanX::Parser::Turtle::Token->fast_constructor(PREFIXNAME, -1, -1, -1, -1, [':']));
 			if (blessed($value)) {
 				push(@tokens, $value->sparql_tokens->elements);
@@ -203,7 +215,16 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 	sub mapCreate {
 		my $model			= shift;
 		my $active_graph	= shift;
-		my $literal			= eval { map_to_lex(@_) };
+		my %map;
+		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
+		while (my ($key, $value) = splice(@_, 0, 2)) {
+			my @tokens	= $key->sparql_tokens->elements;
+			my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+			my $bytes	= $s->serialize_iter_to_bytes($iter);
+			my $key_string	= decode_utf8($bytes);
+			$map{$key_string}	= $value;
+		}
+		my $literal			= eval { map_to_lex(%map) };
 		warn "cdt:Map constructor error: $@" if $@;
 		return $literal;
 	}
@@ -220,7 +241,15 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		my $dt	= $l->datatype;
 		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
 		my %nodes	= lex_to_map($l);
-		my $value	= $nodes{$key->as_string};
+
+		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
+
+		my @tokens	= $key->sparql_tokens->elements;
+		my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+		my $bytes	= $s->serialize_iter_to_bytes($iter);
+		my $key_string	= decode_utf8($bytes);
+
+		my $value	= $nodes{$key_string};
 		return $value;
 	}
 

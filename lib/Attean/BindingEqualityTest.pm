@@ -315,7 +315,12 @@ solutions, the solution returned is arbitrary.
 # 		}
 		
 		my $canon_map	= Attean::TermMap->canonicalization_map;
-		my %bb_master	= map { $_->apply_map($canon_map)->as_string => 1 } @$bb;
+		my %bb_master;
+		foreach my $bb_item (@$bb) {
+			my $k	= $bb_item->apply_map($canon_map)->as_string;
+			$bb_master{ $k }++;
+		}
+# 		my %bb_master	= map { $_->apply_map($canon_map)->as_string => 1 } @$bb;
 	
 		my $count	= 0;
 		MAPPING: while (my $mapping = $kbp->next) {
@@ -336,7 +341,9 @@ solutions, the solution returned is arbitrary.
 				$self->log->trace("checking for '$mapped_st' in " . Dumper(\%bb));
 				if ($bb{ $mapped_st }) {
 					$self->log->trace("Found mapping for binding: " . Dumper($mapped_st));
-					delete $bb{ $mapped_st };
+					if (--$bb{ $mapped_st } == 0) {
+						delete $bb{ $mapped_st };
+					}
 				} else {
 					$self->log->trace("No mapping found for binding: " . Dumper($mapped_st));
 # 					warn "No mapping found for binding: " . Dumper($mapped_st);
