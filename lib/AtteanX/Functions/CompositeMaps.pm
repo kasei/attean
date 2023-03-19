@@ -215,16 +215,17 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 	sub mapCreate {
 		my $model			= shift;
 		my $active_graph	= shift;
-		my %map;
+		my @map;
 		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
 		while (my ($key, $value) = splice(@_, 0, 2)) {
 			my @tokens	= $key->sparql_tokens->elements;
 			my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
 			my $bytes	= $s->serialize_iter_to_bytes($iter);
 			my $key_string	= decode_utf8($bytes);
-			$map{$key_string}	= $value;
+			push(@map, $key_string, $value);
+# 			$map{$key_string}	= $value;
 		}
-		my $literal			= eval { map_to_lex(%map) };
+		my $literal			= eval { map_to_lex(@map) };
 		warn "cdt:Map constructor error: $@" if $@;
 		return $literal;
 	}
