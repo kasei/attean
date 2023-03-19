@@ -209,7 +209,13 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my @nodes		= lex_to_list($l);
 		my $start		= int($pos->value);
 		die 'Unexpected non-positive subseq start argument' unless ($start > 0);
+
 		my @length		= map { int($_->value) } @len;
+		if ($start == (1+scalar(@nodes))) {
+			die 'Unexpected subseq start argument at end of list with non-zero length' unless ((scalar(@length) and $length[0] == 0) or not(scalar(@length)))
+		} else {
+			die 'Unexpected subseq start argument past end of list' unless ($start < (1+scalar(@nodes)));
+		}
 		if (scalar(@length)) {
 			my $end	= $start + $length[0];
 			die 'Subseq start+length is beyond the end of the array' if ($end > (1+scalar(@nodes)));
