@@ -476,6 +476,7 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 	use Scalar::Util qw(blessed looks_like_number);
 
 	use Moo::Role;
+	use List::Util qw(min);
 
 	sub equals {
 		my $lhs	= shift;
@@ -506,19 +507,46 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 		return 1;
 	}
 	
-# 	sub compare {
-# 		my ($a, $b)	= @_;
-# 		return 1 unless blessed($b);
-# 		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
-# 		return -1 if ($b->does('Attean::API::Binding'));
-# 		if ($b->does('Attean::API::NumericLiteral')) {
-# 			return $a->numeric_value <=> $b->numeric_value;
-# 		} else {
-# 			return 1;
-# # 			Attean::API::Literal::compare($a, $b);
-# 		}
-# 	}
-# 
+	sub compare {
+		my $lhs	= shift;
+		my $rhs	= shift;
+# 		warn "LIST-LESS-THAN?";
+# 		warn "- " . $lhs->as_string . "\n";
+# 		warn "- " . $rhs->as_string . "\n";
+		die 'TypeError' unless (blessed($rhs) and $rhs->does('Attean::API::Literal') and $rhs->datatype->value eq $AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
+		
+		my @lhs	= AtteanX::Functions::CompositeLists::lex_to_list($lhs);
+		my @rhs	= AtteanX::Functions::CompositeLists::lex_to_list($rhs);
+		
+		my $lhs_size	= scalar(@lhs);
+ 		my $rhs_size	= scalar(@rhs);
+
+		my $seen_error	= 0;
+		my $length	= min($lhs_size, $rhs_size);
+		foreach my $i (0 .. $length-1) {
+			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i+1));
+			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i+1));
+			unless (blessed($li) and blessed($ri)) {
+				$seen_error++;
+				next;
+			}
+			
+			my $icmp	= $li->compare($ri);
+			next if ($icmp == 0);
+			return $icmp;
+		}
+		
+		if ($seen_error) {
+			die 'TypeError';
+		}
+		
+		if ($lhs_size == $rhs_size) {
+			return 0;
+		} else {
+			return ($lhs_size > $rhs_size) ? 1 : -1;
+		}
+	}
+
 # 	sub canonicalized_term {
 # 		my $self	= shift;
 # 		my $value	= $self->value;

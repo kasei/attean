@@ -793,8 +793,8 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 			}
 			die "Unexpected operator evaluation: $op";
 		} elsif ($expr->isa('Attean::FunctionExpression')) {
-			my $func		= $expr->operator;
-			my @children	= map { $self->impl($_, $active_graph) } @{ $expr->children };
+			my $func			= $expr->operator;
+			my @children		= map { $self->impl($_, $active_graph) } @{ $expr->children };
 			my %type_roles		= qw(URI IRI IRI IRI BLANK Blank LITERAL Literal NUMERIC NumericLiteral TRIPLE Triple);
 			my %type_classes	= qw(URI Attean::IRI IRI Attean::IRI STR Attean::Literal);
 			return sub {
@@ -1063,7 +1063,8 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 					} elsif ($func eq 'SAMETERM') {
 						my ($a, $b)	= @operands;
 						die "TypeError: SAMETERM" unless (blessed($operands[0]) and blessed($operands[1]));
-						if ($a->compare($b)) {
+						my $cmp = eval { $a->compare($b) };
+						if (not($@) and $cmp) {
 							return $false;
 						}
 						if ($a->does('Attean::API::Binding')) {
