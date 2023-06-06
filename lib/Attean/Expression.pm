@@ -246,7 +246,7 @@ package Attean::AggregateExpression 0.032 {
 		return $args;
 	};
 	sub BUILD {
-		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE RANK CUSTOM)];
+		state $type	= Enum[qw(COUNT SUM MIN MAX AVG GROUP_CONCAT SAMPLE RANK CUSTOM FOLD)];
 		$type->assert_valid(shift->operator);
 	}
 	has 'custom_iri'	=> (is => 'ro', isa => Maybe[Str]);

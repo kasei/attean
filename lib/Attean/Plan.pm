@@ -36,6 +36,8 @@ package Attean::Plan::Quad 0.032 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf ArrayRef);
+	use AtteanX::Functions::CompositeLists;
+	use AtteanX::Functions::CompositeMaps;
 	use namespace::clean;
 
 	has 'subject'	=> (is => 'ro', required => 1);
@@ -2143,6 +2145,11 @@ package Attean::Plan::Aggregate 0.032 {
 	}
 	sub tree_attributes { return qw(aggregates groups) };
 	
+	sub BUILD {
+		# Ensure that the CT extensions are registered
+		AtteanX::Functions::CompositeLists->register();
+	}
+
 	sub BUILDARGS {
 		my $class		= shift;
 		my %args		= @_;
@@ -2239,6 +2246,17 @@ package Attean::Plan::Aggregate 0.032 {
 			}
 			my $string	= join($sep, @values);
 			return Attean::Literal->new(value => $string);
+		} elsif ($op eq 'FOLD') {
+			my $l = eval {
+				my @values;
+				foreach my $r (@$rows) {
+					my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+					push(@values, $term);
+				}
+				my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
+				my $l		= $func->(undef, undef, @values);
+			};
+			return $l;
 		} elsif ($op eq 'CUSTOM') {
 			my $iri	= $expr->custom_iri;
 			my $data	= Attean->get_global_aggregate($iri);
@@ -2255,6 +2273,8 @@ package Attean::Plan::Aggregate 0.032 {
 				$process->($thunk, $t);
 			}
 			return $finalize->($thunk);
+		} else {
+			warn "Unexpected aggregate expression: $op";
 		}
 		die "$op not implemented";
 	}

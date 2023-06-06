@@ -539,6 +539,8 @@ currently undefined.
 	}
 }
 
+use AtteanX::Functions::CompositeLists;
+
 1;
 
 __END__

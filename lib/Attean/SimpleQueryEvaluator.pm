@@ -81,6 +81,11 @@ C<< $request_signer->sign( $request ) >>.
 	
 	has 'ground_blanks' => (is => 'rw', isa => Bool, default => 0);
 	
+	sub BUILD {
+		# Ensure that the CT extensions are registered
+		AtteanX::Functions::CompositeLists->register();
+	}
+	
 =back
 
 =head1 METHODS
@@ -1104,7 +1109,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 						return Attean::Literal->integer(scalar(@$rows));
 					};
 				}
-			} elsif ($agg =~ /^(?:SAMPLE|MIN|MAX|SUM|AVG|GROUP_CONCAT)$/) {
+			} elsif ($agg =~ /^(?:SAMPLE|MIN|MAX|SUM|AVG|GROUP_CONCAT|FOLD)$/) {
 				my $impl	= $self->impl($child, $active_graph);
 				if ($agg eq 'SAMPLE') {
 					return sub {
@@ -1162,6 +1167,24 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 						}
 						return Attean::Literal->new(join($sep, sort @strings));
 					};
+				} elsif ($agg eq 'FOLD') {
+					return sub {
+						my ($rows, %args)	= @_;
+						my %seen;
+						my @values;
+						foreach my $r (@$rows) {
+							my $term	= eval { $impl->( $r, %args ) };
+							if ($expr->distinct) {
+								next if ($seen{ blessed($term) ? $term->as_string : '' }++);
+							}
+							push(@values, $term);
+						}
+						my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
+						my $l		= $func->(undef, undef, @values);
+						return $l;
+					};
+				} else {
+					warn "Unexpected aggregate expression: $agg";
 				}
 			} elsif ($agg eq 'CUSTOM') {
 				my $iri	= $expr->custom_iri;

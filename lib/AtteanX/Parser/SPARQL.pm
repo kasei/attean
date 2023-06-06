@@ -3060,6 +3060,7 @@ sub _Aggregate {
 		$star	= 1;
 	} else {
 		$self->_Expression;
+		
 		push(@expr, splice(@{ $self->{_stack} }));
 		if ($op eq 'GROUP_CONCAT') {
 			while ($self->_optional_token(COMMA)) {
@@ -3101,7 +3102,7 @@ sub _BuiltInCall_test {
 	my $t		= $self->_peek_token;
 	return unless ($t);
 	if ($self->{__aggregate_call_ok}) {
-		return 1 if ($self->_test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)$/io));
+		return 1 if ($self->_test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT|FOLD)$/io));
 	}
 	return 1 if ($self->_test_token(KEYWORD, 'NOT'));
 	return 1 if ($self->_test_token(KEYWORD, 'EXISTS'));
@@ -3113,7 +3114,7 @@ sub _BuiltInCall_test {
 sub _BuiltInCall {
 	my $self	= shift;
 	my $t		= $self->_peek_token;
-	if ($self->{__aggregate_call_ok} and $self->_test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT)\b/io)) {
+	if ($self->{__aggregate_call_ok} and $self->_test_token(KEYWORD, qr/^(MIN|MAX|COUNT|AVG|SUM|SAMPLE|GROUP_CONCAT|FOLD)\b/io)) {
 		$self->_Aggregate;
 	} elsif ($self->_test_token(KEYWORD, qr/^(NOT|EXISTS)/)) {
 		my $not	= $self->_optional_token(KEYWORD, 'NOT');
