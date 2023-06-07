@@ -375,20 +375,17 @@ package AtteanX::Functions::CompositeMaps::MapLiteral {
 # # 			Attean::API::Literal::compare($a, $b);
 # 		}
 # 	}
-# 
-# 	sub canonicalized_term {
-# 		my $self	= shift;
-# 		my $value	= $self->value;
-# 		if ($value =~ m/^(true|false|0|1)$/) {
-# 			return ($value eq 'true' or $value eq '1')
-# 				? Attean::Literal->true
-# 				: Attean::Literal->false;
-# 		} else {
-# 			die "Bad lexical form for xsd:boolean: '$value'";
-# 		}
-# 	}
+
+	sub canonicalized_term {
+		my $self	= shift;
+		my %values	= AtteanX::Functions::CompositeMaps::lex_to_map($self);
+		my @keys	= sort keys %values;
+		my @values	= map { $_ => $values{$_} } @keys;
+		return AtteanX::Functions::CompositeMaps::map_to_lex(@values);
+	}
+
 	with 'Attean::API::Literal';
-# 	with 'Attean::API::CanonicalizingLiteral';
+	with 'Attean::API::CanonicalizingLiteral';
 }
 
 1;

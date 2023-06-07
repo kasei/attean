@@ -3055,41 +3055,50 @@ sub _Aggregate {
 	}
 	
 	my $star	= 0;
-	my (@expr, %options);
+	my (@expr, %scalar_args, %options);
 	if ($self->_optional_token(STAR)) {
 		$star	= 1;
 	} else {
 		$self->_Expression;
 		
 		push(@expr, splice(@{ $self->{_stack} }));
-		if ($op eq 'GROUP_CONCAT') {
+		if ($op =~ /^(GROUP_CONCAT|FOLD)$/) { # aggs that can take multiple arguments
 			while ($self->_optional_token(COMMA)) {
 				$self->_Expression;
 				push(@expr, splice(@{ $self->{_stack} }));
 			}
-			if ($self->_optional_token(SEMICOLON)) {
-				$self->_expected_token(KEYWORD, 'SEPARATOR');
+		}
+		while ($self->_optional_token(SEMICOLON)) {
+			if ($self->_optional_token(KEYWORD, 'SEPARATOR')) {
 				$self->_expected_token(EQUALS);
 				my $sep		= $self->_String;
-				$options{ seperator }	= $sep;
+				$scalar_args{ seperator }	= $sep;
+			} elsif ($self->_OrderClause_test()) {
+				local($self->{build}{__aggregate});
+				local($self->{__aggregate_call_ok});
+				local($self->{build}{options}{orderby});
+				$self->_OrderClause();
+				$options{ order }	= $self->{build}{options}{orderby};
 			}
 		}
 	}
+	$self->_expected_token(RPAREN);
+
 	my $arg	= join(',', map { blessed($_) ? $_->as_string : $_ } @expr);
 	if ($distinct) {
 		$arg	= 'DISTINCT ' . $arg;
 	}
 	my $name	= sprintf('%s(%s)', $op, $arg);
-	$self->_expected_token(RPAREN);
 	
 	my $var		= Attean::Variable->new( value => ".$name");
 	my $agg		= Attean::AggregateExpression->new(
 					distinct	=> $distinct,
 					operator	=> $op,
 					children	=> [@expr],
-					scalar_vars	=> \%options,
+					scalar_vars	=> \%scalar_args,
 					variable	=> $var,
-					custom_iri	=> $custom_agg_iri
+					custom_iri	=> $custom_agg_iri,
+					%options
 				);
 	$self->{build}{__aggregate}{ $name }	= [ $var, $agg ];
 	my $expr	= Attean::ValueExpression->new(value => $var);

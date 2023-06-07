@@ -84,6 +84,7 @@ C<< $request_signer->sign( $request ) >>.
 	sub BUILD {
 		# Ensure that the CT extensions are registered
 		AtteanX::Functions::CompositeLists->register();
+		AtteanX::Functions::CompositeMaps->register();
 	}
 	
 =back
@@ -1170,18 +1171,64 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 				} elsif ($agg eq 'FOLD') {
 					return sub {
 						my ($rows, %args)	= @_;
-						my %seen;
-						my @values;
-						foreach my $r (@$rows) {
-							my $term	= eval { $impl->( $r, %args ) };
-							if ($expr->distinct) {
-								next if ($seen{ blessed($term) ? $term->as_string : '' }++);
-							}
-							push(@values, $term);
+						my @children		= @{ $expr->children };
+						my @impls			= map { $self->impl($_, $active_graph) } @children;
+
+						my $order	= $expr->order || [];
+						if (scalar(@$order)) {
+							# sort $rows by the order condition
+							my @cmps	= @$order;
+							my @exprs	= map { $_->[1] } @cmps;
+							my @dirs	= map { $_->[0] eq 'ASC' } @cmps;
+							my @sorted	= map { $_->[0] } sort {
+								my ($ar, $avalues)	= @$a;
+								my ($br, $bvalues)	= @$b;
+								my $c	= 0;
+								foreach my $i (0 .. $#cmps) {
+									my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
+									# Mirrors code in Attean::Plan::OrderBy->sort_rows
+									if (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
+										$c	= 1;
+									} elsif (blessed($bv) and $bv->does('Attean::API::Binding') and (not(defined($av)) or not($av->does('Attean::API::Binding')))) {
+										$c	= -1;
+									} else {
+										$c		= eval { $av ? $av->compare($bv) : 1 };
+										if ($@) {
+											$c	= 1;
+										}
+									}
+									$c		*= -1 if ($dirs[$i] == 0);
+									last unless ($c == 0);
+								}
+								$c
+							} map { my $r = $_; [$r, [map { $self->evaluate_expression( $_, $r, $active_graph, {} ) } @exprs]] } @$rows;
+							$rows	= \@sorted;
 						}
-						my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
-						my $l		= $func->(undef, undef, @values);
-						return $l;
+						
+						
+						if (scalar(@impls) > 1) {
+							my @values;
+							foreach my $r (@$rows) {
+								my ($key, $value)	= map { eval { $_->( $r, %args ) } } @impls;
+								push(@values, $key, $value);
+							}
+							my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI);
+							my $m		= $func->(undef, undef, @values);
+							return $m;
+						} else {
+							my %seen;
+							my @values;
+							foreach my $r (@$rows) {
+								my $term	= eval { $impl->( $r, %args ) };
+								if ($expr->distinct) {
+									next if ($seen{ blessed($term) ? $term->as_string : '' }++);
+								}
+								push(@values, $term);
+							}
+							my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
+							my $l		= $func->(undef, undef, @values);
+							return $l;
+						}
 					};
 				} else {
 					warn "Unexpected aggregate expression: $agg";

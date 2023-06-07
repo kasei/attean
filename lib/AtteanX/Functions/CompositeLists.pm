@@ -547,19 +547,14 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 		}
 	}
 
-# 	sub canonicalized_term {
-# 		my $self	= shift;
-# 		my $value	= $self->value;
-# 		if ($value =~ m/^(true|false|0|1)$/) {
-# 			return ($value eq 'true' or $value eq '1')
-# 				? Attean::Literal->true
-# 				: Attean::Literal->false;
-# 		} else {
-# 			die "Bad lexical form for xsd:boolean: '$value'";
-# 		}
-# 	}
+	sub canonicalized_term {
+		my $self	= shift;
+		my @values	= AtteanX::Functions::CompositeLists::lex_to_list($self);
+		return AtteanX::Functions::CompositeLists::list_to_lex(@values);
+	}
+
 	with 'Attean::API::Literal';
-# 	with 'Attean::API::CanonicalizingLiteral';
+	with 'Attean::API::CanonicalizingLiteral';
 }
 
 1;
