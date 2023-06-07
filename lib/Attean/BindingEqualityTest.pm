@@ -130,8 +130,9 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 			return 0;
 		}
 		
+		my $mapper = Attean::TermMap->canonicalization_map;
 		for ($nba, $nbb) {
-			@$_	= sort map { $_->as_string } @$_;
+			@$_	= sort map { $_->apply_map($mapper)->as_string } @$_;
 		}
 		
 		foreach my $i (0 .. $#{ $nba }) {
