@@ -110,7 +110,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 # 			}
 		};
 
-		return @nodes;
+		my $mapper			= Attean::TermMap->uuid_blank_map;
+		return map { blessed($_) ? $mapper->map($_) : $_ } @nodes;
 	}
 
 =item C<< list_to_lex(@terms) >>
@@ -531,6 +532,10 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 				next;
 			}
 			
+			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
+				$seen_error++;
+				next;
+			}
 			my $icmp	= $li->compare($ri);
 			next if ($icmp == 0);
 			return $icmp;

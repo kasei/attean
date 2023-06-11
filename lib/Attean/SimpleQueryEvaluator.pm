@@ -1209,8 +1209,10 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 						if (scalar(@impls) > 1) {
 							my @values;
 							foreach my $r (@$rows) {
-								my ($key, $value)	= map { eval { $_->( $r, %args ) } } @impls;
-								push(@values, $key, $value);
+								my ($key, $value)	= map { eval { $_->( $r, %args ) } || undef } @impls;
+								if (defined($key)) {
+									push(@values, $key, $value);
+								}
 							}
 							my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI);
 							my $m		= $func->(undef, undef, @values);

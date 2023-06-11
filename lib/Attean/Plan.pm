@@ -2286,15 +2286,17 @@ package Attean::Plan::Aggregate 0.032 {
 					# map
 					my @values;
 					foreach my $r (@$rows) {
-						my ($key, $value)	= map { Attean::Plan::Extend->evaluate_expression($model, $_, $r) } @arg_exprs;
-						push(@values, $key, $value);
+						my ($key, $value)	= map { eval { Attean::Plan::Extend->evaluate_expression($model, $_, $r) } || undef } @arg_exprs;
+						if (defined($key)) {
+							push(@values, $key, $value);
+						}
 					}
 					my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI);
 					$func->(undef, undef, @values);
 				} else {
 					my @values;
 					foreach my $r (@$rows) {
-						my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
+						my $term	= eval { Attean::Plan::Extend->evaluate_expression($model, $e, $r) };
 						push(@values, $term);
 					}
 					my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);

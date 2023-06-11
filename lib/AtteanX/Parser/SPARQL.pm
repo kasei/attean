@@ -1909,7 +1909,12 @@ sub _InlineDataClause {
 	foreach my $row (@rows) {
 		my %d;
 		# Turn triple patterns into ground triples.
-		@d{ map { $_->value } @vars } = map { $_->does('Attean::API::TriplePattern') ? $_->as_triple : $_ } @$row;
+		@d{ map { $_->value } @vars } = map { (blessed($_) and $_->does('Attean::API::TriplePattern')) ? $_->as_triple : $_ } @$row;
+		foreach my $k (keys %d) {
+			unless (blessed($d{$k})) {
+				delete $d{$k};
+			}
+		}
 		my $result	= Attean::Result->new(bindings => \%d);
 		push(@vbs, $result);
 	}
