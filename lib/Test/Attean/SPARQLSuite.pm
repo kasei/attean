@@ -113,7 +113,7 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 # 		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
 		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
 		unless (blessed($list)) {
-			warn "No mf:entries found for manifest " . $m->as_string . "\n";
+			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
 		}
 		my @tests	= $model->get_list( $self->default_graph, $list )->elements;
 		foreach my $test (@tests) {

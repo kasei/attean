@@ -218,6 +218,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		my @map;
 		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
 		while (my ($key, $value) = splice(@_, 0, 2)) {
+			next if (blessed($key) and $key->does('Attean::API::Blank')); # no blank nodes as map keys
 			my @tokens	= $key->sparql_tokens->elements;
 			my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
 			my $bytes	= $s->serialize_iter_to_bytes($iter);
@@ -229,6 +230,16 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		warn "cdt:Map constructor error: $@" if $@;
 		return $literal;
 	}
+
+sub _map_key_string {
+	my $key		= shift;
+	my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
+	my @tokens	= $key->sparql_tokens->elements;
+	my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+	my $bytes	= $s->serialize_iter_to_bytes($iter);
+	my $key_string	= decode_utf8($bytes);
+	return $key_string;
+}
 
 =item C<< mapGet($list, $key) >>
 
@@ -243,15 +254,54 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
 		my %nodes	= lex_to_map($l);
 
-		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
-
-		my @tokens	= $key->sparql_tokens->elements;
-		my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
-		my $bytes	= $s->serialize_iter_to_bytes($iter);
-		my $key_string	= decode_utf8($bytes);
-
+		my $key_string	= _map_key_string($key);
 		my $value	= $nodes{$key_string};
 		return $value;
+	}
+
+=item C<< mapKeys($map) >>
+
+=cut
+	sub mapKeys {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $map				= shift;
+		die 'TypeError' unless ($map->does('Attean::API::Literal'));
+		my $dt	= $map->datatype;
+		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
+		my %nodes	= lex_to_map($map);
+		my @key_strings	= keys %nodes;
+
+		my $p		= AtteanX::Parser::Turtle->new();
+# 		$p->_map->{''}	= Attean::IRI->new($MAP_TYPE_IRI);
+		my @nodes	= map {
+			open(my $fh, '<:encoding(UTF-8)', \$_);
+			my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
+			my $token	= $p->_next_nonws($lexer);
+			$p->_object($lexer, $token);
+		} @key_strings;
+		AtteanX::Functions::CompositeLists::list_to_lex(@nodes);
+	}
+
+=item C<< mapPut($map, $key, $value) >>
+
+=cut
+	sub mapPut {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $map				= shift;
+		my $key				= shift;
+		my $value			= shift;
+		die 'TypeError' unless ($map->does('Attean::API::Literal'));
+		my $dt	= $map->datatype;
+		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
+		my %nodes	= lex_to_map($map);
+		my @key_strings	= keys %nodes;
+
+		my $key_string	= _map_key_string($key);
+		$nodes{ $key_string }	= $value;
+
+		return map_to_lex(%nodes);
 	}
 
 =item C<< mapSize($list) >>
@@ -267,6 +317,28 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		my %nodes	= lex_to_map($l);
 		my @keys	= keys(%nodes);
 		return Attean::Literal->integer(scalar(@keys));
+	}
+
+=item C<< mapContains($map, $term) >>
+
+=cut
+	sub mapContains {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $l				= shift;
+		my $term			= shift;
+		die 'TypeError: Not a literal' unless ($l->does('Attean::API::Literal'));
+		my $dt	= $l->datatype;
+		die 'TypeError: Not a cdt:List' unless ($dt->value eq $MAP_TYPE_IRI);
+		my %nodes	= lex_to_map($l);
+
+		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
+		my @tokens	= $term->sparql_tokens->elements;
+		my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+		my $bytes	= $s->serialize_iter_to_bytes($iter);
+		my $key_string	= decode_utf8($bytes);
+		
+		return (exists $nodes{ $key_string }) ? Attean::Literal->true : Attean::Literal->false;
 	}
 
 =item C<< mapCreate_agg_start() >>
@@ -314,6 +386,9 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		Attean->register_global_function(
 			"${CDT_BASE}mapGet" => \&mapGet,
 			"${CDT_BASE}mapSize" => \&mapSize,
+			"${CDT_BASE}keys" => \&mapKeys,
+			"${CDT_BASE}put" => \&mapPut,
+			"${CDT_BASE}containsKey" => \&mapContains,
 		);
 
 		Attean->register_global_aggregate(

@@ -3073,17 +3073,19 @@ sub _Aggregate {
 				push(@expr, splice(@{ $self->{_stack} }));
 			}
 		}
-		while ($self->_optional_token(SEMICOLON)) {
+		
+		if ($self->_OrderClause_test()) {
+			local($self->{build}{__aggregate});
+			local($self->{__aggregate_call_ok});
+			local($self->{build}{options}{orderby});
+			$self->_OrderClause();
+			$options{ order }	= $self->{build}{options}{orderby};
+		}
+		if ($self->_optional_token(SEMICOLON)) {
 			if ($self->_optional_token(KEYWORD, 'SEPARATOR')) {
 				$self->_expected_token(EQUALS);
 				my $sep		= $self->_String;
 				$scalar_args{ seperator }	= $sep;
-			} elsif ($self->_OrderClause_test()) {
-				local($self->{build}{__aggregate});
-				local($self->{__aggregate_call_ok});
-				local($self->{build}{options}{orderby});
-				$self->_OrderClause();
-				$options{ order }	= $self->{build}{options}{orderby};
 			}
 		}
 	}

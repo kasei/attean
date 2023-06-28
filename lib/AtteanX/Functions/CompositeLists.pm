@@ -174,6 +174,25 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		return $literal;
 	}
 
+=item C<< ctGet($ct, $key) >>
+
+=cut
+	sub ctGet {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $ct				= shift;
+		my $pos				= shift;
+		die 'TypeError' unless ($ct->does('Attean::API::Literal'));
+		my $dt	= $ct->datatype;
+		if ($dt->value eq $LIST_TYPE_IRI) {
+			return listGet($model, $active_graph, $ct, $pos);
+		} elsif ($dt->value eq $AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI) {
+			return AtteanX::Functions::CompositeMaps::mapGet($model, $active_graph, $ct, $pos);
+		} else {
+			die 'TypeError';
+		}
+	}
+
 =item C<< listGet($list, $pos) >>
 
 =cut
@@ -342,6 +361,25 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		return Attean::Literal->false;
 	}
 
+=item C<< ctSize($ct) >>
+
+=cut
+	sub ctSize {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $ct				= shift;
+		my $pos				= shift;
+		die 'TypeError' unless ($ct->does('Attean::API::Literal'));
+		my $dt	= $ct->datatype;
+		if ($dt->value eq $LIST_TYPE_IRI) {
+			return listSize($model, $active_graph, $ct, $pos);
+		} elsif ($dt->value eq $AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI) {
+			return AtteanX::Functions::CompositeMaps::mapSize($model, $active_graph, $ct, $pos);
+		} else {
+			die 'TypeError';
+		}
+	}
+
 =item C<< listSize($list) >>
 
 =cut
@@ -448,9 +486,11 @@ package AtteanX::Functions::CompositeLists 0.032 {
 			"${CDT_BASE}listCreate" => \&listCreate,
 		);
 		Attean->register_global_function(
-			"${CDT_BASE}get" => \&listGet,
+			"${CDT_BASE}get" => \&ctGet,
+			"${CDT_BASE}listGet" => \&listGet,
 			"${CDT_BASE}subseq" => \&listSubseq,
-			"${CDT_BASE}size" => \&listSize,
+			"${CDT_BASE}size" => \&ctSize,
+			"${CDT_BASE}listSize" => \&listSize,
 			"${CDT_BASE}reverse" => \&listReverse,
 			"${CDT_BASE}head" => \&listHead,
 			"${CDT_BASE}tail" => \&listTail,
@@ -497,6 +537,10 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i+1));
 			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i+1));
 			unless (blessed($li) and blessed($ri)) {
+				$seen_error++;
+				next;
+			}
+			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
 				$seen_error++;
 				next;
 			}
