@@ -8,6 +8,8 @@ use File::Slurp;
 use Scalar::Util qw(blessed);
 use Attean;
 use Attean::RDF;
+use AtteanX::Functions::CompositeMaps;
+use AtteanX::Functions::CompositeLists;
 use Data::Dumper;
 use Getopt::Long;
 use Try::Tiny;
@@ -26,6 +28,9 @@ from the data file(s) using Attean::SimpleQueryEvaluator.
 END
 	exit(0);
 }
+
+AtteanX::Functions::CompositeMaps->register();
+AtteanX::Functions::CompositeLists->register();
 
 my $dryrun			= 0;
 my $check_syntax	= 0;
