@@ -63,5 +63,5 @@ install_script glob('bin/attean_*');
 
 write_doap_changes "meta/changes.ttl", "Changes", "turtle";
 
-sign;
+sign if ! exists $ENV{CI};
 WriteAll;
