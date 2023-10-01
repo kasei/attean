@@ -341,6 +341,21 @@ sub _map_key_string {
 		return (exists $nodes{ $key_string }) ? Attean::Literal->true : Attean::Literal->false;
 	}
 
+=item C<< mapMerge($map1, $map2) >>
+
+=cut
+	sub mapMerge {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $map1			= shift;
+		my $map2			= shift;
+		my %nodes1	= lex_to_map($map1);
+		my %nodes2	= lex_to_map($map2);
+		my %merged	= (%nodes2, %nodes1);
+		my $merged	= map_to_lex(%merged);
+		return $merged;
+	}
+
 =item C<< mapCreate_agg_start() >>
 
 =cut
@@ -389,6 +404,7 @@ sub _map_key_string {
 			"${CDT_BASE}keys" => \&mapKeys,
 			"${CDT_BASE}put" => \&mapPut,
 			"${CDT_BASE}containsKey" => \&mapContains,
+			"${CDT_BASE}merge" => \&mapMerge,
 		);
 
 		Attean->register_global_aggregate(
