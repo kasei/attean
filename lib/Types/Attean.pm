@@ -23,6 +23,7 @@ Types::Attean - Type constraints for dealing with Attean classes
 =head1 SYNOPSIS
 
 TODO
+
   package IRI::Counter {
     use Moo;  # or Moose
     use Types::Attean qw( AtteanIRI );
