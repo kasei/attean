@@ -187,6 +187,7 @@ t/store-simpletriple.t
 t/term-map.t
 t/term.t
 t/treerewrite.t
+t/types-general.t
 t/types-iri.t
 xt/dawg11-memory.t
 xt/eval-sparql-star-memory-simpleeval.t
