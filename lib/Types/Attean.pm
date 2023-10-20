@@ -46,7 +46,7 @@ forth. It builds on L<Types::URI>.
 
 =over
 
-=item C<< AtteanIri >>
+=item C<< AtteanIRI >>
 
 A class type for L<Attean::IRI>.
 
