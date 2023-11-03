@@ -23,6 +23,7 @@ Types::Attean - Type constraints for dealing with Attean classes
 =head1 SYNOPSIS
 
 TODO
+
   package IRI::Counter {
     use Moo;  # or Moose
     use Types::Attean qw( AtteanIRI );
@@ -46,7 +47,7 @@ forth. It builds on L<Types::URI>.
 
 =over
 
-=item C<< AtteanIri >>
+=item C<< AtteanIRI >>
 
 A class type for L<Attean::IRI>.
 
