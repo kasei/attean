@@ -2,8 +2,16 @@ package Types::Attean;
 use strict;
 use warnings;
 
-use Type::Library -base, -declare => qw( AtteanIRI );
-use Types::Standard qw( Str InstanceOf ScalarRef );
+use Type::Library -base, -declare => qw(
+        AtteanIRI
+        AtteanBlank
+        AtteanLiteral
+        AtteanSubject AtteanPredicate AtteanObject
+        AtteanGraph
+        AtteanTriple
+        AtteanQuad
+);
+use Types::Standard qw( Str InstanceOf ConsumerOf ScalarRef );
 use Types::URI qw( Uri Iri );
 use Types::Namespace qw( Namespace );
 use Types::Path::Tiny  qw( Path );
@@ -57,6 +65,46 @@ L<XML::Namespace> and strings.
 
 Additionally, a C<ScalarRef> can be coerced into a C<data> URI.
 
+=item C<< AtteanBlank >>
+
+A role type for L<Attean::API::Blank>.
+
+=item C<< AtteanLiteral >>
+
+A role type for L<Attean::API::Literal>.
+
+=item C<< AtteanSubject >>
+
+A role type for a term that can be used as a subject
+in a triple or quad
+(i.e., L<Attean::API::BlankOrIRI>).
+
+=item C<< AtteanPredicate >>
+
+A role type for a term that can be used as a predicate
+in a triple or quad
+(i.e., L<Attean::API::IRI>).
+
+=item C<< AtteanObject >>
+
+A role type for a term that can be used as an object
+in a triple or quad
+(i.e., L<Attean::API::Term>).
+
+=item C<< AtteanGraph >>
+
+A role type for a term that can be used as a graph
+in a quad
+(i.e., L<Attean::API::BlankOrIRI>).
+
+=item C<< AtteanTriple >>
+
+A role type for L<Attean::API::Triple>.
+
+=item C<< AtteanQuad >>
+
+A role type for L<Attean::API::Quad>.
+
 =back
 
 =head1 OTHER COERCIONS
@@ -90,5 +138,44 @@ AtteanIRI->coercion->add_type_coercions(
 
 require Attean::IRI;
 
+__PACKAGE__->add_type(
+	name       => AtteanBlank,
+	parent     => ConsumerOf['Attean::API::Blank']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanLiteral,
+	parent     => ConsumerOf['Attean::API::Literal']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanSubject,
+	parent     => ConsumerOf['Attean::API::BlankOrIRI']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanPredicate,
+	parent     => ConsumerOf['Attean::API::IRI']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanObject,
+	parent     => ConsumerOf['Attean::API::Term']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanGraph,
+	parent     => ConsumerOf['Attean::API::BlankOrIRI']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanTriple,
+	parent     => ConsumerOf['Attean::API::Triple']
+);
+
+__PACKAGE__->add_type(
+	name       => AtteanQuad,
+	parent     => ConsumerOf['Attean::API::Quad']
+);
 
 1;
