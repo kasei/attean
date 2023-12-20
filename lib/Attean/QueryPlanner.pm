@@ -638,6 +638,13 @@ the supplied C<< $active_graph >>.
 				push(@plans, $plan);
 			}
 			return Attean::Plan::Sequence->new( children => \@plans );
+		} elsif ($algebra->isa('Attean::Algebra::Unfold')) {
+			my @plans	= $self->plans_for_algebra($child, $model, $active_graphs, $default_graphs, %args);
+			my @unfold;
+			foreach my $p (@plans) {
+				push(@unfold, Attean::Plan::Unfold->new( children => [$p], expression => $algebra->expression, variables => $algebra->variables, active_graphs => $active_graphs ));
+			}
+			return @unfold;
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
 	}
