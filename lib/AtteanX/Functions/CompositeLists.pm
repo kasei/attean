@@ -110,8 +110,11 @@ package AtteanX::Functions::CompositeLists 0.032 {
 # 			}
 		};
 
-		my $mapper			= Attean::TermMap->uuid_blank_map;
-		return map { blessed($_) ? $mapper->map($_) : $_ } @nodes;
+		return @nodes;
+		
+		# this would create fresh bnodes on each access:
+# 		my $mapper			= Attean::TermMap->uuid_blank_map;
+# 		return map { blessed($_) ? $mapper->map($_) : $_ } @nodes;
 	}
 
 =item C<< list_to_lex(@terms) >>
