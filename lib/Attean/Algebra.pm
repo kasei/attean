@@ -445,7 +445,9 @@ package Attean::Algebra::Unfold 0.031 {
 
 	sub algebra_as_string {
 		my $self	= shift;
-		return sprintf('Unfold { %s ← %s }', $self->variable->as_string, $self->expression->as_string);
+		my @vars	= map { $_->as_string } @{ $self->variables };
+		my $vars	= '(' . join(', ', @vars) . ')';
+		return sprintf('Unfold { %s ← %s }', $vars, $self->expression->as_string);
 	}
 	sub tree_attributes { return qw(variables expression) };
 	sub sparql_tokens {
