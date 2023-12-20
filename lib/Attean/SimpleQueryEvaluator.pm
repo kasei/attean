@@ -1187,7 +1187,11 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 								foreach my $i (0 .. $#cmps) {
 									my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
 									# Mirrors code in Attean::Plan::OrderBy->sort_rows
-									if (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
+									if (not(blessed($av))) {
+										$c = -1;
+									} elsif (not(blessed($av))) {
+										$c = 1;
+									} elsif (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
 										$c	= 1;
 									} elsif (blessed($bv) and $bv->does('Attean::API::Binding') and (not(defined($av)) or not($av->does('Attean::API::Binding')))) {
 										$c	= -1;
