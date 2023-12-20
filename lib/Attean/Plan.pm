@@ -858,7 +858,7 @@ package Attean::Plan::Extend 0.032 {
 			if ($node->does('Attean::API::Variable')) {
 				my $value	= $r->value($node->value);
 				unless (blessed($value)) {
-					die "Variable " . $node->as_string . " is unbound";
+					die "Variable " . $node->as_string . " is unbound in expression " . $expr->as_string;
 				}
 				return $value;
 			} else {
@@ -964,7 +964,7 @@ package Attean::Plan::Extend 0.032 {
 					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @children;
 					my $rr	= eval { $func->($model, $self->active_graphs, @operands) };
 					if ($@) {
-# 						warn "INVOKE error: $@" if $@;
+						warn "INVOKE error: $@" if $@;
 						return;
 					}
 					return $rr;
@@ -972,7 +972,7 @@ package Attean::Plan::Extend 0.032 {
 					my @operands	= map { eval { $self->evaluate_expression($model, $_, $r) } || undef } @children;
 					my $rr	= eval { $fform->($model, $self->active_graphs, @operands) };
 					if ($@) {
-# 						warn "INVOKE error: $@" if $@;
+						warn "INVOKE error: $@" if $@;
 						return $r;
 					}
 					return $rr;
@@ -1358,7 +1358,10 @@ package Attean::Plan::Extend 0.032 {
 							my $expr	= $exprs{$var};
 # 							warn "-> $var => "  . $expr->as_string . "\n";
 							my $term	= eval { $self->evaluate_expression($model, $expr, $r) };
-# 							warn "EXTEND expression evaluation error: $@" if ($@);
+# 							if ($@) {
+# 								warn "EXTEND expression evaluation error: $@";
+# 								warn '- expression: ' . $expr->as_string;
+# 							}
 							if (blessed($term)) {
 # 								warn "===> " . $term->as_string . "\n";
 								if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
@@ -2256,7 +2259,7 @@ package Attean::Plan::Aggregate 0.032 {
 			my $l = eval {
 				if (scalar(@$order)) {
 					# sort $rows by the order condition
-					my @sorted	= map { $_->[0] } sort {
+					my $fold_cmp	= sub {
 						my ($ar, $avalues)	= @$a;
 						my ($br, $bvalues)	= @$b;
 
@@ -2264,7 +2267,11 @@ package Attean::Plan::Aggregate 0.032 {
 						foreach my $i (0 .. $#cmps) {
 							my ($av, $bv)	= map { $_->[$i] } ($avalues, $bvalues);
 							# Mirrors code in Attean::Plan::OrderBy->sort_rows
-							if (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
+							if (not(blessed($av))) {
+								$c = -1;
+							} elsif (not(blessed($av))) {
+								$c = 1;
+							} elsif (blessed($av) and $av->does('Attean::API::Binding') and (not(defined($bv)) or not($bv->does('Attean::API::Binding')))) {
 								$c	= 1;
 							} elsif (blessed($bv) and $bv->does('Attean::API::Binding') and (not(defined($av)) or not($av->does('Attean::API::Binding')))) {
 								$c	= -1;
@@ -2278,10 +2285,16 @@ package Attean::Plan::Aggregate 0.032 {
 							last unless ($c == 0);
 						}
 						$c
-					} map { my $r = $_; [$r, [map { Attean::Plan::Extend->evaluate_expression( $model, $_, $r ) } @exprs]] } @$rows;
+					};
+					
+					my @sorted	= map { $_->[0] } sort { $fold_cmp->() }
+									map { my $r = $_; [$r, [map { eval { Attean::Plan::Extend->evaluate_expression( $model, $_, $r ) } } @exprs]] }
+									@$rows;
+
 					$rows	= \@sorted;
 				}
 				
+				my %seen;
 				if (scalar(@arg_exprs) > 1) {
 					# map
 					my @values;
@@ -2297,6 +2310,9 @@ package Attean::Plan::Aggregate 0.032 {
 					my @values;
 					foreach my $r (@$rows) {
 						my $term	= eval { Attean::Plan::Extend->evaluate_expression($model, $e, $r) };
+						if ($expr->distinct and blessed($term)) {
+							next if ($seen{ $term->as_string }++);
+						}
 						push(@values, $term);
 					}
 					my $func	= Attean->get_global_functional_form($AtteanX::Functions::CompositeLists::LIST_TYPE_IRI);
@@ -2651,6 +2667,162 @@ package Attean::Plan::Load 0.032 {
 	}
 }
 
+
+
+=item * L<Attean::Plan::Unfold>
+
+=cut
+
+package Attean::Plan::Unfold 0.032 {
+	use Moo;
+	use Encode;
+	use UUID::Tiny ':std';
+	use URI::Escape;
+	use Data::Dumper;
+	use I18N::LangTags;
+	use POSIX qw(ceil floor);
+	use Digest::SHA;
+	use Digest::MD5 qw(md5_hex);
+	use Scalar::Util qw(blessed looks_like_number);
+	use List::MoreUtils qw(uniq all);
+	use Types::Standard qw(ConsumerOf ArrayRef InstanceOf HashRef);
+	use namespace::clean;
+
+	with 'MooX::Log::Any';
+	with 'Attean::API::BindingSubstitutionPlan', 'Attean::API::UnaryQueryTree';
+	
+	has 'variables' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']], required => 1);
+	has 'expression' => (is => 'ro', isa => ConsumerOf['Attean::API::Expression'], required => 1);
+	has 'active_graphs' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
+	
+	sub plan_as_string {
+		my $self	= shift;
+		my @vars	= map { $_->as_string } @{ $self->variables };
+		my $vars	= '(' . join(', ', @vars) . ')';
+		return sprintf('Unfold { %s ← %s }', $vars, $self->expression->as_string);
+	}
+	sub tree_attributes { return qw(variable expression) };
+	
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		my $exprs		= $args{ expressions };
+		my @vars		= map { @{ $_->in_scope_variables } } @{ $args{ children } };
+		my @evars		= (@vars, keys %$exprs);
+		
+		if (exists $args{in_scope_variables}) {
+			Carp::confess "in_scope_variables is computed automatically, and must not be specified in the $class constructor";
+		}
+		$args{in_scope_variables}	= [@evars];
+		return $class->SUPER::BUILDARGS(%args);
+	}
+	
+	sub substitute_impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $bind	= shift;
+		my $expr	= $self->expression;
+		my $vars	= $self->variables;
+		my ($impl)	= map { $_->substitute_impl($model, $bind) } @{ $self->children };
+		# TODO: substitute variables in the expression
+		return $self->_impl($model, $impl, $expr, @$vars);
+	}
+	
+	sub impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $expr	= $self->expression;
+		my $vars	= $self->variables;
+		my ($impl)	= map { $_->impl($model) } @{ $self->children };
+		return $self->_impl($model, $impl, $expr, @$vars);
+	}
+	
+	sub _impl {
+		my $self	= shift;
+		my $model	= shift;
+		my $impl	= shift;
+		Carp::confess unless (defined($impl));
+		my $expr	= shift;
+		my @vars	= @_;
+		my $iter_variables	= $self->in_scope_variables;
+
+		my $var			= $vars[0];
+		my $index_var	= $vars[1];
+		return sub {
+			my $iter	= $impl->();
+			my @buffer;
+			return Attean::CodeIterator->new(
+				item_type => 'Attean::API::Result',
+				variables => $iter_variables,
+				generator => sub {
+					if (scalar(@buffer)) {
+						return shift(@buffer);
+					}
+					ROW: while (my $r = $iter->next) {
+						my %base	= map { $_ => $r->value($_) } $r->variables;
+						my $cdt	= eval { Attean::Plan::Extend->evaluate_expression($model, $expr, $r) };
+						warn "UNFOLD expression evaluation error: $@" if ($@);
+						unless ($cdt) {
+							return $r;
+						}
+						
+						if ($cdt->does('Attean::API::Literal') and $cdt->datatype->value eq $AtteanX::Functions::CompositeLists::LIST_TYPE_IRI) {
+							my @values	= AtteanX::Functions::CompositeLists::lex_to_list($cdt);
+							foreach my $index (0 .. $#values) {
+								my %row	= %base;
+								my $term	= $values[$index];
+								if (blessed($term)) {
+									if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
+										next ROW;
+									}
+								
+									if ($term->does('Attean::API::Binding')) {
+										# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+										$term	= $term->ground($r);
+									}
+								
+									$row{ $var->value }	= $term;
+									if (defined $index_var) {
+										$row{ $index_var->value }	= Attean::Literal->integer(1+$index);
+									}
+								}
+								push(@buffer, Attean::Result->new( bindings => \%row, eval_stash => $r->eval_stash ));
+							}
+						} elsif ($cdt->does('Attean::API::Literal') and $cdt->datatype->value eq $AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI) {
+							my @values	= AtteanX::Functions::CompositeMaps::lex_to_maplist($cdt);
+							while (my @pair = splice(@values, 0, 2)) {
+								my ($index, $term)	= @pair;
+								my %row	= %base;
+								if (blessed($term)) {
+									if ($row{ $var } and $term->as_string ne $row{ $var }->as_string) {
+										next ROW;
+									}
+								
+									if ($term->does('Attean::API::Binding')) {
+										# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
+										$term	= $term->ground($r);
+									}
+								
+									if (defined $index_var) {
+										# 2-var
+										$row{ $index_var->value }	= $term;
+										$row{ $var->value }	= $index;
+									} else {
+										# 1-var
+										$row{ $var->value }	= $term;
+									}
+								}
+								push(@buffer, Attean::Result->new( bindings => \%row, eval_stash => $r->eval_stash ));
+							}
+						}
+						return shift(@buffer);
+					}
+					return;
+				}
+			);
+		};
+	}
+}
 # Create(iri)
 
 1;
