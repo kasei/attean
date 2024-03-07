@@ -539,10 +539,13 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 		foreach my $i (0 .. $lhs_size-1) {
 			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i+1));
 			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i+1));
-			unless (blessed($li) and blessed($ri)) {
-				$seen_error++;
+			if (not blessed($li) and not blessed($ri)) {
+				# both null
 				next;
+			} elsif (not blessed($li) or not blessed($ri)) {
+				return 0;
 			}
+
 			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
 				$seen_error++;
 				next;
@@ -574,15 +577,26 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 		foreach my $i (0 .. $length-1) {
 			my $li	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $lhs, Attean::Literal->integer($i+1));
 			my $ri	= AtteanX::Functions::CompositeLists::listGet(undef, undef, $rhs, Attean::Literal->integer($i+1));
-			unless (blessed($li) and blessed($ri)) {
+			
+			if (not blessed($li) and not blessed($ri)) {
+				# both null
+				next;
+			} elsif (not blessed($li)) {
+				die 'TypeError';
+				$seen_error++;
+				next;
+			} elsif (not blessed($ri)) {
+				die 'TypeError';
+				$seen_error++;
+				next;
+			}
+
+			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
+				die 'TypeError';
 				$seen_error++;
 				next;
 			}
 			
-			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
-				$seen_error++;
-				next;
-			}
 			my $icmp	= $li->compare($ri);
 			next if ($icmp == 0);
 			return $icmp;
