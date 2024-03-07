@@ -68,7 +68,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::Functions::CompositeMaps;
 	
-	our $CDT_BASE		= 'http://example.org/cdt/';
+	our $CDT_BASE		= 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/';
 	our $LIST_TYPE_IRI	= "${CDT_BASE}List";
 
 =item C<< lex_to_list($literal) >>

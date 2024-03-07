@@ -46,7 +46,7 @@ sub evaluations {
 subtest 'UNFOLD value' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	UNFOLD(cdt:sequence(10) AS ?x)
 }
@@ -72,7 +72,7 @@ END
 subtest 'UNFOLD extension' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	BIND(cdt:sequence(10) AS ?list)
 	UNFOLD(?list AS ?x)
@@ -106,7 +106,7 @@ END
 subtest 'UNFOLD extension zip pairs' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT ?x ?y WHERE {
 	# correlate two sequences, returning matching elements as (?x, ?y)
 	BIND(cdt:sequence(5) AS ?list_x)

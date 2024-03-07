@@ -48,7 +48,7 @@ subtest 'cdt:get' => sub {
 	$model->load_triples('turtle', $graph, qq[_:a <p> "[1,'b',3]"^^<${AtteanX::Functions::CompositeLists::LIST_TYPE_IRI}> .]);
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	?s ?p ?o .
 	BIND(cdt:get(?o, 1) AS ?e1)
@@ -74,7 +74,7 @@ subtest 'mapCreate' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	BIND(cdt:mapCreate(1, 2, 'c', 4) AS ?map)
 }
@@ -94,7 +94,7 @@ subtest 'mapGet' => sub {
 	$model->load_triples('turtle', $graph, qq[_:a <p> "{1: 2,'three': 4}"^^<${AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI}> .]);
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	?s ?p ?o .
 	BIND(cdt:mapGet(?o, 1) AS ?e1)
@@ -117,7 +117,7 @@ subtest 'listCreate' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	BIND(cdt:listCreate(1, 2, 'c', 4) AS ?list)
 }
@@ -136,7 +136,7 @@ subtest 'listAgg' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT (cdt:listAgg(?v) AS ?aggList) WHERE {
 	VALUES ?v { 1 2 'c' 4 }
 }
@@ -155,7 +155,7 @@ subtest 'sequence' => sub {
 	my $graph	= Attean::IRI->new('http://example.org/graph');
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	BIND(cdt:sequence(3) AS ?list_3)       # [1,3]
 	BIND(cdt:sequence(3, 5) AS ?list_3_5)  # [3,5]
@@ -177,7 +177,7 @@ subtest 'list_from_head' => sub {
 	$model->load_triples('turtle', $graph, qq[<http://example.org/s> <http://example.org/p> ("a" "b" "c") .]);
 	
 	my $sparql	= <<"END";
-PREFIX cdt: <http://example.org/cdt/>
+PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/>
 SELECT * WHERE {
 	<http://example.org/s> <http://example.org/p> ?head .
 	BIND(cdt:list_from_head(?head) AS ?list)

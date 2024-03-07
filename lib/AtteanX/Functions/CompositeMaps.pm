@@ -75,7 +75,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::Functions::CompositeLists;
 	
-	our $CDT_BASE		= 'http://example.org/cdt/';
+	our $CDT_BASE		= 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/';
 	our $MAP_TYPE_IRI	= "${CDT_BASE}Map";
 
 	# Assume the opening token of the cdt has already been consumed.
