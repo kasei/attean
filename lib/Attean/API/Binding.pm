@@ -560,7 +560,7 @@ package Attean::API::Triple 0.032 {
 				my $type	= Type::Tiny::Role->new( role => $role );
 				my $err		= $type->validate($term);
 				if ($err) {
-					die "${class}'s $method failed conformance check for role $role";
+					die "${class}'s $method failed conformance check for role $role: " . $term->as_string;
 				}
 				return $term;
 			};

@@ -1270,7 +1270,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
 				my $term	= $impl->($r, %args);
 				# TODO: reformat syntax for xsd:double
 				my $cast	= Attean::Literal->new( value => $term->value, datatype => $type );
-				return $cast->canonicalized_term if ($cast->does('Attean::API::CanonicalizingLiteral'));
+				return $cast->canonicalized_term_strict() if ($cast->does('Attean::API::CanonicalizingLiteral'));
 				return $cast;
 			}
 		} else {

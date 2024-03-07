@@ -676,6 +676,11 @@ package AtteanX::Functions::CompositeMaps::MapLiteral {
 
 	sub canonicalized_term {
 		my $self	= shift;
+		return $self->canonicalized_term_strict();
+	}
+
+	sub canonicalized_term_strict {
+		my $self	= shift;
 		my %values	= AtteanX::Functions::CompositeMaps::lex_to_map($self);
 		my @keys	= sort keys %values;
 		my @values	= map { $_ => $values{$_} } @keys;

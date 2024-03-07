@@ -327,12 +327,25 @@ package Attean::API::DateTimeLiteral 0.032 {
 package Attean::API::CanonicalizingLiteral 0.032 {
 	use Moo::Role;
 	requires 'canonicalized_term';
+	requires 'canonicalized_term_strict';
 }
 
 package Attean::API::BooleanLiteral 0.032 {
 	use Scalar::Util qw(blessed looks_like_number);
 
 	use Moo::Role;
+
+	sub canonicalized_term_strict {
+		my $self	= shift;
+		my $value	= $self->value;
+		if ($value =~ m/^(true|false|0|1)$/) {
+			return ($value eq 'true' or $value eq '1')
+				? Attean::Literal->true
+				: Attean::Literal->false;
+		} else {
+			die "Bad lexical form for xsd:boolean: '$value'";
+		}
+	}
 
 	sub canonicalized_term {
 		my $self	= shift;
@@ -342,7 +355,7 @@ package Attean::API::BooleanLiteral 0.032 {
 				? Attean::Literal->true
 				: Attean::Literal->false;
 		} else {
-			die "Bad lexical form for xsd:boolean: '$value'";
+			return $self;
 		}
 	}
 	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
@@ -371,9 +384,20 @@ package Attean::API::NumericLiteral 0.032 {
 # 			Attean::API::Literal::compare($a, $b);
 		}
 	}
+
+	sub canonicalized_term_strict {
+		my $self	= shift;
+		return $self->_canonicalized_term(1, @_);
+	}
 	
 	sub canonicalized_term {
 		my $self	= shift;
+		return $self->_canonicalized_term(0, @_);
+	}
+	
+	sub _canonicalized_term {
+		my $self	= shift;
+		my $strict	= shift;
 		my $value	= $self->value;
 		my $type	= $self->datatype->value;
 		$type		=~ s/^.*#//;
@@ -385,7 +409,8 @@ package Attean::API::NumericLiteral 0.032 {
 				$num		=~ s/^0+(\d)/$1/;
 				return Attean::Literal->integer("${sign}${num}");
 			} else {
-				die "Bad lexical form for xsd:integer: '$value'";
+ 				die "Bad lexical form for xsd:integer: '$value'" if ($strict);
+				return $self;
 			}
 		} elsif ($type eq 'negativeInteger') {
 			if ($value =~ m/^-(\d+)$/) {
@@ -393,7 +418,8 @@ package Attean::API::NumericLiteral 0.032 {
 				$num		=~ s/^0+(\d)/$1/;
 				return Attean::Literal->new(value => "-${num}", datatype => 'http://www.w3.org/2001/XMLSchema#negativeInteger');
 			} else {
-				die "Bad lexical form for xsd:integer: '$value'";
+				die "Bad lexical form for xsd:integer: '$value'" if ($strict);
+				return $self;
 			}
 		} elsif ($type eq 'decimal') {
 			if ($value =~ m/^([-+])?((\d+)([.]\d*)?)$/) {
@@ -418,7 +444,8 @@ package Attean::API::NumericLiteral 0.032 {
 				$num		=~ s/^0+(.)/$1/;
 				return Attean::Literal->decimal("${sign}${num}");
 			} else {
-				die "Bad lexical form for xsd:deciaml: '$value'";
+				die "Bad lexical form for xsd:deciaml: '$value'" if ($strict);
+				return $self;
 			}
 		} elsif ($type eq 'float') {
 			if ($value =~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/) {
@@ -444,7 +471,8 @@ package Attean::API::NumericLiteral 0.032 {
 				$exp	=~ s/E(-?)0+$/E${1}0/;
 				return Attean::Literal->float("${sign}${num}${exp}");
 			} else {
-				die "Bad lexical form for xsd:float: '$value'";
+				die "Bad lexical form for xsd:float: '$value'" if ($strict);
+				return $self;
 			}
 		} elsif ($type eq 'boolean') {
 			if ($value =~ m/^(true|false|0|1)$/) {
@@ -452,7 +480,8 @@ package Attean::API::NumericLiteral 0.032 {
 					? Attean::Literal->true
 					: Attean::Literal->false;
 			} else {
-				die "Bad lexical form for xsd:boolean: '$value'";
+				die "Bad lexical form for xsd:boolean: '$value'" if ($strict);
+				return $self;
 			}
 		} elsif ($type eq 'double') {
 			if ($value =~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/) {
@@ -478,7 +507,8 @@ package Attean::API::NumericLiteral 0.032 {
 				$exp	=~ s/E(-?)0+$/E${1}0/;
 				return Attean::Literal->double("${sign}${num}${exp}");
 			} else {
-				die "Bad lexical form for xsd:double: '$value'";
+				die "Bad lexical form for xsd:double: '$value'" if ($strict);
+				return $self;
 			}
 		} else {
 			warn "No canonicalization for type $type";

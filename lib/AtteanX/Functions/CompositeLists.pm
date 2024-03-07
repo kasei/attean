@@ -615,6 +615,11 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 
 	sub canonicalized_term {
 		my $self	= shift;
+		return $self->canonicalized_term_strict();
+	}
+
+	sub canonicalized_term_strict {
+		my $self	= shift;
 		my @values	= AtteanX::Functions::CompositeLists::lex_to_list($self);
 		return AtteanX::Functions::CompositeLists::list_to_lex(@values);
 	}

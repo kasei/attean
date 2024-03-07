@@ -826,7 +826,7 @@ package Attean::Plan::Extend 0.032 {
 					$num	= sprintf("%e", $value);
 				}
 				my $c	= Attean::Literal->new(value => $num, datatype => $expr->datatype);
-				if (my $term = $c->canonicalized_term()) {
+				if (my $term = $c->canonicalized_term_strict()) {
 					return $term;
 				} else {
 					die "Term value is not a valid lexical form for $datatype";
