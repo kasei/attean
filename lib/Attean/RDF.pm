@@ -37,10 +37,9 @@ package Attean::RDF 0.032 {
 
 	use Attean;
 	use List::MoreUtils qw(zip);
-	require Exporter::Tiny;
+	use base qw(Exporter::Tiny);
 	use namespace::clean;
 
-	our @ISA	= qw(Exporter::Tiny);
 	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern quadpattern bgp);
 
 =item C<< variable( $value ) >>
