@@ -16,6 +16,7 @@ test_requires	'Test::Requires'			=> 0;
 test_requires	'Test::LWP::UserAgent'		=> 0;
 test_requires	'Test::More'				=> 0.88;
 test_requires	'XML::Simple'				=> 0;
+test_requires	'HTTP::Headers'				=> 0;
 
 perl_version	'5.014';
 
