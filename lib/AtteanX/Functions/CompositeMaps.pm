@@ -127,6 +127,10 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 
 =item C<< lex_to_map($literal) >>
 
+Parses $literal as a cdt:Map value and returns a hash of stringified keys and
+term object values. Use C<< lex_to_maplist >> to get a list of key-value pairs
+in which the keys are also term objects.
+
 =cut
 	sub lex_to_map {
 		my $l	= shift;
@@ -223,6 +227,11 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		return $literal;
 	}
 
+=item C<< is_valid_map_key( $value ) >>
+
+Returns true if $value is a valid map key (is an IRI or a literal), false otherwise.
+
+=cut
 	sub is_valid_map_key {
 		my $key	= shift;
 		return 0 unless (blessed($key));
@@ -283,6 +292,12 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		AtteanX::Functions::CompositeLists::list_to_lex(@nodes);
 	}
 
+=item C<< map_key_to_term( @keys ) >>
+
+Converts each argument from the stringified version of map keys used as hash
+keys to a list of term objects.
+
+=cut
 	sub map_key_to_term {
 		my @keys	= @_;
 		my $p		= AtteanX::Parser::Turtle->new();
@@ -296,6 +311,12 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		return wantarray ? @terms : $terms[0];
 	}
 	
+=item C<< lex_to_maplist() >>
+
+Parses $literal as a cdt:Map value and returns a (flattened) list of key-value
+pairs of term values.
+
+=cut
 	sub lex_to_maplist {
 		my %map		= lex_to_map(@_);
 		my @key_strings	= keys %map;
