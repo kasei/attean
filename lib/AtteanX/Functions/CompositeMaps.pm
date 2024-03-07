@@ -99,6 +99,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 					push(@nodes, AtteanX::Functions::CompositeMaps::map_to_lex(%$hash));
 				} elsif ($t->type == RBRACE) {
 					my %hash;
+					die unless (scalar(@nodes) % 2 == 0);
 					while (my ($k, $v) = splice(@nodes, 0, 2)) {
 						my @tokens;
 						push(@tokens, $k->sparql_tokens->elements);
@@ -146,14 +147,11 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 # 		$p->_map->{''}	= Attean::IRI->new($MAP_TYPE_IRI);
 		my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
 		my @nodes;
-		eval {
-			my $t = $p->_next_nonws($lexer);
-			if ($t->type == LBRACE) {
-				my $hash	= _recursive_lexer_parse_cdt($p, $lexer);
-    			push(@nodes, %$hash);
-			}
-		};
-		warn $@ if ($@);
+		my $t = $p->_next_nonws($lexer);
+		if ($t->type == LBRACE) {
+			my $hash	= _recursive_lexer_parse_cdt($p, $lexer);
+			push(@nodes, %$hash);
+		}
 
 		return @nodes;
 	}
@@ -203,12 +201,6 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		return dtliteral("{${str}}", $MAP_TYPE_IRI);
 	}
 
-
-
-
-
-
-
 =item C<< mapCreate(@list) >>
 
 =cut
@@ -218,7 +210,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		my @map;
 		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
 		while (my ($key, $value) = splice(@_, 0, 2)) {
-			next if (blessed($key) and $key->does('Attean::API::Blank')); # no blank nodes as map keys
+			next unless (is_valid_map_key($key));
 			my @tokens	= $key->sparql_tokens->elements;
 			my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
 			my $bytes	= $s->serialize_iter_to_bytes($iter);
@@ -231,15 +223,23 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 		return $literal;
 	}
 
-sub _map_key_string {
-	my $key		= shift;
-	my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
-	my @tokens	= $key->sparql_tokens->elements;
-	my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
-	my $bytes	= $s->serialize_iter_to_bytes($iter);
-	my $key_string	= decode_utf8($bytes);
-	return $key_string;
-}
+	sub is_valid_map_key {
+		my $key	= shift;
+		return 0 unless (blessed($key));
+		return 1 if ($key->does('Attean::API::IRI'));
+		return 1 if ($key->does('Attean::API::Literal'));
+		return 0;
+	}
+
+	sub _map_key_string {
+		my $key		= shift;
+		my $s		= AtteanX::Serializer::TurtleTokens->new( suppress_whitespace => 1 );
+		my @tokens	= $key->sparql_tokens->elements;
+		my $iter	= Attean::ListIterator->new( values => \@tokens, item_type => 'AtteanX::Parser::Turtle::Token' );
+		my $bytes	= $s->serialize_iter_to_bytes($iter);
+		my $key_string	= decode_utf8($bytes);
+		return $key_string;
+	}
 
 =item C<< mapGet($list, $key) >>
 
@@ -283,6 +283,38 @@ sub _map_key_string {
 		AtteanX::Functions::CompositeLists::list_to_lex(@nodes);
 	}
 
+	sub map_key_to_term {
+		my @keys	= @_;
+		my $p		= AtteanX::Parser::Turtle->new();
+		my @terms	= map {
+			open(my $fh, '<:encoding(UTF-8)', \$_);
+			my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
+			my $token	= $p->_next_nonws($lexer);
+			$p->_object($lexer, $token);
+		} @keys;
+		
+		return wantarray ? @terms : $terms[0];
+	}
+	
+	sub lex_to_maplist {
+		my %map		= lex_to_map(@_);
+		my @key_strings	= keys %map;
+		my @values		= values %map;
+		my $p		= AtteanX::Parser::Turtle->new();
+		my @keys	= map {
+			open(my $fh, '<:encoding(UTF-8)', \$_);
+			my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
+			my $token	= $p->_next_nonws($lexer);
+			$p->_object($lexer, $token);
+		} @key_strings;
+		my @list;
+		foreach my $i (0 .. $#keys) {
+			push(@list, $keys[$i]);
+			push(@list, $values[$i]);
+		}
+		return @list;
+	}
+
 =item C<< mapPut($map, $key, $value) >>
 
 =cut
@@ -291,8 +323,9 @@ sub _map_key_string {
 		my $active_graph	= shift;
 		my $map				= shift;
 		my $key				= shift;
+		die 'TypeError' unless (is_valid_map_key($key));
 		my $value			= shift;
-		die 'TypeError' unless ($map->does('Attean::API::Literal'));
+		die 'TypeError' unless (blessed($map) and $map->does('Attean::API::Literal'));
 		my $dt	= $map->datatype;
 		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
 		my %nodes	= lex_to_map($map);
@@ -304,6 +337,30 @@ sub _map_key_string {
 		return map_to_lex(%nodes);
 	}
 
+=item C<< mapRemove($map, $key) >>
+
+=cut
+	sub mapRemove {
+		my $model			= shift;
+		my $active_graph	= shift;
+		my $map				= shift;
+		my $key				= shift;
+		die 'TypeError' unless (blessed($map) and $map->does('Attean::API::Literal'));
+		my $dt	= $map->datatype;
+		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
+		my %nodes	= lex_to_map($map);
+		my @key_strings	= keys %nodes;
+
+		unless (is_valid_map_key($key)) {
+			return $map;
+		}
+
+		my $key_string	= _map_key_string($key);
+		delete $nodes{ $key_string };
+
+		return map_to_lex(%nodes);
+	}
+
 =item C<< mapSize($list) >>
 
 =cut
@@ -311,7 +368,7 @@ sub _map_key_string {
 		my $model			= shift;
 		my $active_graph	= shift;
 		my $l		= shift;
-		die 'TypeError' unless ($l->does('Attean::API::Literal'));
+		die 'TypeError' unless (blessed($l) and $l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
 		die 'TypeError' unless ($dt->value eq $MAP_TYPE_IRI);
 		my %nodes	= lex_to_map($l);
@@ -327,7 +384,7 @@ sub _map_key_string {
 		my $active_graph	= shift;
 		my $l				= shift;
 		my $term			= shift;
-		die 'TypeError: Not a literal' unless ($l->does('Attean::API::Literal'));
+		die 'TypeError: Not a literal' unless (blessed($l) and $l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
 		die 'TypeError: Not a cdt:List' unless ($dt->value eq $MAP_TYPE_IRI);
 		my %nodes	= lex_to_map($l);
@@ -397,12 +454,13 @@ sub _map_key_string {
 		Attean->register_global_functional_form(
 			"${CDT_BASE}Map" => \&mapCreate,
 			"${CDT_BASE}mapCreate" => \&mapCreate,
+			"${CDT_BASE}put" => \&mapPut,
 		);
 		Attean->register_global_function(
 			"${CDT_BASE}mapGet" => \&mapGet,
 			"${CDT_BASE}mapSize" => \&mapSize,
 			"${CDT_BASE}keys" => \&mapKeys,
-			"${CDT_BASE}put" => \&mapPut,
+			"${CDT_BASE}remove" => \&mapRemove,
 			"${CDT_BASE}containsKey" => \&mapContains,
 			"${CDT_BASE}merge" => \&mapMerge,
 		);
@@ -419,6 +477,7 @@ sub _map_key_string {
 
 package AtteanX::Functions::CompositeMaps::MapLiteral {
 	use Scalar::Util qw(blessed looks_like_number);
+	use List::Util qw(min);
 
 	use Moo::Role;
 
@@ -441,31 +500,158 @@ package AtteanX::Functions::CompositeMaps::MapLiteral {
 		my @lhs_keys	= sort(keys %lhs_map);
 		my @rhs_keys	= sort(keys %rhs_map);
 		
+		# TODO: handle differing lexical forms for map keys here:
+
+		my $seen_error	= 0;
 		foreach my $i (0 .. $lhs_size-1) {
 			return 0 unless ($lhs_keys[$i] eq $rhs_keys[$i]);
 			my $key	= $lhs_keys[$i];
 			my $lv	= $lhs_map{$key};
 			my $rv	= $rhs_map{$key};
-			unless (blessed($lv) and blessed($rv)) {
-				die 'TypeError';
+			if (not blessed($lv) and not blessed($rv)) {
+				# both null
+				next;
+			} elsif (not blessed($lv) or not blessed($rv)) {
+				return 0;
 			}
+
+			if ($lv->does('Attean::API::Blank') and $rv->does('Attean::API::Blank')) {
+				$seen_error++;
+				next;
+			}
+
 			return 0 unless ($lv->equals($rv));
+		}
+		if ($seen_error) {
+			die 'TypeError';
 		}
 		return 1;
 	}
 	
-# 	sub compare {
-# 		my ($a, $b)	= @_;
-# 		return 1 unless blessed($b);
-# 		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
-# 		return -1 if ($b->does('Attean::API::Binding'));
-# 		if ($b->does('Attean::API::NumericLiteral')) {
-# 			return $a->numeric_value <=> $b->numeric_value;
-# 		} else {
-# 			return 1;
-# # 			Attean::API::Literal::compare($a, $b);
-# 		}
-# 	}
+	sub compare {
+		my $lhs	= shift;
+		my $rhs	= shift;
+# 		warn "MAP-LESS-THAN?";
+# 		warn "- " . $lhs->as_string . "\n";
+# 		warn "- " . $rhs->as_string . "\n";
+		die 'TypeError' unless (blessed($rhs) and $rhs->does('Attean::API::Literal') and $rhs->datatype->value eq $AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI);
+		
+		my %lhs	= AtteanX::Functions::CompositeMaps::lex_to_map($lhs);
+		my %rhs	= AtteanX::Functions::CompositeMaps::lex_to_map($rhs);
+		
+		my $lhs_size	= scalar(%lhs);
+ 		my $rhs_size	= scalar(%rhs);
+ 		
+ 		if (not($lhs_size) and not($rhs_size)) {
+ 			return 0; # empty maps are trivially eq
+ 		}
+ 		
+ 		
+ 		if (scalar(%lhs) == 0 and scalar(%rhs) == 0) {
+ 			return 0;
+ 		}
+
+ 		my @lhs_keys	= sort_map_keys(keys %lhs);
+ 		my @rhs_keys	= sort_map_keys(keys %rhs);
+ 		
+		my $length	= min($lhs_size, $rhs_size);
+		foreach my $i (0 .. $length-1) {
+			my $k1	= AtteanX::Functions::CompositeMaps::map_key_to_term($lhs_keys[$i]);
+			my $k2	= AtteanX::Functions::CompositeMaps::map_key_to_term($rhs_keys[$i]);
+			
+			my $same	= sameterm($k1, $k2);
+			if (not($same)) {
+				# the keys are not the same
+				my @sorted	= sort_map_keys($lhs_keys[$i], $rhs_keys[$i]);
+				if ($sorted[0] eq $lhs_keys[$i]) { # k1 is ordered before k2 according tot he map key sorting
+					return -1; # less than
+				} else {
+					return 1; # greater than
+				}
+			}
+			
+			my $v1	= $lhs{$lhs_keys[$i]};
+			my $v2	= $rhs{$rhs_keys[$i]};
+
+			if (not blessed($v1) and not blessed($v2)) {
+				# both null
+				next;
+			} elsif (not blessed($v1)) {
+				die 'TypeError';
+			} elsif (not blessed($v2)) {
+				die 'TypeError';
+			}
+			
+			foreach my $v ($v1, $v2) {
+				if ($v->does('Attean::API::IRI')) {
+					die 'TypeError'; # IRIs as map values cannot be compared
+				}
+			}
+			
+			my $v_cmp	= $v1->compare($v2); # may throw an error
+			if ($v_cmp) {
+				return $v_cmp;
+			}
+		}
+		
+		return ($lhs_size - $rhs_size); # sort smaller maps ahead of larger maps
+	}
+	
+	sub sameterm {
+		# shared code with SAMETERM handling in SimpleQueryEvaluator. Consider refactoring.
+		my $a	= shift;
+		my $b	= shift;
+		my $cmp = eval { $a->compare($b) };
+		if (not($@) and $cmp) {
+			return 0;
+		}
+		if ($a->does('Attean::API::Binding')) {
+			my $ok	= ($a->sameTerms($b));
+			return $ok;
+		} else {
+			my $ok	= ($a->value eq $b->value);
+			return $ok;
+		}
+	}
+	
+	sub sort_map_keys {
+		my @keys	= @_;
+		my @terms	= AtteanX::Functions::CompositeMaps::map_key_to_term(@keys);
+		my @iri_i;
+		my @other_i;
+		foreach my $i (0 .. $#terms) {
+			if ($terms[$i]->does('Attean::API::IRI')) {
+				push(@iri_i, $i);
+			} else {
+				push(@other_i, $i);
+			}
+		}
+		@iri_i	= sort {
+			my $at		= $terms[$a];
+			my $bt		= $terms[$b];
+			$at->compare($bt)
+		} @iri_i;
+		@other_i	= sort {
+			my $at		= $terms[$a];
+			my $bt		= $terms[$b];
+			my $a_value	= $at->value;
+			my $a_dt	= $at->datatype->value;
+			my $a_lang	= $at->language // '';
+			my $b_value	= $bt->value;
+			my $b_dt	= $bt->datatype->value;
+			my $b_lang	= $bt->language // '';
+			
+			if (my $cdt = ($a_dt cmp $b_dt)) {
+				return $cdt;
+			}
+			if (my $cval = ($a_value cmp $b_value)) {
+				return $cval;
+			}
+			return $a_lang cmp $b_lang;
+		} @other_i;
+		
+		return map { $keys[$_] } (@iri_i, @other_i);
+	}
 
 	sub canonicalized_term {
 		my $self	= shift;
