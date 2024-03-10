@@ -35,13 +35,13 @@ package Attean::RDF 0.033 {
 	use v5.14;
 	use warnings;
 
-	use Attean;
-	use List::MoreUtils qw(zip);
 	require Exporter::Tiny;
-	use namespace::clean;
-
 	our @ISA	= qw(Exporter::Tiny);
 	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern quadpattern bgp);
+
+	require Attean;
+	use List::MoreUtils qw(zip);
+	use namespace::clean;
 
 =item C<< variable( $value ) >>
 
