@@ -59,7 +59,7 @@ A boolean indicating whether term values should be canonicalized during parsing.
 
 package AtteanX::Parser::Turtle 0.032 {
 	use Moo;
-	use Types::Standard qw(Bool ArrayRef HashRef Str Maybe InstanceOf);
+	use Types::Standard qw(Bool HashRef ArrayRef HashRef Str Maybe InstanceOf ConsumerOf);
 	use Types::Namespace qw( NamespaceMap );
 	use utf8;
 	use Carp qw(carp);
@@ -89,6 +89,7 @@ Returns true if the parser has a namespace map, false otherwise.
 =cut
 
 	has 'namespaces' => (is => 'rw', isa => Maybe[NamespaceMap], predicate => 'has_namespaces');
+	has 'blank_nodes'	=> (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Blank']], predicate => 'has_blank_nodes_map', default => sub { +{} });
 	has	'_stack'	=> (
 		is => 'ro',
 		isa => ArrayRef,
@@ -99,6 +100,7 @@ Returns true if the parser has a namespace map, false otherwise.
 	with 'Attean::API::TripleParser';
 	with 'Attean::API::AbbreviatingParser';
 	with 'Attean::API::PushParser';
+	with 'Attean::API::GlobalBlankNodeMappingParser';
 	
 	my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 	my $XSD	= 'http://www.w3.org/2001/XMLSchema#';
@@ -411,7 +413,7 @@ serialization is found at the beginning of C<< $bytes >>.
 				my %args	= (value => $value);
 				$args{language}	= $lang if (defined($lang));
 				$args{datatype}	= $dt if (defined($dt));
-				$obj	= Attean::Literal->new(%args);
+				$obj	= $self->new_literal(%args);
 			} else {
 				$obj	= $self->_token_to_node($t, $type);
 			}
@@ -587,7 +589,7 @@ serialization is found at the beginning of C<< $bytes >>.
 				my %args	= (value => $value);
 				$args{language}	= $lang if (defined($lang));
 				$args{datatype}	= $dt if (defined($dt));
-				$obj	= Attean::Literal->new(%args);
+				$obj	= $self->new_literal(%args);
 			} else {
 				$obj	= $self->_token_to_node($t, $type);
 			}
@@ -627,16 +629,16 @@ serialization is found at the beginning of C<< $bytes >>.
 			}
 		}
 		elsif ($type eq INTEGER) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}integer", lazy => 1));
+			return $self->new_literal(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}integer", lazy => 1));
 		}
 		elsif ($type eq DECIMAL) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}decimal", lazy => 1));
+			return $self->new_literal(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}decimal", lazy => 1));
 		}
 		elsif ($type eq DOUBLE) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}double", lazy => 1));
+			return $self->new_literal(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}double", lazy => 1));
 		}
 		elsif ($type eq BOOLEAN) {
-			return Attean::Literal->new(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}boolean", lazy => 1));
+			return $self->new_literal(value => $t->value, datatype => Attean::IRI->new(value => "${XSD}boolean", lazy => 1));
 		}
 		elsif ($type eq PREFIXNAME) {
 			my ($ns, $local)	= @{ $t->args };
@@ -650,13 +652,15 @@ serialization is found at the beginning of C<< $bytes >>.
 			return $iri;
 		}
 		elsif ($type eq BNODE) {
-			return Attean::Blank->new($t->value);
+			my $b	= Attean::Blank->new($t->value);
+			$self->blank_nodes->{$t->value}	= $b;
+			return $b;
 		}
 		elsif ($type eq STRING1D) {
-			return Attean::Literal->new($t->value);
+			return $self->new_literal($t->value);
 		}
 		elsif ($type eq STRING1S) {
-			return Attean::Literal->new($t->value);
+			return $self->new_literal($t->value);
 		}
 		else {
 			$self->_throw_error("Converting $type to node not implemented", $t);

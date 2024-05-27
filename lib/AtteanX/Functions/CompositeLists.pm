@@ -63,6 +63,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 	use Attean::RDF;
 	use Encode qw(decode_utf8);
 	use Scalar::Util qw(blessed);
+	use Digest::SHA qw(sha1_hex);
 	use AtteanX::Serializer::TurtleTokens;
 	use AtteanX::Parser::Turtle;
 	use AtteanX::SPARQL::Constants;
@@ -90,6 +91,8 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		
 		open(my $fh, '<:encoding(UTF-8)', \$lex);
 		my $p		= AtteanX::Parser::Turtle->new();
+		local($p->{enable_cdt_rewriting})	= 0;
+		
 		my $lexer	= AtteanX::Functions::CompositeLists::TurtleLexerWithNull->new(file => $fh);
 		my @nodes;
 		eval {
@@ -475,6 +478,44 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my $list			= $model->get_list($active_graph, $head);
 		return list_to_lex($list->elements);
 	}
+
+	sub rewrite_lexical {
+		my $term		= shift;
+		my $bnode_map	= shift;
+		my $parse_id	= shift;
+		eval {
+			my @nodes		= lex_to_list($term);
+			my @rewritten;
+			my %bnode_map	= %{ $bnode_map };
+			foreach my $n (@nodes) {
+				if (blessed($n) and $n->does('Attean::API::Blank')) {
+					my $v	= $n->value;
+					if (my $b = $bnode_map{$v}) {
+						push(@rewritten, $b);
+					} else {
+						my $value	= 'b' . sha1_hex($parse_id . $v);
+						my $b		= Attean::Blank->new(value => $value);
+						$bnode_map{$value}	= $b;
+						push(@rewritten, $b);
+					}
+				} elsif (blessed($n) and $n->does('Attean::API::Literal')) {
+					my $dt	= $n->datatype;
+					if (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
+						push(@rewritten, AtteanX::Functions::CompositeMaps::rewrite_lexical($n, \%bnode_map, $parse_id));
+					} elsif (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
+						push(@rewritten, AtteanX::Functions::CompositeLists::rewrite_lexical($n, \%bnode_map, $parse_id));
+					} else {
+						push(@rewritten, $n);
+					}
+				} else {
+					push(@rewritten, $n);
+				}
+			}
+			return list_to_lex(@rewritten);
+		};
+		return $term;
+	}
+
 
 =item C<< register() >>
 

@@ -70,6 +70,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 	use Attean::RDF;
 	use Encode qw(decode_utf8);
 	use Scalar::Util qw(blessed);
+	use Digest::SHA qw(sha1_hex);
 	use AtteanX::Serializer::TurtleTokens;
 	use AtteanX::Parser::Turtle;
 	use AtteanX::SPARQL::Constants;
@@ -99,7 +100,7 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 					push(@nodes, AtteanX::Functions::CompositeMaps::map_to_lex(%$hash));
 				} elsif ($t->type == RBRACE) {
 					my %hash;
-					die unless (scalar(@nodes) % 2 == 0);
+					die "odd number of map elements" unless (scalar(@nodes) % 2 == 0);
 					while (my ($k, $v) = splice(@nodes, 0, 2)) {
 						my @tokens;
 						push(@tokens, $k->sparql_tokens->elements);
@@ -148,6 +149,8 @@ in which the keys are also term objects.
 		
 		open(my $fh, '<:encoding(UTF-8)', \$lex);
 		my $p		= AtteanX::Parser::Turtle->new();
+		local($p->{enable_cdt_rewriting})	= 0;
+
 # 		$p->_map->{''}	= Attean::IRI->new($MAP_TYPE_IRI);
 		my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
 		my @nodes;
@@ -172,6 +175,8 @@ in which the keys are also term objects.
 		my $first	= 1;
 		
 		my $p		= AtteanX::Parser::Turtle->new();
+		local($p->{enable_cdt_rewriting})	= 0;
+
 		while (my ($key_string, $value) = splice(@terms, 0, 2)) {
 			unless ($first) {
 				my @tokens;
@@ -282,6 +287,8 @@ Returns true if $value is a valid map key (is an IRI or a literal), false otherw
 		my @key_strings	= keys %nodes;
 
 		my $p		= AtteanX::Parser::Turtle->new();
+		local($p->{enable_cdt_rewriting})	= 0;
+
 # 		$p->_map->{''}	= Attean::IRI->new($MAP_TYPE_IRI);
 		my @nodes	= map {
 			open(my $fh, '<:encoding(UTF-8)', \$_);
@@ -301,6 +308,8 @@ keys to a list of term objects.
 	sub map_key_to_term {
 		my @keys	= @_;
 		my $p		= AtteanX::Parser::Turtle->new();
+		local($p->{enable_cdt_rewriting})	= 0;
+
 		my @terms	= map {
 			open(my $fh, '<:encoding(UTF-8)', \$_);
 			my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
@@ -322,6 +331,8 @@ pairs of term values.
 		my @key_strings	= keys %map;
 		my @values		= values %map;
 		my $p		= AtteanX::Parser::Turtle->new();
+		local($p->{enable_cdt_rewriting})	= 0;
+
 		my @keys	= map {
 			open(my $fh, '<:encoding(UTF-8)', \$_);
 			my $lexer	= AtteanX::Functions::CompositeMaps::TurtleLexerWithNull->new(file => $fh);
@@ -463,6 +474,47 @@ pairs of term values.
 		my %terms	= @{ $thunk->{'values' }};
 		return map_to_lex(%terms);
 	}
+
+	sub rewrite_lexical {
+		my $term		= shift;
+		my $bnode_map	= shift;
+		my $parse_id	= shift;
+		eval {
+			my @map			= AtteanX::Functions::CompositeMaps::lex_to_map($term);
+			my @nodes		= lex_to_map($term);
+			my @rewritten;
+			my %bnode_map	= %{ $bnode_map };
+			while (my ($key_string, $n) = splice(@map, 0, 2)) {
+				if (blessed($n) and $n->does('Attean::API::Blank')) {
+					my $v	= $n->value;
+					if (my $b = $bnode_map{$v}) {
+						push(@rewritten, $key_string, $b);
+					} else {
+						my $value	= 'b' . sha1_hex($parse_id . $v);
+						my $b		= Attean::Blank->new(value => $value);
+						$bnode_map{$value}	= $b;
+						push(@rewritten, $key_string, $b);
+					}
+				} elsif (blessed($n) and $n->does('Attean::API::Literal')) {
+					my $dt	= $n->datatype;
+					if (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
+	# 					warn "rewriting map object: " . $n->as_string;
+						push(@rewritten, $key_string, AtteanX::Functions::CompositeMaps::rewrite_lexical($n, \%bnode_map, $parse_id));
+					} elsif (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
+	# 					warn "rewriting map object: " . $n->as_string;
+						push(@rewritten, $key_string, AtteanX::Functions::CompositeLists::rewrite_lexical($n, \%bnode_map, $parse_id));
+					} else {
+						push(@rewritten, $key_string, $n);
+					}
+				} else {
+					push(@rewritten, $key_string, $n);
+				}
+			}
+			return map_to_lex(@rewritten);
+		};
+		return $term;
+	}
+
 
 =item C<< register() >>
 

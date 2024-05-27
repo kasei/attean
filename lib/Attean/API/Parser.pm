@@ -62,6 +62,7 @@ package Attean::API::Parser 0.032 {
 	use Types::Standard qw(CodeRef Bool);
 
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
 	has 'handler' => (is => 'rw', isa => CodeRef, default => sub { sub {} });
@@ -94,6 +95,13 @@ C<lazy_iris> attribute.
 		return Attean::IRI->new(%args);
 	}
 	
+	sub new_literal {
+		my $self	= shift;
+		my %args	= @_;
+		
+		return Attean::Literal->new(%args);
+	}
+	
 	sub file_extensions { return [] }
 }
 
@@ -105,8 +113,51 @@ package Attean::API::AbbreviatingParser 0.032 {
 	use Moo::Role;
 	
 	with 'Attean::API::Parser';
-	has 'base' 		=> (is => 'rw', isa => ConsumerOf['Attean::API::IRI'], coerce => sub { blessed($_[0]) ? Attean::IRI->new($_[0]->as_string) : Attean::IRI->new($_[0]) }, predicate => 'has_base');
+	has 'base' 			=> (is => 'rw', isa => ConsumerOf['Attean::API::IRI'], coerce => sub { blessed($_[0]) ? Attean::IRI->new($_[0]->as_string) : Attean::IRI->new($_[0]) }, predicate => 'has_base');
 	has 'namespaces'	=> (is => 'ro', isa => Maybe[NamespaceMap]);
+}
+
+package Attean::API::GlobalBlankNodeMappingParser 0.032 {
+	use Types::Standard qw(HashRef ConsumerOf InstanceOf Maybe Bool);
+	use Scalar::Util qw(blessed);
+	use UUID::Tiny ':std';
+	use Data::Dumper;
+	use Moo::Role;
+	
+	with 'Attean::API::Parser';
+	has 'blank_nodes'	=> (is => 'ro', isa => Maybe[HashRef[ConsumerOf['Attean::API::Blank']]]);
+	has 'parse_id'		=> (is => 'rw', default => sub { unpack('H*', create_uuid()) });
+	has 'enable_cdt_rewriting' => (is => 'rw', isa => Bool, default => 1);
+
+# XXX pushparser
+# 	requires 'parse_cb_from_io';		# parse_cb_from_io($io)
+# 	requires 'parse_cb_from_bytes';		# parse_cb_from_bytes($data)
+
+	foreach my $method (qw(parse_iter_from_io parse_iter_from_bytes)) {
+		around $method => sub {
+			my $orig	= shift;
+			my $self	= $_[0];
+
+			$self->parse_id(unpack('H*', create_uuid()));
+			my $term	= $orig->(@_);
+			return $term;
+		};
+	}
+	
+	around 'new_literal' => sub {
+		my $orig	= shift;
+		my $self	= $_[0];
+		my $term	= $orig->(@_);
+		if ($self->enable_cdt_rewriting) {
+			my $dt 		= $term->datatype();
+			if (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
+				return AtteanX::Functions::CompositeMaps::rewrite_lexical($term, $self->blank_nodes, $self->parse_id);
+			} elsif (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
+				return AtteanX::Functions::CompositeLists::rewrite_lexical($term, $self->blank_nodes, $self->parse_id);
+			}
+		}
+		return $term;
+	};
 }
 
 package Attean::API::PushParser 0.032 {

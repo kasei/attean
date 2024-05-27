@@ -83,7 +83,7 @@ use URI::NamespaceMap;
 use List::MoreUtils qw(zip);
 use AtteanX::Parser::SPARQLLex;
 use AtteanX::SPARQL::Constants;
-use Types::Standard qw(InstanceOf HashRef ArrayRef Bool Str Int);
+use Types::Standard qw(ConsumerOf InstanceOf HashRef ArrayRef Bool Str Int);
 use Scalar::Util qw(blessed looks_like_number reftype refaddr);
 
 ######################################################################
@@ -99,6 +99,7 @@ has '_stack'		=> (is => 'rw', isa => ArrayRef);
 has 'filters'		=> (is => 'rw', isa => ArrayRef);
 has 'counter'		=> (is => 'rw', isa => Int, default => 0);
 has '_pattern_container_stack'	=> (is => 'rw', isa => ArrayRef);
+has 'blank_nodes'	=> (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Blank']], predicate => 'has_blank_nodes_map', default => sub { +{} });
 
 sub file_extensions { return [qw(rq ru)] }
 
@@ -114,6 +115,7 @@ sub handled_type {
 }
 
 with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser';
+with 'Attean::API::GlobalBlankNodeMappingParser';
 with 'MooX::Log::Any';
 
 sub BUILDARGS {
@@ -2929,7 +2931,7 @@ sub _UnaryExpression {
 		### if it's just a literal, force the positive down into the literal
 		if (blessed($expr) and $expr->isa('Attean::ValueExpression') and $expr->value->does('Attean::API::NumericLiteral')) {
 			my $value	= '+' . $expr->value->value;
-			my $l		= Attean::Literal->new( value => $value, datatype => $expr->value->datatype );
+			my $l		= $self->new_literal( value => $value, datatype => $expr->value->datatype );
 			my $lexpr	= Attean::ValueExpression->new( value => $l );
 			$self->_add_stack( $lexpr );
 		} else {
@@ -2943,12 +2945,12 @@ sub _UnaryExpression {
 		### if it's just a literal, force the negative down into the literal instead of make an unnecessary multiplication.
 		if (blessed($expr) and $expr->isa('Attean::ValueExpression') and $expr->value->does('Attean::API::NumericLiteral')) {
 			my $value	= -1 * $expr->value->value;
-			my $l		= Attean::Literal->new( value => $value, datatype => $expr->value->datatype );
+			my $l		= $self->new_literal( value => $value, datatype => $expr->value->datatype );
 			my $lexpr	= Attean::ValueExpression->new( value => $l );
 			$self->_add_stack( $lexpr );
 		} else {
 			my $int		= 'http://www.w3.org/2001/XMLSchema#integer';
-			my $l		= Attean::Literal->new( value => '-1', datatype => $int );
+			my $l		= $self->new_literal( value => '-1', datatype => $int );
 			my $neg		= $self->new_binary_expression( '*', Attean::ValueExpression->new( value => $l ), $expr );
 			my $lexpr	= Attean::ValueExpression->new( value => $neg );
 			$self->_add_stack( $lexpr );
@@ -3264,14 +3266,14 @@ sub _RDFLiteral {
 	if ($self->_test_token(LANG)) {
 		my $t	= $self->_expected_token(LANG);
 		my $lang	= $t->value;
-		$obj	= Attean::Literal->new( value => $value, language => $lang );
+		$obj	= $self->new_literal( value => $value, language => $lang );
 	} elsif ($self->_test_token(HATHAT)) {
 		$self->_expected_token(HATHAT);
 		$self->_IRIref;
 		my ($iri)	= splice(@{ $self->{_stack} });
-		$obj	= Attean::Literal->new( value => $value, datatype => $iri );
+		$obj	= $self->new_literal( value => $value, datatype => $iri );
 	} else {
-		$obj	= Attean::Literal->new( value => $value );
+		$obj	= $self->new_literal( value => $value );
 	}
 	
 	return $obj;
@@ -3308,7 +3310,7 @@ sub _NumericLiteral {
 		$value	= $sign . $value;
 	}
 	
-	my $obj	= Attean::Literal->new( value => $value, datatype => $type );
+	my $obj	= $self->new_literal( value => $value, datatype => $type );
 # 	if ($self->{args}{canonicalize} and blessed($obj) and $obj->isa('RDF::Trine::Node::Literal')) {
 # 		$obj	= $obj->canonicalize;
 # 	}
@@ -3322,7 +3324,7 @@ sub _BooleanLiteral {
 	my $t		= $self->_expected_token(BOOLEAN);
 	my $bool	= $t->value;
 
-	my $obj	= Attean::Literal->new( value => $bool, datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
+	my $obj	= $self->new_literal( value => $bool, datatype => 'http://www.w3.org/2001/XMLSchema#boolean' );
 # 	if ($self->{args}{canonicalize} and blessed($obj) and $obj->isa('RDF::Trine::Node::Literal')) {
 # 		$obj	= $obj->canonicalize;
 # 	}
@@ -3446,7 +3448,9 @@ sub _BlankNode {
 	}
 	if (my $b = $self->_optional_token(BNODE)) {
 		my $label	= $b->value;
-		return Attean::Blank->new($label);
+		my $b	= Attean::Blank->new($label);
+		$self->blank_nodes->{$label}	= $b;
+		return $b;
 	} else {
 		$self->_expected_token(ANON);
 		return Attean::Blank->new();
