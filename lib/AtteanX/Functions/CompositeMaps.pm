@@ -475,6 +475,10 @@ pairs of term values.
 		return map_to_lex(%terms);
 	}
 
+=item C<< rewrite_lexical( $literal, \%bnode_map, $parse_id ) >>
+
+=cut
+
 	sub rewrite_lexical {
 		my $term		= shift;
 		my $bnode_map	= shift;

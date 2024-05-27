@@ -94,7 +94,13 @@ C<lazy_iris> attribute.
 		}
 		return Attean::IRI->new(%args);
 	}
-	
+
+=item C<< new_literal( value => $value, [ datatype => $dt, ] [ language => $lang ])	>>
+
+Constructs and returns a new L<Attean::Literal> object.
+
+=cut
+
 	sub new_literal {
 		my $self	= shift;
 		my %args	= @_;
@@ -117,7 +123,7 @@ package Attean::API::AbbreviatingParser 0.032 {
 	has 'namespaces'	=> (is => 'ro', isa => Maybe[NamespaceMap]);
 }
 
-package Attean::API::GlobalBlankNodeMappingParser 0.032 {
+package Attean::API::CDTBlankNodeMappingParser 0.032 {
 	use Types::Standard qw(HashRef ConsumerOf InstanceOf Maybe Bool);
 	use Scalar::Util qw(blessed);
 	use UUID::Tiny ':std';
@@ -129,7 +135,7 @@ package Attean::API::GlobalBlankNodeMappingParser 0.032 {
 	has 'parse_id'		=> (is => 'rw', default => sub { unpack('H*', create_uuid()) });
 	has 'enable_cdt_rewriting' => (is => 'rw', isa => Bool, default => 1);
 
-# XXX pushparser
+# TODO: handle CDT rewriting on PushParser methods:
 # 	requires 'parse_cb_from_io';		# parse_cb_from_io($io)
 # 	requires 'parse_cb_from_bytes';		# parse_cb_from_bytes($data)
 

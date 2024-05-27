@@ -100,7 +100,7 @@ Returns true if the parser has a namespace map, false otherwise.
 	with 'Attean::API::TripleParser';
 	with 'Attean::API::AbbreviatingParser';
 	with 'Attean::API::PushParser';
-	with 'Attean::API::GlobalBlankNodeMappingParser';
+	with 'Attean::API::CDTBlankNodeMappingParser';
 	
 	my $RDF	= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 	my $XSD	= 'http://www.w3.org/2001/XMLSchema#';

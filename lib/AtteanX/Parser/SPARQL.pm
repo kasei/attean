@@ -115,7 +115,7 @@ sub handled_type {
 }
 
 with 'Attean::API::AtOnceParser', 'Attean::API::Parser', 'Attean::API::AbbreviatingParser';
-with 'Attean::API::GlobalBlankNodeMappingParser';
+with 'Attean::API::CDTBlankNodeMappingParser';
 with 'MooX::Log::Any';
 
 sub BUILDARGS {

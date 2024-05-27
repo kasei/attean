@@ -479,6 +479,10 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		return list_to_lex($list->elements);
 	}
 
+=item C<< rewrite_lexical( $literal, \%bnode_map, $parse_id ) >>
+
+=cut
+
 	sub rewrite_lexical {
 		my $term		= shift;
 		my $bnode_map	= shift;
