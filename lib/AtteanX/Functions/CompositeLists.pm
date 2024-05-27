@@ -483,7 +483,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		my $term		= shift;
 		my $bnode_map	= shift;
 		my $parse_id	= shift;
-		eval {
+		my $r = eval {
 			my @nodes		= lex_to_list($term);
 			my @rewritten;
 			my %bnode_map	= %{ $bnode_map };
@@ -511,9 +511,9 @@ package AtteanX::Functions::CompositeLists 0.032 {
 					push(@rewritten, $n);
 				}
 			}
-			return list_to_lex(@rewritten);
+			list_to_lex(@rewritten);
 		};
-		return $term;
+		return $r || $term;
 	}
 
 

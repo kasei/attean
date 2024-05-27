@@ -479,7 +479,7 @@ pairs of term values.
 		my $term		= shift;
 		my $bnode_map	= shift;
 		my $parse_id	= shift;
-		eval {
+		my $r = eval {
 			my @map			= AtteanX::Functions::CompositeMaps::lex_to_map($term);
 			my @nodes		= lex_to_map($term);
 			my @rewritten;
@@ -510,9 +510,9 @@ pairs of term values.
 					push(@rewritten, $key_string, $n);
 				}
 			}
-			return map_to_lex(@rewritten);
+			map_to_lex(@rewritten);
 		};
-		return $term;
+		return $r || $term;
 	}
 
 
