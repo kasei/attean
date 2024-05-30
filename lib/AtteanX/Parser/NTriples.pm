@@ -33,6 +33,16 @@ and <Attean::API::TripleParser>.
 
 =over 4
 
+=item C<< parse_iter_from_io( $fh ) >>
+
+Returns an L<Attean::API::Iterator> that result from parsing the data read from
+the L<IO::Handle> object C<< $fh >>.
+
+=item C<< parse_iter_from_bytes( $data ) >>
+
+Returns an L<Attean::API::Iterator> that result from parsing the data read from
+the UTF-8 encoded byte string C<< $data >>.
+
 =cut
 
 use v5.14;
@@ -75,6 +85,7 @@ Returns a list of file extensions that may be parsed with the parser.
 	with 'Attean::API::TripleParser';
 	with 'Attean::API::PullParser';
 	with 'Attean::API::Parser';
+	with 'Attean::API::CDTBlankNodeMappingParser';
 
 	sub _binding {
 		my $self	= shift;

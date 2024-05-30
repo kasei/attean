@@ -36,6 +36,16 @@ and <Attean::API::MixedStatementParser>.
 
 =over 4
 
+=item C<< parse_iter_from_io( $fh ) >>
+
+Returns an L<Attean::API::Iterator> that result from parsing the data read from
+the L<IO::Handle> object C<< $fh >>.
+
+=item C<< parse_iter_from_bytes( $data ) >>
+
+Returns an L<Attean::API::Iterator> that result from parsing the data read from
+the UTF-8 encoded byte string C<< $data >>.
+
 =cut
 
 package AtteanX::Parser::NQuads 0.032 {
@@ -74,6 +84,7 @@ Returns a list of file extensions that may be parsed with the parser.
 	
 	with 'Attean::API::MixedStatementParser';
 	with 'Attean::API::PullParser';
+	with 'Attean::API::CDTBlankNodeMappingParser';
 
 	sub _binding {
 		my $self	= shift;
