@@ -135,11 +135,7 @@ package Attean::API::CDTBlankNodeMappingParser 0.032 {
 	has 'parse_id'		=> (is => 'rw', default => sub { unpack('H*', create_uuid()) });
 	has 'enable_cdt_rewriting' => (is => 'rw', isa => Bool, default => 1);
 
-# TODO: handle CDT rewriting on PushParser methods:
-# 	requires 'parse_cb_from_io';		# parse_cb_from_io($io)
-# 	requires 'parse_cb_from_bytes';		# parse_cb_from_bytes($data)
-
-	foreach my $method (qw(parse_iter_from_io parse_iter_from_bytes)) {
+	foreach my $method (qw(parse_iter_from_io parse_iter_from_bytes parse_cb_from_io parse_cb_from_bytes)) {
 		around $method => sub {
 			my $orig	= shift;
 			my $self	= $_[0];
