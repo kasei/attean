@@ -36,9 +36,13 @@ package AtteanX::Functions::CompositeLists::TurtleLexerWithNull {
 			$self->fill_buffer unless (length($self->buffer));
 
 			if ($self->buffer =~ /^[ \r\n\t]+/o) {
-				$self->read_length($+[0]);
+				my $start_column	= $self->column;
+				my $start_line		= $self->line;
+				my $ws	= $self->read_length($+[0]);
 				# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
-	# 			return $self->new_token(WS);
+				unless ($self->ignore_whitespace) {
+		 			return $self->new_token(WS, $start_line, $start_column, $ws);
+				}
 				next;
 			}
 
@@ -85,7 +89,7 @@ package AtteanX::Functions::CompositeLists 0.032 {
 		$lex	=~ s/^\s*//g;
 		$lex	=~ s/\s*$//g;
 		
-		unless ($lex =~ m<^\[(.*)\]$>) {
+		unless ($lex =~ m<^\[(.*)\]$>s) {
 			die 'TypeError: Invalid lexical form for cdt:List literal: '  . $dt->value;
 		}
 		
@@ -483,43 +487,86 @@ package AtteanX::Functions::CompositeLists 0.032 {
 
 =cut
 
+	# lexer-based rewrite that will preserve the lexical representation of the literal for everything but the blank nodes
 	sub rewrite_lexical {
 		my $term		= shift;
 		my $bnode_map	= shift;
 		my $parse_id	= shift;
-		my $r = eval {
-			my @nodes		= lex_to_list($term);
-			my @rewritten;
-			my %bnode_map	= %{ $bnode_map };
-			foreach my $n (@nodes) {
-				if (blessed($n) and $n->does('Attean::API::Blank')) {
-					my $v	= $n->value;
-					if (my $b = $bnode_map{$v}) {
-						push(@rewritten, $b);
-					} else {
-						my $value	= 'b' . sha1_hex($parse_id . $v);
-						my $b		= Attean::Blank->new(value => $value);
-						$bnode_map{$value}	= $b;
-						push(@rewritten, $b);
-					}
-				} elsif (blessed($n) and $n->does('Attean::API::Literal')) {
-					my $dt	= $n->datatype;
-					if (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
-						push(@rewritten, AtteanX::Functions::CompositeMaps::rewrite_lexical($n, \%bnode_map, $parse_id));
-					} elsif (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
-						push(@rewritten, AtteanX::Functions::CompositeLists::rewrite_lexical($n, \%bnode_map, $parse_id));
-					} else {
-						push(@rewritten, $n);
-					}
+		my %bnode_map	= %{ $bnode_map };
+		my $rewrite_tokens	= sub {
+			my $l	= shift;
+			my $t	= shift;
+			return $t unless (blessed($t));
+			if ($t->type == BNODE) {
+				my $v	= $t->value;
+				if (my $b = $bnode_map{$v}) {
+					return $l->new_token(BNODE, $t->start_line, $t->start_column, $b->value);
 				} else {
-					push(@rewritten, $n);
+					my $value	= 'b' . sha1_hex($parse_id . $v);
+					my $b		= Attean::Blank->new(value => $value);
+					$bnode_map{$value}	= $b;
+					return $l->new_token(BNODE, $t->start_line, $t->start_column, $b->value);
 				}
+			} else {
+				return $t;
 			}
-			list_to_lex(@rewritten);
 		};
+		my $r			= eval {
+			my %seen_hathat;
+			my %seen_cdt_iri;
+			my %seen_cdt_list_iri;
+			my %seen_cdt_map_iri;
+			my $lex			= $term->value;
+			open(my $fh, '<:encoding(UTF-8)', \$lex);
+			my $lexer	= AtteanX::Functions::CompositeLists::TurtleLexerWithNull->new(file => $fh, ignore_whitespace => 0);
+			my $p		= AtteanX::Parser::Turtle->new();
+			my @rewritten_tokens;
+			my $i	= 0;
+			while (my $t = $rewrite_tokens->($lexer, $lexer->get_token())) {
+				if (blessed($t)) {
+					if ($t->type == HATHAT) {
+						$seen_hathat{$i-1}++;
+					} elsif ($t->type == IRI) {
+						if ($t->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
+							$seen_cdt_map_iri{$i-2}++;
+							$seen_cdt_iri{$i-2}++;
+						} elsif ($t->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
+							$seen_cdt_list_iri{$i-2}++;
+							$seen_cdt_iri{$i-2}++;
+						}
+					}
+				}
+				push(@rewritten_tokens, $t);
+				$i++;
+			}
+			
+			my @rewritten;
+			my $j	= 0;
+			my $s		= AtteanX::Serializer::SPARQL->new();
+			foreach my $t (@rewritten_tokens) {
+				if (blessed($t) and $t->is_string and $seen_hathat{$j} and $seen_cdt_iri{$j}) {
+					my $ct_type	= $seen_cdt_list_iri{$j}
+								? 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List'
+								: 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map';
+					my $literal	= Attean::Literal->new(value => $t->value, datatype => $ct_type);
+					my $rewritten	= AtteanX::Functions::CompositeLists::rewrite_lexical($literal, $bnode_map, $parse_id);
+					my ($t)	= $rewritten->sparql_tokens->elements;
+					my $i	= Attean::ListIterator->new( values => [$t], item_type => 'AtteanX::SPARQL::Token' );
+					my $str	= decode_utf8($s->serialize_iter_to_bytes($i));
+					chomp($str);
+					push(@rewritten, $str);
+					$j++;
+					next;
+				}
+				push(@rewritten, blessed($t) ? $t->token_as_string() : "null");
+				$j++;
+			}
+			my $rewritten	= join('', @rewritten);
+			Attean::Literal->new(value => $rewritten, datatype => $term->datatype);
+		};
+		warn $@ if ($@);
 		return $r || $term;
 	}
-
 
 =item C<< register() >>
 

@@ -152,9 +152,7 @@ package Attean::API::CDTBlankNodeMappingParser 0.032 {
 		my $term	= $orig->(@_);
 		if ($self->enable_cdt_rewriting) {
 			my $dt 		= $term->datatype();
-			if (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
-				return AtteanX::Functions::CompositeMaps::rewrite_lexical($term, $self->blank_nodes, $self->parse_id);
-			} elsif (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
+			if (blessed($dt) and ($dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map' or $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List')) {
 				return AtteanX::Functions::CompositeLists::rewrite_lexical($term, $self->blank_nodes, $self->parse_id);
 			}
 		}

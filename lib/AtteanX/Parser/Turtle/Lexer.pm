@@ -30,7 +30,7 @@ package AtteanX::Parser::Turtle::Lexer 0.032 {
 	use warnings;
 	use Data::Dumper;
 	use Moo;
-	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
+	use Types::Standard qw(FileHandle Ref Str Int Bool ArrayRef HashRef ConsumerOf InstanceOf);
 	use namespace::clean;
 
 	my $r_nameChar_extra		= qr'[-0-9\x{B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]'o;
@@ -55,6 +55,7 @@ package AtteanX::Parser::Turtle::Lexer 0.032 {
 	our $r_PNAME_LN				= qr/(?:${r_PNAME_NS}${r_PN_LOCAL})/o;
 
 	with 'AtteanX::API::Lexer';
+	has 'ignore_whitespace' => (is => 'rw', isa => Bool, default => 1);
 
 =item C<< new_token ( $type, $start_line, $start_column, @values ) >>
 
@@ -110,10 +111,15 @@ Returns the next token present in the input.
 		while (1) {
 			$self->fill_buffer unless (length($self->buffer));
 
+			my $start_column	= $self->column;
+			my $start_line		= $self->line;
+		
 			if ($self->buffer =~ /^[ \r\n\t]+/o) {
-				$self->read_length($+[0]);
+				my $ws	= $self->read_length($+[0]);
 				# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
-	# 			return $self->new_token(WS);
+				unless ($self->ignore_whitespace) {
+		 			return $self->new_token(WS, $start_line, $start_column, $ws);
+		 		}
 				next;
 			}
 
@@ -125,9 +131,6 @@ Returns the next token present in the input.
 				$self->_get_comment();
 				next;
 			}
-		
-			my $start_column	= $self->column;
-			my $start_line		= $self->line;
 		
 			$self->start_column( $start_column );
 			$self->start_line( $start_line );
@@ -339,9 +342,11 @@ Returns the next token present in the input.
 			my $string	= '';
 			while (1) {
 				if (substr($self->buffer, 0, 1) eq '\\') {
-					$string	.= $self->_get_escaped_char();
+					my $c		= $self->_get_escaped_char();
+					$string	.= $c;
 				} elsif ($self->buffer =~ /^[^"\\]+/o) {
-					$string	.= $self->read_length($+[0]);
+					my $s	= $self->read_length($+[0]);
+					$string	.= $s;
 				} elsif (substr($self->buffer, 0, 1) eq '"') {
 					last;
 				} else {
@@ -390,6 +395,7 @@ Returns the next token present in the input.
 			### #x22 scharacter* #x22
 			my $string	= '';
 			while (1) {
+				$self->fill_buffer unless (length($self->buffer));
 				if (substr($self->buffer, 0, 1) eq '\\') {
 					$string	.= $self->_get_escaped_char();
 				} elsif ($self->buffer =~ /^[^'\\]+/o) {

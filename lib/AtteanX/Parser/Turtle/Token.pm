@@ -102,6 +102,7 @@ sub fast_constructor {
 	);
 }
 
+my %token_strings;
 {
 	my %tokens	= (
 		a			=> [A, 'a'],
@@ -132,7 +133,44 @@ sub fast_constructor {
 			code	=> set_subname($name, $code),
 			as		=> $name
 		});
+		$token_strings{$type}	= $value;
 	}
+	
+}
+
+sub token_as_string {
+	my $self	= shift;
+	my $type	= $self->type;
+	my @args	= @{ $self->args };
+	my $value	= $args[0];
+	if (defined(my $v = $token_strings{$type})) {
+		return $v;
+	} elsif ($type == STRING1D) {
+		return qq["$value"];
+	} elsif ($type == STRING1S) {
+		return qq["$value"];
+	} elsif ($type == STRING3D) {
+		return qq["""$value"""];
+	} elsif ($type == STRING3S) {
+		return qq['''$value'''];
+	} elsif ($type == IRI) {
+		return qq[<$value>];
+	} elsif ($type == BNODE) {
+		return qq[_:$value]
+	} elsif ($type == LANG) {
+		return qq[\@$value]
+	} else {
+		join(', ', @args);
+	}
+}
+
+sub is_string {
+	my $self	= shift;
+	my $type	= $self->type;
+	return 1 if ($type == STRING1D);
+	return 1 if ($type == STRING1S);
+	return 1 if ($type == STRING3D);
+	return 1 if ($type == STRING3S);
 }
 
 =item C<< as_string >>

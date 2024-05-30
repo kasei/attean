@@ -36,15 +36,17 @@ package AtteanX::Functions::CompositeMaps::TurtleLexerWithNull {
 		while (1) {
 			$self->fill_buffer unless (length($self->buffer));
 
-			if ($self->buffer =~ /^[ \r\n\t]+/o) {
-				$self->read_length($+[0]);
-				# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
-	# 			return $self->new_token(WS);
-				next;
-			}
-
 			my $start_column	= $self->column;
 			my $start_line		= $self->line;
+
+			if ($self->buffer =~ /^[ \r\n\t]+/o) {
+				my $ws	= $self->read_length($+[0]);
+				# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
+				unless ($self->ignore_whitespace) {
+		 			return $self->new_token(WS, $start_line, $start_column, $ws);
+				}
+				next;
+			}
 
 			my $c	= $self->peek_char();
 			return unless (defined($c));
@@ -474,51 +476,6 @@ pairs of term values.
 		my %terms	= @{ $thunk->{'values' }};
 		return map_to_lex(%terms);
 	}
-
-=item C<< rewrite_lexical( $literal, \%bnode_map, $parse_id ) >>
-
-=cut
-
-	sub rewrite_lexical {
-		my $term		= shift;
-		my $bnode_map	= shift;
-		my $parse_id	= shift;
-		my $r = eval {
-			my @map			= AtteanX::Functions::CompositeMaps::lex_to_map($term);
-			my @nodes		= lex_to_map($term);
-			my @rewritten;
-			my %bnode_map	= %{ $bnode_map };
-			while (my ($key_string, $n) = splice(@map, 0, 2)) {
-				if (blessed($n) and $n->does('Attean::API::Blank')) {
-					my $v	= $n->value;
-					if (my $b = $bnode_map{$v}) {
-						push(@rewritten, $key_string, $b);
-					} else {
-						my $value	= 'b' . sha1_hex($parse_id . $v);
-						my $b		= Attean::Blank->new(value => $value);
-						$bnode_map{$value}	= $b;
-						push(@rewritten, $key_string, $b);
-					}
-				} elsif (blessed($n) and $n->does('Attean::API::Literal')) {
-					my $dt	= $n->datatype;
-					if (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map') {
-	# 					warn "rewriting map object: " . $n->as_string;
-						push(@rewritten, $key_string, AtteanX::Functions::CompositeMaps::rewrite_lexical($n, \%bnode_map, $parse_id));
-					} elsif (blessed($dt) and $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
-	# 					warn "rewriting map object: " . $n->as_string;
-						push(@rewritten, $key_string, AtteanX::Functions::CompositeLists::rewrite_lexical($n, \%bnode_map, $parse_id));
-					} else {
-						push(@rewritten, $key_string, $n);
-					}
-				} else {
-					push(@rewritten, $key_string, $n);
-				}
-			}
-			map_to_lex(@rewritten);
-		};
-		return $r || $term;
-	}
-
 
 =item C<< register() >>
 
