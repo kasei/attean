@@ -12,8 +12,15 @@ binmode(\*STDOUT, ':encoding(utf8)');
 use autodie;
 use Test::Roo;
 use List::MoreUtils qw(all);
+use FindBin qw($Bin);
 
 with 'Test::Attean::SPARQLSuite';
+
+sub BUILD {
+	my $self	= shift;
+	my $path	= File::Spec->catfile( $Bin, 'data', 'sparql', 'sparql11' );
+	$self->tests_dir($path);
+}
 
 my %args;
 while (defined(my $opt = shift)) {
