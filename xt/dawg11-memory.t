@@ -22,10 +22,11 @@ sub BUILD {
 	$self->tests_dir($path);
 }
 
-my %args;
+my %args	= (use_idp_planner => 1);
 while (defined(my $opt = shift)) {
 	if ($opt eq '-v') {
 		$args{debug}++;
+		$args{results}++;
 	} else {
 		$args{pattern}	= $opt;
 	}
