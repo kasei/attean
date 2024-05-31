@@ -138,6 +138,12 @@ my %token_strings;
 	
 }
 
+=item C<< token_as_string() >>
+
+Returns a string version of the token (without escaping).
+
+=cut
+
 sub token_as_string {
 	my $self	= shift;
 	my $type	= $self->type;
@@ -163,6 +169,13 @@ sub token_as_string {
 		join(', ', @args);
 	}
 }
+
+=item C<< is_string() >>
+
+Returns true if the token is one of the quoted string types (STRING1D, STRING3D,
+STRING1S, or STRING3S), false otherwise.
+
+=cut
 
 sub is_string {
 	my $self	= shift;
