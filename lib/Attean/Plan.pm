@@ -417,12 +417,32 @@ package Attean::Plan::Construct 0.033 {
 		return $self->_impl($model, @children);
 	}
 	
+	# replace blank nodes in all the triple patterns with fresh ones
+	sub refresh_triples {
+		my $self	= shift;
+		my @t;
+		my %mapping;
+		foreach my $t (@_) {
+			foreach my $term ($t->values) {
+				if ($term->does('Attean::API::Blank')) {
+					$mapping{$term->as_string}	= Attean::Blank->new();
+				}
+			}
+		}
+		my $mapper	= Attean::TermMap->rewrite_map(\%mapping);
+		foreach my $t (@_) {
+			push(@t, $t->apply_map($mapper));
+		}
+		return @t;
+	}
+	
 	sub _impl {
 		my $self		= shift;
 		my $model		= shift;
 		my $child		= shift;
 		
 		my @triples		= @{ $self->triples };
+		
 		return sub {
 			my $iter	= $child->();
 			my @buffer;
@@ -434,7 +454,7 @@ package Attean::Plan::Construct 0.033 {
 						return shift(@buffer);
 					}
 					while (my $row = $iter->next) {
-						foreach my $tp (@triples) {
+						foreach my $tp ($self->refresh_triples(@triples)) {
 							my $tp	= $tp->apply_bindings($row);
 							my $t	= eval { $tp->as_triple };
 							if ($t) {
