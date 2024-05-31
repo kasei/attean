@@ -1012,6 +1012,9 @@ package Attean::Plan::Extend 0.033 {
 				return Attean::Literal->new(value => $value, datatype => $string->datatype);
 			} elsif ($func eq 'CONCAT') {
 				my @strings		= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+				if (scalar(@strings) == 0) {
+					return Attean::Literal->new(value => '');
+				}
 # 				die "CONCAT called with terms that are not argument compatible" unless ($strings[0]->argument_compatible(@strings));
 				my %args;
 				if (my $l = $strings[0]->language) {
