@@ -2196,6 +2196,9 @@ package Attean::Plan::Aggregate 0.033 {
 			my $count	= 0;
 			my $all_ints	= 1;
 			my @terms;
+			if (scalar(@$rows) == 0) {
+				return Attean::Literal->integer(0);
+			}
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
 				die unless ($term->does('Attean::API::NumericLiteral'));
