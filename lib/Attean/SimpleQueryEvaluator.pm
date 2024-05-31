@@ -898,6 +898,9 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.033 {
 						my $all_lang	= 1;
 						my $all_str		= 1;
 						my $lang;
+						if (scalar(@operands) == 0) {
+							return Attean::Literal->new(value => '');
+						}
 						foreach my $n (@operands) {
 							die "CONCAT called with a non-literal argument" unless ($n->does('Attean::API::Literal'));
 							if ($n->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string') {
