@@ -843,8 +843,8 @@ package Attean::Algebra::NegatedPropertySet 0.033 {
 
 	with 'Attean::API::PropertyPath';
 
-	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
-	has 'reversed' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
+	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 0, default => sub { [] });
+	has 'reversed' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 0, default => sub { [] });
 	
 	sub as_string {
 		my $self	= shift;
