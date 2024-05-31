@@ -81,7 +81,7 @@ package AtteanX::Functions::CompositeLists 0.033 {
 =cut
 	sub lex_to_list {
 		my $l	= shift;
-		die 'TypeError' unless ($l->does('Attean::API::Literal'));
+		die 'TypeError: Cannot parse non-literal to cdt:List' unless ($l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
 		die 'TypeError: not a datatype literal' unless ($dt);
 		die 'TypeError: Expecting a List but found '  . $dt->value unless ($dt->value eq $LIST_TYPE_IRI);
@@ -192,14 +192,14 @@ package AtteanX::Functions::CompositeLists 0.033 {
 		my $active_graph	= shift;
 		my $ct				= shift;
 		my $pos				= shift;
-		die 'TypeError' unless ($ct->does('Attean::API::Literal'));
+		die 'TypeError: Cannot interpret non-literal as CDT type' unless ($ct->does('Attean::API::Literal'));
 		my $dt	= $ct->datatype;
 		if ($dt->value eq $LIST_TYPE_IRI) {
 			return listGet($model, $active_graph, $ct, $pos);
 		} elsif ($dt->value eq $AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI) {
 			return AtteanX::Functions::CompositeMaps::mapGet($model, $active_graph, $ct, $pos);
 		} else {
-			die 'TypeError';
+			die 'TypeError: Unexpected non-CDT type: ' . $dt->value;
 		}
 	}
 
@@ -211,9 +211,9 @@ package AtteanX::Functions::CompositeLists 0.033 {
 		my $active_graph	= shift;
 		my $l				= shift;
 		my $pos				= shift;
-		die 'TypeError' unless ($l->does('Attean::API::Literal'));
+		die 'TypeError: Cannot interpret non-literal as cdt:List' unless ($l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
-		die 'TypeError' unless ($dt->value eq $LIST_TYPE_IRI);
+		die 'TypeError: Unexpected non-List type: ' . $dt->value unless ($dt->value eq $LIST_TYPE_IRI);
 		my @nodes	= lex_to_list($l);
 		die 'TypeError' unless ($pos->does('Attean::API::NumericLiteral') and $pos->datatype->value eq 'http://www.w3.org/2001/XMLSchema#integer');
 		my $i		= int($pos->value) - 1; # cdt:get is 1-based, while the array index below is 0-based
@@ -645,12 +645,23 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 			return 0 unless ($li->equals($ri));
 		}
 		if ($seen_error) {
-			die 'TypeError';
+			die 'TypeError: Cannot compare cdt:List values with blank nodes';
 		}
 		return 1;
 	}
 	
+	sub order {
+		my $self	= shift;
+		return _compare('order', $self, @_);
+	}
+	
 	sub compare {
+		my $self	= shift;
+		return _compare('compare', $self, @_);
+	}
+	
+	sub _compare {
+		my $cmp_method	= shift;
 		my $lhs	= shift;
 		my $rhs	= shift;
 # 		warn "LIST-LESS-THAN?";
@@ -674,13 +685,21 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 				# both null
 				next;
 			} elsif (not blessed($li)) {
-				die 'TypeError';
-				$seen_error++;
-				next;
+				if ($cmp_method eq 'order') {
+					return -1;
+				} else {
+					die 'TypeError';
+					$seen_error++;
+					next;
+				}
 			} elsif (not blessed($ri)) {
-				die 'TypeError';
-				$seen_error++;
-				next;
+				if ($cmp_method eq 'order') {
+					return 1;
+				} else {
+					die 'TypeError';
+					$seen_error++;
+					next;
+				}
 			}
 
 			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
@@ -689,7 +708,7 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 				next;
 			}
 			
-			my $icmp	= $li->compare($ri);
+			my $icmp	= $li->$cmp_method($ri);
 			next if ($icmp == 0);
 			return $icmp;
 		}

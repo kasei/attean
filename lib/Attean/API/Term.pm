@@ -63,6 +63,17 @@ Returns true if the term has a true SPARQL "effective boolean value", false othe
 	requires 'compare';
 	requires 'sameTerms';
 	
+=item C<< order ( $other ) >>
+
+Similar to C<< compare >>, but provides the ordering semantics of ORDER BY.
+
+=cut
+
+	sub order {
+		my $self	= shift;
+		return $self->compare(@_);
+	}
+	
 	sub __ntriples_string {
 		my $self	= shift;
 		my $value	= $self->value;

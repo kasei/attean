@@ -562,7 +562,18 @@ package AtteanX::Functions::CompositeMaps::MapLiteral {
 		return 1;
 	}
 	
+	sub order {
+		my $self	= shift;
+		return _compare('order', $self, @_);
+	}
+	
 	sub compare {
+		my $self	= shift;
+		return _compare('compare', $self, @_);
+	}
+	
+	sub _compare {
+		my $cmp_method	= shift;
 		my $lhs	= shift;
 		my $rhs	= shift;
 # 		warn "MAP-LESS-THAN?";
@@ -611,18 +622,28 @@ package AtteanX::Functions::CompositeMaps::MapLiteral {
 				# both null
 				next;
 			} elsif (not blessed($v1)) {
-				die 'TypeError';
+				if ($cmp_method eq 'order') {
+					return -1;
+				} else {
+					die 'TypeError';
+				}
 			} elsif (not blessed($v2)) {
-				die 'TypeError';
-			}
-			
-			foreach my $v ($v1, $v2) {
-				if ($v->does('Attean::API::IRI')) {
-					die 'TypeError'; # IRIs as map values cannot be compared
+				if ($cmp_method eq 'order') {
+					return 1;
+				} else {
+					die 'TypeError';
 				}
 			}
 			
-			my $v_cmp	= $v1->compare($v2); # may throw an error
+			if ($cmp_method eq 'compare') {
+				foreach my $v ($v1, $v2) {
+					if ($v->does('Attean::API::IRI')) {
+						die 'TypeError'; # IRIs as map values cannot be compared
+					}
+				}
+			}
+			
+			my $v_cmp	= $v1->$cmp_method($v2); # may throw an error
 			if ($v_cmp) {
 				return $v_cmp;
 			}

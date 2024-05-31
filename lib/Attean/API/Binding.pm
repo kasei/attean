@@ -579,7 +579,18 @@ package Attean::API::Triple 0.033 {
 		return join(' ', '<<', (map { $_->ntriples_string } @values), '>>');
 	}
 
+	sub order {
+		my $self	= shift;
+		return _compare('order', $self, @_);
+	}
+	
 	sub compare {
+		my $self	= shift;
+		return _compare('compare', $self, @_);
+	}
+	
+	sub _compare {
+		my $cmp_method	= shift;
 		my ($a, $b)	= @_;
 		return 1 unless blessed($b);
 		if (not $b->does('Attean::API::Triple')) {
@@ -590,7 +601,7 @@ package Attean::API::Triple 0.033 {
 		foreach my $pos ($a->variables) {
 			my $at	= $a->$pos();
 			my $bt	= $b->$pos();
-			my $c	= $at->compare($bt);
+			my $c	= $at->$cmp_method($bt);
 			
 			# If they are equal, continue. otherwise check if either term is an IRI.
 			# This is because term equality is defined for IRIs, but < and > isn't.

@@ -268,7 +268,7 @@ supplied C<< $active_graph >>.
 					} elsif (blessed($bv) and $bv->does('Attean::API::Binding') and (not(defined($av)) or not($av->does('Attean::API::Binding')))) {
 						$c	= -1;
 					} else {
-						$c		= eval { $av ? $av->compare($bv) : 1 };
+						$c		= eval { $av ? $av->order($bv) : 1 };
 						if ($@) {
 							$c	= 1;
 						}
