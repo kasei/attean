@@ -706,15 +706,37 @@ property path.
 			my $ra	= $self->_package($self->simplify_path($s, $r, $o));
 			return Attean::Algebra::Union->new( children => [$la, $ra] );
 		} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
+			my @branches;
+			
 			my @preds	= @{ $path->predicates };
-			my $pvar	= Attean::Variable->new(value => $self->new_temporary('nps'));
-			my $pvar_e	= Attean::ValueExpression->new( value => $pvar );
-			my $t		= Attean::TriplePattern->new($s, $pvar, $o);
-			my @vals	= map { Attean::ValueExpression->new( value => $_ ) } @preds;
-			my $expr	= Attean::FunctionExpression->new( children => [$pvar_e, @vals], operator => 'notin' );
-			my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
-			my $f		= Attean::Algebra::Filter->new( children => [$bgp], expression => $expr );
-			return $f;
+			if (scalar(@preds)) {
+				my $pvar	= Attean::Variable->new(value => $self->new_temporary('nps'));
+				my $pvar_e	= Attean::ValueExpression->new( value => $pvar );
+				my $t		= Attean::TriplePattern->new($s, $pvar, $o);
+				my @vals	= map { Attean::ValueExpression->new( value => $_ ) } @preds;
+				my $expr	= Attean::FunctionExpression->new( children => [$pvar_e, @vals], operator => 'notin' );
+				my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
+				my $f_fwd	= Attean::Algebra::Filter->new( children => [$bgp], expression => $expr );
+				push(@branches, $f_fwd);
+			}
+
+			my @rev		= @{ $path->reversed };
+			if (scalar(@rev)) {
+				my $pvar	= Attean::Variable->new(value => $self->new_temporary('nps_rev'));
+				my $pvar_e	= Attean::ValueExpression->new( value => $pvar );
+				my $t		= Attean::TriplePattern->new($o, $pvar, $s);
+				my @vals	= map { Attean::ValueExpression->new( value => $_ ) } @rev;
+				my $expr	= Attean::FunctionExpression->new( children => [$pvar_e, @vals], operator => 'notin' );
+				my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
+				my $f_rev	= Attean::Algebra::Filter->new( children => [$bgp], expression => $expr );
+				push(@branches, $f_rev);
+			}
+
+			if (scalar(@branches) == 1) {
+				return shift(@branches);
+			} else {
+				return Attean::Algebra::Union->new( children => \@branches );
+			}
 		} else {
 			return;
 		}

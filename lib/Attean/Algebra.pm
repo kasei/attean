@@ -844,28 +844,39 @@ package Attean::Algebra::NegatedPropertySet 0.033 {
 	with 'Attean::API::PropertyPath';
 
 	has 'predicates' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
+	has 'reversed' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::IRI']], required => 1);
 	
 	sub as_string {
 		my $self	= shift;
-		return sprintf("!(%s)", join('|', map { $_->ntriples_string } @{ $self->predicates }));
+		my @forward	= map { $_->ntriples_string } @{ $self->predicates };
+		my @rev		= map { '^' . $_->ntriples_string } @{ $self->reversed };
+		return sprintf("!(%s)", join('|', @forward, @rev));
 	}
 	sub algebra_as_string { return 'NPS' }
-	sub tree_attributes { return qw(predicates) };
+	sub tree_attributes { return qw(predicates reversed) };
 	sub as_sparql {
 		my $self	= shift;
-		return "!(" . join('|', map { $_->as_sparql } @{$self->predicates}) . ")";
+		my @forward	= map { $_->as_sparql } @{ $self->predicates };
+		my @rev		= map { '^' . $_->as_sparql } @{ $self->reversed };
+		return sprintf("!(%s)", join('|', @forward, @rev));
 	}
 
 	sub sparql_tokens {
 		my $self	= shift;
 		my $bang	= AtteanX::SPARQL::Token->op_bang;
 		my $or		= AtteanX::SPARQL::Token->path_or;
+		my $hat		= AtteanX::SPARQL::Token->path_hat;
 		my $l		= AtteanX::SPARQL::Token->lparen;
 		my $r		= AtteanX::SPARQL::Token->rparen;
 
 		my @tokens;
 		push(@tokens, $bang, $l);
 		foreach my $t (@{ $self->predicates }) {
+			push(@tokens, $t->sparql_tokens->elements);
+			push(@tokens, $or);
+		}
+		foreach my $t (@{ $self->reversed }) {
+			push(@tokens, $hat);
 			push(@tokens, $t->sparql_tokens->elements);
 			push(@tokens, $or);
 		}

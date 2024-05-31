@@ -3675,7 +3675,18 @@ sub __new_path_pred {
 	my @nodes	= @_;
 
 	if ($op eq '!') {
-		return Attean::Algebra::NegatedPropertySet->new( predicates => \@nodes );
+		my @preds;
+		my @reversed;
+		foreach my $p (@nodes) {
+			if (blessed($p)) {
+				push(@preds, $p);
+			} elsif (reftype($p) eq 'ARRAY' and $p->[1] eq '^' and blessed($p->[2])) {
+				push(@reversed, $p->[2]);
+			} else {
+				die "Unexpected NPS element: " . Dumper($p);
+			}
+		}
+		return Attean::Algebra::NegatedPropertySet->new( predicates => \@preds, reversed => \@reversed );
 	}
 	
 	foreach my $i (0 .. $#nodes) {
