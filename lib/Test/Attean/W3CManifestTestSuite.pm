@@ -419,7 +419,6 @@ STRESS:	foreach (1 .. $count) {
 				unless ($start < $end) {
 					warn "*** Loading file did not result in any new quads: " . $g;
 				}
-				warn $test_model->size;
 			}
 		} catch {
 			fail($test->value);

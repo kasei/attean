@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQL - SPARQL 1.1 Parser.
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQL version 0.032.
+This document describes AtteanX::Parser::SPARQL version 0.033.
 
 =head1 SYNOPSIS
 
@@ -70,7 +70,7 @@ L<Attean::API::AbbreviatingParser>.
 
 =cut
 
-package AtteanX::Parser::SPARQL 0.032;
+package AtteanX::Parser::SPARQL 0.033;
 
 use strict;
 use warnings;
@@ -3735,7 +3735,18 @@ sub __new_path_pred {
 	my @nodes	= @_;
 
 	if ($op eq '!') {
-		return Attean::Algebra::NegatedPropertySet->new( predicates => \@nodes );
+		my @preds;
+		my @reversed;
+		foreach my $p (@nodes) {
+			if (blessed($p)) {
+				push(@preds, $p);
+			} elsif (reftype($p) eq 'ARRAY' and $p->[1] eq '^' and blessed($p->[2])) {
+				push(@reversed, $p->[2]);
+			} else {
+				die "Unexpected NPS element: " . Dumper($p);
+			}
+		}
+		return Attean::Algebra::NegatedPropertySet->new( predicates => \@preds, reversed => \@reversed );
 	}
 	
 	foreach my $i (0 .. $#nodes) {
@@ -3928,7 +3939,7 @@ sub _token_error {
 	croak $message;
 }
 
-package AtteanX::Parser::SPARQL::ObjectWrapper 0.032;
+package AtteanX::Parser::SPARQL::ObjectWrapper 0.033;
 
 use strict;
 use warnings;

@@ -4,7 +4,7 @@ Attean::RDF - Utility package for exporting shorthand functions for constructing
 
 =head1 VERSION
 
-This document describes Attean::RDF version 0.032
+This document describes Attean::RDF version 0.033
 
 =head1 SYNOPSIS
 
@@ -31,16 +31,17 @@ by default).
 
 =cut
 
-package Attean::RDF 0.032 {
+package Attean::RDF 0.033 {
 	use v5.14;
 	use warnings;
 
-	use Attean;
-	use List::MoreUtils qw(zip);
-	use base qw(Exporter::Tiny);
-	use namespace::clean;
-
+	require Exporter::Tiny;
+	our @ISA	= qw(Exporter::Tiny);
 	our @EXPORT	= qw(iri blank literal dtliteral langliteral variable triple quad triplepattern quadpattern bgp);
+
+	require Attean;
+	use List::MoreUtils qw(zip);
+	use namespace::clean;
 
 =item C<< variable( $value ) >>
 

@@ -43,6 +43,7 @@ requires		'Sub::Util'					=> 1.40;
 requires		'Test::Modern'				=> 0.012;
 requires		'Test::Moose'				=> 0;
 requires		'Test::Roo'					=> 0;
+requires		'Test::TypeTiny'			=> 0;
 requires		'Text::CSV'					=> 0;
 requires		'Text::Table'				=> 0;
 requires		'Try::Tiny'					=> 0;
@@ -64,5 +65,5 @@ install_script glob('bin/attean_*');
 
 write_doap_changes "meta/changes.ttl", "Changes", "turtle";
 
-sign;
+sign if ! exists $ENV{CI};
 WriteAll;

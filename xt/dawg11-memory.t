@@ -12,13 +12,21 @@ binmode(\*STDOUT, ':encoding(utf8)');
 use autodie;
 use Test::Roo;
 use List::MoreUtils qw(all);
+use FindBin qw($Bin);
 
 with 'Test::Attean::SPARQLSuite';
 
-my %args;
+sub BUILD {
+	my $self	= shift;
+	my $path	= File::Spec->catfile( $Bin, 'data', 'sparql', 'sparql11' );
+	$self->tests_dir($path);
+}
+
+my %args	= (use_idp_planner => 1);
 while (defined(my $opt = shift)) {
 	if ($opt eq '-v') {
 		$args{debug}++;
+		$args{results}++;
 	} else {
 		$args{pattern}	= $opt;
 	}

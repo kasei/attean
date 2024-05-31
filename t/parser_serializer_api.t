@@ -32,10 +32,8 @@ subtest 'Serializer by file extension' => sub {
 	is(Attean->get_serializer('srx'), 'AtteanX::Serializer::SPARQLXML', 'srx');
 	like(Attean->get_serializer('xml'), qr'AtteanX::Serializer::(SPARQLXML|RDFXML)', 'xml');
 	is(Attean->get_serializer('tsv'), 'AtteanX::Serializer::SPARQLTSV', 'tsv');
-	is(Attean->get_serializer('ttl'), 'AtteanX::Serializer::Turtle', 'ttl');
 	is(Attean->get_serializer('nq'), 'AtteanX::Serializer::NQuads', 'nq');
 	is(Attean->get_serializer('rdf'), 'AtteanX::Serializer::RDFXML', 'rdf');
-	is(Attean->get_serializer('xml'), 'AtteanX::Serializer::RDFXML', 'xml');
 	like(Attean->get_serializer('html'), qr'AtteanX::Serializer::[^:]*(HTML|RDFa)[^:]*', 'html'); # if AtteanX::Serializer::RDFa is installed, the html extension may map to either RDFa or SPARQLHTML
 	like(Attean->get_serializer('ttl'), qr'AtteanX::Serializer::Turtle', 'ttl'); # may be Turtle or TurtleTokens
 };

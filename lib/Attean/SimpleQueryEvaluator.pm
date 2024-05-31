@@ -7,7 +7,7 @@ Attean::SimpleQueryEvaluator - Simple query evaluator
 
 =head1 VERSION
 
-This document describes Attean::SimpleQueryEvaluator version 0.032
+This document describes Attean::SimpleQueryEvaluator version 0.033
 
 =head1 SYNOPSIS
 
@@ -34,7 +34,7 @@ model, and returns a query result.
 use Attean::Algebra;
 use Attean::Expression;
 
-package Attean::SimpleQueryEvaluator 0.032 {
+package Attean::SimpleQueryEvaluator 0.033 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::RDF;
@@ -667,7 +667,7 @@ appended to C<< @new_vars >> as it is created.
 	}
 }
 
-package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.032 {
+package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.033 {
 	use Moo;
 	use Attean::RDF;
 	use Scalar::Util qw(blessed);

@@ -4,7 +4,7 @@ Attean::API::Result - Role representing a set of variable bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Result version 0.032
+This document describes Attean::API::Result version 0.033
 
 =head1 SYNOPSIS
 
