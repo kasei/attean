@@ -86,6 +86,8 @@ lib/Attean/TripleModel.pm
 lib/Attean/Variable.pm
 lib/AtteanX/API/JoinRotatingPlanner.pm
 lib/AtteanX/API/Lexer.pm
+lib/AtteanX/Functions/CompositeMaps.pm
+lib/AtteanX/Functions/CompositeLists.pm
 lib/AtteanX/Parser/NQuads.pm
 lib/AtteanX/Parser/NTriples.pm
 lib/AtteanX/Parser/NTuples.pm
