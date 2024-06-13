@@ -550,8 +550,12 @@ package AtteanX::Functions::CompositeMaps::MapLiteral {
 			}
 
 			if ($lv->does('Attean::API::Blank') and $rv->does('Attean::API::Blank')) {
-				$seen_error++;
-				next;
+				if ($lv->value eq $rv->value) {
+					next;
+				} else {
+					$seen_error++;
+					next;
+				}
 			}
 
 			return 0 unless ($lv->equals($rv));

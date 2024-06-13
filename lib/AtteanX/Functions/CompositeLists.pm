@@ -639,8 +639,12 @@ package AtteanX::Functions::CompositeLists::ListLiteral {
 			}
 
 			if ($li->does('Attean::API::Blank') and $ri->does('Attean::API::Blank')) {
-				$seen_error++;
-				next;
+				if ($li->value eq $ri->value) {
+					next;
+				} else {
+					$seen_error++;
+					next;
+				}
 			}
 			return 0 unless ($li->equals($ri));
 		}
