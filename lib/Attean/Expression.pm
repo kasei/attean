@@ -217,8 +217,16 @@ package Attean::FunctionExpression 0.033 {
 		my $comma	= AtteanX::SPARQL::Token->comma;
 
 		my @tokens;
-		push(@tokens, $func, $lparen);
-		foreach my $t (@{ $self->children }) {
+		my @children	= @{ $self->children };
+		if ($self->operator eq 'INVOKE') {
+			my $iri	= shift(@children);
+			push(@tokens, $iri->sparql_tokens->elements);
+			push(@tokens, $lparen);
+		} else {
+			push(@tokens, $func, $lparen);
+		}
+		
+		foreach my $t (@children) {
 			push(@tokens, $t->sparql_tokens->elements);
 			push(@tokens, $comma);
 		}
