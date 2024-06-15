@@ -104,7 +104,23 @@ iterator. Otherwise raises an error via C<< die >>.
 		my $response	= $ua->request($req);
 		if (blessed($response) and $response->is_success) {
 			my $type	= $response->header('Content-Type');
-			my $pclass	= Attean->get_parser(media_type => $type) or die "No parser for media type: $type";
+			my $pclass	= eval { Attean->get_parser(media_type => $type) or die "No parser for media type: $type" };
+			if ($@) {
+				if ($silent) {
+					my $b	= Attean::Result->new( bindings => {} );
+					return Attean::ListIterator->new(variables => [], values => [$b], item_type => 'Attean::API::Result');
+				} else {
+					die $@;
+				}
+			}
+			if (not($pclass)) {
+				if ($silent) {
+					my $b	= Attean::Result->new( bindings => {} );
+					return Attean::ListIterator->new(variables => [], values => [$b], item_type => 'Attean::API::Result');
+				} else {
+					die "No parser found for type [$type]";
+				}
+			}
 			my $parser	= $pclass->new();
 			my $xml		= $response->decoded_content;
 			my $bytes	= encode('UTF-8', $xml, Encode::FB_CROAK);
