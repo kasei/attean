@@ -8,13 +8,15 @@ use Attean;
 use Attean::RDF;
 use AtteanX::Parser::SPARQL;
 use Attean::SimpleQueryEvaluator;
+use Test::Attean::TestSimpleQueryEvaluator;
+use Test::Attean::TestIDPQueryPlanner;
 
 use Carp;
 use HTTP::Request;
 use HTTP::Response;
 use HTTP::Message::PSGI;
 use Data::Dumper;
-use Encode qw(encode encode_utf8);
+use Encode qw(encode encode_utf8 decode_utf8);
 use Getopt::Long;
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
@@ -392,14 +394,14 @@ sub query_eval_test {
 	my $q			= $sparql;
 	$q				=~ s/\s+/ /g;
 	if ($self->debug) {
-		warn "### test     : " . $test->value . "\n";
-		warn "# sparql     : $q\n";
+		warn "### test           : " . $test->value . "\n";
+		warn "# sparql           : $q\n";
 		foreach my $data (@data) {
-			warn "# data       : " . ($data->value =~ s#file://##r) . "\n" if (blessed($data));
+			warn "# data             : " . ($data->value =~ s#file://##r) . "\n" if (blessed($data));
 		}
-		warn "# graph data : " . ($_->value =~ s#file://##r) . "\n" for (@gdata);
-		warn "# result     : " . ($result->value =~ s#file://##r) . "\n";
-		warn "# requires   : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
+		warn "# graph data       : " . ($_->value =~ s#file://##r) . "\n" for (@gdata);
+		warn "# result           : " . ($result->value =~ s#file://##r) . "\n";
+		warn "# requires         : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
 	}
 	
 STRESS:	foreach (1 .. $count) {
@@ -446,7 +448,7 @@ STRESS:	foreach (1 .. $count) {
 				{
 					local($::DEBUG)	= 1;
 					print STDERR "getting actual results... " if ($self->debug);
-					($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base );
+					($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata );
 					print STDERR "ok\n" if ($self->debug);
 				}
 			
@@ -472,12 +474,45 @@ STRESS:	foreach (1 .. $count) {
 	}
 }
 
+sub mock_endpoints {
+	my $self			= shift;
+	my $mock			= shift;
+	my $model	= shift;
+	my $sdata			= shift;
+	
+	foreach my $sd (@$sdata) {
+		my ($e)		= $model->objects( $sd, iri("${RQ}endpoint") )->elements;
+		my @data	= $model->objects( $sd, iri("${RQ}data") )->elements;
+		my @gdata	= $model->objects( $sd, iri("${RQ}graphData") )->elements;
+
+		my $endpoint	= $e->value;
+		my $test_model	= $self->test_model();
+		foreach my $data (@data) {
+			if (blessed($data)) {
+				$test_model->load_urls_into_graph($self->default_graph, $data);
+			}
+		}
+		foreach my $g (@gdata) {
+			my $start = $test_model->size;
+			$test_model->load_urls_into_graph($g, $g);
+			my $end	= $test_model->size;
+			unless ($start < $end) {
+				warn "*** Loading file did not result in any new quads: " . $g;
+			}
+		}
+		$mock->register_test_endpoint($endpoint, [$test_model, $self->default_graph]);
+	}
+}
+
 sub get_actual_results {
-	my $self		= shift;
-	my $filename	= shift;
-	my $model		= shift;
-	my $sparql		= shift;
-	my $base		= shift;
+	my $self			= shift;
+	my $filename		= shift;
+	my $model			= shift;
+	my $sparql			= shift;
+	my $base			= shift;
+	my $manifest_model	= shift;
+	my $sdata			= shift;
+	
 	my $bytes	= encode_utf8($sparql);
 
 	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
@@ -510,7 +545,8 @@ sub get_actual_results {
 	my $results;
 	if ($self->use_idp_planner) {
 		my $default_graphs	= [$self->default_graph];
-		my $planner	= Attean::IDPQueryPlanner->new();
+		my $planner	= Test::Attean::TestIDPQueryPlanner->new();
+		$self->mock_endpoints($planner, $manifest_model, $sdata);
 		my $plan	= $planner->plan_for_algebra($algebra, $model, $default_graphs);
 		if ($self->debug) {
 			warn "Walking plan:\n";
@@ -519,7 +555,8 @@ sub get_actual_results {
 		$results	= eval { $plan->evaluate($model) };
 		warn $@ if $@;
 	} else {
-		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $self->default_graph );
+		my $e		= Test::Attean::TestSimpleQueryEvaluator->new( model => $model, default_graph => $self->default_graph );
+		$self->mock_endpoints($e, $manifest_model, $sdata);
 		$results	= eval { $e->evaluate($algebra, $self->default_graph) };
 		warn $@ if $@;
 	}

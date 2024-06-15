@@ -4,7 +4,7 @@ Attean - A Semantic Web Framework
 
 =head1 VERSION
 
-This document describes Attean version 0.033	
+This document describes Attean version 0.033
 
 =head1 SYNOPSIS
 

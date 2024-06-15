@@ -1695,6 +1695,7 @@ package Attean::Plan::Service 0.033 {
 	has 'sparql' => (is => 'ro', isa => Str, required => 1);
 	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent']);
 	has 'request_signer' => (is => 'rw');
+	has 'client' => (is => 'rw', required => 0);
 
 	sub plan_as_string {
 		my $self	= shift;
@@ -1717,7 +1718,7 @@ package Attean::Plan::Service 0.033 {
 			request_signer	=> $self->request_signer,
 		);
 		$args{user_agent}	= $self->user_agent if ($self->user_agent);
-		my $client		= Attean::SPARQLClient->new(%args);
+		my $client		= $self->client || Attean::SPARQLClient->new(%args);
 		return sub {
 			return $client->query($sparql);
 		};

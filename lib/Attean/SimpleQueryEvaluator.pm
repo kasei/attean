@@ -284,12 +284,7 @@ supplied C<< $active_graph >>.
 			my ($pattern)	= @{ $algebra->children };
 			my $sparql		= Attean::Algebra::Project->new( variables => [ map { variable($_) } $pattern->in_scope_variables ], children => [ $pattern ] )->as_sparql;
 			my $silent		= $algebra->silent;
-			my $client		= Attean::SPARQLClient->new(
-				endpoint => $endpoint,
-				silent => $silent,
-				user_agent => $self->user_agent,
-				request_signer => $self->request_signer,
-			);
+			my $client		= $self->new_service_client($endpoint, $silent);
 			return $client->query($sparql);
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
 			my $graph	= $algebra->graph;
@@ -664,6 +659,19 @@ appended to C<< @new_vars >> as it is created.
 				variables => \@vars
 			);
 		}
+	}
+	
+	sub new_service_client {
+		my $self		= shift;
+		my $endpoint	= shift;
+		my $silent		= shift;
+		my $client		= Attean::SPARQLClient->new(
+			endpoint => $endpoint,
+			silent => $silent,
+			user_agent => $self->user_agent,
+			request_signer => $self->request_signer,
+		);
+		return $client;
 	}
 }
 
