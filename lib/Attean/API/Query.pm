@@ -166,7 +166,8 @@ package Attean::API::SPARQLSerializable 0.033 {
 		my $s		= AtteanX::Serializer::SPARQL->new();
 		my $i		= $self->sparql_tokens;
 		my $bytes	= $s->serialize_iter_to_bytes($i);
-		return decode_utf8($bytes);
+		my $sparql	= decode_utf8($bytes);
+		return $sparql
 	}
 	
 	sub sparql_subtokens {
@@ -261,6 +262,9 @@ package Attean::API::SPARQLSerializable 0.033 {
 					push(@tokens, $v->sparql_tokens->elements);
 					push(@tokens, $rparen);
 					$modifiers{project_expression_tokens}{$name}	= \@tokens;
+					unless ($modifiers{project_variables}{$name}++) {
+						unshift(@{ $modifiers{project_variables_order} }, $v->value);
+					}
 				} elsif ($algebra->isa('Attean::Algebra::Project')) {
 					my $vars	= $algebra->variables;
 					my ($child)	= @{ $algebra->children };
