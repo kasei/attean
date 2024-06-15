@@ -49,6 +49,10 @@ This class consumes L<Attean::API::Parser>, L<Attean::API::PushParser>,
 
 A boolean indicating whether term values should be canonicalized during parsing.
 
+=item C<< blank_nodes >>
+
+=item C<< has_blank_nodes_map >>
+
 =back
 
 =head1 METHODS

@@ -661,6 +661,13 @@ appended to C<< @new_vars >> as it is created.
 		}
 	}
 	
+=item C<< new_service_client( $endpoint, $silent ) >>
+
+Returns a new Attean::SPARQLClient for use in evaluating queries using
+the SPARQL Protocol against the given endpoint.
+
+=cut
+
 	sub new_service_client {
 		my $self		= shift;
 		my $endpoint	= shift;

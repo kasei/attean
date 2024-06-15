@@ -62,6 +62,10 @@ L<Attean::API::AbbreviatingParser>.
 
 =item C<< filters >>
 
+=item C<< blank_nodes >>
+
+=item C<< has_blank_nodes_map >>
+
 =back
 
 =head1 METHODS

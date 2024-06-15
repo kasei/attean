@@ -17,6 +17,16 @@ This document describes AtteanX::Parser::NTuples version 0.033
 
 This module provides a base class for RDF formats N-Triples and N-Quads.
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item C<< blank_nodes >>
+
+=item C<< has_blank_nodes_map >>
+
+=back
+
 =head1 METHODS
 
 =over 4
