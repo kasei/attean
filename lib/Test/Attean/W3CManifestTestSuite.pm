@@ -358,6 +358,61 @@ sub update_eval_test {
 	warn "ok\n" if ($self->debug);
 }
 
+sub construct_data {
+	my $self	= shift;
+	my $model	= shift;
+	my $action	= shift;
+	my ($queryd)	= $model->objects( $action, iri("${RQ}query") )->elements;
+	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
+	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
+	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
+	my @cdata		= $model->objects( $action, iri("${RQ}constructedData") )->elements;
+	my ($fnode)		= $model->objects( $action, iri("${RQ}format") )->elements;
+	my $format		= blessed($fnode) ? $fnode->value : 'text/turtle';
+
+	my $uri					= URI->new( $queryd->value );
+	my $filename			= $uri->file;
+	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
+	$base					= "file://${base}";
+	warn "Loading SPARQL query from file $filename" if ($self->debug);
+	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename"); return }; binmode($fh, ':utf8'); <$fh> };
+	
+	my $test_model	= $self->test_model();
+	foreach my $data (@data) {
+		if (blessed($data)) {
+			$test_model->load_urls_into_graph($self->default_graph, $data);
+		}
+	}
+	foreach my $g (@gdata) {
+		my $start = $test_model->size;
+		$test_model->load_urls_into_graph($g, $g);
+		my $end	= $test_model->size;
+		unless ($start < $end) {
+			warn "*** Loading file did not result in any new quads: " . $g;
+		}
+	}
+	foreach my $n (@cdata) {
+		my ($bytes, $format)	= $self->construct_data($model, $n);
+		my $p					= Attean->get_parser(media_type => $format)->new();
+		my $iter				= $p->parse_iter_from_bytes($bytes);
+		$test_model->add_iter($iter->as_quads($self->default_graph));
+	}
+	
+	print STDERR "ok\n" if ($self->debug);
+
+	if ($self->debug) {
+		my $q	= $sparql;
+		$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
+		warn $q;
+	}
+	
+	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata );
+	my $sclass				= Attean->get_serializer(media_type => $format);
+	my $s					= $sclass->new();
+	my $bytes				= $s->serialize_iter_to_bytes($iter);
+	return ($bytes, $format);
+}
+
 sub query_eval_test {
 	my $self		= shift;
 	my $model		= shift;
@@ -372,6 +427,7 @@ sub query_eval_test {
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
+	my @cdata		= $model->objects( $action, iri("${RQ}constructedData") )->elements;
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -400,6 +456,7 @@ sub query_eval_test {
 			warn "# data             : " . ($data->value =~ s#file://##r) . "\n" if (blessed($data));
 		}
 		warn "# graph data       : " . ($_->value =~ s#file://##r) . "\n" for (@gdata);
+		warn "# constructed data : " . ($_->value =~ s#file://##r) . "\n" for (@cdata);
 		warn "# result           : " . ($result->value =~ s#file://##r) . "\n";
 		warn "# requires         : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
 	}
@@ -421,6 +478,12 @@ STRESS:	foreach (1 .. $count) {
 				unless ($start < $end) {
 					warn "*** Loading file did not result in any new quads: " . $g;
 				}
+			}
+			foreach my $n (@cdata) {
+				my ($bytes, $format)	= $self->construct_data($model, $n);
+				my $p					= Attean->get_parser(media_type => $format)->new();
+				my $iter				= $p->parse_iter_from_bytes($bytes);
+				$test_model->add_iter($iter->as_quads($self->default_graph));
 			}
 		} catch {
 			fail($test->value);
