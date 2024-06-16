@@ -275,7 +275,8 @@ package Attean::API::CanonicalizingBindingSet 0.033 {
 		my $parse_id	= '1';
 		my %bnode_map	= map { $_ => Attean::Blank->new( value => $mapping{"_:$_"}{'id'} ) }
 							map { substr($_,2) } # remove the leading _:
-								(keys %mapping);
+								grep { /^_:/ }
+									(keys %mapping);
 		foreach my $p (@tuples) {
 			my ($str, $t)	= @$p;
 			my $item_class	= ref($t);
