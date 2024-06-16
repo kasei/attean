@@ -184,6 +184,7 @@ package Attean::API::CanonicalizingBindingSet 0.033 {
 	use Attean::RDF;
 
 	use Moo::Role;
+	use Scalar::Util qw(blessed);
 	use namespace::clean;
 
 	with 'MooX::Log::Any';
@@ -270,7 +271,30 @@ package Attean::API::CanonicalizingBindingSet 0.033 {
 				}
 			}
 		}
-
+		
+		my $parse_id	= '1';
+		my %bnode_map	= map { $_ => Attean::Blank->new( value => $mapping{"_:$_"}{'id'} ) }
+							map { substr($_,2) } # remove the leading _:
+								(keys %mapping);
+		foreach my $p (@tuples) {
+			my ($str, $t)	= @$p;
+			my $item_class	= ref($t);
+			foreach my $pos (reverse $t->variables) {
+				my $term	= $t->$pos();
+				if (blessed($term) and $term->does('Attean::API::Literal')) {
+					my $dt 		= $term->datatype();
+					if (blessed($dt) and ($dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map' or $dt->value eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List')) {
+						my %t	= $p->[1]->mapping;
+						my $newterm	= AtteanX::Functions::CompositeLists::rewrite_lexical($term, \%bnode_map, $parse_id);
+						$t{ $pos }	= $newterm;
+						my $newt	= $item_class->new( %t );
+						$t			= $newt;
+						$p->[1]	= $t;
+					}
+				}
+			}
+		}
+		
 		@tuples	= sort { $a->[0] cmp $b->[0] } @tuples;
 		my $elements	= [ map { $_->[1] } @tuples ];
 		return ($elements, \%mapping);
