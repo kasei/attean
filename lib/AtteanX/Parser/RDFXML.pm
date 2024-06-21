@@ -59,7 +59,7 @@ use warnings;
 
 package AtteanX::Parser::RDFXML 0.033 {
 	use Moo;
-	use Types::Standard qw(Str Object);
+	use Types::Standard qw(Bool HashRef ArrayRef HashRef Str Object Maybe InstanceOf ConsumerOf);
 	use Attean;
 	use Attean::RDF;
 	
@@ -99,6 +99,7 @@ Returns a list of file extensions that may be parsed with the parser.
 	with 'Attean::API::PushParser';
 
 	has 'bnode_prefix'	=> (is => 'ro', isa => Str, default => '');
+	has 'blank_nodes'	=> (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Blank']], default => sub { +{} });
 	
 =item C<< parse_cb_from_io( $fh ) >>
 
@@ -139,7 +140,7 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 			push(@args, base => $self->base);
 		}
 		my $new_iri		= sub { $self->new_iri(@_) };
-		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, handler => $self->handler, new_iri => $new_iri, @args );
+		my $saxhandler	= AtteanX::Parser::RDFXML::SAXHandler->new( bnode_prefix => $self->bnode_prefix, blank_nodes => $self->blank_nodes, handler => $self->handler, new_iri => $new_iri, @args );
 		my $p			= XML::SAX::ParserFactory->parser(Handler => $saxhandler);
 		$saxhandler->push_base( $self->base ) if ($self->has_base);
 		eval {
@@ -195,6 +196,7 @@ sub new {
 	my $class	= shift;
 	my %args	= @_;
 	my $prefix	= $args{ bnode_prefix } // '';
+	my $bnodes	= $args{ blank_nodes } // {};
 	my $self	= bless( {
 					expect			=> [ SUBJECT, NIL ],
 					base			=> [],
@@ -206,7 +208,7 @@ sub new {
 					chars_ok		=> 0,
 					sthandler		=> $args{handler},
 					new_iri			=> $args{new_iri},
-					named_bnodes	=> {},
+					named_bnodes	=> $bnodes
 				}, $class );
 	if (my $ns = $args{ namespaces }) {
 		$self->{namespaces}	= $ns;
@@ -705,6 +707,11 @@ sub new_literal {
 					warn "Cannot canonicalize XMLLiteral: $@" . Dumper($string);
 				}
 			}
+		} elsif ($dt eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/Map' or $dt eq 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List') {
+			my $parse_id	= '1';
+			my $term		= Attean::Literal->new( value => $string, %args );
+			my $newterm		= AtteanX::Functions::CompositeLists::rewrite_lexical($term, $self->{named_bnodes}, $parse_id);
+			$string			= $newterm->value;
 		}
 	} elsif (my $lang = $self->get_language) {
 		$args{language}	= $lang;
@@ -722,7 +729,13 @@ sub new_resource {
 sub get_named_bnode {
 	my $self	= shift;
 	my $name	= shift;
-	return ($self->{named_bnodes}{ $name } ||= $self->new_bnode);
+	if (my $b = $self->{named_bnodes}{ $name }) {
+		return $b;
+	}
+	
+	my $b	= $self->new_bnode;
+	$self->{named_bnodes}{ $name }	= $b;
+	return $b;
 }
 
 1;
