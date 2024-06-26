@@ -7,7 +7,7 @@ AtteanX::Parser::SPARQL - SPARQL 1.1 Parser.
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::SPARQL version 0.033.
+This document describes AtteanX::Parser::SPARQL version 0.034.
 
 =head1 SYNOPSIS
 
@@ -74,7 +74,7 @@ L<Attean::API::AbbreviatingParser>.
 
 =cut
 
-package AtteanX::Parser::SPARQL 0.033;
+package AtteanX::Parser::SPARQL 0.034;
 
 use strict;
 use warnings;
@@ -3943,7 +3943,7 @@ sub _token_error {
 	croak $message;
 }
 
-package AtteanX::Parser::SPARQL::ObjectWrapper 0.033;
+package AtteanX::Parser::SPARQL::ObjectWrapper 0.034;
 
 use strict;
 use warnings;

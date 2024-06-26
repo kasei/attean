@@ -34,8 +34,33 @@ my:project
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
 							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
-							my:v_0-031 , my:v_0-032 , my:v_0-033 ;
+							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 ;
 	.
+
+my:v_0-034
+	a					:Version ;
+	dc:issued			"2024-06-25"^^xsd:date ;
+	:revision			"0.034" ;
+	dcterms:replaces	my:v_0-033 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add support for composite types (CDTs)." ],
+			[ a dcs:Addition ; rdfs:label "Allow extension functions to register as functional forms." ],
+			[ a dcs:Addition ; rdfs:label "Add registry to allow extension literal datatypes to map to Moo roles." ],
+			[ a dcs:Update ; rdfs:label "Fix bit-rotten code in W3C test suite harnesses." ],
+			[ a dcs:Update ; rdfs:label "Fix bugs discovered based on run of updated W3C test suite harnesses." ],
+			[ a dcs:Update ; rdfs:label "Change in `import()` behaviour for Perl > 5.39.1 (#168 from @zmughal)." ],
+			[ a dcs:Update ; rdfs:label "Improve Attean::API::CanonicalizingLiteral to have strict and non-strict c14n variants." ],
+			[ a dcs:Update ; rdfs:label "Add HTTP::Headers to test requirements." ],
+			[ a dcs:Update ; rdfs:label "Add types for RDF triple/quad and their terms (#166 from @zmughal)." ],
+			[ a dcs:Update ; rdfs:label "Fix casing for AtteanIRI type (#165 from @zmughal)." ],
+			[ a dcs:Update ; rdfs:label "Add GitHub workflow using perlrdf/devops actions (#163 from @zmughal)." ],
+			[ a dcs:Update ; rdfs:label "Add Attean::API::NumericLiteral->equals." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of BOUND and error-causing INVOKE expressions in Attean::Plan." ],
+			[ a dcs:Update ; rdfs:label "Impove error reporting in Attean::API::MutableModel->load_urls_into_graph." ]
+	]
+	.
+
 
 my:v_0-033
 	a					:Version ;
