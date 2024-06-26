@@ -44,6 +44,8 @@ This class consumes L<Attean::API::Parser>, L<Attean::API::PushParser>,
 
 =item C<< bnode_prefix >>
 
+=item C<< blank_nodes >>
+
 A string prefix for identifiers generated for blank nodes.
 
 =back

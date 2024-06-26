@@ -28,6 +28,8 @@ This document describes AtteanX::Serializer::RDFXML version 0.034
 
 =item C<< file_extensions >>
 
+=item C<< blank_nodes >>
+
 =back
 
 =head1 METHODS
