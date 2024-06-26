@@ -7,7 +7,7 @@ Attean::TermMap - Mapping terms to new terms
 
 =head1 VERSION
 
-This document describes Attean::TermMap version 0.033
+This document describes Attean::TermMap version 0.034
 
 =head1 SYNOPSIS
 
@@ -42,7 +42,7 @@ term objects.
 
 =cut
 
-package Attean::TermMap 0.033 {
+package Attean::TermMap 0.034 {
 	use Moo;
 	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;

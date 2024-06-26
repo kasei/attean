@@ -39,7 +39,7 @@ my:project
 
 my:v_0-034
 	a					:Version ;
-	dc:issued			"2024-06-15"^^xsd:date ;
+	dc:issued			"2024-06-25"^^xsd:date ;
 	:revision			"0.034" ;
 	dcterms:replaces	my:v_0-033 ;
 	dcs:changeset [

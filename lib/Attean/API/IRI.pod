@@ -4,7 +4,7 @@ Attean::API::IRI - Role representing RDF IRI terms
 
 =head1 VERSION
 
-This document describes Attean::API::IRI version 0.033
+This document describes Attean::API::IRI version 0.034
 
 =head1 SYNOPSIS
 

@@ -4,7 +4,7 @@ AtteanX::Store::Simple - Simple, unindexed, in-memory RDF store
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Simple version 0.033
+This document describes AtteanX::Store::Simple version 0.034
 
 =head1 SYNOPSIS
 
@@ -19,7 +19,7 @@ AtteanX::Store::Simple provides an in-memory quad-store.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Simple 0.033 {
+package AtteanX::Store::Simple 0.034 {
 	use Moo;
 	use Type::Tiny::Role;
 	use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
