@@ -366,7 +366,7 @@ sub construct_data {
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
-	my @cdata		= $model->objects( $action, iri("${RQ}constructedData") )->elements;
+	my @cdata		= $model->objects( $action, iri("${RQ}constructDataFile") )->elements;
 	my ($fnode)		= $model->objects( $action, iri("${RQ}format") )->elements;
 	my $format		= blessed($fnode) ? $fnode->value : 'text/turtle';
 
@@ -427,7 +427,7 @@ sub query_eval_test {
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
-	my @cdata		= $model->objects( $action, iri("${RQ}constructedData") )->elements;
+	my @cdata		= $model->objects( $action, iri("${RQ}constructDataFile") )->elements;
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
