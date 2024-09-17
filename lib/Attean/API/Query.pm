@@ -162,8 +162,25 @@ package Attean::API::SPARQLSerializable 0.034 {
 	requires 'sparql_tokens';
 	
 	sub as_sparql {
-		my $self	= shift;
-		my $s		= AtteanX::Serializer::SPARQL->new();
+		my $self = shift;
+		my %args = @_;
+
+		my $s = do {
+
+			if ($args{namespaces}) {
+
+				my $map = ref $args{namespaces} eq 'URI::NamespaceMap' ?
+						  $args{namespaces} :
+					  ref $args{namespaces} eq 'HASH' ?
+						  URI::NamespaceMap->new($args{namespaces}) :
+						  die ("namespaces value must be URI::NamespaceMap object or HASH refference.");
+
+				AtteanX::Serializer::SPARQL->new(namespaces => $map);
+			} else {
+				AtteanX::Serializer::SPARQL->new();
+			}
+		};
+
 		my $i		= $self->sparql_tokens;
 		my $bytes	= $s->serialize_iter_to_bytes($i);
 		my $sparql	= decode_utf8($bytes);
