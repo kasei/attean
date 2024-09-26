@@ -116,6 +116,7 @@ my %token_strings;
 		comma		=> [COMMA, ','],
 		semicolon	=> [SEMICOLON, ';'],
 		hathat		=> [HATHAT, '^^'],
+		tilde		=> [TILDE, '~'],
 	);
 	for my $name (keys %tokens) {
 		my ($type, $value)	= @{ $tokens{ $name } };
