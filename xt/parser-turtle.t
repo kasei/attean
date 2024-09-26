@@ -10,7 +10,7 @@ use File::Spec;
 use Attean;
 use Type::Tiny::Role;
 
-my $path	= File::Spec->catfile( $Bin, 'data', 'turtle' );
+my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-tests', 'rdf', 'rdf11', 'rdf-turtle' );
 my @good	= bsd_glob("${path}/test*.ttl");
 my @bad		= bsd_glob("${path}/bad*.ttl");
 
