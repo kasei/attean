@@ -36,8 +36,8 @@ isa_ok( $parser, 'AtteanX::Parser::NTriples' );
 {
 	my $store		= Attean->get_store('Memory')->new();
 	my $ntriples	= <<"END";
-	_:a <b> <a> .
-	<a> <b> _:a .
+	_:a <tag:b> <tag:a> .
+	<tag:a> <tag:b> _:a .
 END
 	my @list	= $parser->parse_list_from_bytes($ntriples);
 	is(scalar(@list), 2);
@@ -45,20 +45,20 @@ END
 	does_ok($t1, 'Attean::API::Triple');
 	does_ok($t2, 'Attean::API::Triple');
 	is($t1->subject->value, 'a');
-	is($t2->subject->value, 'a');
+	is($t2->subject->value, 'tag:a');
 
-	is($t1->predicate->value, 'b');
-	is($t2->predicate->value, 'b');
+	is($t1->predicate->value, 'tag:b');
+	is($t2->predicate->value, 'tag:b');
 
-	is($t1->object->value, 'a');
+	is($t1->object->value, 'tag:a');
 	is($t2->object->value, 'a');
 }
 
 {
 	my $store	= Attean->get_store('Memory')->new();
 	my $ntriples	= <<"END";
-	_:a <b> <a> .
-	<a> <b> _:a .
+	_:a <tag:b> <tag:a> .
+	<tag:a> <tag:b> _:a .
 END
 	my $iter	= $parser->parse_iter_from_bytes($ntriples);
 	my $graph	= Attean::IRI->new('http://example.org/graph');
@@ -67,9 +67,9 @@ END
 	
 	is( $store->size, 2, 'expected model size after ntriples parse' );
 	is( $store->count_quads(blank('a')), 1, 'expected 1 count bff' );
-	is( $store->count_quads(iri('a')), 1, 'expected 1 count bff' );
-	is( $store->count_quads(iri('b')), 0, 'expected 0 count bff' );
-	is( $store->count_quads(undef, iri('b')), 2, 'expected 2 count fbf' );
+	is( $store->count_quads(iri('tag:a')), 1, 'expected 1 count bff' );
+	is( $store->count_quads(iri('tag:b')), 0, 'expected 0 count bff' );
+	is( $store->count_quads(undef, iri('tag:b')), 2, 'expected 2 count fbf' );
 }
 
 {

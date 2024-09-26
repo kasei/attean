@@ -65,27 +65,27 @@ END
 }
 
 {
-	my $g		= iri('g');
+	my $g		= iri('tag:g');
 	my $store	= Attean->get_store('Memory')->new();
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	{
 		my $data	= <<"END";
-		<a> <p> <b> <g> .
-		<b> <p> <c> <g> .
-		<c> <p> <d> <g> .
-		<c> <q> <e> <g> .
+		<tag:a> <tag:p> <tag:b> <tag:g> .
+		<tag:b> <tag:p> <tag:c> <tag:g> .
+		<tag:c> <tag:p> <tag:d> <tag:g> .
+		<tag:c> <tag:q> <tag:e> <tag:g> .
 		
-		<b> <values> "0"^^<http://www.w3.org/2001/XMLSchema#integer> <ints> .
-		<b> <values> "1"^^<http://www.w3.org/2001/XMLSchema#integer> <ints> .
-		<b> <values> "2"^^<http://www.w3.org/2001/XMLSchema#integer> <ints> .
-		<b> <values> "07"^^<http://www.w3.org/2001/XMLSchema#integer> <ints> .
+		<tag:b> <tag:values> "0"^^<http://www.w3.org/2001/XMLSchema#integer> <tag:ints> .
+		<tag:b> <tag:values> "1"^^<http://www.w3.org/2001/XMLSchema#integer> <tag:ints> .
+		<tag:b> <tag:values> "2"^^<http://www.w3.org/2001/XMLSchema#integer> <tag:ints> .
+		<tag:b> <tag:values> "07"^^<http://www.w3.org/2001/XMLSchema#integer> <tag:ints> .
 END
 		$model->load_triples('nquads', $g, $data);
 	}
 	
 	{
 		note('Project');
-		my $t		= triplepattern(variable('s'), iri('q'), variable('o'));
+		my $t		= triplepattern(variable('s'), iri('tag:q'), variable('o'));
 		my $b		= Attean::Algebra::BGP->new( triples => [$t] );
 		my $p		= Attean::Algebra::Project->new( children => [$b], variables => [variable('s')] );
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
@@ -114,7 +114,7 @@ END
 		is(scalar(@dpreds), 2, 'post-distinct projected count');
 
 		my %preds	= map { $_->value('p')->value => 1 } @dpreds;
-		is_deeply(\%preds, { 'p' => 1, 'q' => 1 });
+		is_deeply(\%preds, { 'tag:p' => 1, 'tag:q' => 1 });
 	}
 
 	{
@@ -125,7 +125,7 @@ END
 		my $f		= Attean::Algebra::Filter->new( children => [$bgp], expression => $expr );
 
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
-		my $iter	= $e->evaluate($f, iri('ints'));
+		my $iter	= $e->evaluate($f, iri('tag:ints'));
 		my @quads	= $iter->elements;
 		is(scalar(@quads), 3, 'filter count');
 		
@@ -135,9 +135,9 @@ END
 
 	{
 		note('IRI Graph');
-		my $t		= triplepattern(variable('s'), iri('values'), variable('o'));
+		my $t		= triplepattern(variable('s'), iri('tag:values'), variable('o'));
 		my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
-		my $graph	= Attean::Algebra::Graph->new( children => [$bgp], graph => iri('ints') );
+		my $graph	= Attean::Algebra::Graph->new( children => [$bgp], graph => iri('tag:ints') );
 
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
 		my $iter	= $e->evaluate($graph, $g);
@@ -150,7 +150,7 @@ END
 
 	{
 		note('Variable Graph');
-		my $t		= triplepattern(variable('s'), iri('values'), variable('o'));
+		my $t		= triplepattern(variable('s'), iri('tag:values'), variable('o'));
 		my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
 		my $graph	= Attean::Algebra::Graph->new( children => [$bgp], graph => variable('graph') );
 
@@ -163,15 +163,15 @@ END
 		does_ok($r, 'Attean::API::Result');
 		my $gt		= $r->value('graph');
 		does_ok($gt, 'Attean::API::Term');
-		is($gt->value, 'ints');
+		is($gt->value, 'tag:ints');
 	}
 
 	{
 		note('Join');
-		my $t1		= triplepattern(iri('a'), iri('p'), variable('o'));
+		my $t1		= triplepattern(iri('tag:a'), iri('tag:p'), variable('o'));
 		my $bgp1	= Attean::Algebra::BGP->new( triples => [$t1] );
 
-		my $t2		= triplepattern(variable('o'), iri('p'), iri('c'));
+		my $t2		= triplepattern(variable('o'), iri('tag:p'), iri('tag:c'));
 		my $bgp2	= Attean::Algebra::BGP->new( triples => [$t2] );
 		
 		my $j		= Attean::Algebra::Join->new( children => [$bgp1, $bgp2] );
@@ -182,7 +182,7 @@ END
 		my ($r)		= @results;
 		does_ok($r, 'Attean::API::Result');
 		my $term	= $r->value('o');
-		is($term->value, 'b');
+		is($term->value, 'tag:b');
 	}
 
 	{
@@ -223,21 +223,21 @@ END
 			my $order_o	= $sort_by->( $b, 'o', 1 );
 			my @rows_o	= $e->evaluate($order_o, $g)->elements;
 			my @values_o	= map { $_->value('o')->value } @rows_o;
-			is_deeply(\@values_o, [qw(b c d e)], 'ORDER ascending');
+			is_deeply(\@values_o, [qw(tag:b tag:c tag:d tag:e)], 'ORDER ascending');
 		}
 		
 		{
 			my $order_o	= $sort_by->( $b, 'o', 0 );
 			my @rows_o	= $e->evaluate($order_o, $g)->elements;
 			my @values_o	= map { $_->value('o')->value } @rows_o;
-			is_deeply(\@values_o, [qw(e d c b)], 'ORDER descending');
+			is_deeply(\@values_o, [qw(tag:e tag:d tag:c tag:b)], 'ORDER descending');
 		}
 		
 		{
 			my $order_so	= $sort_by->( $b, 's' => 1, 'o' => 0 );
 			my @rows_so	= $e->evaluate($order_so, $g)->elements;
 			my @values_so	= map { [$_->value('s')->value, $_->value('o')->value] } @rows_so;
-			is_deeply(\@values_so, [[qw(a b)], [qw(b c)], [qw(c e)], [qw(c d)]], 'ORDER mixed');
+			is_deeply(\@values_so, [[qw(tag:a tag:b)], [qw(tag:b tag:c)], [qw(tag:c tag:e)], [qw(tag:c tag:d)]], 'ORDER mixed');
 # 			foreach my $r (@rows_so) { say $r->as_string }
 		}
 	}
@@ -248,31 +248,31 @@ END
 		
 		{
 			# <a> <q>? ?o
-			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('tag:q') );
 			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
-			my $path	= Attean::Algebra::Path->new( subject => iri('a'), path => $pp, object => variable('o') );
+			my $path	= Attean::Algebra::Path->new( subject => iri('tag:a'), path => $pp, object => variable('o') );
 			my $iter	= $e->evaluate($path, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 1);
-			is($rows[0]->value('o')->value, 'a');
+			is($rows[0]->value('o')->value, 'tag:a');
 		}
 		
 		{
 			# ?s <q>? <c>
-			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('tag:q') );
 			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
-			my $path	= Attean::Algebra::Path->new( subject => variable('s'), path => $pp, object => iri('c') );
+			my $path	= Attean::Algebra::Path->new( subject => variable('s'), path => $pp, object => iri('tag:c') );
 			my $iter	= $e->evaluate($path, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 1);
-			is($rows[0]->value('s')->value, 'c');
+			is($rows[0]->value('s')->value, 'tag:c');
 		}
 		
 		{
 			# <c> <q>? <c>
-			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('tag:q') );
 			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
-			my $path	= Attean::Algebra::Path->new( subject => iri('c'), path => $pp, object => iri('c') );
+			my $path	= Attean::Algebra::Path->new( subject => iri('tag:c'), path => $pp, object => iri('tag:c') );
 			my $iter	= $e->evaluate($path, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 1);
@@ -281,9 +281,9 @@ END
 		
 		{
 			# <c> <q>? <d>
-			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('tag:q') );
 			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
-			my $path	= Attean::Algebra::Path->new( subject => iri('c'), path => $pp, object => iri('d') );
+			my $path	= Attean::Algebra::Path->new( subject => iri('tag:c'), path => $pp, object => iri('tag:d') );
 			my $iter	= $e->evaluate($path, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 0);
@@ -291,7 +291,7 @@ END
 		
 		{
 			# ?s <q>? ?o
-			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $pred	= Attean::Algebra::PredicatePath->new( predicate => iri('tag:q') );
 			my $pp		= Attean::Algebra::ZeroOrOnePath->new( children => [ $pred ] );
 			my $path	= Attean::Algebra::Path->new( subject => variable('s'), path => $pp, object => variable('o') );
 			my $iter	= $e->evaluate($path, $g);
@@ -306,12 +306,12 @@ END
 		
 		{
 			# <c> !<p> ?o
-			my $pp		= Attean::Algebra::NegatedPropertySet->new( predicates => [iri('p')] );
-			my $path	= Attean::Algebra::Path->new( subject => iri('c'), path => $pp, object => variable('o') );
+			my $pp		= Attean::Algebra::NegatedPropertySet->new( predicates => [iri('tag:p')] );
+			my $path	= Attean::Algebra::Path->new( subject => iri('tag:c'), path => $pp, object => variable('o') );
 			my $iter	= $e->evaluate($path, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 1);
-			is($rows[0]->value('o')->value, 'e');
+			is($rows[0]->value('o')->value, 'tag:e');
 		}
 	}
 
@@ -321,14 +321,14 @@ END
 		
 		{
 			# <a> <p>/<values> ?o
-			my $p1		= Attean::Algebra::PredicatePath->new( predicate => iri('p') );
-			my $p2		= Attean::Algebra::PredicatePath->new( predicate => iri('q') );
+			my $p1		= Attean::Algebra::PredicatePath->new( predicate => iri('tag:p') );
+			my $p2		= Attean::Algebra::PredicatePath->new( predicate => iri('tag:q') );
 			my $pp		= Attean::Algebra::SequencePath->new( children => [ $p1, $p2 ] );
-			my $path	= Attean::Algebra::Path->new( subject => iri('b'), path => $pp, object => variable('o') );
+			my $path	= Attean::Algebra::Path->new( subject => iri('tag:b'), path => $pp, object => variable('o') );
 			my $iter	= $e->evaluate($path, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 1);
-			is($rows[0]->value('o')->value, 'e');
+			is($rows[0]->value('o')->value, 'tag:e');
 		}
 	}
 
@@ -344,7 +344,7 @@ END
 			my $iter	= $e->evaluate($extend, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 4);
-			like($rows[0]->value('x')->value, qr'^[bcde]$');
+			like($rows[0]->value('x')->value, qr'^tag:[bcde]$');
 		}
 	}
 	
@@ -353,14 +353,14 @@ END
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
 		
 		{
-			my $t		= triplepattern(variable('s'), iri('q'), variable('o'));
-			my $u		= triplepattern(variable('o'), iri('qqq'), variable('s'));
+			my $t		= triplepattern(variable('s'), iri('tag:q'), variable('o'));
+			my $u		= triplepattern(variable('o'), iri('tag:qqq'), variable('s'));
 			my $b		= Attean::Algebra::BGP->new( triples => [$t] );
 			my $c		= Attean::Algebra::Construct->new( children => [$b], triples => [$u] );
 			my $iter	= $e->evaluate($c, $g);
 			my @rows	= $iter->elements;
 			is(scalar(@rows), 1);
-			is($rows[0]->as_string, '<e> <qqq> <c> .');
+			is($rows[0]->as_string, '<tag:e> <tag:qqq> <tag:c> .');
 		}
 	}
 	
@@ -369,9 +369,9 @@ END
 		my $e		= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $g );
 		
 		{
-			my $t		= triplepattern(variable('s'), iri('values'), variable('o'));
+			my $t		= triplepattern(variable('s'), iri('tag:values'), variable('o'));
 			my $bgp		= Attean::Algebra::BGP->new( triples => [$t] );
-			my $graph	= Attean::Algebra::Graph->new( children => [$bgp], graph => iri('ints') );
+			my $graph	= Attean::Algebra::Graph->new( children => [$bgp], graph => iri('tag:ints') );
 			my $var		= Attean::ValueExpression->new( value => variable('o') );
 			my $expr	= Attean::CastExpression->new( children => [$var], datatype => iri('http://www.w3.org/2001/XMLSchema#decimal') );
 			my $extend	= Attean::Algebra::Extend->new(children => [$graph], variable => variable('x'), expression => $expr);

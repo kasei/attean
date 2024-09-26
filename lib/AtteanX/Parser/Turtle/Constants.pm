@@ -60,6 +60,7 @@ package AtteanX::Parser::Turtle::Constants 0.035 {
 			LTLT
 			LANNOT
 			RANNOT
+			TILDE
 			WS
 			decrypt_constant
 		)

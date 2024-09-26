@@ -44,6 +44,16 @@ package AtteanX::Parser::NTuples 0.035 {
 
 	has 'blank_nodes'	=> (is => 'ro', isa => HashRef[ConsumerOf['Attean::API::Blank']], predicate => 'has_blank_nodes_map', default => sub { +{} });
 
+	my $r_PN_CHARS_U			= qr/[_A-Za-z_\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o;
+	my $r_PN_CHARS				= qr"${r_PN_CHARS_U}|[-0-9\x{00B7}\x{0300}-\x{036F}\x{203F}-\x{2040}]"o;
+
+	sub new_abs_iri {
+		my $self	= shift;
+		my $iri		= $self->new_iri(@_);
+		die "Not an absolute IRI" unless $iri->components->{'absolute'};
+		return $iri;
+	}
+	
 =item C<< parse_term_from_bytes( $bytes ) >>
 
 Parses the given C<< $bytes >> and returns a corresponding L<Attean::API::Term> object.
@@ -106,8 +116,8 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 					push(@nodes, $n);
 					$line	=~ s/^\s*//;
 				}
-				$line	=~ s/^\s//g;
-				unless ($line eq '.') {
+				$line	=~ s/^\s+//g;
+				unless ($line =~ m'[.]\s*(#.*)?') {
 					die "Missing expected '.' at line $lineno";
 				}
 		
@@ -135,22 +145,36 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		return if ($char eq '.');
 	
 		if ($char eq '<') {
-			my ($uri)	= $_[0] =~ m/^<([^>]*)>/;
-			substr($_[0], 0, length($uri)+2)	= '';
-			state %cache;
-			if (my $i = $cache{$uri}) {
-				return $i;
+			if ($_[0] =~ m{^<<\(}) {
+				substr($_[0], 0, 3, '');
+				my $s	= $self->_eat_node($lineno, $_[0]);
+				my $p	= $self->_eat_node($lineno, $_[0]);
+				my $o	= $self->_eat_node($lineno, $_[0]);
+				$_[0]	=~ s/^\s*//;
+				die qq[Expected end of triple term at line $lineno, near "$_[0]"] unless ($_[0] =~ m{^\)>>});
+				substr($_[0], 0, 3, '');
+				return Attean::Triple->new( $s, $p, $o );
 			} else {
-				if (rand() < 0.02) {
-					# clear out the cache roughly every 50 IRIs
-					%cache	= ();
+				my ($uri)	= $_[0] =~ m/^<([^>]*)>/;
+				substr($_[0], 0, length($uri)+2)	= '';
+				state %cache;
+				if (my $i = $cache{$uri}) {
+					return $i;
+				} else {
+					if (rand() < 0.02) {
+						# clear out the cache roughly every 50 IRIs
+						%cache	= ();
+					}
+					my $iri	= $self->new_abs_iri( value => _unescape($uri, $lineno) );
+					$cache{$uri}	= $iri;
+					return $iri;
 				}
-				my $iri	= $self->new_iri( value => _unescape($uri, $lineno) );
-				$cache{$uri}	= $iri;
-				return $iri;
 			}
 		} elsif ($char eq '_') {
-			my ($name)	= $_[0] =~ m/^_:([A-Za-z][A-Za-z0-9]*)/;
+			my ($name)	= $_[0] =~ m/^_:((${r_PN_CHARS}|[0-9])((${r_PN_CHARS}|[.]})*${r_PN_CHARS})?)/;
+			unless (defined($name)) {
+				die qq[Invalid blank-node label at line $lineno, near "$_[0]"];
+			}
 			substr($_[0], 0, length($name)+2)	= '';
 			my $b	= Attean::Blank->new($name);
 			$self->blank_nodes->{$name}	= $b;
@@ -168,8 +192,14 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 						if ($1 eq 't') {
 							$value	.= "\t";
 							substr($_[0],0,2)	= '';
+						} elsif ($1 eq 'b') {
+							$value	.= "\b";
+							substr($_[0],0,2)	= '';
 						} elsif ($1 eq 'r') {
 							$value	.= "\r";
+							substr($_[0],0,2)	= '';
+						} elsif ($1 eq 'f') {
+							$value	.= "\f";
 							substr($_[0],0,2)	= '';
 						} elsif ($1 eq 'n') {
 							$value	.= "\n";
@@ -200,7 +230,8 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				die qq[Ending double quote not found at line $lineno];
 			}
 		
-			if ($_[0] =~ m/^@([a-z]+(-[a-zA-Z0-9]+)*)/) {
+# 			if ($_[0] =~ m/^@(([a-z]+(?:-[a-zA-Z0-9]+)*)(?:--([a-zA-Z]+))?)/) {
+			if ($_[0] =~ m/^@(([a-z]+(?:-[a-zA-Z0-9]+)*)(?:--(ltr|rtl))?)/) {
 				my $lang	= $1;
 				substr($_[0],0,1+length($lang))	= '';
 				return Attean::Literal->new( value => $value, language => $lang );
@@ -208,13 +239,13 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				substr($_[0],0,3)	= '';
 				my ($uri)	= $_[0] =~ m/^([^>]*)>/;
 				substr($_[0], 0, length($uri)+1)	= '';
-				my $dt	= $self->new_iri(value => $uri);
-				return Attean::Literal->new( value => $value, datatype => $dt);
+				my $dt	= $self->new_abs_iri(value => _unescape($uri, $lineno));
+				return Attean::Literal->new( value => $value, datatype => $dt );
 			} else {
 				return Attean::Literal->new($value);
 			}
 		} else {
-			Carp::cluck;
+# 			Carp::cluck;
 			die qq[Not valid N-Triples node start character '$char' at line $lineno, near "$_[0]"];
 		}
 	}
