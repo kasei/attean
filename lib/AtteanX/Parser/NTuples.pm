@@ -287,7 +287,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 							$value	.= "\\";
 							substr($string,0,2)	= '';
 						} elsif ($1 eq 'u') {
-							$string =~ m/^\\u([0-9A-F]{4})/ or die qq[Bad N-Triples \\u escape at line $lineno, near "$string"];
+							$string =~ m/^\\u([0-9A-Fa-f]{4})/ or die qq[Bad N-Triples \\u escape at line $lineno, near "$string"];
 							$value	.= chr(oct('0x' . $1));
 							substr($string,0,6)	= '';
 						} elsif ($1 eq 'U') {
