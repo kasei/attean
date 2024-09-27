@@ -130,6 +130,8 @@ sub sparql_syntax_test {
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($name)		= $model->objects( $test, $mfname )->elements;
 	my $namevalue	= $name->value;
+	my $testname	= $test->value;
+	$testname		=~ s{^.*[/#]}{};
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -173,7 +175,7 @@ sub sparql_syntax_test {
 		my $ok	= blessed($query);
 		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
-			pass("syntax $namevalue: $filename");
+			pass("$testname - $filename");
 		} else {
 			fail("syntax $namevalue; $filename: $@");
 		}
@@ -182,7 +184,7 @@ sub sparql_syntax_test {
 		my $ok	= $@ ? 1 : 0;
 		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
-			pass("syntax $namevalue: $filename");
+			pass("$testname - $filename");
 		} else {
 			if ($self->debug) {
 				warn $query->as_string;
@@ -205,6 +207,8 @@ sub data_syntax_eval_test {
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($name)		= $model->objects( $test, $mfname )->elements;
 	my $namevalue	= $name->value;
+	my $testname	= $test->value;
+	$testname		=~ s{^.*[/#]}{};
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -286,13 +290,13 @@ sub data_syntax_eval_test {
 	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
 	my $nt_parser	= Attean->get_parser('NTriples')->new();
 	if ($is_pos_ttl or $is_eval_ttl) {
-		my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
+		my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
 		if ($is_eval) {
 			my $ser	= Attean->get_serializer('NTriples')->new();
 			my $nt_parser	= Attean->get_parser('NTriples')->new();
-			my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($result_bytes) };
+			my @nt_triples	= eval { $nt_parser->parse_iter_from_bytes($result_bytes)->uniq()->elements() };
 			if ($@) {
-				fail("$namevalue - Failed to parse expected data from $result_filename: $@");
+				fail("$testname - Failed to parse expected data from $result_filename: $@");
 				return;
 			}
 			my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
@@ -300,22 +304,23 @@ sub data_syntax_eval_test {
 			my $test	= Attean::BindingEqualityTest->new();
 			my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
 			my $ok		= $test->equals($ttl_iter, $nt_iter);
-			ok($ok, "eval $namevalue: $filename");
+			ok($ok, "$testname - $filename");
 			if (not $ok) {
 				warn "Expecting " . scalar(@nt_triples) . " triples:\n";
 				if (scalar(@nt_triples)) {
 					warn $ser->serialize_list_to_bytes(@nt_triples);
 				}
 # 				warn $_->as_string for (sort map { $_->as_string } @nt_triples);
-				warn "But found:\n";
-				warn $ser->serialize_list_to_bytes(@triples);
+				warn "But found " . scalar(@triples) . " triples:\n";
+				my $bytes	= $ser->serialize_list_to_bytes(@triples);
+				warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
 # 				warn "$_\n" for (sort map { $_->as_string } @triples);
 			}
 		} else {
 			my $ok	= scalar(@triples);
 			$self->record_result('syntax', $ok, $test->as_string);
 			if ($ok) {
-				pass("syntax $namevalue: $filename");
+				pass("$testname - $filename");
 			} else {
 				fail("syntax $namevalue; $filename: $@");
 			}
@@ -335,7 +340,7 @@ sub data_syntax_eval_test {
 			my $test	= Attean::BindingEqualityTest->new();
 			my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
 			my $ok		= $test->equals($ttl_iter, $nt_iter);
-			ok($ok, "eval $namevalue: $filename");
+			ok($ok, "$testname - $filename");
 			if (not $ok) {
 				warn "Expecting:\n";
 				warn $ser->serialize_list_to_bytes(@nt_triples);
@@ -348,7 +353,7 @@ sub data_syntax_eval_test {
 			my $ok	= scalar(not $parse_error);
 			$self->record_result('syntax', $ok, $test->as_string);
 			if ($ok) {
-				pass("syntax $namevalue: $filename");
+				pass("$testname - $filename");
 			} else {
 				fail("syntax $namevalue; $filename: $@");
 			}
@@ -358,7 +363,7 @@ sub data_syntax_eval_test {
 		my $ok	= $@ ? 1 : 0;
 		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
-			pass("syntax $namevalue: $filename");
+			pass("$testname - $filename");
 		} else {
 			if ($self->debug) {
 				warn "Unexpected successful parse of:\n" . $content;
@@ -370,7 +375,7 @@ sub data_syntax_eval_test {
 		my $ok	= $@ ? 1 : 0;
 		$self->record_result('syntax', $ok, $test->as_string);
 		if ($ok) {
-			pass("syntax $namevalue: $filename");
+			pass("$testname - $filename");
 		} else {
 			if ($self->debug) {
 				warn "Unexpected successful parse of:\n" . $content;
@@ -446,7 +451,7 @@ sub data_syntax_eval_test {
 # 			my $ok	= scalar(@triples);
 # 			$self->record_result('syntax', $ok, $test->as_string);
 # 			if ($ok) {
-# 				pass("syntax $namevalue: $filename");
+# 				pass("$testname - $filename");
 # 			} else {
 # 				fail("syntax $namevalue; $filename: $@");
 # 			}
@@ -455,7 +460,7 @@ sub data_syntax_eval_test {
 # 			my $ok	= scalar(@triples);
 # 			$self->record_result('syntax', $ok, $test->as_string);
 # 			if ($ok) {
-# 				pass("syntax $namevalue: $filename");
+# 				pass("$testname - $filename");
 # 			} else {
 # 				fail("syntax $namevalue; $filename: $@");
 # 			}
@@ -464,7 +469,7 @@ sub data_syntax_eval_test {
 # 			my $ok	= $@ ? 1 : 0;
 # 			$self->record_result('syntax', $ok, $test->as_string);
 # 			if ($ok) {
-# 				pass("syntax $namevalue: $filename");
+# 				pass("$testname - $filename");
 # 			} else {
 # # 				if ($self->debug) {
 # # 					warn $query->as_string;
@@ -476,7 +481,7 @@ sub data_syntax_eval_test {
 # 			my $ok	= $@ ? 1 : 0;
 # 			$self->record_result('syntax', $ok, $test->as_string);
 # 			if ($ok) {
-# 				pass("syntax $namevalue: $filename");
+# 				pass("$testname - $filename");
 # 			} else {
 # # 				if ($self->debug) {
 # # 					warn $query->as_string;
