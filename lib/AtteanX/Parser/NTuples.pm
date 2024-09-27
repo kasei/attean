@@ -50,7 +50,7 @@ package AtteanX::Parser::NTuples 0.039 {
 	sub new_abs_iri {
 		my $self	= shift;
 		my $iri		= $self->new_iri(@_);
-		die "Not an absolute IRI" unless $iri->components->{'absolute'};
+		die "Not an absolute IRI" . Dumper($iri) unless $iri->is_absolute;
 		return $iri;
 	}
 	

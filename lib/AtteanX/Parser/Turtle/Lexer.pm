@@ -84,6 +84,7 @@ current line and column of the input data.
 		'}'	=> RBRACE,
 		','	=> COMMA,
 		'='	=> EQUALS,
+		'~' => TILDE,
 	);
 
 	my %METHOD_TOKEN	= (
