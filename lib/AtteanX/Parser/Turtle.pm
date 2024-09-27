@@ -181,11 +181,9 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $self	= shift;
 		my $l		= shift;
 		$l->check_for_bom;
-		while (my $t = $self->_next_nonws($l)) {
-			$self->_statement($l, $t);
-		}
+		$self->_turtleDoc($l);
 	}
-
+	
 	################################################################################
 
 	sub _unget_token {
@@ -195,6 +193,14 @@ serialization is found at the beginning of C<< $bytes >>.
 # 		push(@{ $self->{ stack } }, $t);
 	}
 
+	sub _peek_nonws {
+		my $self	= shift;
+		my $l		= shift;
+		my $t		= $self->_next_nonws($l);
+		$self->_unget_token($t);
+		return $t;
+	}
+	
 	sub _next_nonws {
 		my $self	= shift;
 		if (scalar(@{ $self->_stack })) {
@@ -224,6 +230,16 @@ serialization is found at the beginning of C<< $bytes >>.
 			$self->_throw_error(sprintf("Expecting %s but got %s", decrypt_constant($type), decrypt_constant($t->type)), $t, $l);
 		}
 		return $t;
+	}
+
+	## Methods based on grammar productions:
+	
+	sub _turtleDoc {
+		my $self	= shift;
+		my $l		= shift;
+		while (my $t = $self->_next_nonws($l)) {
+			$self->_statement($l, $t);
+		}
 	}
 
 	sub _statement {
@@ -282,22 +298,22 @@ serialization is found at the beginning of C<< $bytes >>.
 			$self->base($iri);
 		}
 		else {
-			$self->_triple( $l, $t );
+			$self->_triples( $l, $t );
 			$t	= $self->_get_token_type($l, DOT);
 		}
 	# 	}
 	}
 
-	sub _triple {
+	sub _subject {
 		my $self	= shift;
 		my $l		= shift;
 		my $t		= shift;
+		my $bnode_plist_ref	= shift;
 		my $type	= $t->type;
-		# subject
 		my $subj;
 		my $bnode_plist	= 0;
 		if ($type == LTLT) {
-			$subj	= $self->_quotedTriple($l);
+			$subj	= $self->_reifiedTriple($l);
 		} elsif ($type == LBRACKET) {
 			$bnode_plist	= 1;
 			$subj	= Attean::Blank->new();
@@ -330,6 +346,21 @@ serialization is found at the beginning of C<< $bytes >>.
 		} else {
 			$subj	= $self->_token_to_node($t);
 		}
+		die 'unexpected undef subject' unless defined($subj);
+		if (ref($bnode_plist_ref)) {
+			$$bnode_plist_ref	= $bnode_plist;
+		}
+		return $subj;
+	}
+	
+	sub _triples {
+		my $self	= shift;
+		my $l		= shift;
+		my $t		= shift;
+		my $type	= $t->type;
+		# subject
+		my $bnode_plist	= 0;
+		my $subj	= $self->_subject($l, $t, \$bnode_plist);
 	# 	warn "Subject: $subj\n";	# XXX
 	
 		if ($bnode_plist) {
@@ -345,84 +376,55 @@ serialization is found at the beginning of C<< $bytes >>.
 		}
 	}
 
-	sub _quotedTriple {
+	sub _verb {
 		my $self	= shift;
 		my $l		= shift;
-		my $subj	= $self->_qtSubject($l);
-
 		my $t		= $self->_next_nonws($l);
-		my $type	= $t->type;
+		my $type = $t->type;
 		unless ($type==IRI or $type==PREFIXNAME or $type==A) {
 			$self->_throw_error("Expecting verb but got " . decrypt_constant($type), $t, $l);
 		}
 		my $pred	= $self->_token_to_node($t);
-		my $obj		= $self->_qtObject($l, $self->_next_nonws($l));
-		$self->_get_token_type($l, GTGT);
-		my $triple	= Attean::Triple->new($subj, $pred, $obj);
-		return $triple;
+		return $pred;
 	}
 	
-	sub _qtSubject {
+	sub _reifiedTriple {
 		my $self	= shift;
 		my $l		= shift;
+
 		my $t		= $self->_next_nonws($l);
-		my $type	= $t->type;
-
 		my $subj;
-		if ($type == LTLT) {
-			$subj	= $self->_quotedTriple($l);
-		} elsif ($type == LBRACKET) {
-			$self->_get_token_type($l, RBRACKET);
-			return Attean::Blank->new();
-		} elsif (not($type==IRI or $type==PREFIXNAME or $type==BNODE)) {
-			$self->_throw_error("Expecting resource or bnode but got " . decrypt_constant($type), $t, $l);
+		if ($t->type == LTLT) {
+			$subj	= $self->_reifiedTriple($l);
 		} else {
-			$subj	= $self->_token_to_node($t);
+			$subj	= $self->_subject($l, $t);
 		}
-		return $subj;
+		
+		my $pred	= $self->_verb($l);
+		my $obj		= $self->_object($l, $self->_next_nonws($l));
+		
+		$t			= $self->_peek_nonws($l);
+		my $reif	= ($t->type == TILDE) ? $self->_reifier($l) : Attean::Blank->new();
+		$self->_get_token_type($l, GTGT);
+		my $triple	= Attean::Triple->new($subj, $pred, $obj);
+		$self->_assert_triple($reif, Attean::IRI->new(value => "${RDF}reifies", lazy => 1), $triple);
+		return $reif;
 	}
-
-	sub _qtObject {
+	
+	sub _reifier {
 		my $self	= shift;
 		my $l		= shift;
-		my $t		= shift;
-		my $tcopy	= $t;
-		my $obj;
-		my $type	= $t->type;
-		if ($type == LTLT) {
-			$obj	= $self->_quotedTriple($l);
-		} elsif ($type == LBRACKET) {
-			$self->_get_token_type($l, RBRACKET);
-			return Attean::Blank->new();
-		} elsif (not($type==IRI or $type==PREFIXNAME or $type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN)) {
-			$self->_throw_error("Expecting object but got " . decrypt_constant($type), $t, $l);
-		} else {
-			if ($type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S) {
-				my $value	= $t->value;
-				my $t		= $self->_next_nonws($l);
-				my $dt;
-				my $lang;
-				if ($t) {
-					if ($t->type == HATHAT) {
-						my $t		= $self->_next_nonws($l);
-						if ($t->type == IRI or $t->type == PREFIXNAME) {
-							$dt	= $self->_token_to_node($t);
-						}
-					} elsif ($t->type == LANG) {
-						$lang	= $t->value;
-					} else {
-						$self->_unget_token($t);
-					}
-				}
-				my %args	= (value => $value);
-				$args{language}	= $lang if (defined($lang));
-				$args{datatype}	= $dt if (defined($dt));
-				$obj	= $self->new_literal(%args);
-			} else {
-				$obj	= $self->_token_to_node($t, $type);
+		my $t		= $self->_peek_nonws($l);
+		if ($t->type == TILDE) {
+			$self->_next_nonws($l);
+			my $t		= $self->_peek_nonws($l);
+			my $type	= $t->type;
+			if ($type==IRI or $type==PREFIXNAME or $type==BNODE) {
+				$self->_get_token_type($l, $type);
+				return $self->_token_to_node($t);
 			}
 		}
-		return $obj;
+		return Attean::Blank->new();
 	}
 	
 	sub _assert_list {
@@ -484,7 +486,8 @@ serialization is found at the beginning of C<< $bytes >>.
 			my $t		= $self->_next_nonws($l);
 			last unless ($t);
 			my $obj		= $self->_object($l, $t);
-			$self->_assert_triple_with_optional_annotation($l, $subj, $pred, $obj);
+			$self->_assert_triple($subj, $pred, $obj);
+			$self->_annotation($l, $subj, $pred, $obj);
 		
 			$t	= $self->_next_nonws($l);
 			if ($t and $t->type == COMMA) {
@@ -495,25 +498,33 @@ serialization is found at the beginning of C<< $bytes >>.
 			}
 		}
 	}
-
-	sub _assert_triple_with_optional_annotation {
+	
+	sub _annotation {
 		my $self	= shift;
 		my $l		= shift;
 		my $subj	= shift;
 		my $pred	= shift;
 		my $obj		= shift;
-		my $qt		= $self->_assert_triple($subj, $pred, $obj);
-		
-		my $t	= $self->_next_nonws($l);
-		if ($t->type != LANNOT) {
-			$self->_unget_token($t);
-			return;
+		my $t		= $self->_peek_nonws($l);
+		my $reif;
+		while ($t->type == TILDE or $t->type == LANNOT) {
+			if (not defined($reif)) {
+				$reif	= Attean::Blank->new();
+			}
+			if ($t->type == TILDE) {
+				$reif	= $self->_reifier($l);
+			} elsif ($t->type == LANNOT) {
+				$self->_get_token_type($l, LANNOT);
+				my $triple	= Attean::Triple->new($subj, $pred, $obj);
+				$self->_assert_triple($reif, Attean::IRI->new(value => "${RDF}reifies", lazy => 1), $triple);
+				$self->_predicateObjectList( $l, $reif );
+				$self->_get_token_type($l, RANNOT);
+				$reif	= undef;
+			}
+			$t	= $self->_peek_nonws($l);
 		}
-		
-		$self->_predicateObjectList( $l, $qt );
-		$self->_get_token_type($l, RANNOT);
 	}
-	
+
 	sub _assert_triple {
 		my $self	= shift;
 		my $subj	= shift;
@@ -525,7 +536,6 @@ serialization is found at the beginning of C<< $bytes >>.
 	
 		my $t		= Attean::Triple->new($subj, $pred, $obj);
 		$self->handler->($t);
-		return $t;
 	}
 
 
@@ -537,7 +547,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $obj;
 		my $type	= $t->type;
 		if ($type==LTLT) {
-			return $self->_quotedTriple($l);
+			return $self->_reifiedTriple($l);
 		} elsif ($type==LBRACKET) {
 			$obj	= Attean::Blank->new();
 			my $t	= $self->_next_nonws($l);
@@ -683,7 +693,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		if (defined($t->value)) {
 			$text	.= " (near '" . $t->value . "')";
 		}
-		die $text;
+		Carp::cluck $text;
 	}
 }
 
