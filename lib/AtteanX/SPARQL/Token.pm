@@ -137,7 +137,7 @@ sub fast_constructor {
 		gtgt		=> [GTGT, '>>'],
 		lannot		=> [LANNOT, '{|'],
 		rannot		=> [RANNOT, '|}'],
-		
+		tilde		=> [TILDE, '~'],
 	);
 	for my $name (keys %tokens) {
 		my ($type, $value)	= @{ $tokens{ $name } };

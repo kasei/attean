@@ -59,7 +59,7 @@ package Attean::TriplePattern 0.039 {
 	
 	sub ntriples_string {
 		my $self	= shift;
-		return join(' ', '<<', (map { $self->$_()->ntriples_string() } qw(subject predicate object)), '>>');
+		return join(' ', '<<(', (map { $self->$_()->ntriples_string() } qw(subject predicate object)), ')>>');
 	}
 }
 

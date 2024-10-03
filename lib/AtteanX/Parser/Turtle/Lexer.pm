@@ -80,7 +80,6 @@ current line and column of the input data.
 		'['	=> LBRACKET,
 		']'	=> RBRACKET,
 		'('	=> LPAREN,
-		')'	=> RPAREN,
 		'}'	=> RBRACE,
 		','	=> COMMA,
 		'='	=> EQUALS,
@@ -92,6 +91,7 @@ current line and column of the input data.
 		q[@]	=> '_get_keyword',
 		q[<]	=> '_get_iriref_or_ltlt',
 		q[>]	=> '_get_gtgt',
+		q[)]	=> '_get_rparen_or_pgtgt',
 		q[|]	=> '_get_rannot',
 		q[{]	=> '_get_lbrace_or_lannot',
 		q[_]	=> '_get_bnode',
@@ -216,10 +216,26 @@ Returns the next token present in the input.
 		return $self->new_token(RANNOT, $self->start_line, $self->start_column, '|}');
 	}
 	
+	sub _get_rparen_or_pgtgt {
+		my $self	= shift;
+		$self->get_char_safe(q[)]);
+		if ($self->buffer =~ /^>>/o) {
+			$self->get_char_safe(q[>]);
+			$self->get_char_safe(q[>]);
+			return $self->new_token(PGTGT, $self->start_line, $self->start_column, 'PGTGT');
+		} else {
+			return $self->new_token(RPAREN, $self->start_line, $self->start_column, ')');
+		}
+	}
+	
 	sub _get_iriref_or_ltlt {
 		my $self	= shift;
 		$self->get_char_safe(q[<]);
-		if ($self->buffer =~ /^</o) {
+		if ($self->buffer =~ /^<\(/o) {
+			$self->get_char_safe(q[<]);
+			$self->get_char_safe(q[(]);
+			return $self->new_token(LTLTP, $self->start_line, $self->start_column, '<<(');
+		} elsif ($self->buffer =~ /^</o) {
 			$self->get_char_safe(q[<]);
 			return $self->new_token(LTLT, $self->start_line, $self->start_column, '<<');
 		}
