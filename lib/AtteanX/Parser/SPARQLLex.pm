@@ -168,6 +168,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.035 {
 			q[>]	=> '_get_iriref_or_relational',
 			q([)	=> '_get_lbracket_or_anon',
 			q[(]	=> '_get_lparen_or_nil',
+			q[)]	=> '_get_rparen_or_pgtgt',
 			(map {$_ => '_get_number'} (0 .. 9, '-', '+'))
 		);
 		while (my ($k,$v) = each(%METHOD_TOKEN)) {
@@ -182,12 +183,12 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.035 {
 			'.'	=> DOT,
 			'='	=> EQUALS,
 			']'	=> RBRACKET,
-			')'	=> RPAREN,
 			'-'	=> MINUS,
 			'+'	=> PLUS,
 			';'	=> SEMICOLON,
 			'/'	=> SLASH,
 			'*'	=> STAR,
+			'~'	=> TILDE,
 		);
 		while (my ($k,$v) = each(%CHAR_TOKEN)) {
 			if (length($k) != 1) {
@@ -436,6 +437,9 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.035 {
 		} elsif (substr($buffer, 0, 2) eq '>=') {
 			$self->read_length(2);
 			return $self->new_token(GE, $self->start_line, $self->start_column, '>=');
+		} elsif (substr($buffer, 0, 3) eq '<<(') {
+			$self->read_length(3);
+			return $self->new_token(LTLTP, $self->start_line, $self->start_column, '<<(');
 		} elsif (substr($buffer, 0, 2) eq '<<') {
 			$self->read_length(2);
 			return $self->new_token(LTLT, $self->start_line, $self->start_column, '<<');
@@ -494,6 +498,17 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.035 {
 		} else {
 			$self->get_char_safe('(');
 			return $self->new_token(LPAREN, $self->start_line, $self->start_column, '(');
+		}
+	}
+	
+	sub _get_rparen_or_pgtgt {
+		my $self	= shift;
+		if (substr($self->buffer, 0, 3) eq ')>>') {
+			$self->read_length(3);
+			return $self->new_token(PGTGT, $self->start_line, $self->start_column, ')>>');
+		} else {
+			$self->get_char_safe(')');
+			return $self->new_token(RPAREN, $self->start_line, $self->start_column, ')');
 		}
 	}
 	

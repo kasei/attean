@@ -576,7 +576,7 @@ package Attean::API::Triple 0.035 {
 	sub ntriples_string {
 		my $self	= shift;
 		my @values	= $self->values;
-		return join(' ', '<<', (map { $_->ntriples_string } @values), '>>');
+		return join(' ', '<<(', (map { $_->ntriples_string } @values), ')>>');
 	}
 
 	sub order {

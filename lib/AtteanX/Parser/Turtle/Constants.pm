@@ -57,7 +57,9 @@ package AtteanX::Parser::Turtle::Constants 0.035 {
 			TURTLEBASE
 			TURTLEPREFIX
 			GTGT
+			PGTGT
 			LTLT
+			LTLTP
 			LANNOT
 			RANNOT
 			TILDE
