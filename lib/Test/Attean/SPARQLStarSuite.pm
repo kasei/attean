@@ -61,13 +61,14 @@ sub manifest_paths {
 ###############################################################################
 
 
-Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
+Test::Roo::top_test 'SPARQL 1.2 tests' => sub {
 	my $self		= shift;
 	my $PATTERN		= $self->pattern;
 	my @manifests	= @{ $self->manifests };
 	my $model		= $self->model;
+	
 	foreach my $m (@manifests) {
-# 		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
+		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
 		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
 		unless (blessed($list)) {
 			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
@@ -77,15 +78,19 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 			unless ($test->value =~ /$PATTERN/) {
 				next;
 			}
+			warn "Test: " . $test->as_string . "\n" if ($self->debug);
 # 			if ($LIST_TESTS) {
 # 				say $test->value;
 # 			}
+
+			my $handled	= 0;
 			if ($self->run_query_tests) {
 				{
 					# Evaluation Tests
 					my $et	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}QueryEvaluationTest"));
 					my $ct	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}CSVResultFormatTest"));
 					if ($et + $ct) {
+						$handled++;
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->query_eval_test( $model, $test );
@@ -95,11 +100,12 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 				{
 					# Syntax Tests
 					my $total	= 0;
-					foreach my $type (qw(PositiveSyntaxTest11 NegativeSyntaxTest11)) {
+					foreach my $type (qw(PositiveSyntaxTest NegativeSyntaxTest)) {
 						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
 					}
 
 					if ($total) {
+						$handled++;
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->sparql_syntax_test( 'query', $model, $test );
@@ -111,6 +117,7 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 				{
 					# Evaluation Tests
 					if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_quads($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
+						$handled++;
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						unless ($test->value =~ /$PATTERN/) {
 							next;
@@ -123,16 +130,25 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 				{
 					# Syntax Tests
 					my $total	= 0;
-					foreach my $type (qw(PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest11)) {
+					foreach my $type (qw(PositiveUpdateSyntaxTest NegativeUpdateSyntaxTest)) {
 						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
 					}
 
 					if ($total) {
+						$handled++;
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->sparql_syntax_test( 'update', $model, $test );
 					}
 				}
+			}
+			
+			unless ($handled) {
+				my (@types)	= $model->objects( $test, iri("${RDF}type") )->elements;
+				foreach my $t (@types) {
+					diag("type: " . $t->value);
+				}
+				fail("Unhandled test: " . $test->value);
 			}
 		}
 	}

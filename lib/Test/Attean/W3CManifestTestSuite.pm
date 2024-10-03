@@ -123,13 +123,13 @@ sub sparql_syntax_test {
 	my $model		= shift;
 	my $test		= shift;
 	my $count		= shift // 1;
+	my $handled		= 0;
 	
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
 	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($name)		= $model->objects( $test, $mfname )->elements;
-	my $namevalue	= $name->value;
 	my $testname	= $test->value;
 	$testname		=~ s{^.*[/#]}{};
 	
@@ -144,8 +144,8 @@ sub sparql_syntax_test {
 		}
 	}
 
-	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
-	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
+	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
+	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
 	my $is_neg_query	= $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest11"));
 	my $is_neg_update	= $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest11"));
 
@@ -174,24 +174,31 @@ sub sparql_syntax_test {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= blessed($query);
 		$self->record_result('syntax', $ok, $test->as_string);
+		$handled++;
 		if ($ok) {
 			pass("$testname - $filename");
 		} else {
-			fail("syntax $namevalue; $filename: $@");
+			fail("$testname - $filename: $@");
 		}
 	} elsif ($is_neg_query or $is_neg_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= $@ ? 1 : 0;
 		$self->record_result('syntax', $ok, $test->as_string);
+		$handled++;
 		if ($ok) {
 			pass("$testname - $filename");
 		} else {
 			if ($self->debug) {
 				warn $query->as_string;
 			}
-			fail("syntax $namevalue; $filename (unexpected successful parse)");
+			fail("$testname - $filename (unexpected successful parse)");
 		}
 	}
+	
+	unless ($handled) {
+		fail("Unhandled test: $testname");
+	}
+	
 }
 
 sub data_syntax_eval_test {
@@ -206,9 +213,8 @@ sub data_syntax_eval_test {
 	my ($resultd)	= $model->objects( $test, iri("${MF}result") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($name)		= $model->objects( $test, $mfname )->elements;
-	my $namevalue	= $name->value;
 	my $testname	= $test->value;
-	$testname		=~ s{^.*[/#]}{};
+	$testname		=~ s{^.*[/#]([^/#]+[/#])}{$1};
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -221,17 +227,25 @@ sub data_syntax_eval_test {
 		}
 	}
 
-	my $is_eval_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
-	my $is_pos_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
-	my $is_neg_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax"));
+	my $is_eval_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
+	my $is_pos_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
+	my $is_neg_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax"));
+	my $is_pos_c14n_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveC14N"));
 
-	my $is_eval_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
-	my $is_pos_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
-	my $is_neg_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
+	my $is_eval_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
+	my $is_pos_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
+	my $is_neg_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
+	my $is_pos_c14n_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveC14N"));
 
-	my $is_eval			= ($is_eval_ttl or $is_eval_nt);
-	my $is_ttl			= ($is_eval_ttl or $is_pos_ttl or $is_neg_ttl);
-	my $is_nt			= ($is_eval_nt or $is_pos_nt or $is_neg_nt);
+	my $is_eval_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsEval"));
+	my $is_pos_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveSyntax"));
+	my $is_neg_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsNegativeSyntax"));
+	my $is_pos_c14n_nq		= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveC14N"));
+
+	my $is_eval				= ($is_eval_ttl or $is_eval_nt or $is_eval_nq);
+	my $is_ttl				= ($is_eval_ttl or $is_pos_ttl or $is_neg_ttl or $is_pos_c14n_ttl);
+	my $is_nt				= ($is_eval_nt or $is_pos_nt or $is_neg_nt or $is_pos_c14n_nt);
+	my $is_nq				= ($is_eval_nq or $is_pos_nq or $is_neg_nq or $is_pos_c14n_nq);
 	
 	
 	my $parser_name		= $is_ttl ? 'Turtle' : 'NTriples';
@@ -289,98 +303,152 @@ sub data_syntax_eval_test {
 	
 	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
 	my $nt_parser	= Attean->get_parser('NTriples')->new();
-	if ($is_pos_ttl or $is_eval_ttl) {
-		my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
-		if ($is_eval) {
-			my $ser	= Attean->get_serializer('NTriples')->new();
-			my $nt_parser	= Attean->get_parser('NTriples')->new();
-			my @nt_triples	= eval { $nt_parser->parse_iter_from_bytes($result_bytes)->uniq()->elements() };
-			if ($@) {
-				fail("$testname - Failed to parse expected data from $result_filename: $@");
-				return;
-			}
-			my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
-
-			my $test	= Attean::BindingEqualityTest->new();
-			my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
-			my $ok		= $test->equals($ttl_iter, $nt_iter);
-			ok($ok, "$testname - $filename");
-			if (not $ok) {
-				warn "Expecting " . scalar(@nt_triples) . " triples:\n";
-				if (scalar(@nt_triples)) {
-					warn $ser->serialize_list_to_bytes(@nt_triples);
+	my $nq_parser	= Attean->get_parser('NQuads')->new();
+	SKIP: {
+		if ($is_pos_ttl or $is_eval_ttl) {
+			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
+			if ($is_eval) {
+				my $ser	= Attean->get_serializer('NTriples')->new();
+				my $nt_parser	= Attean->get_parser('NTriples')->new();
+				my @nt_triples	= eval { $nt_parser->parse_iter_from_bytes($result_bytes)->uniq()->elements() };
+				if ($@) {
+					fail("$testname - Failed to parse expected data from $result_filename: $@");
+					return;
 				}
-# 				warn $_->as_string for (sort map { $_->as_string } @nt_triples);
-				warn "But found " . scalar(@triples) . " triples:\n";
-				my $bytes	= $ser->serialize_list_to_bytes(@triples);
-				warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
-# 				warn "$_\n" for (sort map { $_->as_string } @triples);
-			}
-		} else {
-			my $ok	= scalar(@triples);
-			$self->record_result('syntax', $ok, $test->as_string);
-			if ($ok) {
-				pass("$testname - $filename");
-			} else {
-				fail("syntax $namevalue; $filename: $@");
-			}
-		}
-	} elsif ($is_pos_nt or $is_eval_nt) {
-		my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
-		my $parse_error	= $@;
-		if ($is_eval) {
-			my $ser	= Attean->get_serializer('NTriples')->new();
-			my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($result_bytes) };
-			if ($@) {
-				fail("Failed to parse expected data from $result_filename: $@");
-				return;
-			}
-			my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
+				my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
 
-			my $test	= Attean::BindingEqualityTest->new();
-			my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
-			my $ok		= $test->equals($ttl_iter, $nt_iter);
-			ok($ok, "$testname - $filename");
-			if (not $ok) {
-				warn "Expecting:\n";
-				warn $ser->serialize_list_to_bytes(@nt_triples);
-# 				warn $_->as_string for (sort map { $_->as_string } @nt_triples);
-				warn "But found:\n";
-				warn $ser->serialize_list_to_bytes(@triples);
-# 				warn "$_\n" for (sort map { $_->as_string } @triples);
+				my $test	= Attean::BindingEqualityTest->new();
+				my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
+				my $ok		= $test->equals($ttl_iter, $nt_iter);
+				ok($ok, "$testname - $filename");
+				if (not $ok) {
+					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
+					if (scalar(@nt_triples)) {
+						warn $ser->serialize_list_to_bytes(@nt_triples);
+					}
+					warn "But found " . scalar(@triples) . " triples:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@triples);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= scalar(@triples);
+				$self->record_result('syntax', $ok, $test->as_string);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $@");
+				}
 			}
-		} else {
-			my $ok	= scalar(not $parse_error);
+		} elsif ($is_pos_nt or $is_eval_nt) {
+			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
+			my $parse_error	= $@;
+			if ($is_eval) {
+				my $ser	= Attean->get_serializer('NTriples')->new();
+				my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($result_bytes) };
+				if ($@) {
+					fail("Failed to parse expected data from $result_filename: $@");
+					return;
+				}
+				my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
+
+				my $test	= Attean::BindingEqualityTest->new();
+				my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
+				my $ok		= $test->equals($ttl_iter, $nt_iter);
+				ok($ok, "$testname - $filename");
+				if (not $ok) {
+					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
+					if (scalar(@nt_triples)) {
+						warn $ser->serialize_list_to_bytes(@nt_triples);
+					}
+					warn "But found " . scalar(@triples) . " triples:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@triples);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= scalar(not $parse_error);
+				$self->record_result('syntax', $ok, $test->as_string);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $@");
+				}
+			}
+		} elsif ($is_pos_nq or $is_eval_nq) {
+			my (@triples)	= eval { $nq_parser->parse_list_from_bytes($bytes) };
+			my $parse_error	= $@;
+			if ($is_eval) {
+				my $ser	= Attean->get_serializer('NQuads')->new();
+				my @nt_triples	= eval { $nq_parser->parse_list_from_bytes($result_bytes) };
+				if ($@) {
+					fail("Failed to parse expected data from $result_filename: $@");
+					return;
+				}
+				my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
+
+				my $test	= Attean::BindingEqualityTest->new();
+				my $ttl_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
+				my $ok		= $test->equals($ttl_iter, $nt_iter);
+				ok($ok, "$testname - $filename");
+				if (not $ok) {
+					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
+					if (scalar(@nt_triples)) {
+						warn $ser->serialize_list_to_bytes(@nt_triples);
+					}
+					warn "But found " . scalar(@triples) . " triples:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@triples);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= scalar(not $parse_error);
+				$self->record_result('syntax', $ok, $test->as_string);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $@");
+				}
+			}
+		} elsif ($is_neg_ttl) {
+			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
+			my $ok	= $@ ? 1 : 0;
 			$self->record_result('syntax', $ok, $test->as_string);
 			if ($ok) {
 				pass("$testname - $filename");
 			} else {
-				fail("syntax $namevalue; $filename: $@");
+				if ($self->debug) {
+					warn "Unexpected successful parse of:\n" . $content;
+				}
+				fail("$testname - $filename (unexpected successful parse)");
 			}
-		}
-	} elsif ($is_neg_ttl) {
-		my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
-		my $ok	= $@ ? 1 : 0;
-		$self->record_result('syntax', $ok, $test->as_string);
-		if ($ok) {
-			pass("$testname - $filename");
+		} elsif ($is_neg_nt) {
+			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
+			my $ok	= $@ ? 1 : 0;
+			$self->record_result('syntax', $ok, $test->as_string);
+			if ($ok) {
+				pass("$testname - $filename");
+			} else {
+				if ($self->debug) {
+					warn "Unexpected successful parse of:\n" . $content;
+				}
+				fail("$testname - $filename (unexpected successful parse)");
+			}
+		} elsif ($is_neg_nq) {
+			my (@triples)	= eval { $nq_parser->parse_list_from_bytes($bytes) };
+			my $ok	= $@ ? 1 : 0;
+			$self->record_result('syntax', $ok, $test->as_string);
+			if ($ok) {
+				pass("$testname - $filename");
+			} else {
+				if ($self->debug) {
+					warn "Unexpected successful parse of:\n" . $content;
+				}
+				fail("$testname - $filename (unexpected successful parse)");
+			}
+		} elsif ($is_pos_c14n_ttl or $is_pos_c14n_nt or $is_pos_c14n_nq) {
+			skip("$testname - C14N tests not supported");
 		} else {
-			if ($self->debug) {
-				warn "Unexpected successful parse of:\n" . $content;
-			}
-			fail("syntax $namevalue; $filename (unexpected successful parse)");
-		}
-	} elsif ($is_neg_nt) {
-		my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
-		my $ok	= $@ ? 1 : 0;
-		$self->record_result('syntax', $ok, $test->as_string);
-		if ($ok) {
-			pass("$testname - $filename");
-		} else {
-			if ($self->debug) {
-				warn "Unexpected successful parse of:\n" . $content;
-			}
-			fail("syntax $namevalue; $filename (unexpected successful parse)");
+			my @types		= $model->objects( $test, $type )->elements();
+			my $types		= join(',', map {$_->value} @types);
+			fail("$testname - unrecognized test type(s): $types");
 		}
 	}
 }
@@ -397,7 +465,6 @@ sub data_syntax_eval_test {
 # 	my ($resultd)	= $model->objects( $test, iri("${MF}result") )->elements;
 # 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 # 	my ($name)		= $model->objects( $test, $mfname )->elements;
-# 	my $namevalue	= $name->value;
 # 	
 # 	if ($self->strict_approval) {
 # 		unless ($approved) {
@@ -453,7 +520,7 @@ sub data_syntax_eval_test {
 # 			if ($ok) {
 # 				pass("$testname - $filename");
 # 			} else {
-# 				fail("syntax $namevalue; $filename: $@");
+# 				fail("$testname - $filename: $@");
 # 			}
 # 		} elsif ($is_pos_nt or $is_eval_nt) {
 # 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
@@ -462,7 +529,7 @@ sub data_syntax_eval_test {
 # 			if ($ok) {
 # 				pass("$testname - $filename");
 # 			} else {
-# 				fail("syntax $namevalue; $filename: $@");
+# 				fail("$testname - $filename: $@");
 # 			}
 # 		} elsif ($is_neg_ttl) {
 # 			my (@triples)	= eval { $ttl_parser->parse_list_from_bytes($bytes) };
@@ -474,7 +541,7 @@ sub data_syntax_eval_test {
 # # 				if ($self->debug) {
 # # 					warn $query->as_string;
 # # 				}
-# 				fail("syntax $namevalue; $filename (unexpected successful parse)");
+# 				fail("$testname - $filename (unexpected successful parse)");
 # 			}
 # 		} elsif ($is_neg_nt) {
 # 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
@@ -486,7 +553,7 @@ sub data_syntax_eval_test {
 # # 				if ($self->debug) {
 # # 					warn $query->as_string;
 # # 				}
-# 				fail("syntax $namevalue; $filename (unexpected successful parse)");
+# 				fail("$testname - $filename (unexpected successful parse)");
 # 			}
 # 		}
 # 	}

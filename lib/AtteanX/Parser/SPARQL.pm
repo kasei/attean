@@ -512,6 +512,7 @@ sub _DeleteDataUpdate {
 	my $self	= shift;
 	$self->_expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
+	local($self->{__data_pattern_delete})	= 1;
 	local($self->{__no_bnodes})		= "DELETE DATA block";
 	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
@@ -1203,7 +1204,7 @@ sub _BindingValue_test {
 	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->_test_token(BNODE));
 	return 1 if ($self->_test_token(NIL));
-	return 1 if ($self->_test_token(LTLT));
+	return 1 if ($self->_test_token(LTLTP));
 	return 0;
 }
 
@@ -1211,8 +1212,9 @@ sub _BindingValue {
 	my $self	= shift;
 	if ($self->_optional_token(KEYWORD, 'UNDEF')) {
 		push(@{ $self->{_stack} }, undef);
-	} elsif ($self->_test_token(LTLT)) {
-		$self->_QuotedTriple();
+	} elsif ($self->_test_token(LTLTP)) {
+		my $t	= $self->_TripleTermData();
+		push(@{ $self->{_stack} }, $t);
 	} else {
 		$self->_GraphTerm;
 	}
@@ -1778,6 +1780,7 @@ sub _TriplesBlock_test {
 	return 1 if ($self->_test_token(LPAREN));
 	return 1 if ($self->_test_token(LBRACKET));
 	return 1 if ($self->_test_token(LTLT));
+	return 1 if ($self->_test_token(LTLTP));	# Not in official grammar yet
 	return 1 if ($self->_IRIref_test);
 	return 1 if ($self->_test_literal_token);
 	return 0;
@@ -2271,16 +2274,18 @@ sub _TriplesSameSubject {
 	if ($self->_TriplesNode_test) {
 		$self->_TriplesNode;
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyList;
+		$self->_PropertyList($s);
 		my @list	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
 		}
+	} elsif ($self->_test_token(LTLT)) {
+		$self->_ReifiedTripleBlock();
 	} else {
-		$self->_VarOrTermOrQuotedTP;
+		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{_stack} });
 
-		$self->_PropertyListNotEmpty;
+		$self->_PropertyListNotEmpty($s);
 		my (@list)	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2296,17 +2301,24 @@ sub _TriplesSameSubjectPath {
 	my $self	= shift;
 	my @triples;
 	if ($self->_TriplesNode_test) {
-		$self->_TriplesNode;
+		if ($self->_test_token(LTLTP)) {	# Not in official grammar yet
+			$self->_TripleTerm();
+		} else {
+			$self->_TriplesNode;
+		}
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyListPath;
+		$self->_PropertyListPath($s);
 		my @list	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
 		}
+	} elsif ($self->_test_token(LTLT)) {
+		$self->_ReifiedTripleBlockPath();
+		push(@triples, splice(@{ $self->{_stack} }));
 	} else {
-		$self->_VarOrTermOrQuotedTP;
+		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyListNotEmptyPath;
+		$self->_PropertyListNotEmptyPath($s);
 		my (@list)	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2319,18 +2331,19 @@ sub _TriplesSameSubjectPath {
 # [33] PropertyListNotEmpty ::= Verb ObjectList ( ';' ( Verb ObjectList )? )*
 sub _PropertyListNotEmpty {
 	my $self	= shift;
+	my $s		= shift;
 	$self->_Verb;
-	my ($v)	= splice(@{ $self->{_stack} });
-	$self->_ObjectList;
+	my ($p)	= splice(@{ $self->{_stack} });
+	$self->_ObjectList($s, $p);
 	my @l	= splice(@{ $self->{_stack} });
-	my @props		= map { [$v, $_] } @l;
+	my @props		= map { [$p, $_] } @l;
 	while ($self->_optional_token(SEMICOLON)) {
 		if ($self->_Verb_test) {
 			$self->_Verb;
-			my ($v)	= splice(@{ $self->{_stack} });
-			$self->_ObjectList;
+			my ($p)	= splice(@{ $self->{_stack} });
+			$self->_ObjectList($s, $p);
 			my @l	= splice(@{ $self->{_stack} });
-			push(@props, map { [$v, $_] } @l);
+			push(@props, map { [$p, $_] } @l);
 		}
 	}
 	$self->_add_stack( @props );
@@ -2339,23 +2352,25 @@ sub _PropertyListNotEmpty {
 # [34] PropertyList ::= PropertyListNotEmpty?
 sub _PropertyList {
 	my $self	= shift;
+	my $s		= shift;
 	if ($self->_Verb_test) {
-		$self->_PropertyListNotEmpty;
+		$self->_PropertyListNotEmpty($s);
 	}
 }
 
 # [33] PropertyListNotEmptyPath ::= (VerbPath | VerbSimple) ObjectList ( ';' ( (VerbPath | VerbSimple) ObjectList )? )*
 sub _PropertyListNotEmptyPath {
 	my $self	= shift;
+	my $s		= shift;
 	if ($self->_VerbPath_test) {
 		$self->_VerbPath;
 	} else {
 		$self->_VerbSimple;
 	}
-	my ($v)	= splice(@{ $self->{_stack} });
-	$self->_ObjectList;
+	my ($p)	= splice(@{ $self->{_stack} });
+	$self->_ObjectList($s, $p);
 	my @l	= splice(@{ $self->{_stack} });
-	my @props		= map { [$v, $_] } @l;
+	my @props		= map { [$p, $_] } @l;
 	while ($self->_optional_token(SEMICOLON)) {
 		if ($self->_VerbPath_test or $self->_test_token(VAR)) {
 			if ($self->_VerbPath_test) {
@@ -2363,10 +2378,10 @@ sub _PropertyListNotEmptyPath {
 			} else {
 				$self->_VerbSimple;
 			}
-			my ($v)	= splice(@{ $self->{_stack} });
-			$self->_ObjectList;
+			my ($p)	= splice(@{ $self->{_stack} });
+			$self->_ObjectList($s, $p);
 			my @l	= splice(@{ $self->{_stack} });
-			push(@props, map { [$v, $_] } @l);
+			push(@props, map { [$p, $_] } @l);
 		}
 	}
 	$self->_add_stack( @props );
@@ -2375,21 +2390,24 @@ sub _PropertyListNotEmptyPath {
 # [34] PropertyListPath ::= PropertyListNotEmptyPath?
 sub _PropertyListPath {
 	my $self	= shift;
+	my $s		= shift;
 	if ($self->_Verb_test) {
-		$self->_PropertyListNotEmptyPath;
+		$self->_PropertyListNotEmptyPath($s);
 	}
 }
 
 # [35] ObjectList ::= Object ( ',' Object )*
 sub _ObjectList {
 	my $self	= shift;
+	my $s		= shift;
+	my $p		= shift;
 	
 	my @list;
-	$self->_Object;
+	$self->_Object($s, $p);
 	push(@list, splice(@{ $self->{_stack} }));
 	
 	while ($self->_optional_token(COMMA)) {
-		$self->_Object;
+		$self->_Object($s, $p);
 		push(@list, splice(@{ $self->{_stack} }));
 	}
 	$self->_add_stack( @list );
@@ -2398,17 +2416,11 @@ sub _ObjectList {
 # [36] Object ::= GraphNode
 sub _Object {
 	my $self	= shift;
+	my $s		= shift;
+	my $p		= shift;
 	$self->_GraphNode;
-	if ($self->_optional_token(LANNOT)) {
-		######################## TODO: SPARQL-star annotation syntax
-		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyListNotEmptyPath;
-		my (@list)	= splice(@{ $self->{_stack} });
-		my $obj	= AtteanX::Parser::SPARQL::ObjectWrapper->new( value => $s, annotations => \@list);
-		$self->_add_stack($obj);
-		########################
-		$self->_expected_token(RANNOT)
-	}
+	my ($o)	= ${ $self->{_stack} }[-1];
+	$self->_AnnotationPath($s, $p, $o); # this should be _Annotation, but the calling code doesn't distinguish between Object and ObjectPath from the SPARQL grammar
 }
 
 # [37] Verb ::= VarOrIRIref | 'a'
@@ -2683,12 +2695,12 @@ sub _BlankNodePropertyList {
 		croak "Syntax error: Blank nodes not allowed in $where";
 	}
 	$self->_expected_token(LBRACKET);
-#	$self->_PropertyListNotEmpty;
-	$self->_PropertyListNotEmptyPath;
+	my $subj	= Attean::Blank->new();
+#	$self->_PropertyListNotEmpty($subj);
+	$self->_PropertyListNotEmptyPath($subj);
 	$self->_expected_token(RBRACKET);
 	
 	my @props	= splice(@{ $self->{_stack} });
-	my $subj	= Attean::Blank->new();
 	my @triples	= map { $self->__new_statement( $subj, @$_ ) } @props;
 	$self->_add_patterns( @triples );
 	$self->_add_stack( $subj );
@@ -2747,6 +2759,7 @@ sub _GraphNode_test {
 	return 1 if ($self->_test_token(ANON));
 	return 1 if ($self->_test_token(NIL));
 	return 1 if ($self->_test_token(LTLT));
+	return 1 if ($self->_test_token(LTLTP));
 	return 0;
 }
 
@@ -2754,8 +2767,10 @@ sub _GraphNode {
 	my $self	= shift;
 	if ($self->_TriplesNode_test) {
 		$self->_TriplesNode;
+	} elsif ($self->_test_token(LTLT)) {
+		$self->_ReifiedTriple();
 	} else {
-		$self->_VarOrTermOrQuotedTP;
+		$self->_VarOrTerm;
 	}
 }
 
@@ -2771,16 +2786,16 @@ sub _GraphNode {
 # 	return 0;
 # }
 
-sub _VarOrTermOrQuotedTP {
-	my $self	= shift;
-	if ($self->_test_token(VAR)) {
-		$self->_Var();
-	} elsif ($self->_test_token(LTLT)) {
-		$self->_QuotedTP();
-	} else {
-		$self->_GraphTerm;
-	}
-}
+# sub _VarOrTermOrQuotedTP {
+# 	my $self	= shift;
+# 	if ($self->_test_token(VAR)) {
+# 		$self->_Var();
+# 	} elsif ($self->_test_token(LTLT)) {
+# 		$self->_QuotedTP();
+# 	} else {
+# 		$self->_GraphTerm;
+# 	}
+# }
 
 sub _VarOrTerm {
 	my $self	= shift;
@@ -2837,6 +2852,9 @@ sub _GraphTerm {
 	} elsif ($self->_test_literal_token) {
 		my $l	= $self->_RDFLiteral;
 		$self->_add_stack( $l );
+	} elsif ($self->_test_token(LTLTP)) {
+		my $t	= $self->_TripleTerm();
+		$self->_add_stack( $t );
 	} else {
 		$self->_IRIref;
 	}
@@ -3062,8 +3080,8 @@ sub _PrimaryExpression {
 		my $l		= $self->_NumericLiteral;
 		my $expr	= Attean::ValueExpression->new(value => $l);
 		$self->_add_stack($expr);
-	} elsif ($self->_test_token(LTLT)) {
-		$self->_ExprQuotedTP();
+	} elsif ($self->_test_token(LTLTP)) {
+		$self->_ExprTripleTerm();
 		my $tp		= pop(@{ $self->{_stack} });
 		my $expr	= Attean::ValueExpression->new(value => $tp);
 		$self->_add_stack($expr);
@@ -3074,35 +3092,22 @@ sub _PrimaryExpression {
 	}
 }
 
-sub _ExprQuotedTP {
-	my $self	= shift;
-	# '<<' ExprVarOrTerm Verb ExprVarOrTerm '>>'
-	$self->_expected_token(LTLT);
-	$self->_ExprVarOrTerm();
-	$self->_Verb();
-	$self->_ExprVarOrTerm();
-	$self->_expected_token(GTGT);
-	
-	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
-	
-	$self->_add_stack( $self->__new_statement( $s, $p, $o ) );
-}
 
-sub _ExprVarOrTerm {
-	my $self	= shift;
-	if ($self->_test_token(VAR)) {
-		$self->_Var();
-	} elsif ($self->_test_token(LTLT)) {
-		$self->_ExprQuotedTP();
-	} else {
-		# TODO: this should prevent use of bnodes
-		$self->_GraphTerm;
-		my $term		= ${ $self->{_stack} }[-1];
-		if ($term->does('Attean::API::Blank')) {
-			croak "Expecting (non-blank) RDF term but found blank";
-		}
-	}
-}
+# sub _ExprVarOrTerm {
+# 	my $self	= shift;
+# 	if ($self->_test_token(VAR)) {
+# 		$self->_Var();
+# 	} elsif ($self->_test_token(LTLT)) {
+# 		$self->_ExprQuotedTP();
+# 	} else {
+# 		# TODO: this should prevent use of bnodes
+# 		$self->_GraphTerm;
+# 		my $term		= ${ $self->{_stack} }[-1];
+# 		if ($term->does('Attean::API::Blank')) {
+# 			croak "Expecting (non-blank) RDF term but found blank";
+# 		}
+# 	}
+# }
 
 # [56] BrackettedExpression ::= '(' Expression ')'
 # sub _BrackettedExpression_test {
@@ -3442,7 +3447,9 @@ sub _String {
 	} else {
 		my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		my $value	= $t->value;
-		croak "Expecting string literal but found $got '$value'";
+# 		Carp::cluck "Expecting string literal but found $got '$value'";
+		$self->_token_error($t, "Expecting string literal but found $got '$value'")
+# 		croak "Expecting string literal but found $got '$value'";
 	}
 
 	$value	=~ s/\\t/\t/g;
@@ -3495,44 +3502,53 @@ sub _PrefixedName {
 	return $p;
 }
 
-sub _qtSubjectOrObject {
-	my $self	= shift;
-	# Var | BlankNode | iri | RDFLiteral | NumericLiteral | BooleanLiteral | QuotedTP
-	if ($self->_test_token(LTLT)) {
-		$self->_QuotedTP();
-	} else {
-		$self->_VarOrTerm;
-	}
-}
-
-sub _QuotedTP {
-	my $self	= shift;
-	#'<<' qtSubjectOrObject Verb qtSubjectOrObject '>>'
-	$self->_expected_token(LTLT);
-	$self->_qtSubjectOrObject();
-	$self->_Verb();
-	$self->_qtSubjectOrObject();
-	$self->_expected_token(GTGT);
-	
-	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
-	
-	if ($self->{__data_pattern}) {
-		foreach my $term ($s, $o) {
-			if ($term->does('Attean::API::Blank')) {
-				croak "Expecting (non-blank) RDF term  in quoted triple, but found blank";
-			}
-		}
-	}
-
-	$self->_add_stack( $self->__new_statement( $s, $p, $o ) );
-}
-
-sub _QuotedTriple {
-	my $self	= shift;
-	#'<<' DataValueTerm Verb DataValueTerm '>>'
-	local($self->{__data_pattern})	= 1;
-	$self->_QuotedTP();
-}
+# sub _qtSubjectOrObject {
+# 	my $self	= shift;
+# 	# Var | BlankNode | iri | RDFLiteral | NumericLiteral | BooleanLiteral | QuotedTP
+# 	if ($self->_test_token(LTLT)) {
+# 		$self->_QuotedTP();
+# 	} else {
+# 		$self->_VarOrTerm;
+# 	}
+# }
+# 
+# sub _QuotedTP {
+# 	my $self	= shift;
+# 	#'<<' qtSubjectOrObject Verb qtSubjectOrObject '>>'
+# 	$self->_expected_token(LTLT);
+# 	$self->_qtSubjectOrObject();
+# 	$self->_Verb();
+# 	$self->_qtSubjectOrObject();
+# 	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
+# 
+# 	my $reif	= Attean::Blank->new();
+# 	if ($self->_test_token(TILDE)) {
+# 		$self->_expected_token(TILDE);
+# 		$self->_GraphNode();
+# 		$reif	= pop(@{ $self->{_stack} });
+# 	}
+# 	$self->_expected_token(GTGT);
+# 	
+# 	if ($self->{__data_pattern}) {
+# 		foreach my $term ($s, $o) {
+# 			if ($term->does('Attean::API::Blank')) {
+# 				croak "Expecting (non-blank) RDF term  in quoted triple, but found blank";
+# 			}
+# 		}
+# 	}
+# 
+# 	my ($t)		= $self->__new_statement( $s, $p, $o );
+# 	my $reifies	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies', lazy => 1);
+# 	$self->_add_patterns( $self->__new_statement( $reif, $reifies, $t ) );
+# 	$self->_add_stack( $reif );
+# }
+# 
+# sub _QuotedTriple {
+# 	my $self	= shift;
+# 	#'<<' DataValueTerm Verb DataValueTerm '>>'
+# 	local($self->{__data_pattern})	= 1;
+# 	$self->_QuotedTP();
+# }
 
 # [69] BlankNode ::= BLANK_NODE_LABEL | ANON
 sub _BlankNode {
@@ -3556,6 +3572,423 @@ sub _NIL {
 	$self->_expected_token(NIL);
 	return Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil', lazy => 1);
 }
+
+##########
+
+sub _Reifier {
+	my $self	= shift;
+	$self->_expected_token(TILDE);
+	if ($self->_VarOrReifierId_test) {
+		return $self->_VarOrReifierId();
+	} else {
+		return Attean::Blank->new();
+	}
+}
+
+sub _ReifierData {
+	my $self	= shift;
+	$self->_expected_token(TILDE);
+	if ($self->_ReifierId_test) {
+		return $self->_ReifierId();
+	} else {
+		return Attean::Blank->new();
+	}
+}
+
+sub _VarOrReifierId_test {
+	my $self	= shift;
+	return 1 if ($self->_test_token(VAR));
+	return 1 if ($self->_IRIref_test);
+	return 1 if ($self->_test_token(BNODE));
+	return 1 if ($self->_test_token(ANON));
+	return 0;
+}
+
+sub _ReifierId_test {
+	my $self	= shift;
+	return 1 if ($self->_IRIref_test);
+	return 1 if ($self->_test_token(BNODE));
+	return 1 if ($self->_test_token(ANON));
+	return 0;
+}
+
+sub _VarOrReifierId {
+	my $self	= shift;
+	if (my $b = $self->_test_token(VAR)) {
+		$self->_Var();
+	} else {
+		$self->_GraphTerm();
+	}
+}
+
+sub _ReifierId {
+	my $self	= shift;
+	$self->_GraphTerm();
+}
+
+sub _AnnotationPath {
+	my $self	= shift;
+	my $s		= shift;
+	my $p		= shift;
+	my $o		= shift;
+
+	my $reif;
+	while ($self->_test_token(TILDE) or $self->_AnnotationBlockPath_test) {
+		unless (defined($reif)) {
+			$reif	= Attean::Blank->new();
+		}
+		my $assert_reification	= undef;
+		if ($self->_test_token(TILDE)) {
+			$self->_Reifier();
+			$reif	= pop(@{ $self->{_stack} });
+			$assert_reification	= $reif;
+		} else {
+			$self->_AnnotationBlockPath($reif);
+			$assert_reification	= $reif;
+			$reif	= undef;
+		}
+		if ($assert_reification) {
+			my $reif			= $assert_reification;
+			if (blessed($reif) and $reif->does('Attean::API::Blank') and $self->{__data_pattern_delete}) {
+				croak "Syntax error: Annotation syntax with non-IRI reifier not allowed in DELETE DATA template.";
+			}
+			my $reifies	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies', lazy => 1);
+			my ($tt)			= $self->__new_statement($s, $p, $o);
+			my ($reification)	= $self->__new_statement( $reif, $reifies, $tt);
+			$self->_add_patterns( $reification );
+			undef $assert_reification;
+		}
+	}
+}
+
+sub _Annotation {
+	my $self	= shift;
+	my $reif;
+	while ($self->_test_token(TILDE) or $self->_AnnotationBlockPath_test) {
+		unless (defined($reif)) {
+			$reif	= Attean::Blank->new();
+		}
+		if ($self->_test_token(TILDE)) {
+			$self->_Reifier();
+			$reif	= pop(@{ $self->{_stack} });
+		} else {
+			$self->_AnnotationBlock($reif);
+			$reif	= undef;
+		}
+	}
+}
+
+sub _AnnotationBlockPath_test {
+	my $self	= shift;
+	return ($self->_test_token(LANNOT));
+}
+
+sub _AnnotationBlock_test {
+	my $self	= shift;
+	return ($self->_test_token(LANNOT));
+}
+
+sub _AnnotationBlockPath {
+	my $self	= shift;
+	my $reif	= shift;
+	my @state	= splice(@{ $self->{_stack} });
+
+	$self->_expected_token(LANNOT);
+	$self->_PropertyListNotEmptyPath($reif);
+	$self->_expected_token(RANNOT);
+
+	my @props	= splice(@{ $self->{_stack} });
+	my @triples	= map { $self->__new_statement( $reif, @$_ ) } @props;
+	$self->_add_patterns( @triples );
+	
+	push(@{ $self->{_stack} }, @state);
+}
+
+sub _AnnotationBlock {
+	my $self	= shift;
+	my $reif	= shift;
+	my @state	= splice(@{ $self->{_stack} });
+
+	$self->_expected_token(LANNOT);
+	$self->_PropertyListNotEmpty($reif);
+	$self->_expected_token(RANNOT);
+
+	my @props	= splice(@{ $self->{_stack} });
+	my @triples	= map { $self->__new_statement( $reif, @$_ ) } @props;
+	$self->_add_patterns( @triples );
+	
+	push(@{ $self->{_stack} }, @state);
+}
+
+sub _ReifiedTripleBlockPath {
+	my $self	= shift;
+	$self->_ReifiedTriple();
+	# XXX
+	my ($s)	= splice(@{ $self->{_stack} });
+	$self->_PropertyListPath($s);
+	my @list	= splice(@{ $self->{_stack} });
+	my @triples;
+	foreach my $data (@list) {
+		push(@triples, $self->__new_statement( $s, @$data ));
+	}
+	push( @{ $self->{_stack} }, @triples );
+}
+
+sub _ReifiedTripleBlock {
+	my $self	= shift;
+	$self->_ReifiedTriple();
+	# XXX
+	my ($s)	= splice(@{ $self->{_stack} });
+	$self->_PropertyList($s);
+	my @list	= splice(@{ $self->{_stack} });
+	my @triples;
+	foreach my $data (@list) {
+		push(@triples, $self->__new_statement( $s, @$data ));
+	}
+	# XXX
+}
+
+sub _ReifiedTriple {
+	my $self	= shift;
+	$self->_expected_token(LTLT);
+	$self->_ReifiedTripleSubject();
+	$self->_Verb();
+	$self->_ReifiedTripleObject();
+	if (scalar(@{ $self->{_stack} }) < 3) {
+		use Data::Dumper;
+		Carp::cluck Dumper($self->{_stack});
+	}
+	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
+	# XXX handle default reifier
+	my $reif	= Attean::Blank->new();
+	if ($self->_test_token(TILDE)) {
+		$self->_Reifier();
+		$reif	= pop(@{ $self->{_stack} });
+	}
+	# add rdf:reifies triple pattern
+	
+	my $reifies	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies', lazy => 1);
+	my ($tt)			= $self->__new_statement($s, $p, $o);
+	my ($reification)	= $self->__new_statement( $reif, $reifies, $tt);
+	$self->_add_patterns( $reification );
+	
+	push( @{ $self->{_stack} }, $reif );
+	$self->_expected_token(GTGT);
+}
+
+sub _ReifiedTripleSubject {
+	my $self	= shift;
+	if ($self->_test_token(VAR)) {
+		$self->_Var();
+	} elsif ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(NIL)) {
+		my $n	= $self->_NIL;
+		$self->_add_stack( $n );
+	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
+		my $b	= $self->_BlankNode;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_token(LTLT)) {
+		$self->_ReifiedTriple();
+# 	} elsif ($self->_test_token(LTLTP)) {	# Not in official grammar yet
+# 		my $t	= $self->_TripleTerm();
+# 		$self->_add_stack( $t );
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _ReifiedTripleObject {
+	my $self	= shift;
+	if ($self->_test_token(VAR)) {
+		$self->_Var();
+	} elsif ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
+		my $b	= $self->_BlankNode;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_token(LTLT)) {
+		$self->_ReifiedTriple();
+	} elsif ($self->_test_token(LTLTP)) {	# Not in official grammar yet
+		my $t	= $self->_TripleTerm();
+		$self->_add_stack( $t );
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _TripleTerm {
+	my $self	= shift;
+	$self->_expected_token(LTLTP);
+	$self->_TripleTermSubject;
+	$self->_Verb;
+	$self->_TripleTermObject;
+	$self->_expected_token(PGTGT);
+	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
+	my ($t)	= $self->__new_statement( $s, $p, $o );
+	return $t;
+}
+
+sub _TripleTermData {
+	my $self	= shift;
+	$self->_expected_token(LTLTP);
+	$self->_TripleTermDataSubject;
+	$self->_Verb;
+	$self->_TripleTermDataObject;
+	$self->_expected_token(PGTGT);
+	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
+	my $t	= $self->__new_statement( $s, $p, $o );
+	return $t;
+}
+
+sub _TripleTermSubject {
+	my $self	= shift;
+	if ($self->_test_token(VAR)) {
+		$self->_Var();
+	} elsif ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(NIL)) {
+		my $n	= $self->_NIL;
+		$self->_add_stack( $n );
+	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
+		my $b	= $self->_BlankNode;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _TripleTermObject {
+	my $self	= shift;
+	if ($self->_test_token(VAR)) {
+		$self->_Var();
+	} elsif ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
+		my $b	= $self->_BlankNode;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_token(LTLTP)) {
+		my $tt	= $self->_TripleTerm();
+		$self->_add_stack( $tt );
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _TripleTermDataSubject {
+	my $self	= shift;
+	if ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _TripleTermDataObject {
+	my $self	= shift;
+	if ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_token(LTLTP)) {
+		push(@{ $self->{_stack} }, $self->_TripleTermData());
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _ExprTripleTerm {
+	my $self	= shift;
+	$self->_expected_token(LTLTP);
+	$self->_ExprTripleTermSubject();
+	$self->_Verb();
+	$self->_ExprTripleTermObject();
+	$self->_expected_token(PGTGT);
+	
+	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
+	
+	$self->_add_stack( $self->__new_statement( $s, $p, $o ) );
+}
+
+sub _ExprTripleTermSubject {
+	my $self	= shift;
+	if ($self->_test_token(VAR)) {
+		$self->_Var();
+	} elsif ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} else {
+		$self->_IRIref;
+	}
+}
+
+sub _ExprTripleTermObject {
+	my $self	= shift;
+	if ($self->_test_token(VAR)) {
+		$self->_Var();
+	} elsif ($self->_test_token(BOOLEAN)) {
+		my $b	= $self->_BooleanLiteral;
+		$self->_add_stack( $b );
+	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+		my $l	= $self->_NumericLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_literal_token) {
+		my $l	= $self->_RDFLiteral;
+		$self->_add_stack( $l );
+	} elsif ($self->_test_token(LTLTP)) {
+		push(@{ $self->{_stack} }, $self->_TripleTermData());
+	} else {
+		$self->_IRIref;
+	}
+}
+
+##########
 
 sub __solution_modifiers {
 	my $self	= shift;
@@ -3888,6 +4321,10 @@ sub __new_bgp {
 	if ($self->log->is_trace && (scalar(@patterns) > scalar(@paths) + scalar(@triples))) {
 		$self->log->warn('More than just triples and paths passed to __new_bgp');
 		$self->log->trace("Arguments to __new_bgp:\n" .Dumper(\@patterns));
+	}
+	
+	foreach my $t (@triples) {
+		Carp::cluck Dumper($t) unless (blessed($t) and $t->can('does'));
 	}
 	
 	my $bgp			= Attean::Algebra::BGP->new( triples => \@triples );

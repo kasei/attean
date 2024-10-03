@@ -538,9 +538,9 @@ package Attean::API::TriplePattern 0.039 {
 		my @tokens;
 		foreach my $t ($self->values) {
 			if ($t->does('Attean::API::TriplePattern')) {
-				push(@tokens, AtteanX::SPARQL::Token->ltlt);
+				push(@tokens, AtteanX::SPARQL::Token->ltltp);
 				push(@tokens, $t->sparql_tokens->elements);
-				push(@tokens, AtteanX::SPARQL::Token->gtgt);
+				push(@tokens, AtteanX::SPARQL::Token->pgtgt);
 			} else {
 				push(@tokens, $t->sparql_tokens->elements);
 			}
@@ -591,7 +591,7 @@ package Attean::API::Triple 0.039 {
 	sub ntriples_string {
 		my $self	= shift;
 		my @values	= $self->values;
-		return join(' ', '<<', (map { $_->ntriples_string } @values), '>>');
+		return join(' ', '<<(', (map { $_->ntriples_string } @values), ')>>');
 	}
 
 	sub order {

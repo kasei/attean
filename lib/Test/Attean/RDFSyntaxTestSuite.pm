@@ -90,36 +90,12 @@ Test::Roo::top_test 'RDF Concrete Syntax tests' => sub {
 # 				say $test->value;
 # 			}
 			if ($self->run_syntax_tests) {
-				my %syntax_eval_tests	= map { $_ => 1 } (
-					"http://www.w3.org/ns/rdftest#TestTurtleEval",
-				);
-				my %syntax_tests	= map { $_ => 1 } (
-					"http://www.w3.org/ns/rdftest#TestNTriplesPositiveSyntax",
-					"http://www.w3.org/ns/rdftest#TestNTriplesNegativeSyntax",
-				);
 				{
-					my @types	= $model->objects($test, , iri("${RDF}type"))->elements;
-					my $eval_count	= 0;
-					my $syntax_count	= 0;
-					foreach my $t (@types) {
-						if (exists $syntax_eval_tests{ $t->value }) {
-							$eval_count++;
-						}
-						if (exists $syntax_tests{ $t->value }) {
-							$syntax_count++;
-						}
-					}
+# 					my @types	= $model->objects($test, , iri("${RDF}type"))->elements;
 # 					warn Dumper([map { $_->value } @types]);
-					if ($eval_count) {
-						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-						warn "### RDF syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->data_syntax_eval_test( $model, $test );
-					}
-					if ($syntax_count) {
-						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-						warn "### RDF syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->data_syntax_eval_test( $model, $test );
-					}
+					my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
+					warn "### RDF syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
+					$self->data_syntax_eval_test( $model, $test );
 				}
 			}
 		}
