@@ -22,10 +22,12 @@ subtest 'triple-pattern subject' => sub {
 	my $s		= $p->child;
 	isa_ok($s, 'Attean::Algebra::BGP');
 	my $triples	= $s->triples();
-	is(scalar(@$triples), 1, 'number of triples');
-	my ($t)	= @$triples;
-	isa_ok($t->subject, 'Attean::TriplePattern');
-	is($t->subject->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
+	is(scalar(@$triples), 2, 'number of triples');
+	my ($reification, $t)	= sort { $b->predicate->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies' } @$triples;
+	isa_ok($t->subject, 'Attean::Blank');
+	isa_ok($reification->object, 'Attean::TriplePattern');
+	my $tp	= $reification->object;
+	is($tp->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
 	is($t->predicate->as_string, 'http://xmlns.com/foaf/0.1/believedBy');
 	is($t->object->as_string, 'http://kasei.us/about/#greg');
 };
@@ -40,17 +42,18 @@ subtest 'triple-pattern object' => sub {
 	my $s		= $p->child;
 	isa_ok($s, 'Attean::Algebra::BGP');
 	my $triples	= $s->triples();
-	is(scalar(@$triples), 1, 'number of triples');
-	my ($t)	= @$triples;
+	is(scalar(@$triples), 2, 'number of triples');
+	my ($reification, $t)	= sort { $b->predicate->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies' } @$triples;
+	my $tp	= $reification->object;
 	is($t->subject->as_string, 'http://kasei.us/about/#greg');
 	is($t->predicate->as_string, 'http://xmlns.com/foaf/0.1/believes');
-	isa_ok($t->object, 'Attean::TriplePattern');
-	is($t->object->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
+	isa_ok($reification->object, 'Attean::TriplePattern');
+	is($reification->object->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
 };
 
 subtest 'triple-pattern bind' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
-	my $q		= $parser->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { BIND(<< ?s a foaf:Person >> AS ?tp) }");
+	my $q		= $parser->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { BIND(<<( ?s a foaf:Person )>> AS ?tp) }");
 	does_ok($q, 'Attean::API::Algebra');
 	isa_ok($q, 'Attean::Algebra::Query');
 	my $p		= $q->child;
@@ -73,14 +76,15 @@ subtest 'object annotation 1' => sub {
 	my $s		= $p->child;
 	isa_ok($s, 'Attean::Algebra::BGP');
 	my $triples	= $s->triples();
-	is(scalar(@$triples), 2, 'number of triples');
-	my ($t, $a)	= @$triples;
-	isa_ok($a->subject, 'Attean::TriplePattern');
-	is($a->subject->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
+	is(scalar(@$triples), 3, 'number of triples');
+	my ($reification, @ta)	= sort { $b->predicate->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies' } @$triples;
+	my ($t, $a)				= sort { $b->predicate->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' } @$triples;
+	isa_ok($reification->object, 'Attean::TriplePattern');
+	is($reification->object->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
 	is($a->predicate->as_string, 'http://xmlns.com/foaf/0.1/believedBy');
 	is($a->object->as_string, 'http://kasei.us/about/#greg');
 	foreach my $pos (qw(subject predicate object)) {
-		is($a->subject->$pos()->as_string, $t->$pos()->as_string);
+		is($reification->object->$pos()->as_string, $t->$pos()->as_string);
 	}
 };
 
@@ -94,11 +98,15 @@ subtest 'object annotation 2' => sub {
 	my $s		= $p->child;
 	isa_ok($s, 'Attean::Algebra::BGP');
 	my $triples	= $s->triples();
-	is(scalar(@$triples), 3, 'number of triples');
-	my ($t, $a1, $a2)	= @$triples;
-	isa_ok($a1->subject, 'Attean::TriplePattern');
-	is($a1->subject->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
-	is($a2->subject->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
+	is(scalar(@$triples), 4, 'number of triples');
+	my ($reification, @ta)	= sort { $b->predicate->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies' } @$triples;
+	my ($t, @a)		= sort { $b->object->as_string eq 'http://xmlns.com/foaf/0.1/Person' } @$triples;
+	my ($a1, $a2)	= sort { $a->predicate->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' } @a;
+	isa_ok($reification->object, 'Attean::TriplePattern');
+	my $reif	= $reification->subject;
+	is($reification->object->as_string, '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> .');
+	is($a1->subject->as_string, $reif->as_string);
+	is($a2->subject->as_string, $reif->as_string);
 
 	is($a1->predicate->as_string, 'http://xmlns.com/foaf/0.1/believedBy');
 	is($a1->object->as_string, 'http://kasei.us/about/#greg');
@@ -107,8 +115,9 @@ subtest 'object annotation 2' => sub {
 	is($a2->object->as_string, 'http://example.org/Assertion');
 
 	foreach my $pos (qw(subject predicate object)) {
-		is($a1->subject->$pos()->as_string, $t->$pos()->as_string);
-		is($a2->subject->$pos()->as_string, $t->$pos()->as_string);
+		is($reification->object->$pos()->as_string, $t->$pos()->as_string);
+		is($a1->subject->value, $reif->value);
+		is($a2->subject->value, $reif->value);
 	}
 };
 

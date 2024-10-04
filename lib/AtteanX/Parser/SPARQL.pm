@@ -2272,7 +2272,7 @@ sub _TriplesSameSubject {
 	if ($self->_TriplesNode_test) {
 		$self->_TriplesNode;
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyList;
+		$self->_PropertyList($s);
 		my @list	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2283,7 +2283,7 @@ sub _TriplesSameSubject {
 		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{_stack} });
 
-		$self->_PropertyListNotEmpty;
+		$self->_PropertyListNotEmpty($s);
 		my (@list)	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2305,17 +2305,18 @@ sub _TriplesSameSubjectPath {
 			$self->_TriplesNode;
 		}
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyListPath;
+		$self->_PropertyListPath($s);
 		my @list	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
 		}
 	} elsif ($self->_test_token(LTLT)) {
 		$self->_ReifiedTripleBlockPath();
+		push(@triples, splice(@{ $self->{_stack} }));
 	} else {
 		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{_stack} });
-		$self->_PropertyListNotEmptyPath;
+		$self->_PropertyListNotEmptyPath($s);
 		my (@list)	= splice(@{ $self->{_stack} });
 		foreach my $data (@list) {
 			push(@triples, $self->__new_statement( $s, @$data ));
@@ -2328,18 +2329,19 @@ sub _TriplesSameSubjectPath {
 # [33] PropertyListNotEmpty ::= Verb ObjectList ( ';' ( Verb ObjectList )? )*
 sub _PropertyListNotEmpty {
 	my $self	= shift;
+	my $s		= shift;
 	$self->_Verb;
-	my ($v)	= splice(@{ $self->{_stack} });
-	$self->_ObjectList;
+	my ($p)	= splice(@{ $self->{_stack} });
+	$self->_ObjectList($s, $p);
 	my @l	= splice(@{ $self->{_stack} });
-	my @props		= map { [$v, $_] } @l;
+	my @props		= map { [$p, $_] } @l;
 	while ($self->_optional_token(SEMICOLON)) {
 		if ($self->_Verb_test) {
 			$self->_Verb;
-			my ($v)	= splice(@{ $self->{_stack} });
-			$self->_ObjectList;
+			my ($p)	= splice(@{ $self->{_stack} });
+			$self->_ObjectList($s, $p);
 			my @l	= splice(@{ $self->{_stack} });
-			push(@props, map { [$v, $_] } @l);
+			push(@props, map { [$p, $_] } @l);
 		}
 	}
 	$self->_add_stack( @props );
@@ -2348,23 +2350,25 @@ sub _PropertyListNotEmpty {
 # [34] PropertyList ::= PropertyListNotEmpty?
 sub _PropertyList {
 	my $self	= shift;
+	my $s		= shift;
 	if ($self->_Verb_test) {
-		$self->_PropertyListNotEmpty;
+		$self->_PropertyListNotEmpty($s);
 	}
 }
 
 # [33] PropertyListNotEmptyPath ::= (VerbPath | VerbSimple) ObjectList ( ';' ( (VerbPath | VerbSimple) ObjectList )? )*
 sub _PropertyListNotEmptyPath {
 	my $self	= shift;
+	my $s		= shift;
 	if ($self->_VerbPath_test) {
 		$self->_VerbPath;
 	} else {
 		$self->_VerbSimple;
 	}
-	my ($v)	= splice(@{ $self->{_stack} });
-	$self->_ObjectList;
+	my ($p)	= splice(@{ $self->{_stack} });
+	$self->_ObjectList($s, $p);
 	my @l	= splice(@{ $self->{_stack} });
-	my @props		= map { [$v, $_] } @l;
+	my @props		= map { [$p, $_] } @l;
 	while ($self->_optional_token(SEMICOLON)) {
 		if ($self->_VerbPath_test or $self->_test_token(VAR)) {
 			if ($self->_VerbPath_test) {
@@ -2372,10 +2376,10 @@ sub _PropertyListNotEmptyPath {
 			} else {
 				$self->_VerbSimple;
 			}
-			my ($v)	= splice(@{ $self->{_stack} });
-			$self->_ObjectList;
+			my ($p)	= splice(@{ $self->{_stack} });
+			$self->_ObjectList($s, $p);
 			my @l	= splice(@{ $self->{_stack} });
-			push(@props, map { [$v, $_] } @l);
+			push(@props, map { [$p, $_] } @l);
 		}
 	}
 	$self->_add_stack( @props );
@@ -2384,21 +2388,24 @@ sub _PropertyListNotEmptyPath {
 # [34] PropertyListPath ::= PropertyListNotEmptyPath?
 sub _PropertyListPath {
 	my $self	= shift;
+	my $s		= shift;
 	if ($self->_Verb_test) {
-		$self->_PropertyListNotEmptyPath;
+		$self->_PropertyListNotEmptyPath($s);
 	}
 }
 
 # [35] ObjectList ::= Object ( ',' Object )*
 sub _ObjectList {
 	my $self	= shift;
+	my $s		= shift;
+	my $p		= shift;
 	
 	my @list;
-	$self->_Object;
+	$self->_Object($s, $p);
 	push(@list, splice(@{ $self->{_stack} }));
 	
 	while ($self->_optional_token(COMMA)) {
-		$self->_Object;
+		$self->_Object($s, $p);
 		push(@list, splice(@{ $self->{_stack} }));
 	}
 	$self->_add_stack( @list );
@@ -2407,8 +2414,11 @@ sub _ObjectList {
 # [36] Object ::= GraphNode
 sub _Object {
 	my $self	= shift;
+	my $s		= shift;
+	my $p		= shift;
 	$self->_GraphNode;
-	$self->_AnnotationPath(); # this should be _Annotation, but the calling code doesn't distinguish between Object and ObjectPath from the SPARQL grammar
+	my ($o)	= ${ $self->{_stack} }[-1];
+	$self->_AnnotationPath($s, $p, $o); # this should be _Annotation, but the calling code doesn't distinguish between Object and ObjectPath from the SPARQL grammar
 }
 
 # [37] Verb ::= VarOrIRIref | 'a'
@@ -2683,12 +2693,12 @@ sub _BlankNodePropertyList {
 		croak "Syntax error: Blank nodes not allowed in $where";
 	}
 	$self->_expected_token(LBRACKET);
-#	$self->_PropertyListNotEmpty;
-	$self->_PropertyListNotEmptyPath;
+	my $subj	= Attean::Blank->new();
+#	$self->_PropertyListNotEmpty($subj);
+	$self->_PropertyListNotEmptyPath($subj);
 	$self->_expected_token(RBRACKET);
 	
 	my @props	= splice(@{ $self->{_stack} });
-	my $subj	= Attean::Blank->new();
 	my @triples	= map { $self->__new_statement( $subj, @$_ ) } @props;
 	$self->_add_patterns( @triples );
 	$self->_add_stack( $subj );
@@ -3615,17 +3625,32 @@ sub _ReifierId {
 
 sub _AnnotationPath {
 	my $self	= shift;
+	my $s		= shift;
+	my $p		= shift;
+	my $o		= shift;
+
 	my $reif;
 	while ($self->_test_token(TILDE) or $self->_AnnotationBlockPath_test) {
 		unless (defined($reif)) {
 			$reif	= Attean::Blank->new();
 		}
+		my $assert_reification	= undef;
 		if ($self->_test_token(TILDE)) {
 			$self->_Reifier();
 			$reif	= pop(@{ $self->{_stack} });
+			$assert_reification	= $reif;
 		} else {
 			$self->_AnnotationBlockPath($reif);
+			$assert_reification	= $reif;
 			$reif	= undef;
+		}
+		if ($assert_reification) {
+			my $reif			= $assert_reification;
+			my $reifies	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies', lazy => 1);
+			my ($tt)			= $self->__new_statement($s, $p, $o);
+			my ($reification)	= $self->__new_statement( $reif, $reifies, $tt);
+			$self->_add_patterns( $reification );
+			undef $assert_reification;
 		}
 	}
 }
@@ -3659,15 +3684,15 @@ sub _AnnotationBlock_test {
 
 sub _AnnotationBlockPath {
 	my $self	= shift;
-	my $subj	= shift;
+	my $reif	= shift;
 	my @state	= splice(@{ $self->{_stack} });
 
 	$self->_expected_token(LANNOT);
-	$self->_PropertyListNotEmptyPath();
+	$self->_PropertyListNotEmptyPath($reif);
 	$self->_expected_token(RANNOT);
 
 	my @props	= splice(@{ $self->{_stack} });
-	my @triples	= map { $self->__new_statement( $subj, @$_ ) } @props;
+	my @triples	= map { $self->__new_statement( $reif, @$_ ) } @props;
 	$self->_add_patterns( @triples );
 	
 	push(@{ $self->{_stack} }, @state);
@@ -3675,15 +3700,15 @@ sub _AnnotationBlockPath {
 
 sub _AnnotationBlock {
 	my $self	= shift;
-	my $subj	= shift;
+	my $reif	= shift;
 	my @state	= splice(@{ $self->{_stack} });
 
 	$self->_expected_token(LANNOT);
-	$self->_PropertyListNotEmpty();
+	$self->_PropertyListNotEmpty($reif);
 	$self->_expected_token(RANNOT);
 
 	my @props	= splice(@{ $self->{_stack} });
-	my @triples	= map { $self->__new_statement( $subj, @$_ ) } @props;
+	my @triples	= map { $self->__new_statement( $reif, @$_ ) } @props;
 	$self->_add_patterns( @triples );
 	
 	push(@{ $self->{_stack} }, @state);
@@ -3694,13 +3719,13 @@ sub _ReifiedTripleBlockPath {
 	$self->_ReifiedTriple();
 	# XXX
 	my ($s)	= splice(@{ $self->{_stack} });
-	$self->_PropertyListPath;
+	$self->_PropertyListPath($s);
 	my @list	= splice(@{ $self->{_stack} });
 	my @triples;
 	foreach my $data (@list) {
 		push(@triples, $self->__new_statement( $s, @$data ));
 	}
-	# XXX
+	push( @{ $self->{_stack} }, @triples );
 }
 
 sub _ReifiedTripleBlock {
@@ -3708,7 +3733,7 @@ sub _ReifiedTripleBlock {
 	$self->_ReifiedTriple();
 	# XXX
 	my ($s)	= splice(@{ $self->{_stack} });
-	$self->_PropertyList;
+	$self->_PropertyList($s);
 	my @list	= splice(@{ $self->{_stack} });
 	my @triples;
 	foreach my $data (@list) {
@@ -3735,7 +3760,12 @@ sub _ReifiedTriple {
 		$reif	= pop(@{ $self->{_stack} });
 	}
 	# add rdf:reifies triple pattern
-	# push reifier to stack
+	
+	my $reifies	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies', lazy => 1);
+	my ($tt)			= $self->__new_statement($s, $p, $o);
+	my ($reification)	= $self->__new_statement( $reif, $reifies, $tt);
+	$self->_add_patterns( $reification );
+	
 	push( @{ $self->{_stack} }, $reif );
 	$self->_expected_token(GTGT);
 }
