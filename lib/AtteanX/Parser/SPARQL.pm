@@ -2687,6 +2687,7 @@ sub _GraphNode_test {
 	return 1 if ($self->_test_token(ANON));
 	return 1 if ($self->_test_token(NIL));
 	return 1 if ($self->_test_token(LTLT));
+	return 1 if ($self->_test_token(LTLTP));
 	return 0;
 }
 
@@ -3701,9 +3702,9 @@ sub _ReifiedTripleSubject {
 		$self->_add_stack( $l );
 	} elsif ($self->_test_token(LTLT)) {
 		$self->_ReifiedTriple();
-	} elsif ($self->_test_token(LTLTP)) {	# Not in official grammar yet
-		my $t	= $self->_TripleTerm();
-		$self->_add_stack( $t );
+# 	} elsif ($self->_test_token(LTLTP)) {	# Not in official grammar yet
+# 		my $t	= $self->_TripleTerm();
+# 		$self->_add_stack( $t );
 	} else {
 		$self->_IRIref;
 	}
@@ -3806,7 +3807,8 @@ sub _TripleTermObject {
 		my $l	= $self->_RDFLiteral;
 		$self->_add_stack( $l );
 	} elsif ($self->_test_token(LTLTP)) {
-		$self->_TripleTermData();
+		my $tt	= $self->_TripleTerm();
+		$self->_add_stack( $tt );
 	} else {
 		$self->_IRIref;
 	}
