@@ -484,6 +484,7 @@ sub _DeleteDataUpdate {
 	my $self	= shift;
 	$self->_expected_token(LBRACE);
 	local($self->{__data_pattern})	= 1;
+	local($self->{__data_pattern_delete})	= 1;
 	local($self->{__no_bnodes})		= "DELETE DATA block";
 	my @triples	= $self->_ModifyTemplate();
 	$self->_expected_token(RBRACE);
@@ -1238,7 +1239,8 @@ sub _BindingValue {
 	if ($self->_optional_token(KEYWORD, 'UNDEF')) {
 		push(@{ $self->{_stack} }, undef);
 	} elsif ($self->_test_token(LTLTP)) {
-		$self->_TripleTermData();
+		my $t	= $self->_TripleTermData();
+		push(@{ $self->{_stack} }, $t);
 	} else {
 		$self->_GraphTerm;
 	}
@@ -3355,7 +3357,7 @@ sub _String {
 	} else {
 		my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		my $value	= $t->value;
-		Carp::cluck "Expecting string literal but found $got '$value'";
+# 		Carp::cluck "Expecting string literal but found $got '$value'";
 		$self->_token_error($t, "Expecting string literal but found $got '$value'")
 # 		croak "Expecting string literal but found $got '$value'";
 	}
@@ -3557,6 +3559,9 @@ sub _AnnotationPath {
 		}
 		if ($assert_reification) {
 			my $reif			= $assert_reification;
+			if (blessed($reif) and $reif->does('Attean::API::Blank') and $self->{__data_pattern_delete}) {
+				croak "Syntax error: Annotation syntax with non-IRI reifier not allowed in DELETE DATA template.";
+			}
 			my $reifies	= Attean::IRI->new(value =>  'http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies', lazy => 1);
 			my ($tt)			= $self->__new_statement($s, $p, $o);
 			my ($reification)	= $self->__new_statement( $reif, $reifies, $tt);
@@ -3717,9 +3722,6 @@ sub _ReifiedTripleObject {
 	} elsif ($self->_test_token(BOOLEAN)) {
 		my $b	= $self->_BooleanLiteral;
 		$self->_add_stack( $b );
-	} elsif ($self->_test_token(NIL)) {
-		my $n	= $self->_NIL;
-		$self->_add_stack( $n );
 	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
 		my $b	= $self->_BlankNode;
 		$self->_add_stack( $b );
@@ -3794,9 +3796,6 @@ sub _TripleTermObject {
 	} elsif ($self->_test_token(BOOLEAN)) {
 		my $b	= $self->_BooleanLiteral;
 		$self->_add_stack( $b );
-	} elsif ($self->_test_token(NIL)) {
-		my $n	= $self->_NIL;
-		$self->_add_stack( $n );
 	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
 		my $b	= $self->_BlankNode;
 		$self->_add_stack( $b );
@@ -3842,7 +3841,7 @@ sub _TripleTermDataObject {
 		my $l	= $self->_RDFLiteral;
 		$self->_add_stack( $l );
 	} elsif ($self->_test_token(LTLTP)) {
-		$self->_TripleTermData();
+		push(@{ $self->{_stack} }, $self->_TripleTermData());
 	} else {
 		$self->_IRIref;
 	}
@@ -3893,7 +3892,7 @@ sub _ExprTripleTermObject {
 		my $l	= $self->_RDFLiteral;
 		$self->_add_stack( $l );
 	} elsif ($self->_test_token(LTLTP)) {
-		$self->_TripleTermData();
+		push(@{ $self->{_stack} }, $self->_TripleTermData());
 	} else {
 		$self->_IRIref;
 	}

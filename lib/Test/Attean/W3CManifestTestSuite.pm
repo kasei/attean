@@ -123,6 +123,7 @@ sub sparql_syntax_test {
 	my $model		= shift;
 	my $test		= shift;
 	my $count		= shift // 1;
+	my $handled		= 0;
 	
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
@@ -143,8 +144,8 @@ sub sparql_syntax_test {
 		}
 	}
 
-	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
-	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
+	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
+	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
 	my $is_neg_query	= $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest11"));
 	my $is_neg_update	= $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest11"));
 
@@ -173,6 +174,7 @@ sub sparql_syntax_test {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= blessed($query);
 		$self->record_result('syntax', $ok, $test->as_string);
+		$handled++;
 		if ($ok) {
 			pass("$testname - $filename");
 		} else {
@@ -182,6 +184,7 @@ sub sparql_syntax_test {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= $@ ? 1 : 0;
 		$self->record_result('syntax', $ok, $test->as_string);
+		$handled++;
 		if ($ok) {
 			pass("$testname - $filename");
 		} else {
@@ -191,6 +194,11 @@ sub sparql_syntax_test {
 			fail("$testname - $filename (unexpected successful parse)");
 		}
 	}
+	
+	unless ($handled) {
+		fail("Unhandled test: $testname");
+	}
+	
 }
 
 sub data_syntax_eval_test {
