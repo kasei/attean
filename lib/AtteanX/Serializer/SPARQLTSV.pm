@@ -41,7 +41,7 @@ package AtteanX::Serializer::SPARQLTSV 0.034 {
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use Attean::ListIterator;
-	use List::MoreUtils qw(any);
+	use List::Util qw(any);
 	use namespace::clean;
 
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/tab-separated-values');

@@ -41,7 +41,6 @@ package AtteanX::Parser::SPARQLTSV 0.034 {
 	use Attean;
 	use Encode;
 	use Encode qw(decode);
-	use List::MoreUtils qw(zip);
 	use namespace::clean;
 
 	sub canonical_media_type { return "text/tab-separated-values" }

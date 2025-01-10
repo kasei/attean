@@ -47,7 +47,7 @@ package Attean::QueryPlanner 0.034 {
 	use Attean::RDF;
 	use Scalar::Util qw(blessed reftype);
 	use List::Util qw(reduce);
-	use List::MoreUtils qw(all any);
+	use List::Util qw(all any);
 	use Types::Standard qw(Int ConsumerOf InstanceOf);
 	use URI::Escape;
 	use Algorithm::Combinatorics qw(subsets);

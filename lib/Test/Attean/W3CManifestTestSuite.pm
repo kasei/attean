@@ -20,7 +20,7 @@ use Encode qw(encode encode_utf8 decode_utf8);
 use Getopt::Long;
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
-use List::MoreUtils qw(all);
+use List::Util qw(all);
 use Test::Modern;
 use Text::CSV;
 use Try::Tiny;

@@ -1524,7 +1524,7 @@ package Attean::Algebra::Modify 0.034 {
 	use Scalar::Util qw(blessed);
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
-	use List::MoreUtils qw(all any);
+	use List::Util qw(all any);
 	use Types::Standard qw(HashRef ArrayRef ConsumerOf);
 	use namespace::clean;
 	

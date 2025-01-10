@@ -61,7 +61,7 @@ package AtteanX::Parser::Turtle::Token;
 
 use Moo;
 use Types::Standard qw(ArrayRef Str);
-use List::MoreUtils qw(zip);
+use List::Util qw(mesh);
 use Sub::Util qw(set_subname);
 use AtteanX::Parser::Turtle::Constants;
 use Sub::Install;
@@ -98,7 +98,7 @@ my @KEYS	= qw(type start_line start_column line column args);
 sub fast_constructor {
 	my $class = shift;
 	return $class->new(
-		zip @KEYS, @_
+		mesh \@KEYS, \@_
 	);
 }
 

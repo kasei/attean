@@ -44,7 +44,7 @@ package AtteanX::Serializer::NTriples 0.034 {
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);
 	use Attean::ListIterator;
-	use List::MoreUtils qw(any);
+	use List::Util qw(any);
 	use namespace::clean;
 
 	extends 'AtteanX::Serializer::NTuples';

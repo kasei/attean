@@ -45,7 +45,6 @@ package AtteanX::Parser::SPARQLLex 0.034 {
 	use Attean;
 	use Encode;
 	use Encode qw(decode);
-	use List::MoreUtils qw(zip);
 	use Types::Standard qw(ArrayRef);
 	use namespace::clean;
 
@@ -110,7 +109,6 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.034 {
 	use Attean;
 	use Encode;
 	use Encode qw(decode);
-	use List::MoreUtils qw(zip);
 	use AtteanX::SPARQL::Token;
 	use AtteanX::SPARQL::Constants;
 	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);

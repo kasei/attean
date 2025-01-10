@@ -692,7 +692,6 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.034 {
 	use POSIX qw(ceil floor);
 	use Digest;
 	use UUID::Tiny ':std';
-	use List::MoreUtils qw(zip);
 	use DateTime::Format::W3CDTF;
 	use I18N::LangTags;
 	use namespace::clean;

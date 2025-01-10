@@ -11,7 +11,7 @@ binmode(\*STDOUT, ':encoding(utf8)');
 
 use autodie;
 use Test::Roo;
-use List::MoreUtils qw(all);
+use List::Util qw(all);
 use FindBin qw($Bin);
 
 with 'Test::Attean::SPARQLSuite';

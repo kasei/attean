@@ -41,7 +41,7 @@ package AtteanX::Serializer::SPARQLHTML 0.034 {
 	use Encode qw(encode);
 	use Scalar::Util qw(blessed);
 	use Attean::ListIterator;
-	use List::MoreUtils qw(any);
+	use List::Util qw(any);
 	use namespace::clean;
 
 	has 'full_document' => (is => 'rw', isa => Bool, default => 1);
