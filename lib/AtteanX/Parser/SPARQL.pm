@@ -84,7 +84,7 @@ use Carp qw(cluck confess croak);
 use Attean;
 use Data::Dumper;
 use URI::NamespaceMap;
-use List::MoreUtils qw(zip);
+use List::Util qw(mesh);
 use AtteanX::Parser::SPARQLLex;
 use AtteanX::SPARQL::Constants;
 use Types::Standard qw(ConsumerOf InstanceOf HashRef ArrayRef Bool Str Int);
@@ -564,7 +564,7 @@ sub _statements_with_fresh_bnodes {
 					push(@terms, $term);
 				}
 			}
-			push(@triples_with_fresh_bnodes, ref($t)->new(zip @pos, @terms));
+			push(@triples_with_fresh_bnodes, ref($t)->new(mesh \@pos, \@terms));
 		} else {
 			push(@triples_with_fresh_bnodes, $t);
 		}

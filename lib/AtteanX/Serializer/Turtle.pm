@@ -44,7 +44,7 @@ package AtteanX::Serializer::Turtle 0.034 {
 	use Data::Dumper;
 	use Encode qw(encode);
 	use Attean::ListIterator;
-	use List::MoreUtils qw(any);
+	use List::Util qw(any);
 	use AtteanX::Parser::Turtle::Constants;
 	use AtteanX::Parser::Turtle::Token;
 	use AtteanX::Serializer::TurtleTokens;

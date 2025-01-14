@@ -141,7 +141,7 @@ Evaluates a join (natural-, anti-, or left-) using a nested loop.
 
 package Attean::Plan::NestedLoopJoin 0.034 {
 	use Moo;
-	use List::MoreUtils qw(all);
+	use List::Util qw(all);
 	use namespace::clean;
 
 	with 'Attean::API::BindingSubstitutionPlan';
@@ -230,7 +230,7 @@ Evaluates a join (natural-, anti-, or left-) using a hash join.
 
 package Attean::Plan::HashJoin 0.034 {
 	use Moo;
-	use List::MoreUtils qw(all);
+	use List::Util qw(all);
 	use namespace::clean;
 	
 	sub BUILD {
@@ -371,7 +371,7 @@ package Attean::Plan::HashJoin 0.034 {
 
 package Attean::Plan::Construct 0.034 {
 	use Moo;
-	use List::MoreUtils qw(all);
+	use List::Util qw(all);
 	use Types::Standard qw(Str ArrayRef ConsumerOf InstanceOf);
 	use namespace::clean;
 	has 'triples' => (is => 'ro', 'isa' => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], required => 1);
@@ -483,7 +483,7 @@ package Attean::Plan::Construct 0.034 {
 package Attean::Plan::Describe 0.034 {
 	use Moo;
 	use Attean::RDF;
-	use List::MoreUtils qw(all);
+	use List::Util qw(all);
 	use Types::Standard qw(Str ArrayRef ConsumerOf InstanceOf);
 	use namespace::clean;
 
@@ -736,7 +736,7 @@ package Attean::Plan::Extend 0.034 {
 	use Digest::SHA;
 	use Digest::MD5 qw(md5_hex);
 	use Scalar::Util qw(blessed looks_like_number);
-	use List::MoreUtils qw(uniq all);
+	use List::Util qw(uniq all);
 	use Types::Standard qw(ConsumerOf ArrayRef InstanceOf HashRef);
 	use namespace::clean;
 
@@ -2155,7 +2155,7 @@ package Attean::Plan::Aggregate 0.034 {
 	use Digest::SHA;
 	use Digest::MD5 qw(md5_hex);
 	use Scalar::Util qw(blessed);
-	use List::MoreUtils qw(uniq);
+	use List::Util qw(uniq);
 	use Types::Standard qw(ConsumerOf InstanceOf HashRef ArrayRef);
 	use namespace::clean;
 
@@ -2732,7 +2732,7 @@ package Attean::Plan::Unfold 0.032 {
 	use Digest::SHA;
 	use Digest::MD5 qw(md5_hex);
 	use Scalar::Util qw(blessed looks_like_number);
-	use List::MoreUtils qw(uniq all);
+	use List::Util qw(uniq all);
 	use Types::Standard qw(ConsumerOf ArrayRef InstanceOf HashRef);
 	use namespace::clean;
 

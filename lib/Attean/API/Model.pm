@@ -171,7 +171,7 @@ package Attean::API::Model 0.034 {
 	use Sub::Util qw(set_subname);
 	use URI::Namespace;
 	use Scalar::Util qw(blessed);
-	use List::MoreUtils qw(uniq);
+	use List::Util qw(uniq);
 	use Math::Cartesian::Product;
 	use Data::Dumper;
 

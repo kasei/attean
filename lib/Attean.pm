@@ -76,7 +76,7 @@ package Attean {
 	use Attean::TermMap;
 	
 	use HTTP::Negotiate qw(choose);
-	use List::MoreUtils qw(any all);
+	use List::Util qw(any all);
 	use Module::Load::Conditional qw(can_load);
 	use Role::Tiny ();
 	use Sub::Util qw(set_subname);

@@ -48,7 +48,7 @@ package AtteanX::Serializer::RDFXML 0.034 {
 	use Scalar::Util qw(blessed);
 	use Attean::API::Iterator;
 	use Attean::ListIterator;
-	use List::MoreUtils qw(any);
+	use List::Util qw(any);
 	use namespace::clean;
 
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/rdf+xml');
