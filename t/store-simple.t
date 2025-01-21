@@ -1,6 +1,5 @@
-use Test::Roo;
 use Test::Modern;
-use Test::Exception;
+use Test::Roo;
 
 use v5.14;
 use warnings;
