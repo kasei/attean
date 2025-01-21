@@ -20,7 +20,7 @@ use Getopt::Long;
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
 use List::Util qw(all);
-use Test::Modern;
+use Test::More;
 use Text::CSV;
 use Try::Tiny;
 use URI::file;
