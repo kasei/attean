@@ -13,14 +13,14 @@ use Attean::BindingEqualityTest;
 
 my $ok_regex	= (@ARGV) ? shift : '';
 
-my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-star', 'sparql', 'syntax' );
+my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-tests', 'sparql', 'sparql12' );
 my @good;
 my @bad;
 find( sub {
 	return if ($File::Find::name =~ /^manifest[.]rq/);
 	if ($File::Find::name =~ /^(.*)[.]rq/) {
 		my $prefix	= $1;
-		my ($file)	= $File::Find::name =~ m{rdf-star/sparql/syntax(.*)$};
+		my ($file)	= $File::Find::name =~ m{rdf-tests/sparql/sparql12/(.*)$};
 		if ($file =~ /\bbad\b/) {
 			push(@bad, $File::Find::name);
 		} else {
