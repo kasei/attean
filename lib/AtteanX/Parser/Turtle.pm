@@ -436,7 +436,19 @@ serialization is found at the beginning of C<< $bytes >>.
 		}
 		
 		my $pred	= $self->_verb($l);
-		my $obj		= $self->_object($l, $self->_next_nonws($l));
+		
+		
+		$t			= $self->_peek_nonws($l);
+		my $obj;
+		if ($t->type == LPAREN) {
+			$self->_throw_error("Collections cannot appear inside of reified triples", $t, $l);
+		} elsif ($t->type == LBRACKET) {
+			$self->_get_token_type($l, LBRACKET);
+			$self->_get_token_type($l, RBRACKET);
+			$obj	= Attean::Blank->new();
+		} else {
+			$obj		= $self->_object($l, $self->_next_nonws($l));
+		}
 		
 		$t			= $self->_peek_nonws($l);
 		my $reif	= ($t->type == TILDE) ? $self->_reifier($l) : Attean::Blank->new();
@@ -582,33 +594,33 @@ serialization is found at the beginning of C<< $bytes >>.
 		if ($type==LBRACKET) {
 			$obj	= Attean::Blank->new();
 			$self->_get_token_type($l, RBRACKET);
-		} elsif (not($type==IRI or $type==PREFIXNAME or $type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN)) {
-			$self->_throw_error("Expecting object but got " . decrypt_constant($type), $t, $l);
-		} else {
-			if ($type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S) {
-				my $value	= $t->value;
-				my $t		= $self->_next_nonws($l);
-				my $dt;
-				my $lang;
-				if ($t) {
-					if ($t->type == HATHAT) {
-						my $t		= $self->_next_nonws($l);
-						if ($t->type == IRI or $t->type == PREFIXNAME) {
-							$dt	= $self->_token_to_node($t);
-						}
-					} elsif ($t->type == LANG) {
-						$lang	= $t->value;
-					} else {
-						$self->_unget_token($t);
+		} elsif ($type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S) {
+			my $value	= $t->value;
+			my $t		= $self->_next_nonws($l);
+			my $dt;
+			my $lang;
+			if ($t) {
+				if ($t->type == HATHAT) {
+					my $t		= $self->_next_nonws($l);
+					if ($t->type == IRI or $t->type == PREFIXNAME) {
+						$dt	= $self->_token_to_node($t);
 					}
+				} elsif ($t->type == LANG) {
+					$lang	= $t->value;
+				} else {
+					$self->_unget_token($t);
 				}
-				my %args	= (value => $value);
-				$args{language}	= $lang if (defined($lang));
-				$args{datatype}	= $dt if (defined($dt));
-				$obj	= $self->new_literal(%args);
-			} else {
-				$obj	= $self->_token_to_node($t, $type);
 			}
+			my %args	= (value => $value);
+			$args{language}	= $lang if (defined($lang));
+			$args{datatype}	= $dt if (defined($dt));
+			$obj	= $self->new_literal(%args);
+		} elsif ($type==IRI or $type==PREFIXNAME or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN) {
+			$obj	= $self->_token_to_node($t, $type);
+		} elsif ($type==LTLTP) {
+			$obj	= $self->_tripleTerm($l);
+		} else {
+			$self->_throw_error("Expecting object but got " . decrypt_constant($type), $t, $l);
 		}
 		return $obj;
 	}
@@ -769,7 +781,8 @@ serialization is found at the beginning of C<< $bytes >>.
 		if (defined($t->value)) {
 			$text	.= " (near '" . $t->value . "')";
 		}
-		Carp::cluck $text;
+# 		Carp::cluck $text;
+		die $text;
 	}
 }
 

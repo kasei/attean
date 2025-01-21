@@ -463,8 +463,11 @@ Returns the next token present in the input.
 			$self->read_word('prefix');
 			return $self->new_token(TURTLEPREFIX, $self->start_line, $self->start_column);
 		} else {
-			if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
+			if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*(--[a-zA-Z]+)?\b/o) {
 				my $lang	= $self->read_length($+[0]);
+				if ($lang !~ /--(ltr|rtl)$/ and $lang =~ /--(\w+)$/) {
+					$self->_throw_error("Expected base direction to be 'ltr' or 'rtl', but found '$1'");
+				}
 				return $self->new_token(LANG, $self->start_line, $self->start_column, $lang);
 			}
 			$self->_throw_error("Expected keyword or language tag");
