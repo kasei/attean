@@ -2,7 +2,6 @@ package Test::Attean::RDFSyntaxTestSuite;
 
 use v5.14;
 use warnings;
-use Test::Roo::Role;
 
 use Attean;
 use Attean::RDF;
@@ -21,6 +20,7 @@ use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
 use List::MoreUtils qw(all);
 use Test::Modern;
+use Test::Roo::Role;
 use Text::CSV;
 use Try::Tiny;
 use URI::file;
