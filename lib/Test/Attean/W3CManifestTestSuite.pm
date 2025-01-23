@@ -339,9 +339,9 @@ sub data_syntax_eval_test {
 					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
 				}
 			} else {
-				my $ok	= scalar(@triples);
+				my $ok	= not($err);
 				$self->record_result('syntax', $ok, $test->as_string);
-				if (not $err) {
+				if ($ok) {
 					pass("$testname - $filename");
 				} else {
 					fail("$testname - $filename: $err");
