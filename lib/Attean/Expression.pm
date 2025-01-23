@@ -7,7 +7,7 @@ Attean::Expression - SPARQL Expressions
 
 =head1 VERSION
 
-This document describes Attean::Expression version 0.034
+This document describes Attean::Expression version 0.035
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ use Attean::API::Expression;
 
 =cut
 
-package Attean::ValueExpression 0.034 {
+package Attean::ValueExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use AtteanX::SPARQL::Constants;
@@ -101,7 +101,7 @@ package Attean::ValueExpression 0.034 {
 
 =cut
 
-package Attean::UnaryExpression 0.034 {
+package Attean::UnaryExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -138,7 +138,7 @@ package Attean::UnaryExpression 0.034 {
 
 =cut
 
-package Attean::BinaryExpression 0.034 {
+package Attean::BinaryExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(Enum);
 	use namespace::clean;
@@ -166,7 +166,7 @@ package Attean::BinaryExpression 0.034 {
 
 =cut
 
-package Attean::FunctionExpression 0.034 {
+package Attean::FunctionExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf HashRef);
 	use Types::Common::String qw(UpperCaseStr);
@@ -238,7 +238,7 @@ package Attean::FunctionExpression 0.034 {
 	}
 }
 
-package Attean::AggregateExpression 0.034 {
+package Attean::AggregateExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(Bool Enum Str HashRef ConsumerOf Maybe ArrayRef);
 	use Types::Common::String qw(UpperCaseStr);
@@ -311,7 +311,7 @@ package Attean::AggregateExpression 0.034 {
 	}
 }
 
-package Attean::CastExpression 0.034 {
+package Attean::CastExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(Enum ConsumerOf);
 	use AtteanX::SPARQL::Constants;
@@ -363,7 +363,7 @@ package Attean::CastExpression 0.034 {
 	}
 }
 
-package Attean::ExistsExpression 0.034 {
+package Attean::ExistsExpression 0.035 {
 	use Moo;
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
@@ -415,7 +415,7 @@ package Attean::ExistsExpression 0.034 {
 	}
 }
 
-package Attean::ExistsPlanExpression 0.034 {
+package Attean::ExistsPlanExpression 0.035 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf);
 	use namespace::clean;

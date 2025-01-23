@@ -4,7 +4,7 @@ AtteanX::Serializer::RDFXML - RDF/XML Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::RDFXML version 0.034
+This document describes AtteanX::Serializer::RDFXML version 0.035
 
 =head1 SYNOPSIS
 
@@ -41,7 +41,7 @@ This document describes AtteanX::Serializer::RDFXML version 0.034
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::RDFXML 0.034 {
+package AtteanX::Serializer::RDFXML 0.035 {
 	use Moo;
 	use Types::Standard qw(Bool HashRef ArrayRef HashRef Str Maybe InstanceOf ConsumerOf);
 	use Encode qw(encode);

@@ -37,6 +37,29 @@ my:project
 							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 ;
 	.
 
+my:v_0-035
+	a					:Version ;
+	dc:issued			"2025-01-23"^^xsd:date ;
+	:revision			"0.035" ;
+	dcterms:replaces	my:v_0-034 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add test classes for mocking federation tests." ],
+			[ a dcs:Addition ; rdfs:label "Add support for testing SERVICE evaluation in both Simple and Plan evaluation." ],
+			[ a dcs:Addition ; rdfs:label "Add CDT rewriting in RDFXML parser and serializer." ],
+			[ a dcs:Addition ; rdfs:label "Add POD for blank_nodes attributes in RDFXML parser and serializer." ],
+			[ a dcs:Update ; rdfs:label "Use List::Util instead of List::MoreUtils (#171 from @plicease)." ],
+			[ a dcs:Update ; rdfs:label "Fix bug that was causing warnings during test suite runs (#172)." ],
+			[ a dcs:Update ; rdfs:label "Fix CDT rewriting in Attean::API::CanonicalizingBindingSet." ],
+			[ a dcs:Update ; rdfs:label "Fix error handling in Attean::SPARQLClient." ],
+			[ a dcs:Update ; rdfs:label "Fix SPARQL serialization of algebras with top-level Extend (BIND or select expressions)." ],
+			[ a dcs:Update ; rdfs:label "Fix SPARQL serialization of casting function expressions." ],
+			[ a dcs:Update ; rdfs:label "Update Attean::API::CanonicalizingBindingSet to rewrite CDT blank nodes as part of canonicalization." ],
+			[ a dcs:Update ; rdfs:label "Extend W3C manifest support for new qt:constructDataFile. property." ]
+	]
+	.
+
+
 my:v_0-034
 	a					:Version ;
 	dc:issued			"2024-06-25"^^xsd:date ;

@@ -7,7 +7,7 @@ Attean::API::Binding - Name to term bindings
 
 =head1 VERSION
 
-This document describes Attean::API::Binding version 0.034
+This document describes Attean::API::Binding version 0.035
 
 =head1 DESCRIPTION
 
@@ -71,7 +71,7 @@ otherwise.
 
 use Type::Tiny::Role;
 
-package Attean::API::Binding 0.034 {
+package Attean::API::Binding 0.035 {
 	use Scalar::Util qw(blessed);
 	use List::Util qw(mesh);
 
@@ -285,7 +285,7 @@ C<< $binding >>.
 	}
 }
 
-package Attean::API::TripleOrQuadPattern 0.034 {
+package Attean::API::TripleOrQuadPattern 0.035 {
 	use Encode qw(encode);
 	use List::Util qw(mesh);
 	use Scalar::Util qw(blessed);
@@ -465,7 +465,7 @@ parsed from C<< $string >> in SPARQL syntax.
 	}
 }
 
-package Attean::API::TripleOrQuad 0.034 {
+package Attean::API::TripleOrQuad 0.035 {
 	use List::Util qw(any);
 	use Carp;
 
@@ -481,7 +481,7 @@ package Attean::API::TripleOrQuad 0.034 {
 	}
 }
 
-package Attean::API::TriplePattern 0.034 {
+package Attean::API::TriplePattern 0.035 {
 	use List::Util qw(mesh);
 	use Scalar::Util qw(blessed);
 
@@ -540,7 +540,7 @@ package Attean::API::TriplePattern 0.034 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding', 'Attean::API::TermOrVariableOrTriplePattern';
 }
 
-package Attean::API::Triple 0.034 {
+package Attean::API::Triple 0.035 {
 	use Scalar::Util qw(blessed);
 	use Moo::Role;
 	
@@ -631,7 +631,7 @@ package Attean::API::Triple 0.034 {
 	with 'Attean::API::TermOrTriple';
 }
 
-package Attean::API::QuadPattern 0.034 {
+package Attean::API::QuadPattern 0.035 {
 	use Scalar::Util qw(blessed);
 	use List::Util qw(mesh);
 
@@ -688,7 +688,7 @@ package Attean::API::QuadPattern 0.034 {
 	with 'Attean::API::TripleOrQuadPattern', 'Attean::API::Binding';
 }
 
-package Attean::API::Quad 0.034 {
+package Attean::API::Quad 0.035 {
 	use Moo::Role;
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
@@ -715,7 +715,7 @@ package Attean::API::Quad 0.034 {
 }
 
 
-package Attean::API::Result 0.034 {
+package Attean::API::Result 0.035 {
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(HashRef);
 
