@@ -7,7 +7,7 @@ Attean::Variable - Pattern matching variables
 
 =head1 VERSION
 
-This document describes Attean::Variable version 0.034
+This document describes Attean::Variable version 0.035
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ It conforms to the L<Attean::API::TermOrVariable|Attean::API> role.
 
 =cut
 
-package Attean::Variable 0.034 {
+package Attean::Variable 0.035 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use UUID::Tiny ':std';

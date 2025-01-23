@@ -37,9 +37,9 @@ my:project
 							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 ;
 	.
 
-my:v_0-034
+my:v_0-035
 	a					:Version ;
-	dc:issued			"2025-01-21"^^xsd:date ;
+	dc:issued			"2025-01-23"^^xsd:date ;
 	:revision			"0.035" ;
 	dcterms:replaces	my:v_0-034 ;
 	dcs:changeset [

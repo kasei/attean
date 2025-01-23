@@ -7,7 +7,7 @@ Attean::Quad - RDF Quads
 
 =head1 VERSION
 
-This document describes Attean::Quad version 0.034
+This document describes Attean::Quad version 0.035
 
 =head1 SYNOPSIS
 
@@ -40,7 +40,7 @@ This class consumes L<Attean::API::Quad>.
 
 =cut
 
-package Attean::QuadPattern 0.034 {
+package Attean::QuadPattern 0.035 {
 	use Moo;
 	use Scalar::Util qw(blessed);
 	use Attean::RDF;
@@ -54,7 +54,7 @@ package Attean::QuadPattern 0.034 {
 	with 'Attean::API::QuadPattern';
 }
 
-package Attean::Quad 0.034 {
+package Attean::Quad 0.035 {
 	use Moo;
 	use Attean::API::Binding;
 	
