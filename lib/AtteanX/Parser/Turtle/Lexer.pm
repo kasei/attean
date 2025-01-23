@@ -378,7 +378,11 @@ Returns the next token present in the input.
 					last;
 				} else {
 					my $c	= $self->peek_char;
-					$self->_throw_error("Got '$c' while expecting string character");
+					if (defined($c)) {
+						$self->_throw_error("Got '$c' while expecting string character");
+					} else {
+						$self->_throw_error("Got EOF while expecting string character");
+					}
 				}
 			}
 			$self->get_char_safe(q["]);
@@ -431,7 +435,11 @@ Returns the next token present in the input.
 					last;
 				} else {
 					my $c		= $self->peek_char();
-					$self->_throw_error("Got '$c' while expecting string character");
+					if (defined($c)) {
+						$self->_throw_error("Got '$c' while expecting string character");
+					} else {
+						$self->_throw_error("Got EOF while expecting string character");
+					}
 				}
 			}
 			$self->get_char_safe(q[']);
