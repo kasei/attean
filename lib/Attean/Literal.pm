@@ -34,6 +34,8 @@ The following attributes exist:
 
 =item C<< language >>
 
+=item C<< base_dir >>
+
 =item C<< datatype >>
 
 =back
@@ -45,6 +47,12 @@ The following attributes exist:
 =item C<< has_language >>
 
 Returns true if the literal has a language tag, false otherwise.
+
+=cut
+
+=item C<< has_base_dir >>
+
+Returns true if the literal has a base diredction, false otherwise.
 
 =cut
 
@@ -61,6 +69,7 @@ package Attean::Literal 0.035 {
 	my $XSD_STRING	= IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
 	has 'value'				=> (is => 'ro', isa => Str, required => 1);
 	has 'language'			=> (is => 'ro', isa => Maybe[Str], predicate => 'has_language');
+	has 'base_dir'			=> (is => 'ro', isa => Maybe[Str]);
 	has 'datatype'			=> (
 		is => 'ro',
 		isa => InstanceOf['Attean::IRI'],
@@ -108,7 +117,11 @@ package Attean::Literal 0.035 {
 		$value		=~ s/\r/\\r/g;
 		$value		=~ s/"/\\"/g;
 		if ($self->has_language) {
-			return sprintf('"%s"@%s', $value, $self->language);
+			if (my $d = $self->base_dir) {
+				return sprintf('"%s"@%s--%s', $value, $self->language, $d);
+			} else {
+				return sprintf('"%s"@%s', $value, $self->language);
+			}
 		} else {
 			my $dt	= $self->datatype->as_string;
 			if ($dt eq 'http://www.w3.org/2001/XMLSchema#string') {

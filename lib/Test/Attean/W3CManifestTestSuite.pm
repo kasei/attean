@@ -113,7 +113,13 @@ sub setup {
 	}
 	my @manifests	= values %manifests;
 	
-	warn "done parsing manifests" if $self->debug;
+	if ($self->debug) {
+		warn "done parsing manifests" if $self->debug;
+		warn "setting manifests:\n";
+		foreach my $m (@manifests) {
+			warn "- " . $m->as_string . "\n";
+		}
+	}
 	$self->manifests(\@manifests);
 }
 
@@ -229,7 +235,7 @@ sub data_syntax_eval_test {
 
 	my $is_eval_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
 	my $is_pos_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
-	my $is_neg_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax"));
+	my $is_neg_ttl			= ($model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeEval")));
 	my $is_pos_c14n_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveC14N"));
 
 	my $is_eval_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
@@ -300,6 +306,7 @@ sub data_syntax_eval_test {
 	
 	my $test_base	= $uri->as_string;
 	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+	warn "Test base: " . $test_base if ($self->debug);
 	
 	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
 	my $nt_parser	= Attean->get_parser('NTriples')->new();
@@ -307,12 +314,13 @@ sub data_syntax_eval_test {
 	SKIP: {
 		if ($is_pos_ttl or $is_eval_ttl) {
 			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
+			my $err			= $@;
 			if ($is_eval) {
 				my $ser	= Attean->get_serializer('NTriples')->new();
 				my $nt_parser	= Attean->get_parser('NTriples')->new();
 				my @nt_triples	= eval { $nt_parser->parse_iter_from_bytes($result_bytes)->uniq()->elements() };
-				if ($@) {
-					fail("$testname - Failed to parse expected data from $result_filename: $@");
+				if ($err) {
+					fail("$testname - Failed to parse expected data from $result_filename: $err");
 					return;
 				}
 				my $nt_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
@@ -333,10 +341,10 @@ sub data_syntax_eval_test {
 			} else {
 				my $ok	= scalar(@triples);
 				$self->record_result('syntax', $ok, $test->as_string);
-				if ($ok) {
+				if (not $err) {
 					pass("$testname - $filename");
 				} else {
-					fail("$testname - $filename: $@");
+					fail("$testname - $filename: $err");
 				}
 			}
 		} elsif ($is_pos_nt or $is_eval_nt) {
@@ -1106,7 +1114,10 @@ sub get_expected_results {
 		return $iter;
 	} elsif ($file =~ /[.](ttl|rdf|nt)/) {
 		my $model	= memory_model();
-		$model->load_urls_into_graph($self->default_graph, iri("file://$file"));
+		my $file_url	= "file://$file";
+		my $base		= $file_url;
+		$base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+		$model->load_urls_into_graph_with_base($self->default_graph, [iri($file_url)], iri($base));
 		my ($res)	= $model->subjects( iri("${RDF}type"), iri("${RS}ResultSet") )->elements;
 		if (my($b) = $model->objects( $res, iri("${RS}boolean") )->elements) {
 			my $bool	= $b->value;

@@ -3135,7 +3135,8 @@ sub _BuiltInCall_test {
 	return 1 if ($self->_test_token(KEYWORD, 'EXISTS'));
 	return 1 if ($self->_test_token(KEYWORD, qr/^(ABS|CEIL|FLOOR|ROUND|CONCAT|SUBSTR|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|RAND|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|NOW)$/i));
 	return 1 if ($self->_test_token(KEYWORD, qr/^(TRIPLE|ISTRIPLE|SUBJECT|PREDICATE|OBJECT)$/i));
-	return ($self->_test_token(KEYWORD, qr/^(COALESCE|UUID|STRUUID|STR|STRDT|STRLANG|STRBEFORE|STRAFTER|REPLACE|BNODE|IRI|URI|LANG|LANGMATCHES|DATATYPE|BOUND|sameTerm|isIRI|isURI|isBLANK|isLITERAL|REGEX|IF|isNumeric)$/i));
+	return 1 if ($self->_test_token(KEYWORD, qr/^(HASLANG|HASLANGDIR|LANGDIR)$/i));
+	return ($self->_test_token(KEYWORD, qr/^(COALESCE|UUID|STRUUID|STR|STRDT|STRLANG|STRLANGDIR|STRBEFORE|STRAFTER|REPLACE|BNODE|IRI|URI|LANG|LANGMATCHES|DATATYPE|BOUND|sameTerm|isIRI|isURI|isBLANK|isLITERAL|REGEX|IF|isNumeric)$/i));
 }
 
 sub _BuiltInCall {
@@ -3170,7 +3171,7 @@ sub _BuiltInCall {
 			# no-arg functions
 			$self->_expected_token(NIL);
 			$self->_add_stack( $self->new_function_expression($op) );
-		} elsif ($op =~ /^(STR|URI|IRI|LANG|DATATYPE|isIRI|isURI|isBLANK|isLITERAL|isNumeric|ABS|CEIL|FLOOR|ROUND|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|ISTRIPLE|SUBJECT|PREDICATE|OBJECT)$/i) {
+		} elsif ($op =~ /^(STR|URI|IRI|LANG|LANGDIR|HASLANG|HASLANGDIR|DATATYPE|isIRI|isURI|isBLANK|isLITERAL|isNumeric|ABS|CEIL|FLOOR|ROUND|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|MD5|SHA1|SHA224|SHA256|SHA384|SHA512|HOURS|MINUTES|SECONDS|DAY|MONTH|YEAR|TIMEZONE|TZ|ISTRIPLE|SUBJECT|PREDICATE|OBJECT)$/i) {
 			### one-arg functions that take an expression
 			$self->_expected_token(LPAREN);
 			$self->_Expression;
@@ -3187,7 +3188,7 @@ sub _BuiltInCall {
 			my ($arg2)	= splice(@{ $self->{_stack} });
 			$self->_add_stack( $self->new_function_expression($op, $arg1, $arg2) );
 			$self->_expected_token(RPAREN);
-		} elsif ($op =~ /^(IF|REPLACE|TRIPLE)$/i) {
+		} elsif ($op =~ /^(IF|REPLACE|TRIPLE|STRLANGDIR)$/i) {
 			### three-arg functions that take expressions
 			$self->_expected_token(LPAREN);
 			$self->_Expression;
@@ -3357,7 +3358,7 @@ sub _String {
 	} else {
 		my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		my $value	= $t->value;
-# 		Carp::cluck "Expecting string literal but found $got '$value'";
+		Carp::cluck "Expecting string literal but found $got '$value'";
 		$self->_token_error($t, "Expecting string literal but found $got '$value'")
 # 		croak "Expecting string literal but found $got '$value'";
 	}

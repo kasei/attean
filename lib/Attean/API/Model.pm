@@ -400,7 +400,16 @@ package Attean::API::MutableModel 0.035 {
 	sub load_urls_into_graph {
 		my $self	= shift;
 		my $graph	= shift;
-		my @urls	= @_;
+		my $urls	= [@_];
+		return $self->load_urls_into_graph_with_base($graph, $urls);
+	}
+	
+	sub load_urls_into_graph_with_base {
+		my $self	= shift;
+		my $graph	= shift;
+		my $urls	= shift;
+		my @urls	= @$urls;
+		my $default_base	= shift;
 		my $ua		= LWP::UserAgent->new();
 		my $accept	= Attean->acceptable_parsers( handles => 'Attean::API::Triple' );
 		$ua->default_headers->push_header( 'Accept' => $accept );
@@ -412,7 +421,8 @@ package Attean::API::MutableModel 0.035 {
 				my $ct		= $resp->header('Content-Type');
 				my $pclass = Attean->get_parser( media_type => $ct, filename => $url ) // Attean->get_parser('ntriples');
 				if ($pclass) {
-					my $p		= $pclass->new(base => iri($url));
+					my $base	= $default_base || iri($url);
+					my $p		= $pclass->new(base => $base);
 					my $str		= $resp->decoded_content;
 					my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
 					my $iter	= eval { $p->parse_iter_from_bytes( $bytes ) };

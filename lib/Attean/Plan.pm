@@ -1103,6 +1103,19 @@ package Attean::Plan::Extend 0.035 {
 					die unless ($string->does('Attean::API::Literal'));
 					my $value		= $string->language // '';
 					return Attean::Literal->new(value => $value);
+				} elsif ($func eq 'HASLANG') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return $false unless ($string->does('Attean::API::Literal'));
+					return $string->has_language ? $true : $false;
+				} elsif ($func eq 'HASLANGDIR') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return $false unless ($string->does('Attean::API::Literal'));
+					return $string->has_base_dir ? $true : $false;
+				} elsif ($func eq 'LANGDIR') {
+					my ($string)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					die unless ($string->does('Attean::API::Literal'));
+					my $dir	= $string->base_dir // '';
+					return Attean::Literal->new(value => $dir);
 				} elsif ($func eq 'LANGMATCHES') {
 					my ($term, $pat)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 					my $lang	= $term->value;
@@ -1126,7 +1139,18 @@ package Attean::Plan::Extend 0.035 {
 					die unless ($term->does('Attean::API::Literal'));
 					die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
 					die if ($term->language);
+					die unless ($lang->value);
 					return Attean::Literal->new(value => $term->value, language => $lang->value);
+				} elsif ($func eq 'STRLANGDIR') {
+					my ($term, $lang, $dir)	= @terms;
+					die unless ($term->does('Attean::API::Literal'));
+					die unless ($lang->does('Attean::API::Literal'));
+					die unless ($dir->does('Attean::API::Literal'));
+					die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
+					die unless ($lang->value);
+					die unless ($dir->value =~ /^(ltr|rtl)$/);
+					my $v	= Attean::Literal->new(value => $term->value, language => $lang->value, base_dir => $dir->value);
+					return $v;
 				} elsif ($func eq 'STRDT') {
 					my ($term, $dt)	= @terms;
 					die unless ($term->does('Attean::API::Literal'));
