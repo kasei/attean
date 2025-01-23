@@ -135,6 +135,7 @@ package Attean::API::Literal 0.039 {
 	with 'Attean::API::TermOrVariableOrTriplePattern';
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
+	requires 'base_dir'; # => (is => 'ro', isa => 'Maybe[Str]');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
 	
 	sub BUILD {}
@@ -194,6 +195,10 @@ package Attean::API::Literal 0.039 {
 		my $t	= AtteanX::SPARQL::Token->fast_constructor( $qtype, -1, -1, -1, -1, [$self->value] );
 		push(@tokens, $t);
 		if (my $lang = $self->language) {
+			my $lex	= "$lang";
+			if (my $d = $self->base_dir) {
+				$lex	.= '--' . $d;
+			}
 			my $l	= AtteanX::SPARQL::Token->fast_constructor( LANG, -1, -1, -1, -1, ["$lang"] );
 			push(@tokens, $l);
 		} else {
@@ -300,7 +305,11 @@ package Attean::API::Literal 0.039 {
 		my $self	= shift;
 		my $str		= sprintf('"%s"', $self->__ntriples_string);
 		if (my $l = $self->language) {
-			return join('@', $str, $l);
+			if (my $d = $self->base_dir) {
+				return join('', $str, '@', $l, '--', $d);
+			} else {
+				return join('@', $str, $l);
+			}
 		} else {
 			my $dt	= $self->datatype;
 			if ($dt->value eq 'http://www.w3.org/2001/XMLSchema#string') {
@@ -322,6 +331,12 @@ package Attean::API::Literal 0.039 {
 		
 		return $s;
 	};
+
+	sub has_base_dir {
+		my $self	= shift;
+		my $base_dir	= $self->base_dir;
+		return (defined($base_dir) and length($base_dir) > 0);
+	}
 }
 
 package Attean::API::DateTimeLiteral 0.039 {

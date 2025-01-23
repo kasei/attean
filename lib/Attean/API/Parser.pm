@@ -104,7 +104,10 @@ Constructs and returns a new L<Attean::Literal> object.
 	sub new_literal {
 		my $self	= shift;
 		my %args	= @_;
-		
+		if (exists $args{'language'} and $args{'language'} =~ m/^(.*)--(rtl|ltr)$/) {
+			$args{'language'}	= $1;
+			$args{'base_dir'}	= $2;
+		}
 		return Attean::Literal->new(%args);
 	}
 	

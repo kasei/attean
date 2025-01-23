@@ -18,7 +18,7 @@ with 'Test::Attean::SPARQLStarSuite';
 
 sub BUILD {
 	my $self	= shift;
-	my $path	= File::Spec->catfile( $Bin, 'data', 'sparql', 'sparql12' );
+	my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-tests', 'sparql', 'sparql12' );
 	$self->tests_dir($path);
 }
 

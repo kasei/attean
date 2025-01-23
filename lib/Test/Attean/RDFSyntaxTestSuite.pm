@@ -78,14 +78,21 @@ Test::Roo::top_test 'RDF Concrete Syntax tests' => sub {
 
 		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
 		unless (blessed($list)) {
-			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
+			if ($self->debug) {
+				warn "No mf:entries found for manifest " . $m->as_string . "\n";
+				my @manifests	= $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") )->elements;
+				warn "Manifests:\n";
+				foreach my $m (@manifests) {
+					warn "- " . $m->value . "\n";
+				}
+			}
 		}
 		my @tests	= $model->get_list( $self->default_graph, $list )->elements;
 		foreach my $test (@tests) {
 			unless ($test->value =~ /$PATTERN/) {
 				next;
 			}
-# 			warn 'TEST: ' . $test->value;
+# 			warn 'TEST: ' . $test->value if ($self->debug);
 # 			if ($LIST_TESTS) {
 # 				say $test->value;
 # 			}
