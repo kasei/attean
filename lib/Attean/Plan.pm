@@ -1072,6 +1072,9 @@ package Attean::Plan::Extend 0.035 {
 	# 				die "CONCAT called with terms that are not argument compatible" unless ($strings[0]->argument_compatible(@strings));
 					my %args;
 					if (my $l = $strings[0]->language) {
+						if (my $d = $strings[0]->base_dir) {
+							$args{base_dir}	= $d;
+						}
 						$args{language}	= $l;
 					} else {
 						my $dt	= $strings[0]->datatype;
@@ -1081,15 +1084,25 @@ package Attean::Plan::Extend 0.035 {
 					}
 					foreach my $s (@strings) {
 						die unless ($s->does('Attean::API::Literal'));
-						die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>));
+						die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#(lang|dirLang)String|2001/XMLSchema#string)>));
 						if (my $l2 = $s->language) {
 							if (my $l1 = $args{language}) {
 								if ($l1 ne $l2) {
 									delete $args{language};
+									delete $args{base_dir};
+								}
+							}
+
+							if (my $d2 = $s->base_dir) {
+								if (my $d1 = $args{base_dir}) {
+									if ($d1 ne $d2) {
+										delete $args{base_dir};
+									}
 								}
 							}
 						} else {
 							delete $args{language};
+							delete $args{base_dir};
 						}
 					}
 					my $c	= Attean::Literal->new(value => join('', map { $_->value } @strings), %args);
@@ -1137,7 +1150,7 @@ package Attean::Plan::Extend 0.035 {
 				} elsif ($func eq 'STRLANG') {
 					my ($term, $lang)	= @terms;
 					die unless ($term->does('Attean::API::Literal'));
-					die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
+					die unless ($term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#string>);
 					die if ($term->language);
 					die unless ($lang->value);
 					return Attean::Literal->new(value => $term->value, language => $lang->value);
@@ -1146,7 +1159,7 @@ package Attean::Plan::Extend 0.035 {
 					die unless ($term->does('Attean::API::Literal'));
 					die unless ($lang->does('Attean::API::Literal'));
 					die unless ($dir->does('Attean::API::Literal'));
-					die unless ($term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
+					die unless ($term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#string>);
 					die unless ($lang->value);
 					die unless ($dir->value =~ /^(ltr|rtl)$/);
 					my $v	= Attean::Literal->new(value => $term->value, language => $lang->value, base_dir => $dir->value);

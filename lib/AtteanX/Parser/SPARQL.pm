@@ -3358,7 +3358,7 @@ sub _String {
 	} else {
 		my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
 		my $value	= $t->value;
-		Carp::cluck "Expecting string literal but found $got '$value'";
+# 		Carp::cluck "Expecting string literal but found $got '$value'";
 		$self->_token_error($t, "Expecting string literal but found $got '$value'")
 # 		croak "Expecting string literal but found $got '$value'";
 	}
