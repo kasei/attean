@@ -55,11 +55,14 @@ while (defined(my $file = shift)) {
 		$fh		= \*STDIN;
 		$base	= Attean::IRI->new('file:///dev/stdin');
 	} else {
-		open( $fh, '<:encoding(UTF-8)', $file ) or die $!;
+		open( $fh, '<', $file ) or die $!;
+		binmode($fh);
+
 		$base	= Attean::IRI->new('file://' . File::Spec->rel2abs($file));
 	}
 
 	my $out_io		= \*STDOUT;
+	binmode(\*STDOUT);
 	$|				= 1;
 	my $parser;
 	my $map			= URI::NamespaceMap->new( \%namespaces );
