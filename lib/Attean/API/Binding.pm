@@ -546,7 +546,7 @@ package Attean::API::Triple 0.035 {
 	
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		my %map	= (
-			subject		=> 'Attean::API::BlankOrIRI',
+			subject		=> 'Attean::API::BlankOrIRIOrTriple',
 			predicate	=> 'Attean::API::IRI',
 			object		=> 'Attean::API::TermOrTriple'
 		);

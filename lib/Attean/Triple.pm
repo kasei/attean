@@ -67,7 +67,7 @@ package Attean::Triple 0.035 {
 	use Moo;
 	use Attean::API::Binding;
 	
-	has 'subject'	=> (is => 'ro', does => 'Attean::API::BlankOrIRI', required => 1);
+	has 'subject'	=> (is => 'ro', does => 'Attean::API::BlankOrIRIOrTriple', required => 1);
 	has 'predicate'	=> (is => 'ro', does => 'Attean::API::IRI', required => 1);
 	has 'object'	=> (is => 'ro', does => 'Attean::API::Term', required => 1);
 	

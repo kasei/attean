@@ -84,6 +84,8 @@ package Attean::Plan::Quad 0.035 {
 				}
 			} elsif ($t->does('Attean::API::TermOrVariable')) {
 				push(@strings, $t->ntriples_string);
+			} elsif ($t->does('Attean::API::TriplePattern')) {
+				push(@strings, $t->ntriples_string);
 			} else {
 				use Data::Dumper;
 				die "Unrecognized node in quad pattern: " . Dumper($t);
