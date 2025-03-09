@@ -18,11 +18,11 @@ with 'Test::Attean::SPARQLStarSuite';
 
 sub BUILD {
 	my $self	= shift;
-	my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-star', 'sparql', 'eval' );
+	my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-tests', 'sparql', 'sparql12' );
 	$self->tests_dir($path);
 }
 
-my %args	= (use_idp_planner => 0, run_update_tests => 0);
+my %args	= (use_idp_planner => 0, run_update_tests => 1);
 while (defined(my $opt = shift)) {
 	if ($opt eq '-v') {
 		$args{debug}++;
