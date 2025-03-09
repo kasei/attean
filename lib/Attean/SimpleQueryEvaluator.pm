@@ -895,6 +895,19 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.035 {
 						} else {
 							return (I18N::LangTags::is_dialect_of( $lang, $match )) ? $true : $false;
 						}
+					} elsif ($func eq 'HASLANG') {
+						my ($string)	= @operands;
+						return $false unless ($string->does('Attean::API::Literal'));
+						return $string->has_language ? $true : $false;
+					} elsif ($func eq 'HASLANGDIR') {
+						my ($string)	= @operands;
+						return $false unless ($string->does('Attean::API::Literal'));
+						return $string->has_base_dir ? $true : $false;
+					} elsif ($func eq 'LANGDIR') {
+						my ($string)	= @operands;
+						die unless ($string->does('Attean::API::Literal'));
+						my $dir	= $string->base_dir // '';
+						return Attean::Literal->new(value => $dir);
 					} elsif ($func eq 'DATATYPE') {
 						return $operands[0]->datatype;
 					} elsif ($func eq 'BOUND') {
@@ -1074,7 +1087,18 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.035 {
 						my @values	= map { $_->value } @operands;
 						die "TypeError: STRLANG must be called with two plain literals" unless (blessed($str) and $str->does('Attean::API::Literal') and blessed($lang) and $lang->does('Attean::API::Literal'));
 						die "TypeError: STRLANG not called with a simple literal" unless ($str->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string' and not($str->language));
+						die unless (length($lang->value));
 						return Attean::Literal->new( value => $values[0], language => $values[1] );
+					} elsif ($func eq 'STRLANGDIR') {
+						my ($term, $lang, $dir)	= @operands;
+						die unless ($term->does('Attean::API::Literal'));
+						die unless ($lang->does('Attean::API::Literal'));
+						die unless ($dir->does('Attean::API::Literal'));
+						die unless ($term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#string>);
+						die unless ($lang->value);
+						die unless ($dir->value =~ /^(ltr|rtl)$/);
+						my $v	= Attean::Literal->new(value => $term->value, language => $lang->value, base_dir => $dir->value);
+						return $v;
 					} elsif ($func eq 'STRDT') {
 						die "TypeError: STRDT" unless ($operands[0]->does('Attean::API::Literal') and not($operands[0]->language));
 						if (my $dt = $operands[0]->datatype) {
