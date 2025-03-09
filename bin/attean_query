@@ -10,6 +10,7 @@ use Attean;
 use Attean::RDF;
 use AtteanX::Functions::CompositeMaps;
 use AtteanX::Functions::CompositeLists;
+use Attean::SimpleQueryEvaluator;
 use Data::Dumper;
 use Getopt::Long;
 use Try::Tiny;
@@ -41,6 +42,7 @@ my $print_sparql	= 0;
 my $print_plan		= 0;
 my $print_algebra	= 0;
 my $update			= 0;
+my $simple_eval		= 0;
 my $out_format		= '';
 my $short			= 0;
 my $result			= GetOptions(
@@ -49,6 +51,7 @@ my $result			= GetOptions(
 	"update"	=> \$update,
 	"benchmark"	=> \$benchmark,
 	'algebra'	=> \$print_algebra,
+	'simpleeval'	=> \$simple_eval,
 	'plan'		=> \$print_plan,
 	"q"			=> \$print_sparql,
 	'n'			=> \$dryrun,
@@ -124,7 +127,13 @@ try {
 		unless ($dryrun) {
 			my $mapper	= $short ? Attean::TermMap->short_blank_map : undef;
 			my $bmapper	= $short ? $mapper->binding_mapper : undef;
-			my $iter	= $plan->evaluate($model);
+			my $iter;
+			if ($simple_eval) {
+				my $e	= Attean::SimpleQueryEvaluator->new( model => $model, default_graph => $graph );
+				$iter	= $e->evaluate($algebra, $graph)
+			} else {
+				$iter	= $plan->evaluate($model);
+			}
 			if ($bmapper) {
 				$iter	= $iter->map($bmapper);
 			}
