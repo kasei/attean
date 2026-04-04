@@ -190,7 +190,8 @@ package Attean::API::Literal 0.035 {
 			}
 		}
 		
-		my $t	= AtteanX::SPARQL::Token->fast_constructor( STRING1D, -1, -1, -1, -1, [$self->value] );
+		my $qtype	= ($self->value =~ /\n/) ? STRING3D : STRING1D;
+		my $t	= AtteanX::SPARQL::Token->fast_constructor( $qtype, -1, -1, -1, -1, [$self->value] );
 		push(@tokens, $t);
 		if (my $lang = $self->language) {
 			my $l	= AtteanX::SPARQL::Token->fast_constructor( LANG, -1, -1, -1, -1, ["$lang"] );
