@@ -61,14 +61,18 @@ sub manifest_paths {
 		));
 
 		push(@files, qw(
-			aggregates
-			construct
-			delete-insert
-			grouping
 			syntax-query
 			syntax-fed
 			syntax-update-1
 			syntax-update-2
+		));
+
+		push(@files, qw(
+			lang-basedir
+			rdf11
+			syntax-escaping
+			syntax-triple-terms-negative
+			syntax-triple-terms-positive
 		));
 	}
 	if ($self->run_update_tests) {
