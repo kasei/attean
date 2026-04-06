@@ -34,8 +34,22 @@ my:project
 							my:v_0-016 , my:v_0-017 , my:v_0-018 , my:v_0-019 , my:v_0-020 ,
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
 							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
-							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 ;
+							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 , my:v_0-035 ,
+							my:v_0-036 ;
 	.
+
+my:v_0-036
+	a					:Version ;
+	dc:issued			"2026-04-06"^^xsd:date ;
+	:revision			"0.036" ;
+	dcterms:replaces	my:v_0-035 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Fix bug in Attean::API::Literal->sparql_tokens handling of newlines." ],
+			[ a dcs:Update ; rdfs:label "Minor fixes and updates to developer tests." ]
+	]
+	.
+
 
 my:v_0-035
 	a					:Version ;
