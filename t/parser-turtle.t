@@ -87,6 +87,12 @@ subtest 'turtle numeric U escaping' => sub {
 	is($t->value, 'o');
 };
 
+subtest 'turtle invalid use of surrogates in u escaping' => sub {
+	open(my $fh, '<', \q['\\uD83C\\uDCA1']);
+	my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+	dies_ok { $l->get_token } 'Use of surrogates in \\u escaping throws error';
+};
+
 subtest 'pre-defined base IRI' => sub {
 	my $base	= iri('http://example.org/base/');
 	my $parser	= Attean->get_parser('Turtle')->new( base => $base );

@@ -182,11 +182,11 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 							substr($_[0],0,2)	= '';
 						} elsif ($1 eq 'u') {
 							$_[0] =~ m/^\\u([0-9A-Fa-f]{4})/ or die qq[Bad N-Triples \\u escape at line $lineno, near "$_[0]"];
-							$value	.= chr(oct('0x' . $1));
+							$value	.= $self->unescape_hex($1);
 							substr($_[0],0,6)	= '';
 						} elsif ($1 eq 'U') {
 							$_[0] =~ m/^\\U([0-9A-Fa-f]{8})/ or die qq[Bad N-Triples \\U escape at line $lineno, near "$_[0]"];
-							$value	.= chr(oct('0x' . $1));
+							$value	.= $self->unescape_hex($1);
 							substr($_[0],0,10)	= '';
 						} else {
 							die qq[Not valid N-Triples escape character '\\$1' at line $lineno, near "$_[0]"];
@@ -217,6 +217,16 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 			Carp::cluck;
 			die qq[Not valid N-Triples node start character '$char' at line $lineno, near "$_[0]"];
 		}
+	}
+
+	sub unescape_hex {
+		my $self		= shift;
+		my $codepoint	= shift;
+		my $cp			= hex($codepoint);
+		if ($cp >= 0xd800 && $cp <= 0xdfff) {
+			$self->_throw_error("Invalid use of surrogate codepoint in escape sequence: '$codepoint'", $codepoint);
+		}
+		return chr($cp);
 	}
 
 	sub _unescape {

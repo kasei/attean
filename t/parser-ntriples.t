@@ -2,6 +2,7 @@ use v5.14;
 use warnings;
 use autodie;
 use Test::Modern;
+use Test::Exception;
 use utf8;
 
 use Attean;
@@ -115,7 +116,7 @@ END
 	$parser->handler(sub {});
 }
 
-{
+subtest 'escaping tests' => sub {
 	# escaping tests
 	{
 		my $ntriples	= qq[_:a <http://example.com/string> "0\\t1" .\n];
@@ -137,7 +138,13 @@ END
 		my ($st)		= $parser->parse_list_from_bytes($ntriples);
 		is($st->object->value, qq[0a1], 'expected plain literal with U-encoding' );
 	}
-}
+	{
+		my $ntriples	= qq[_:a <http://example.com/string> "\\uD83C\\uDCA1" .\n];
+		dies_ok {
+			$parser->parse_list_from_bytes($ntriples);
+		} 'Use of surrogates in \\u escaping throws error';
+	}
+};
 
 subtest 'parse_term_from_bytes' => sub {
 	my $parser	= Attean->get_parser('NTriples')->new();
