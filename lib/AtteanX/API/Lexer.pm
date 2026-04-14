@@ -154,7 +154,7 @@ Throw an error if C<< $word >> is not at the start of the buffer.
 		my $lines	= ($word =~ tr/\n//);
 		my $lastnl	= rindex($word, "\n");
 		my $cols	= length($word) - $lastnl - 1;
-		$self->{lines}	+= $lines;
+		$self->{line}	+= $lines;
 		if ($lines) {
 			$self->{column}	= $cols;
 		} else {
@@ -182,7 +182,7 @@ Consume and return C<< $length >> characters  from the start of the buffer.
 		my $lines	= ($word =~ tr/\n//);
 		my $lastnl	= rindex($word, "\n");
 		my $cols	= length($word) - $lastnl - 1;
-		$self->{lines}	+= $lines;
+		$self->{line}	+= $lines;
 		if ($lines) {
 			$self->{column}	= $cols;
 		} else {
