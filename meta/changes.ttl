@@ -35,8 +35,23 @@ my:project
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
 							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
 							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 , my:v_0-035 ,
-							my:v_0-036 ;
+							my:v_0-036 , my:v_0-037 ;
 	.
+
+my:v_0-037
+	a					:Version ;
+	dc:issued			"2026-05-04"^^xsd:date ;
+	:revision			"0.037" ;
+	dcterms:replaces	my:v_0-036 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Update Makefile.PL to use GNU tar on MacOS when creating new releases." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in Turtle serialization of strings with newlines and a trailing quote." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in parser code that was failing to accurately track the input line number." ],
+			[ a dcs:Update ; rdfs:label "Fix Turtle and N-Tuples parsers to throw an error on the use of escaped surrogates." ]
+	]
+	.
+
 
 my:v_0-036
 	a					:Version ;
