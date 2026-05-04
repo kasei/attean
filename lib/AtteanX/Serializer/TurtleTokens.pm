@@ -195,6 +195,10 @@ L<IO::Handle> object C<< $fh >>.
 				my $value	= $t->value;
 				$value		=~ s/'''/''\\'/g;
 				$io->print("'''");
+				if ($value =~ /'$/) {
+					chop($value);
+					$value	.= "\\'";
+				}
 				$io->print($value);
 				$io->print("'''");
 				$need_space++;
@@ -202,6 +206,10 @@ L<IO::Handle> object C<< $fh >>.
 				my $value	= $t->value;
 				$value		=~ s/"""/""\\"/g;
 				$io->print('"""');
+				if ($value =~ /"$/) {
+					chop($value);
+					$value	.= "\\\"";
+				}
 				$io->print($value);
 				$io->print('"""');
 				$need_space++;

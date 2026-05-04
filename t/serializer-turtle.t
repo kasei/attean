@@ -51,11 +51,13 @@ my $o1	= Attean::Literal->integer(1);
 my $o2	= Attean::Literal->integer(2);
 my $o3	= Attean::Literal->new(value => '3');
 my $o4	= Attean::Literal->new(value => '火星', language => 'ja');
+my $o5	= Attean::Literal->new(value => "a\nb\"");
 
 my $t1	= triple($s, $p, $o1);
 my $t2	= triple($s, $p, $o2);
 my $t3	= triple($s, $q, $o3);
 my $t4	= triple($t, $r, $o4);
+my $t5	= triple($s, $p, $o5);
 
 subtest 'turtle with object-list' => sub {
 	my $ser	= Attean->get_serializer('Turtle')->new();
@@ -208,6 +210,22 @@ subtest 'End-to-end AbbreviatingSerializer' => sub {
 	like($bytes, qr/foaf:name "Alice"/, 'serialization has prefix name foaf:name');
 	is_deeply([sort $map->list_prefixes], [qw(ex foaf)]);
 };
+
+subtest 'literal with newline and trailing double quote' => sub {
+	# If STRING3D is used to serialize the literal, and the lexical value ends with a double quote,
+	# that double quote needs to be escaped. Otherwise the serialized form will end with four
+	# quotes in a row, the first three will be treated as the end of the string, and the fourth
+	# will be invalid trailing content.
+	my $ser	= Attean->get_serializer('Turtle')->new();
+	my $expected	= <<'END';
+_:x <http://example.org/p> """a
+b\"""" .
+END
+	my $data	= $ser->serialize_list_to_bytes($t5);
+
+	is($data, $expected, 'serialize_iter_to_bytes');
+};
+
 
 done_testing();
 
