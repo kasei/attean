@@ -90,9 +90,20 @@ while (my ($accept,$restrict) = each(%negotiate_fail)) {
 	my $h	= new HTTP::Headers;
 	$h->header(Accept => "");
 	my ($type, $s)	= Attean->negotiate_serializer( request_headers => $h );
-	use Data::Dumper;
 	like( $type, qr'^((application/n-triples)|(text/plain))$', "expected media type with empty accept header" ) or die Dumper($type, $s);
 	like($s, qr/^AtteanX::Serializer::.*NTriples$/, "HTTP negotiated empty accept header to proper serializer" );
 }
+
+subtest 'restrict negotiation by role' => sub {
+	my $h = new HTTP::Headers;
+	$h->header(Accept=>"application/rdf+xml,application/sparql-results+xml");
+
+	my ($rdf_type)	= Attean->negotiate_serializer( request_headers => $h, role => 'Attean::API::TripleSerializer' );
+	is ( $rdf_type, 'application/rdf+xml', 'RDF serializer' );
+
+	my ($result_type)	= Attean->negotiate_serializer( request_headers => $h, role => 'Attean::API::ResultSerializer' );
+	is ( $result_type, 'application/sparql-results+xml', 'Result serializer' );
+};
+
 
 done_testing();
