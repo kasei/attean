@@ -281,13 +281,22 @@ returns undef.
 		}
 	}
 	
-=item C<< negotiate_serializer ( request_headers => $request_headers, restrict => \@serializer_names, extend => \%media_types ) >>
+=item C<< negotiate_serializer ( request_headers => $request_headers, restrict => \@serializer_names, extend => \%media_types, role => $role ) >>
 
 Returns a two-element list containing an appropriate media type and
 L<Attean::API::Serializer> class as decided by L<HTTP::Negotiate>.  If the
 C<< 'request_headers' >> key-value is supplied, the C<< $request_headers >> is
-passed to C<< HTTP::Negotiate::choose >>.  The option C<< 'restrict' >>, set to
-a list of serializer names, can be used to limit the serializers to choose from.
+passed to C<< HTTP::Negotiate::choose >>. 
+
+The option C<< 'restrict' >>, set to a list of serializer names, can be used to
+limit the serializers to choose from.
+
+The option C<< 'role' >> can be used to limit the serializers to only ones that
+consume the $role. For example, C<< 'Attean::API::ResultSerializer' >> would
+limit negotiation to result serializers such as SPARQL/XML and SPARQL/JSON,
+while C<< 'Attean::API::TripleSerializer' >> would limit negotiation to RDF
+serializers.
+
 Finally, an C<<'extend'>> option can be set to a hashref that contains
 MIME-types as keys and a custom variant as value. This will enable the user to
 use this negotiator to return a type that isn't supported by any serializers.
@@ -299,6 +308,7 @@ The subsequent code will have to find out how to return a representation.
 		my $class		= shift;
 		my %options		= @_;
 		my $headers		= delete $options{ 'request_headers' };
+		my $role		= delete $options{ 'role' };
 		my $restrict	= delete $options{ 'restrict' };
 		my $extend		= delete $options{ 'extend' } || {};
 		my %serializer_names;
@@ -320,6 +330,14 @@ The subsequent code will have to find out how to return a representation.
 		} else {
 			%sclasses = reverse %serializer_names;
 		}
+		if (defined($role)) {
+			foreach my $sclass (keys %sclasses) {
+				unless ($sclass->does($role)) {
+					delete $sclasses{ $sclass };
+				}
+			}
+		}
+		
 		my @default_variants;
 		while (my($type, $sclasses) = each(%media_types)) {
 			foreach my $sclass (@$sclasses) {
@@ -333,6 +351,7 @@ The subsequent code will have to find out how to return a representation.
 					$qv	= 0.2;
 				} else {
 					$qv	= 0.99;
+					$qv		-= 0.01 if ($type =~ m#/html#);				# prefer data formats to HTML
 					$qv		-= 0.01 if ($type =~ m#/x-#);				# prefer non experimental media types
 					$qv		-= 0.01 if ($type =~ m#^application/(?!rdf[+]xml)#);	# prefer standard rdf/xml to other application/* formats
 				}
