@@ -35,8 +35,20 @@ my:project
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
 							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
 							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 , my:v_0-035 ,
-							my:v_0-036 , my:v_0-037 ;
+							my:v_0-036 , my:v_0-037 , my:v_0-038 ;
 	.
+
+my:v_0-038
+	a					:Version ;
+	dc:issued			"2026-05-19"^^xsd:date ;
+	:revision			"0.038" ;
+	dcterms:replaces	my:v_0-037 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Update ; rdfs:label "Update negotiate_serializer to accept a 'role' argument." ]
+	]
+	.
+
 
 my:v_0-037
 	a					:Version ;
