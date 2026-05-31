@@ -505,6 +505,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $qt		= $self->_assert_triple($subj, $pred, $obj);
 		
 		my $t	= $self->_next_nonws($l);
+		return unless ($t);
 		if ($t->type != LANNOT) {
 			$self->_unget_token($t);
 			return;

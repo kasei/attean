@@ -72,6 +72,8 @@ Fills the buffer with a new line from the underlying filehandle.
 		my $self	= shift;
 		unless (length($self->buffer)) {
 			my $line	= $self->file->getline;
+# use Data::Dumper;
+# warn Dumper({buffer_line => $line});
 			$self->{buffer}	.= $line if (defined($line));
 		}
 	}

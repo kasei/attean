@@ -54,6 +54,7 @@ package Attean::ListIterator 0.038 {
 	use Scalar::Util qw(blessed);
 	use Type::Tiny::Role;
 	use Types::Standard qw(ArrayRef Int);
+	use Attean::API::Iterator;
 	use namespace::clean;
 	
 	has values => (is => 'ro', isa => ArrayRef, required => 1);

@@ -89,9 +89,9 @@ while (my ($accept,$restrict) = each(%negotiate_fail)) {
 	my ($sname, $etype)	= ();
 	my $h	= new HTTP::Headers;
 	$h->header(Accept => "");
-	my ($type, $s)	= Attean->negotiate_serializer( request_headers => $h );
-	like( $type, qr'^((application/n-triples)|(text/plain))$', "expected media type with empty accept header" ) or die Dumper($type, $s);
-	like($s, qr/^AtteanX::Serializer::.*NTriples$/, "HTTP negotiated empty accept header to proper serializer" );
+	my ($type, $s)	= Attean->negotiate_serializer( request_headers => $h, role => 'Attean::API::TripleSerializer' );
+	like( $type, qr'^((application/n-triples)|(text/(turtle|plain)))$', "expected media type with empty accept header" );
+	like($s, qr/^AtteanX::Serializer::.*(NTriples|Turtle)$/, "HTTP negotiated empty accept header to proper serializer" );
 }
 
 subtest 'restrict negotiation by role' => sub {

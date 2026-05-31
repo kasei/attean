@@ -641,7 +641,7 @@ package Attean::API::QuadPattern 0.038 {
 	sub value {
 		my $self	= shift;
 		my $key		= shift;
-		return $self->$key() if ($key =~ /^(subject|predicate|object|graph)$/);
+		return $self->$key() if (defined($key) and $key =~ /^(subject|predicate|object|graph)$/);
 		die "Unrecognized binding name '$key'";
 	}
 	

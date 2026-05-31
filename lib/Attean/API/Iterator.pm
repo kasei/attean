@@ -22,6 +22,8 @@ This package also defines several type-specific iterator roles:
 
 =item * L<Attean::API::MixedStatementIterator>
 
+=item * L<Attean::API::MixedPatternIterator>
+
 =item * L<Attean::API::ResultIterator>
 
 =back
@@ -122,6 +124,8 @@ package Attean::API::Iterator 0.038 {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::TripleIterator');
 			} elsif ($check->('Attean::API::TripleOrQuad')) {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::MixedStatementIterator');
+			} elsif ($check->('Attean::API::TripleOrQuadPattern')) {
+				Moo::Role->apply_roles_to_object($self, 'Attean::API::MixedPatternIterator');
 			} elsif ($check->('Attean::API::Result')) {
 				Moo::Role->apply_roles_to_object($self, 'Attean::API::ResultIterator');
 				my $vars	= $args->{variables} // confess "Construction of a Attean::API::ResultIterator must include a variables list";
@@ -439,6 +443,20 @@ package Attean::API::MixedStatementIterator 0.038 {
 	}
 }
 
+package Attean::API::MixedPatternIterator 0.038 {
+	use Moo::Role;
+	with 'Attean::API::CanonicalizingBindingIterator';
+	with 'Attean::API::StringyItemIterator';
+	sub as_quads {
+		my $self	= shift;
+		my $graph	= shift;
+		return $self->map(
+			sub { $_->does('Attean::API::QuadPattern') ? $_ : $_->as_quad($graph) },
+			'Attean::API::QuadPattern'
+		);
+	}
+}
+
 package Attean::API::ResultIterator 0.038 {
 	use Types::Standard qw(Str ArrayRef);
 	use Moo::Role;
@@ -491,6 +509,7 @@ are provided. These iterators are:
 Attean::API::ResultOrTermIterator
 Attean::API::StatementIterator
 Attean::API::MixedStatementIterator
+Attean::API::MixedPatternIterator
 Attean::API::ResultIterator
 Attean::API::TermIterator
 

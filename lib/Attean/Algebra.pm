@@ -1521,29 +1521,56 @@ package Attean::Algebra::Add 0.038 {
 
 package Attean::Algebra::Modify 0.038 {
 	use Moo;
-	use Scalar::Util qw(blessed);
+	use Scalar::Util qw(blessed reftype);
 	use AtteanX::SPARQL::Constants;
 	use AtteanX::SPARQL::Token;
 	use List::Util qw(all any);
-	use Types::Standard qw(HashRef ArrayRef ConsumerOf);
+	use Types::Standard qw(Bool HashRef ArrayRef ConsumerOf);
 	use namespace::clean;
 	
 	with 'Attean::API::Algebra', 'Attean::API::QueryTree';
 
 	has 'dataset' => (is => 'ro', isa => HashRef, default => sub { +{} });
-	has 'insert' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
-	has 'delete' => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::TripleOrQuadPattern']], default => sub { [] });
-
+	has 'insert' => (is => 'ro', isa => ConsumerOf['Attean::API::MixedPatternIterator'], default => sub { Attean::ListIterator->new(values => [], item_type => 'Attean::API::TripleOrQuadPattern') });
+	has 'delete' => (is => 'ro', isa => ConsumerOf['Attean::API::MixedPatternIterator'], default => sub { Attean::ListIterator->new(values => [], item_type => 'Attean::API::TripleOrQuadPattern') });
+	has 'specifies_dataset' => (is => 'ro', isa => Bool, default => 0);
+	
 	sub in_scope_variables { return; }
 	sub tree_attributes { return; }
 
+	around 'BUILDARGS' => sub {
+		my $orig		= shift;
+		my $class		= shift;
+		my @args		= @_;
+		my $args		= {@args};
+
+		if (my $insert = $args->{'insert'} and reftype($args->{'insert'}) eq 'ARRAY') {
+			$args->{'insert'}	= Attean::ListIterator->new(values => $insert, item_type => 'Attean::API::TripleOrQuadPattern');
+		}
+		if (my $delete = $args->{'delete'} and reftype($args->{'delete'}) eq 'ARRAY') {
+			$args->{'delete'}	= Attean::ListIterator->new(values => $delete, item_type => 'Attean::API::TripleOrQuadPattern');
+		}
+
+		return $orig->( $class, $args );
+	};
+	
+	sub materialize {
+		my $self	= shift;
+		$self->{'insert'}	= $self->insert->materialize;
+		$self->{'delete'}	= $self->delete->materialize;
+		return $self;
+	}
+
 	sub _op_type {
 		my $self	= shift;
-		my $i		= scalar(@{ $self->insert });
-		my $d		= scalar(@{ $self->delete });
+		$self->materialize;
+		my $insert	= $self->insert;
+		my $delete	= $self->delete;
+		my $i		= $insert->size;
+		my $d		= $delete->size;
 		my $w		= scalar(@{ $self->children });
-		my $ig		= all { $_->is_ground } @{ $self->insert };
-		my $dg		= all { $_->is_ground } @{ $self->delete };
+		my $ig		= all { $_->is_ground } $insert->elements;
+		my $dg		= all { $_->is_ground } $delete->elements;
 		if ($i and not $d) {
 			# INSERT
 			return ($ig and not $w) ? 'ID' : 'I';
@@ -1560,9 +1587,10 @@ package Attean::Algebra::Modify 0.038 {
 		my $orig	= shift;
 		my $self	= shift;
 		my @blanks	= $orig->($self, @_);
+		$self->materialize;
 		my %seen	= map { $_->value => 1 } @blanks;
 		foreach my $data ($self->insert, $self->delete) {
-			my @triples	= @{ $data };
+			my @triples	= $data->elements;
 			my @b	= grep { $_->does('Attean::API::Blank') } map { $_->values } @triples;
 			push(@blanks, grep { not $seen{$_->value}++ } @b);
 		}
@@ -1580,11 +1608,13 @@ package Attean::Algebra::Modify 0.038 {
 			'D'		=> 'Delete',
 			'U'		=> 'Update',
 		};
+
+		$self->materialize;
 		my $op	= $self->_op_type();
 		my $s	= $S->{ $op };
 		my @data;
-		my $ic	= scalar(@{ $self->insert });
-		my $dc	= scalar(@{ $self->delete });
+		my $ic	= $self->insert->size;
+		my $dc	= $self->delete->size;
 		if ($ic) {
 			my $name	= $dc ? 'Insert Data' : 'Data';
 			push(@data, [$name, $self->insert]);
@@ -1596,7 +1626,7 @@ package Attean::Algebra::Modify 0.038 {
 		foreach my $data (@data) {
 			my ($name, $quads)	= @$data;
 			$s	.= "\n-${indent} $name";
-			foreach my $q (@$quads) {
+			foreach my $q ($quads->elements) {
 				$s	.= "\n-${indent}   " . $q->as_string;
 			}
 		}
@@ -1619,6 +1649,8 @@ package Attean::Algebra::Modify 0.038 {
 		# TODO: Support 'DELETE WHERE' shortcut syntax
 		# TODO: Support WITH
 		
+		$self->materialize;
+
 		my @dataset;
 		my $dataset	= $self->dataset;
 		my @default	= @{ $dataset->{default} || [] };
@@ -1639,7 +1671,7 @@ package Attean::Algebra::Modify 0.038 {
 			push(@tokens, $kw);
 			push(@tokens, $data);
 			push(@tokens, $l);
-			foreach my $t (@{ $statements }) {
+			foreach my $t ($statements->elements) {
 				push(@tokens, $t->sparql_tokens->elements);
 				push(@tokens, $dot);
 			}
@@ -1649,7 +1681,7 @@ package Attean::Algebra::Modify 0.038 {
 			my $kw	= ($op eq 'I') ? $insert : $delete;
 			push(@tokens, $kw);
 			push(@tokens, $l);
-			foreach my $t (@{ $statements }) {
+			foreach my $t ($statements->elements) {
 				push(@tokens, $t->sparql_tokens->elements);
 				push(@tokens, $dot);
 			}
@@ -1666,7 +1698,7 @@ package Attean::Algebra::Modify 0.038 {
 				my ($kw, $statements)	= @$x;
 				push(@tokens, $kw);
 				push(@tokens, $l);
-				foreach my $t (@{ $statements }) {
+				foreach my $t ($statements->elements) {
 					push(@tokens, $t->sparql_tokens->elements);
 					push(@tokens, $dot);
 				}
