@@ -65,6 +65,7 @@ lib/Attean/API/Variable.pod
 lib/Attean/BindingEqualityTest.pm
 lib/Attean/Blank.pm
 lib/Attean/CodeIterator.pm
+lib/Attean/DatasetModel.pm
 lib/Attean/Expression.pm
 lib/Attean/IDPQueryPlanner.pm
 lib/Attean/IRI.pm
