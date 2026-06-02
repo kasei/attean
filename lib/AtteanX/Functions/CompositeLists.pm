@@ -8,7 +8,7 @@ AtteanX::Functions::CompositeLists - Functions and aggregates to work with compo
 
 =head1 VERSION
 
-This document describes AtteanX::Functions::CompositeLists version 0.038
+This document describes AtteanX::Functions::CompositeLists version 0.039
 
 =head1 SYNOPSIS
 
@@ -61,7 +61,7 @@ package AtteanX::Functions::CompositeLists::TurtleLexerWithNull {
 	}
 }
 
-package AtteanX::Functions::CompositeLists 0.038 {
+package AtteanX::Functions::CompositeLists 0.039 {
 
 	use Attean;
 	use Attean::RDF;

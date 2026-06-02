@@ -4,7 +4,7 @@ AtteanX::Parser::NTriples - N-Triples Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NTriples version 0.038
+This document describes AtteanX::Parser::NTriples version 0.039
 
 =head1 SYNOPSIS
 
@@ -48,7 +48,7 @@ the UTF-8 encoded byte string C<< $data >>.
 use v5.14;
 use warnings;
 
-package AtteanX::Parser::NTriples 0.038 {
+package AtteanX::Parser::NTriples 0.039 {
 	use utf8;
 	
 	use Attean;
