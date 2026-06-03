@@ -78,9 +78,9 @@ L<IO::Handle> object C<< $fh >>.
 
 		my $data	= {};
 		if ($iter->does('Attean::API::TermIterator')) {
-			my $v	= $iter->next;
-			my $b	= $v->canonicalized_term->value;
-			$data->{boolean}	= ($b eq 'true') ? $JSON::true : $JSON::false;
+			my $b	= $iter->get_boolean;
+			$data->{head}		= {};
+			$data->{boolean}	= ($b) ? $JSON::true : $JSON::false;
 		} else {
 			my @vars	= sort @{ $iter->variables };
 			$data->{head}{vars}	= \@vars;

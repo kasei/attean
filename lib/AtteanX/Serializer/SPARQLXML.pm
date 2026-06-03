@@ -90,13 +90,13 @@ END
 
 		print {$fh} qq[</head>\n];
 		if ($iter->does('Attean::API::TermIterator')) {
-			my $v	= $iter->next;
-			my $b	= $v->canonicalized_term->value;
-			print $fh qq[<boolean>$b</boolean>\n];
+			my $v	= $iter->get_boolean;
+			my $lex	= ($v) ? 'true' : 'false';
+			print $fh qq[<boolean>$lex</boolean>\n];
 		} else {
 			print $fh qq[<results>\n];
 			while (my $t = $iter->next()) {
-				print $fh "\t\t<result>\n";
+				print $fh "\t<result>\n";
 				foreach my $name (@vars) {
 					my $term	= $t->value($name);
 					if (blessed($term)) {
@@ -106,7 +106,7 @@ END
 							$label	=~ s/</&lt;/g;
 							$label	=~ s/"/&quot;/g;
 							$label	= encode_utf8($label);
-							print $fh qq(\t\t\t<binding name="${name}"><uri>${label}</uri></binding>\n);
+							print $fh qq(\t\t<binding name="${name}"><uri>${label}</uri></binding>\n);
 						} elsif ($term->does('Attean::API::Literal')) {
 							my $label	= $term->value;
 							$label	=~ s/&/&amp;/g;
@@ -120,20 +120,20 @@ END
 							} else {
 								$label	= qq(<literal>${label}</literal>);
 							}
-							print $fh qq(\t\t\t<binding name="${name}">${label}</binding>\n);
+							print $fh qq(\t\t<binding name="${name}">${label}</binding>\n);
 						} elsif ($term->does('Attean::API::Blank')) {
 							my $label	= $term->value;
 							$label	=~ s/&/&amp;/g;
 							$label	=~ s/</&lt;/g;
 							$label	=~ s/"/&quot;/g;
 							$label	= encode_utf8($label);
-							print $fh qq(\t\t\t<binding name="${name}"><bnode>${label}</bnode></binding>\n);
+							print $fh qq(\t\t<binding name="${name}"><bnode>${label}</bnode></binding>\n);
 						} else {
 							die "Term object has an unrecognized type: " . ref($term);
 						}
 					}
 				}
-				print $fh "\t\t</result>\n";
+				print $fh "\t</result>\n";
 			}
 			print {$fh} "</results>\n";
 		}

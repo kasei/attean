@@ -491,6 +491,17 @@ package Attean::API::TermIterator 0.039 {
 		my $mapper	= Attean::TermMap->canonicalization_map;
 		return $self->map( $mapper );
 	}
+	
+	# for an iterator of terms representing something like an ASK query, pull the first result, and return
+	# a boolean value based on the term;
+	sub get_boolean {
+		my $self	= shift;
+		my $v		= $self->next();
+		return 0 unless ($v);
+		my $b		= $v->canonicalized_term->value;
+		return ($b eq 'true');
+	}
+	
 	with 'Attean::API::CanonicalizingBindingIterator';
 	with 'Attean::API::StringyItemIterator';
 }
