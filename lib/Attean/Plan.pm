@@ -2271,24 +2271,10 @@ package Attean::Plan::Aggregate 0.039 {
 		} elsif ($op eq 'GROUP_CONCAT') {
 			my $sep	= $expr->scalar_vars->{seperator} // ' ';
 			my @values;
-			my $all_lang	= 1;
-			my $all_str		= 1;
-			my $lang;
 			my %seen;
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
 				die "GROUP_CONCAT called with a non-literal argument" unless ($term->does('Attean::API::Literal'));
-				if ($term->language) {
-					$all_str	= 0;
-					if (defined($lang) and $lang ne $term->language) {
-						$all_lang	= 0;
-					} else {
-						$lang	= $term->language;
-					}
-				} else {
-					$all_lang	= 0;
-					$all_str	= 0;
-				}
 				if ($expr->distinct) {
 					unless ($seen{ $term->value }++) {
 						push(@values, $term->value);
@@ -2297,14 +2283,8 @@ package Attean::Plan::Aggregate 0.039 {
 					push(@values, $term->value);
 				}
 			}
-			my %strtype;
-			if ($all_lang and $lang) {
-				$strtype{language}	= $lang;
-			} elsif ($all_str) {
-				$strtype{datatype}	= 'http://www.w3.org/2001/XMLSchema#string'
-			}
 			my $string	= join($sep, @values);
-			return Attean::Literal->new(value => $string, %strtype);
+			return Attean::Literal->new(value => $string);
 		} elsif ($op eq 'FOLD') {
 			my @arg_exprs	= @{ $expr->children };
 			my $order	= $expr->order || [];
