@@ -37,7 +37,13 @@ package Test::Attean::Plan::TestService 0.033 {
 		if ($@ and not $self->silent) {
 			die $@;
 		}
-		return $result;
+		
+		# mimic the document-scoping of bnodes from the SERVICE call
+		my $m	= Attean::TermMap->uuid_blank_map;
+		return sub {
+			my $iter	= $result->();
+			return $iter->map(sub { return shift->apply_map($m) });
+		}
 	}
 }
 
