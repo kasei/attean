@@ -2274,6 +2274,7 @@ package Attean::Plan::Aggregate 0.039 {
 			my $all_lang	= 1;
 			my $all_str		= 1;
 			my $lang;
+			my %seen;
 			foreach my $r (@$rows) {
 				my $term	= Attean::Plan::Extend->evaluate_expression($model, $e, $r);
 				die "GROUP_CONCAT called with a non-literal argument" unless ($term->does('Attean::API::Literal'));
@@ -2288,7 +2289,13 @@ package Attean::Plan::Aggregate 0.039 {
 					$all_lang	= 0;
 					$all_str	= 0;
 				}
-				push(@values, $term->value);
+				if ($expr->distinct) {
+					unless ($seen{ $term->value }++) {
+						push(@values, $term->value);
+					}
+				} else {
+					push(@values, $term->value);
+				}
 			}
 			my %strtype;
 			if ($all_lang and $lang) {
