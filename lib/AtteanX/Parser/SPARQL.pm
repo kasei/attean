@@ -1393,8 +1393,16 @@ sub _HavingClause {
 	$self->_expected_token(KEYWORD, 'HAVING');
 	$self->{build}{__aggregate}	||= {};
 	local($self->{__aggregate_call_ok})	= 1;
-	$self->_Constraint;
-	my ($expr) = splice(@{ $self->{_stack} });
+	my $expr;
+	do {
+		$self->_Constraint;
+		my ($_expr) = splice(@{ $self->{_stack} });
+		if ($expr) {
+			$expr	= Attean::BinaryExpression->new( operator => '&&', children => [$expr, $_expr] );
+		} else {
+			$expr	= $_expr;
+		}
+	} while ($self->_Constraint_test);
 	$self->{build}{__having}	= $expr;
 }
 
