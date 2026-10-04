@@ -1135,13 +1135,14 @@ package Attean::Plan::Extend 0.039 {
 	# 				my ($term, $dt)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 					return Attean::Literal->new(value => $term->value, datatype => $dt->value);
 				} elsif ($func eq 'REPLACE') {
-					my ($term, $pat, $rep)	= @terms;
+					my ($term, $pat, $rep, $flags_term)	= @terms;
 					die unless ($term->does('Attean::API::Literal'));
 					die unless ($term->language or $term->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#langString|2001/XMLSchema#string)>);
 	# 				my ($term, $pat, $rep)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 					my $value	= $term->value;
 					my $pattern	= $pat->value;
 					my $replace	= $rep->value;
+					my $flags	= blessed($flags_term) ? $flags_term->value : '';
 					die 'REPLACE() called with unsafe ?{} match pattern' if (index($pattern, '(?{') != -1 or index($pattern, '(??{') != -1);
 					die 'REPLACE() called with unsafe ?{} replace pattern' if (index($replace, '(?{') != -1 or index($replace, '(??{') != -1);
 
@@ -1150,6 +1151,11 @@ package Attean::Plan::Extend 0.039 {
 					$replace	=~ s/"/\\"/g;
 					$replace	= qq["$replace"];
 					no warnings 'uninitialized';
+
+					if ($flags eq 'i') {
+						$pattern	= '(?i)' . $pattern;
+					}
+
 					$value	=~ s/$pattern/"$replace"/eeg;
 				# 	warn "==> " . Dumper($value);
 					return Attean::Literal->new(value => $value, $term->construct_args);

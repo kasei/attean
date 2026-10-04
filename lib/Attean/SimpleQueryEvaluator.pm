@@ -952,6 +952,8 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						die "TypeError: REPLACE called without a literal arg3 term" unless (blessed($rep) and $rep->does('Attean::API::Literal'));
 						die "TypeError: REPLACE called with a datatyped (non-xsd:string) literal" if ($node->datatype and $node->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string');
 						my ($value, $pattern, $replace)	= map { $_->value } @operands;
+						my $flags_term	= $operands[3];
+						my $flags		= blessed($flags_term) ? $flags_term->value : '';
 						die "EvaluationError: REPLACE called with unsafe ?{} match pattern" if (index($pattern, '(?{') != -1 or index($pattern, '(??{') != -1);
 						die "EvaluationError: REPLACE called with unsafe ?{} replace pattern" if (index($replace, '(?{') != -1 or index($replace, '(??{') != -1);
 	
@@ -960,6 +962,11 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						$replace	=~ s/"/\\"/g;
 						$replace	= qq["$replace"];
 						no warnings 'uninitialized';
+						
+						if ($flags eq 'i') {
+							$pattern	= '(?i)' . $pattern;
+						}
+						
 						$value	=~ s/$pattern/"$replace"/eeg;
 						return Attean::Literal->new(value => $value, $node->construct_args);
 					} elsif ($func =~ /^[UL]CASE$/) {

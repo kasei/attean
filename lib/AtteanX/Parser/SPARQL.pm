@@ -3191,7 +3191,7 @@ sub _BuiltInCall {
 			my ($arg2)	= splice(@{ $self->{_stack} });
 			$self->_add_stack( $self->new_function_expression($op, $arg1, $arg2) );
 			$self->_expected_token(RPAREN);
-		} elsif ($op =~ /^(IF|REPLACE|TRIPLE)$/i) {
+		} elsif ($op =~ /^(IF|TRIPLE)$/i) {
 			### three-arg functions that take expressions
 			$self->_expected_token(LPAREN);
 			$self->_Expression;
@@ -3203,6 +3203,26 @@ sub _BuiltInCall {
 			$self->_Expression;
 			my ($arg3)	= splice(@{ $self->{_stack} });
 			$self->_add_stack( $self->new_function_expression($op, $arg1, $arg2, $arg3) );
+			$self->_expected_token(RPAREN);
+		} elsif ($op =~ /^(REPLACE)$/i) {
+			### three- or four-arg functions that take expressions
+			$self->_expected_token(LPAREN);
+			$self->_Expression;
+			my ($arg1)	= splice(@{ $self->{_stack} });
+			$self->_expected_token(COMMA);
+			$self->_Expression;
+			my ($arg2)	= splice(@{ $self->{_stack} });
+			$self->_expected_token(COMMA);
+			$self->_Expression;
+			my ($arg3)	= splice(@{ $self->{_stack} });
+			my @args	= ($arg1, $arg2, $arg3);
+			if ($self->_test_token(COMMA)) {
+				$self->_expected_token(COMMA);
+				$self->_Expression;
+				my ($arg4)	= splice(@{ $self->{_stack} });
+				push(@args, $arg4);
+			}
+			$self->_add_stack( $self->new_function_expression($op, @args) );
 			$self->_expected_token(RPAREN);
 		} else {
 			### BOUND(Var)
