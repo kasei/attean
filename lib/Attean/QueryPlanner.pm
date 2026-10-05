@@ -126,7 +126,26 @@ the supplied C<< $active_graph >>.
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::Query') or $algebra->isa('Attean::Algebra::Update')) {
-			return $self->plans_for_algebra($algebra->child, $model, $active_graphs, $default_graphs, %args);
+
+			my @active_graphs	= @$active_graphs;
+			my @default_graphs	= @$default_graphs;
+			
+			if ($algebra->can('dataset')) {
+				my $dataset	= $algebra->dataset;
+				my @default	= @{ $dataset->{'default'} || [] };
+				my $named	= $dataset->{'named'};
+				my @named	= (ref($named) eq 'ARRAY') ? @$named : (values %{ $named || {} });
+				
+				if (scalar(@default) or scalar(@named)) {
+					# change the available named graphs
+					# change the active graph(s)
+					@active_graphs	= @default;
+					@default_graphs	= @default;
+					$args{ available_graphs }	= [@named];
+				}
+			}
+
+			return $self->plans_for_algebra($algebra->child, $model, \@active_graphs, \@default_graphs, %args);
 		} elsif ($algebra->isa('Attean::Algebra::BGP')) {
 			my $triples	= $algebra->triples;
 			my @triples	= @$triples;
@@ -286,6 +305,7 @@ the supplied C<< $active_graph >>.
 			} else {
 				my $gvar	= $graph->value;
 				my $graphs	= $model->get_graphs;
+				
 				my @plans;
 				my %vars		= map { $_ => 1 } $child->in_scope_variables;
 				$vars{ $gvar }++;

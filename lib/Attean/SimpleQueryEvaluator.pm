@@ -105,6 +105,7 @@ supplied C<< $active_graph >>.
 		my $self			= shift;
 		my $algebra			= shift;
 		my $active_graph	= shift || Carp::confess "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
+		my %args			= @_;
 		
 		Carp::confess "No algebra passed for evaluation" unless ($algebra);
 		
@@ -113,7 +114,18 @@ supplied C<< $active_graph >>.
 		my @children	= @{ $algebra->children };
 		my ($child)		= $children[0];
 		if ($algebra->isa('Attean::Algebra::Query') or $algebra->isa('Attean::Algebra::Update')) {
-			return $self->evaluate($algebra->child, $active_graph, @_);
+			my $dataset	= $algebra->dataset;
+			my $named	= $dataset->{'named'};
+			my @named	= (ref($named) eq 'ARRAY') ? @$named : (values %{ $named || {} });
+			
+			if (scalar(@named)) {
+				$args{ available_graphs }	= [@named];
+			} else {
+				# no custom dataset
+			}
+
+
+			return $self->evaluate( $algebra->child, $active_graph, %args ) ;
 		} elsif ($algebra->isa('Attean::Algebra::BGP')) {
 			my @triples	= @{ $algebra->triples };
 			if (scalar(@triples) == 0) {
@@ -134,7 +146,7 @@ supplied C<< $active_graph >>.
 			}
 		} elsif ($algebra->isa('Attean::Algebra::Distinct') or $algebra->isa('Attean::Algebra::Reduced')) {
 			my %seen;
-			my $iter	= $self->evaluate( $child, $active_graph );
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			return $iter->grep(sub {
 				my $r	= shift;
 				my $str	= $r->as_string;
@@ -153,7 +165,7 @@ supplied C<< $active_graph >>.
 				unshift(@extends, $var);
 				($child)			= @{ $child->children };
 			}
-			return $self->evaluate( $child, $active_graph )->map(sub {
+			return $self->evaluate( $child, $active_graph, %args ) ->map(sub {
 				my $r	= shift;
 				my %extension;
 				my %row_cache;
@@ -179,7 +191,7 @@ supplied C<< $active_graph >>.
 			}
 
 			my ($child)			= @{ $algebra->children };
-			my $iter				= $self->evaluate( $child, $active_graph );
+			my $iter				= $self->evaluate( $child, $active_graph, %args ) ;
 			my @results;
 			while (my $r = $iter->next) {
 				my %extension;
@@ -243,7 +255,7 @@ supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Filter')) {
 			# TODO: Merge adjacent filter evaluation so that they can share a row_cache hash (as is done for Extend above)
 			my $expr	= $algebra->expression;
-			my $iter	= $self->evaluate( $child, $active_graph );
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			return $iter->grep(sub {
 				my $t	= $expr_eval->evaluate_expression( $expr, shift, $active_graph, {} );
 # 				if ($@) { warn "Filter evaluation: $@\n" };
@@ -251,7 +263,7 @@ supplied C<< $active_graph >>.
 			});
 		} elsif ($algebra->isa('Attean::Algebra::OrderBy')) {
 			local($Attean::API::Binding::ALLOW_IRI_COMPARISON)	= 1;
-			my $iter	= $self->evaluate( $child, $active_graph );
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			my @rows	= $iter->elements;
 			my @cmps	= @{ $algebra->comparators };
 			my @exprs	= map { $_->expression } @cmps;
@@ -287,16 +299,25 @@ supplied C<< $active_graph >>.
 			my $client		= $self->new_service_client($endpoint, $silent);
 			return $client->query($sparql);
 		} elsif ($algebra->isa('Attean::Algebra::Graph')) {
+			my $available_graphs	= $args{ available_graphs };
+			my @graphs				= ref($available_graphs) ? @$available_graphs : $self->model->get_graphs()->elements;
+			my %graphs				= map { $_->value => 1 } @graphs;
+
 			my $graph	= $algebra->graph;
-			return $self->evaluate($child, $graph) if ($graph->does('Attean::API::Term'));
+			if ($graph->does('Attean::API::Term')) {
+				unless (exists $graphs{ $graph->value }) {
+					# graph does not exist in the dataset
+					return Attean::ListIterator->new(variables => [], values => [], item_type => 'Attean::API::Result');
+				}
+				return $self->evaluate( $child, $graph, %args );
+			}
 			
 			my @iters;
-			my $graphs	= $self->model->get_graphs();
 			my %vars;
-			while (my $g = $graphs->next) {
+			while (my $g = shift(@graphs)) {
 				next if ($g->value eq $self->default_graph->value);
 				my $gr	= Attean::Result->new( bindings => { $graph->value => $g } );
-				my $iter	= $self->evaluate($child, $g)->map(sub { if (my $result = shift->join($gr)) { return $result } else { return } });
+				my $iter	= $self->evaluate( $child, $g, %args ) ->map(sub { if (my $result = shift->join($gr)) { return $result } else { return } });
 				foreach my $v (@{ $iter->variables }) {
 					$vars{$v}++;
 				}
@@ -305,7 +326,7 @@ supplied C<< $active_graph >>.
 			return Attean::IteratorSequence->new( variables => [keys %vars], iterators => \@iters, item_type => 'Attean::API::Result' );
 		} elsif ($algebra->isa('Attean::Algebra::Group')) {
 			my @groupby	= @{ $algebra->groupby };
-			my $iter	= $self->evaluate($child, $active_graph);
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			my %groups;
 			while (my $r = $iter->next) {
 				my %vars;
@@ -343,11 +364,11 @@ supplied C<< $active_graph >>.
 			}
 			return Attean::ListIterator->new(variables => [keys %vars], values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Join')) {
-			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @children;
+			my ($lhs, $rhs)	= map { $self->evaluate( $_, $active_graph, %args )  } @children;
 			return $lhs->join($rhs);
 		} elsif ($algebra->isa('Attean::Algebra::LeftJoin')) {
 			my $expr	= $algebra->expression;
-			my ($lhs_iter, $rhs_iter)	= map { $self->evaluate($_, $active_graph) } @children;
+			my ($lhs_iter, $rhs_iter)	= map { $self->evaluate( $_, $active_graph, %args )  } @children;
 			my @rhs		= $rhs_iter->elements;
 			my @results;
 			my %vars	= map { $_ => 1 } (@{ $lhs_iter->variables }, @{ $rhs_iter->variables });
@@ -365,7 +386,7 @@ supplied C<< $active_graph >>.
 			}
 			return Attean::ListIterator->new( variables => [keys %vars], values => \@results, item_type => 'Attean::API::Result');
 		} elsif ($algebra->isa('Attean::Algebra::Minus')) {
-			my ($lhsi, $rhs)	= map { $self->evaluate($_, $active_graph) } @children;
+			my ($lhsi, $rhs)	= map { $self->evaluate( $_, $active_graph, %args )  } @children;
 			my @rhs				= $rhs->elements;
 			my @results;
 			while (my $lhs = $lhsi->next) {
@@ -407,11 +428,11 @@ supplied C<< $active_graph >>.
 			return $self->model->get_bindings( $s, $path->predicate, $o, $active_graph ) if ($path->isa('Attean::Algebra::PredicatePath'));
 			if ($path->isa('Attean::Algebra::InversePath')) {
 				my $path	= Attean::Algebra::Path->new( subject => $o, path => $child, object => $s );
-				return $self->evaluate( $path, $active_graph );
+				return $self->evaluate( $path, $active_graph, %args ) ;
 			} elsif ($path->isa('Attean::Algebra::AlternativePath')) {
 				my @children	= @{ $path->children };
 				my @algebras	= map { Attean::Algebra::Path->new( subject => $s, path => $_, object => $o ) } @children;
-				my @iters		= map { $self->evaluate($_, $active_graph) } @algebras;
+				my @iters		= map { $self->evaluate( $_, $active_graph, %args )  } @algebras;
 				return Attean::IteratorSequence->new( iterators => \@iters, item_type => $iters[0]->item_type, variables => [$algebra->in_scope_variables] );
 			} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
 				my $preds	= $path->predicates;
@@ -433,7 +454,7 @@ supplied C<< $active_graph >>.
 			} elsif ($path->isa('Attean::Algebra::SequencePath')) {
 				if (scalar(@children) == 1) {
 					my $path	= Attean::Algebra::Path->new( subject => $s, path => $children[0], object => $o );
-					return $self->evaluate($path, $active_graph);
+					return $self->evaluate( $path, $active_graph, %args ) ;
 				} else {
 					my @paths;
 					my $first		= shift(@children);
@@ -458,11 +479,11 @@ supplied C<< $active_graph >>.
 				if ($s->does('Attean::API::TermOrTriple') and $o->does('Attean::API::Variable')) {
 					my $v	= {};
 					if ($path->isa('Attean::Algebra::ZeroOrMorePath')) {
-						$self->_ALP($active_graph, $s, $child, $v);
+						$self->_ALP($active_graph, $s, $child, $v, %args);
 					} else {
-						my $iter	= $self->_eval($active_graph, $s, $child);
+						my $iter	= $self->_eval($active_graph, $s, $child, %args);
 						while (my $n = $iter->next) {
-							$self->_ALP($active_graph, $n, $child, $v);
+							$self->_ALP($active_graph, $n, $child, $v, %args);
 						}
 					}
 					my @results	= map { Attean::Result->new( bindings => { $o->value => $_ } ) } (values %$v);
@@ -473,7 +494,7 @@ supplied C<< $active_graph >>.
 					while (my $t = $nodes->next) {
 						my $tr		= Attean::Result->new( bindings => { $s->value => $t } );
 						my $p		= Attean::Algebra::Path->new( subject => $t, path => $path, object => $o );
-						my $iter	= $self->evaluate($p, $active_graph);
+						my $iter	= $self->evaluate( $p, $active_graph, %args ) ;
 						while (my $r = $iter->next) {
 							push(@results, $r->join($tr));
 						}
@@ -483,10 +504,10 @@ supplied C<< $active_graph >>.
 				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::TermOrTriple')) {
 					my $pp	= Attean::Algebra::InversePath->new( children => [$child] );
 					my $p	= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
-					return $self->evaluate($p, $active_graph);
+					return $self->evaluate( $p, $active_graph, %args ) ;
 				} else { # Term ZeroOrMorePath(path) Term
 					my $v	= {};
-					$self->_ALP($active_graph, $s, $child, $v);
+					$self->_ALP($active_graph, $s, $child, $v, %args);
 					my @results;
 					foreach my $v (values %$v) {
 						return Attean::ListIterator->new(variables => [], values => [Attean::Result->new()], item_type => 'Attean::API::Result')
@@ -498,7 +519,7 @@ supplied C<< $active_graph >>.
 				my $path	= Attean::Algebra::Path->new( subject => $s, path => $child, object => $o );
 				my @iters;
 				my %seen;
-				push(@iters, $self->evaluate( $path, $active_graph )->grep(sub { return not($seen{shift->as_string}++); }));
+				push(@iters, $self->evaluate( $path, $active_graph, %args ) ->grep(sub { return not($seen{shift->as_string}++); }));
 				push(@iters, $self->_zeroLengthPath($s, $o, $active_graph));
 				my %vars;
 				foreach my $iter (@iters) {
@@ -508,7 +529,7 @@ supplied C<< $active_graph >>.
 			}
 			die "Unimplemented path type: $path";
 		} elsif ($algebra->isa('Attean::Algebra::Project')) {
-			my $iter	= $self->evaluate( $child, $active_graph );
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			my @vars	= map { $_->value } @{ $algebra->variables };
 			return $iter->map(sub {
 				my $r	= shift;
@@ -516,23 +537,23 @@ supplied C<< $active_graph >>.
 				return Attean::Result->new( bindings => $b );
 			}, undef, variables => \@vars); #->debug('Project result');
 		} elsif ($algebra->isa('Attean::Algebra::Slice')) {
-			my $iter	= $self->evaluate( $child, $active_graph );
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			$iter		= $iter->offset($algebra->offset) if ($algebra->offset > 0);
 			$iter		= $iter->limit($algebra->limit) if ($algebra->limit >= 0);
 			return $iter;
 		} elsif ($algebra->isa('Attean::Algebra::Union')) {
-			my ($lhs, $rhs)	= map { $self->evaluate($_, $active_graph) } @children;
+			my ($lhs, $rhs)	= map { $self->evaluate( $_, $active_graph, %args )  } @children;
 			return Attean::IteratorSequence->new(
 				iterators => [$lhs, $rhs],
 				item_type => 'Attean::API::Result',
 				variables => [$algebra->in_scope_variables]
 			);
 		} elsif ($algebra->isa('Attean::Algebra::Ask')) {
-			my $iter	= $self->evaluate($child, $active_graph);
+			my $iter	= $self->evaluate( $child, $active_graph, %args ) ;
 			my $result	= $iter->next;
 			return Attean::ListIterator->new(values => [$result ? Attean::Literal->true : Attean::Literal->false], item_type => 'Attean::API::Term');
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
-			my $iter		= $self->evaluate($child, $active_graph);
+			my $iter		= $self->evaluate( $child, $active_graph, %args ) ;
 			my $patterns	= $algebra->triples;
 			use Data::Dumper;
 			my %seen;
@@ -607,12 +628,13 @@ appended to C<< @new_vars >> as it is created.
 		my $term	= shift;
 		my $path	= shift;
 		my $v		= shift;
+		my %args	= @_;
 		return if (exists $v->{ $term->as_string });
 		$v->{ $term->as_string }	= $term;
 		
-		my $iter	= $self->_eval($graph, $term, $path);
+		my $iter	= $self->_eval($graph, $term, $path, %args);
 		while (my $n = $iter->next) {
-			$self->_ALP($graph, $n, $path, $v);
+			$self->_ALP($graph, $n, $path, $v, %args);
 		}
 	}
 	
@@ -621,8 +643,9 @@ appended to C<< @new_vars >> as it is created.
 		my $graph	= shift;
 		my $term	= shift;
 		my $path	= shift;
+		my %args	= @_;
 		my $pp		= Attean::Algebra::Path->new( subject => $term, path => $path, object => variable('o') );
-		my $iter	= $self->evaluate($pp, $graph);
+		my $iter	= $self->evaluate( $pp, $graph, %args ) ;
 		my $terms	= $iter->map(sub { shift->value('o') }, 'Attean::API::Term');
 		my %seen;
 		return $terms->grep(sub { not $seen{ shift->as_string }++ });
@@ -1350,7 +1373,6 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						} elsif (looks_like_number($value)) {
 							$value	= +$value;
 						} elsif ($value =~ /^(.*)[eE][-+]?\d+$/) { #} and looks_like_number($1)) {
-							warn 'xxx';
 							$value	= +$value;
 						} else {
 							die "cannot cast unrecognized value '$value' to xsd:$typename";
