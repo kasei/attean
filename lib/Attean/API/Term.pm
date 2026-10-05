@@ -440,7 +440,7 @@ package Attean::API::NumericLiteral 0.039 {
 				my $int		= $3;
 				my $frac	= $4;
 				$sign		= '' if ($sign eq '+');
-				$num		=~ s/^0+(.)/$1/;
+				$num		=~ s/^0+(\d)/$1/;
 				$num		=~ s/[.](\d+)0+$/.$1/;
 				if ($num =~ /^[.]/) {
 					$num	= "0$num";
@@ -469,6 +469,7 @@ package Attean::API::NumericLiteral 0.039 {
 				return Attean::Literal->float("${sign}$inf") if ($inf);
 				return Attean::Literal->float($nan) if ($nan);
 
+				no warnings 'numeric';
 				$value		= sprintf('%E', $value);
 				$value 		=~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/;
 				$sign		= $1;
@@ -505,6 +506,7 @@ package Attean::API::NumericLiteral 0.039 {
 				return Attean::Literal->double("${sign}$inf") if ($inf);
 				return Attean::Literal->double($nan) if ($nan);
 
+				no warnings 'numeric';
 				$value		= sprintf('%E', $value);
 				$value 		=~ m/^(?:([-+])?(?:(\d+(?:\.\d*)?|\.\d+)([Ee][-+]?\d+)?|(INF)))|(NaN)$/;
 				$sign		= $1;

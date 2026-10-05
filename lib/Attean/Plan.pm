@@ -784,6 +784,7 @@ package Attean::Plan::Extend 0.039 {
 			my ($child)	= @{ $expr->children };
 			my $term	= $self->evaluate_expression($model, $child, $r);
 
+			# TODO: the code below duplicates code in Attean::SimpleQueryEvaluator. It should be refactored.
 			if ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#string$>) {
 				my $value	= $term->value;
 				if ($term->does('Attean::API::IRI')) {

@@ -685,7 +685,7 @@ the SPARQL Protocol against the given endpoint.
 package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 	use Moo;
 	use Attean::RDF;
-	use Scalar::Util qw(blessed);
+	use Scalar::Util qw(blessed looks_like_number);
 	use Types::Standard qw(InstanceOf);
 	use URI::Escape qw(uri_escape_utf8);
 	use Encode qw(encode);
@@ -917,15 +917,15 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						}
 						foreach my $n (@operands) {
 							die "CONCAT called with a non-literal argument" unless ($n->does('Attean::API::Literal'));
-							if ($n->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string') {
-								die "CONCAT called with a datatyped-literal other than xsd:string";
-							} elsif ($n->language) {
+							if ($n->language) {
 								$all_str	= 0;
 								if (defined($lang) and $lang ne $n->language) {
 									$all_lang	= 0;
 								} else {
 									$lang	= $n->language;
 								}
+							} elsif ($n->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string') {
+								die "CONCAT called with a datatyped-literal other than xsd:string";
 							} else {
 								$all_lang	= 0;
 								$all_str	= 0;
@@ -950,7 +950,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						die "TypeError: REPLACE called without a literal arg1 term" unless (blessed($node) and $node->does('Attean::API::Literal'));
 						die "TypeError: REPLACE called without a literal arg2 term" unless (blessed($pat) and $pat->does('Attean::API::Literal'));
 						die "TypeError: REPLACE called without a literal arg3 term" unless (blessed($rep) and $rep->does('Attean::API::Literal'));
-						die "TypeError: REPLACE called with a datatyped (non-xsd:string) literal" if ($node->datatype and $node->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string');
+						die "TypeError: REPLACE called with a datatyped (non-xsd:string) literal" if ($node->datatype and $node->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string' and $node->datatype->value ne 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
 						my ($value, $pattern, $replace)	= map { $_->value } @operands;
 						my $flags_term	= $operands[3];
 						my $flags		= blessed($flags_term) ? $flags_term->value : '';
@@ -991,7 +991,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 
 						die "$func called without a literal arg1 term" unless (blessed($node) and $node->does('Attean::API::Literal'));
 						die "$func called without a literal arg2 term" unless (blessed($substr) and $substr->does('Attean::API::Literal'));
-						die "$func called with a datatyped (non-xsd:string) literal" if ($node->datatype and $node->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string');
+						die "$func called with a datatyped (non-xsd:string) literal" if ($node->datatype and $node->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string' and $node->datatype->value ne 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
 
 						my $lhs_simple	= (not($node->language) and ($node->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string'));
 						my $rhs_simple	= (not($substr->language) and ($substr->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string'));
@@ -1289,12 +1289,110 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 			my ($child)	= @{ $expr->children };
 			my $impl	= $self->impl( $child, $active_graph );
 			my $type	= $expr->datatype;
+			my $datatype	= $expr->datatype->value;
 			return sub {
 				my ($r, %args)	= @_;
 				my $term	= $impl->($r, %args);
+
+				# TODO: the code below duplicates code in Attean::Plan::Extend. It should be refactored.
 				# TODO: reformat syntax for xsd:double
+				if ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#string$>) {
+					my $value	= $term->value;
+					if ($term->does('Attean::API::IRI')) {
+						return Attean::Literal->new(value => $term->value);
+					} elsif ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+						my $v	= ($value eq 'true' or $value eq '1') ? 'true' : 'false';
+						return Attean::Literal->new(value => $v);
+					} elsif ($term->does('Attean::API::NumericLiteral')) {
+						my $v	= $term->numeric_value();
+						if ($v == int($v)) {
+							return Attean::Literal->new(value => int($v));
+						}
+					}
+					
+					return Attean::Literal->new(value => $value);
+				} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(integer|float|double|decimal)>) {
+					my $value	= $term->value;
+					my $num;
+					if ($datatype eq 'http://www.w3.org/2001/XMLSchema#integer') {
+						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+							$value	= ($value eq 'true' or $value eq '1') ? '1' : '0';
+						} elsif ($term->does('Attean::API::NumericLiteral')) {
+							my $v	= $term->numeric_value();
+							$v		=~ s/[.].*$//;
+							$value	= int($v);
+						} elsif ($value =~ /^[-+]\d+$/) {
+							my ($v) = "$value";
+							$v		=~ s/[.].*$//;
+							$value	= int($v);
+						}
+						$num	= $value;
+					} elsif ($datatype eq 'http://www.w3.org/2001/XMLSchema#decimal') {
+						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+							$value	= ($value eq 'true') ? '1' : '0';
+						} elsif ($term->does('Attean::API::NumericLiteral')) {
+							$value	= $term->numeric_value;
+						} elsif (looks_like_number($value)) {
+							if ($value =~ /[eE]/) {	# double
+								die "cannot cast to xsd:decimal as precision would be lost";
+							}
+							$value = +$value;
+						}
+						$num	= "$value";
+						$num	=~ s/[.]0+$/.0/;
+						$num	=~ s/[.](\d+)0*$/.$1/;
+					} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#(float|double)$>) {
+						my $typename	= $1;
+						if ($term->datatype->value eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+							$value	= ($value eq 'true') ? '1.0' : '0.0';
+						} elsif ($term->does('Attean::API::NumericLiteral')) {
+							# no-op
+						} elsif (looks_like_number($value)) {
+							$value	= +$value;
+						} elsif ($value =~ /^(.*)[eE][-+]?\d+$/) { #} and looks_like_number($1)) {
+							warn 'xxx';
+							$value	= +$value;
+						} else {
+							die "cannot cast unrecognized value '$value' to xsd:$typename";
+						}
+						$num	= sprintf("%e", $value);
+					}
+					my $c	= Attean::Literal->new(value => $num, datatype => $expr->datatype);
+					if (my $term = $c->canonicalized_term_strict()) {
+						return $term;
+					} else {
+						die "Term value is not a valid lexical form for $datatype";
+					}
+				} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#boolean$>) {
+					if ($term->does('Attean::API::NumericLiteral')) {
+						my $value	= $term->numeric_value;
+						return ($value == 0) ? Attean::Literal->false : Attean::Literal->true;
+					} else {
+						my $value	= $term->value;
+						if ($value =~ m/^(true|false|0|1)$/) {
+							return ($value eq 'true' or $value eq '1') ? Attean::Literal->true : Attean::Literal->false;
+						} else {
+							die "Bad lexical form for xsd:boolean: '$value'";
+						}
+					}
+				} elsif ($datatype =~ m<^http://www.w3.org/2001/XMLSchema#dateTime$>) {
+					my $value	= $term->value;
+					my $c	= Attean::Literal->new(value => $value, datatype => $expr->datatype);
+					if ($c->does('Attean::API::DateTimeLiteral') and $c->datetime) {
+						return $c;
+					} else {
+						die "Bad lexical form for xsd:dateTime: '$value'";
+					}
+				}
+
+
+# use Data::Dumper;
+# warn '444444' . $term->as_string . ' ' . Dumper($term->value);
 				my $cast	= Attean::Literal->new( value => $term->value, datatype => $type );
-				return $cast->canonicalized_term_strict() if ($cast->does('Attean::API::CanonicalizingLiteral'));
+# warn "- casted: " . $cast->as_string . "\n";
+				if ($cast->does('Attean::API::CanonicalizingLiteral')) {
+					return $cast->canonicalized_term_strict();
+				}
 				return $cast;
 			}
 		} else {
