@@ -968,6 +968,8 @@ sub _ConstructQuery {
 	$self->_SolutionModifier();
 	$self->_ValuesClause();
 	
+	$self->__solution_modifiers();
+
 	my $pattern		= $self->{build}{triples}[0];
 	my $triples		= delete $self->{build}{construct_triples};
 	if (blessed($triples) and $triples->isa('Attean::Algebra::BGP')) {
