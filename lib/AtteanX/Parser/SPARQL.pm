@@ -854,73 +854,8 @@ sub _SelectQuery {
 	
 	$self->_WhereClause;
 	$self->_SolutionModifier($vars);
-	
-	if ($self->_optional_token(KEYWORD, 'VALUES')) {
-		my @vars;
-# 		$self->_Var;
-# 		push( @vars, splice(@{ $self->{_stack} }));
-		my $parens	= 0;
-		if ($self->_optional_token(NIL)) {
-			$parens	= 1;
-		} else {
-			if ($self->_optional_token(LPAREN)) {
-				$parens	= 1;
-			}
-			while ($self->_test_token(VAR)) {
-				$self->_Var;
-				push( @vars, splice(@{ $self->{_stack} }));
-			}
-			if ($parens) {
-				$self->_expected_token(RPAREN);
-			}
-		}
-		
-		my $count	= scalar(@vars);
-		if (not($parens) and $count == 0) {
-			croak "Syntax error: Expected VAR in inline data declaration";
-		} elsif (not($parens) and $count > 1) {
-			croak "Syntax error: Inline data declaration can only have one variable when parens are omitted";
-		}
-		
-		my $short	= (not($parens) and $count == 1);
-		$self->_expected_token(LBRACE);
-		if ($self->_optional_token(NIL)) {
-		
-		} else {
-			if (not($short) or ($short and $self->_test_token(LPAREN))) {
-				while ($self->_test_token(LPAREN)) {
-					my $terms	= $self->_Binding($count);
-					push( @{ $self->{build}{bindings}{terms} }, $terms );
-				}
-			} else {
-				while ($self->_BindingValue_test) {
-					$self->_BindingValue;
-					my ($term)	= splice(@{ $self->{_stack} });
-					push( @{ $self->{build}{bindings}{terms} }, [$term] );
-				}
-			}
-		}
-		
-		$self->_expected_token(RBRACE);
+	$self->_ValuesClause();
 
-		my $bindings	= delete $self->{build}{bindings};
-		my @rows	= @{ $bindings->{terms} || [] };
-		my @vbs;
-		foreach my $r (@rows) {
-			my %d;
-			foreach my $i (0 .. $#{ $r }) {
-				if (blessed($r->[$i])) {
-					$d{ $vars[$i]->value }	= $r->[$i];
-				}
-			}
-			my $r	= Attean::Result->new(bindings => \%d);
-			push(@vbs, $r);
-		}
-		my $table	= Attean::Algebra::Table->new( variables => \@vars, rows => \@vbs );
-		my $pattern	= pop(@{ $self->{build}{triples} });
-		push(@{ $self->{build}{triples} }, $self->_new_join($pattern, $table));
-	}
-	
 	my %projected	= map { $_ => 1 } $self->__solution_modifiers( $star, @exprs );
 	delete $self->{build}{options};
 	$self->{build}{method}		= 'SELECT';
@@ -1031,6 +966,7 @@ sub _ConstructQuery {
 	}
 	
 	$self->_SolutionModifier();
+	$self->_ValuesClause();
 	
 	my $pattern		= $self->{build}{triples}[0];
 	my $triples		= delete $self->{build}{construct_triples};
@@ -1091,6 +1027,7 @@ sub _AskQuery {
 	$self->_DatasetClause();
 	
 	$self->_WhereClause;
+	$self->_ValuesClause();
 	
 	$self->{build}{variables}	= [];
 	$self->{build}{method}		= 'ASK';
@@ -1159,9 +1096,11 @@ sub _WhereClause {
 	$self->_check_duplicate_blanks($ggp);
 }
 
+# TODO: This is commented out because of SPARQL errata regarding blank node labels shared between
+#       an adjacent BGP and a property path. 
 sub _check_duplicate_blanks {
 	my $self	= shift;
-	my $p		= shift;
+	my $ggp		= shift;
 # 	warn 'TODO: $ggp->_check_duplicate_blanks'; # XXXXXXXX
 # 	my @children	= @{ $ggp->children };
 # 	my %seen;
@@ -1206,18 +1145,21 @@ sub _Binding {
 	my $self	= shift;
 	my $count	= shift;
 	
-	$self->_expected_token(LPAREN);
-	
 	my @terms;
-	foreach my $i (1..$count) {
-		unless ($self->_BindingValue_test) {
-			my $found	= $i-1;
-			croak "Syntax error: Expected $count BindingValues but only found $found";
+	if ($count == 0) {
+		$self->_expected_token(NIL);
+	} else {
+		$self->_expected_token(LPAREN);
+		foreach my $i (1..$count) {
+			unless ($self->_BindingValue_test) {
+				my $found	= $i-1;
+				croak "Syntax error: Expected $count BindingValues but only found $found";
+			}
+			$self->_BindingValue;
+			push( @terms, splice(@{ $self->{_stack} }));
 		}
-		$self->_BindingValue;
-		push( @terms, splice(@{ $self->{_stack} }));
+		$self->_expected_token(RPAREN);
 	}
-	$self->_expected_token(RPAREN);
 	return \@terms;
 }
 
@@ -1716,15 +1658,21 @@ sub _SubSelect {
 		if ($self->_optional_token(KEYWORD, 'VALUES')) {
 			my @vars;
 			my $parens	= 0;
-			if ($self->_optional_token(LPAREN)) {
+			my $nil		= 0;
+			if ($self->_optional_token(NIL)) {
+				$parens = 1;
+				$nil	= 1;
+			} elsif ($self->_optional_token(LPAREN)) {
 				$parens	= 1;
 			}
-			while ($self->_test_token(VAR)) {
-				$self->_Var;
-				push( @vars, splice(@{ $self->{_stack} }));
-			}
-			if ($parens) {
-				$self->_expected_token(RPAREN);
+			unless ($nil) {
+				while ($self->_test_token(VAR)) {
+					$self->_Var;
+					push( @vars, splice(@{ $self->{_stack} }));
+				}
+				if ($parens) {
+					$self->_expected_token(RPAREN);
+				}
 			}
 			my $count	= scalar(@vars);
 			if (not($parens) and $count == 0) {
@@ -1735,16 +1683,21 @@ sub _SubSelect {
 			
 			my $short	= (not($parens) and $count == 1);
 			$self->_expected_token(LBRACE);
-			if (not($short) or ($short and $self->_test_token(LPAREN))) {
-				while ($self->_test_token(LPAREN)) {
-					my $terms	= $self->_Binding($count);
-					push( @{ $self->{build}{bindings}{terms} }, $terms );
-				}
+
+			if ($self->_optional_token(NIL)) {
+				# no-op
 			} else {
-				while ($self->_BindingValue_test) {
-					$self->_BindingValue;
-					my ($term)	= splice(@{ $self->{_stack} });
-					push( @{ $self->{build}{bindings}{terms} }, [$term] );
+				if (not($short) or ($short and $self->_test_token(LPAREN))) {
+					while ($self->_test_token(LPAREN) or $self->_test_token(NIL)) {
+						my $terms	= $self->_Binding($count);
+						push( @{ $self->{build}{bindings}{terms} }, $terms );
+					}
+				} else {
+					while ($self->_BindingValue_test) {
+						$self->_BindingValue;
+						my ($term)	= splice(@{ $self->{_stack} });
+						push( @{ $self->{build}{bindings}{terms} }, [$term] );
+					}
 				}
 			}
 			
@@ -1882,15 +1835,22 @@ sub _InlineDataClause {
 	my @vars;
 	
 	my $parens	= 0;
-	if ($self->_optional_token(LPAREN)) {
+	my $nil		= 0;
+	if ($self->_optional_token(NIL)) {
+		$nil	= 1;
+		$parens	= 1;
+	} elsif ($self->_optional_token(LPAREN)) {
 		$parens	= 1;
 	}
-	while ($self->_test_token(VAR)) {
-		$self->_Var;
-		push( @vars, splice(@{ $self->{_stack} }));
-	}
-	if ($parens) {
-		$self->_expected_token(RPAREN);
+	
+	unless ($nil) {
+		while ($self->_test_token(VAR)) {
+			$self->_Var;
+			push( @vars, splice(@{ $self->{_stack} }));
+		}
+		if ($parens) {
+			$self->_expected_token(RPAREN);
+		}
 	}
 	
 	my $count	= scalar(@vars);
@@ -1905,7 +1865,7 @@ sub _InlineDataClause {
 	my @rows;
 	if (not($short) or ($short and $self->_test_token(LPAREN))) {
 		# { (term) (term) }
-		while ($self->_test_token(LPAREN)) {
+		while ($self->_test_token(LPAREN) or $self->_test_token(NIL)) {
 			my $terms	= $self->_Binding($count);
 			push( @rows, $terms );
 		}
@@ -2144,6 +2104,75 @@ sub _FunctionCall {
 		$self->_add_stack( $expr );
 	}
 }
+
+# [28]  	ValuesClause	  ::=  	( 'VALUES' DataBlock )?
+sub _ValuesClause {
+	my $self	= shift;
+	if ($self->_optional_token(KEYWORD, 'VALUES')) {
+		my @vars;
+# 		$self->_Var;
+# 		push( @vars, splice(@{ $self->{_stack} }));
+		my $parens	= 0;
+		my $nil		= 0;
+		if ($self->_optional_token(NIL)) {
+			$parens	= 1;
+			$nil	= 1;
+		} else {
+			if ($self->_optional_token(LPAREN)) {
+				$parens	= 1;
+			}
+			while ($self->_test_token(VAR)) {
+				$self->_Var;
+				push( @vars, splice(@{ $self->{_stack} }));
+			}
+			if ($parens) {
+				$self->_expected_token(RPAREN);
+			}
+		}
+		
+		my $count	= scalar(@vars);
+		if (not($parens) and $count == 0) {
+			croak "Syntax error: Expected VAR in inline data declaration";
+		} elsif (not($parens) and $count > 1) {
+			croak "Syntax error: Inline data declaration can only have one variable when parens are omitted";
+		}
+		
+		my $short	= (not($parens) and $count == 1);
+		$self->_expected_token(LBRACE);
+		if (not($short) or ($short and $self->_test_token(LPAREN))) {
+			while ($self->_test_token(LPAREN) or $self->_test_token(NIL)) {
+				my $terms	= $self->_Binding($count);
+				push( @{ $self->{build}{bindings}{terms} }, $terms );
+			}
+		} else {
+			while ($self->_BindingValue_test) {
+				$self->_BindingValue;
+				my ($term)	= splice(@{ $self->{_stack} });
+				push( @{ $self->{build}{bindings}{terms} }, [$term] );
+			}
+		}
+		
+		$self->_expected_token(RBRACE);
+
+		my $bindings	= delete $self->{build}{bindings};
+		my @rows	= @{ $bindings->{terms} || [] };
+		my @vbs;
+		foreach my $r (@rows) {
+			my %d;
+			foreach my $i (0 .. $#{ $r }) {
+				if (blessed($r->[$i])) {
+					$d{ $vars[$i]->value }	= $r->[$i];
+				}
+			}
+			my $r	= Attean::Result->new(bindings => \%d);
+			push(@vbs, $r);
+		}
+		my $table	= Attean::Algebra::Table->new( variables => \@vars, rows => \@vbs );
+		my $pattern	= pop(@{ $self->{build}{triples} });
+		push(@{ $self->{build}{triples} }, $self->_new_join($pattern, $table));
+	}
+}
+
 
 # [29] ArgList ::= ( NIL | '(' Expression ( ',' Expression )* ')' )
 sub _ArgList_test {
