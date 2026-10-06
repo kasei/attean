@@ -514,8 +514,9 @@ supplied C<< $active_graph >>.
 					my %vars	= map { $_ => 1 } ($s->value, $o->value);
 					return Attean::ListIterator->new(variables => [keys %vars], values => \@results, item_type => 'Attean::API::Result');
 				} elsif ($s->does('Attean::API::Variable') and $o->does('Attean::API::TermOrTriple')) {
-					my $pp	= Attean::Algebra::InversePath->new( children => [$child] );
-					my $p	= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
+					my $pclass	= ref($path);
+					my $pp		= $pclass->new( children => [ Attean::Algebra::InversePath->new( children => [$child] ) ] );
+					my $p		= Attean::Algebra::Path->new( subject => $o, path => $pp, object => $s );
 					return $self->evaluate( $p, $active_graph, %args ) ;
 				} else { # Term ZeroOrMorePath(path) Term
 					my $v	= {};
@@ -567,7 +568,6 @@ supplied C<< $active_graph >>.
 		} elsif ($algebra->isa('Attean::Algebra::Construct')) {
 			my $iter		= $self->evaluate( $child, $active_graph, %args ) ;
 			my $patterns	= $algebra->triples;
-			use Data::Dumper;
 			my %seen;
 			return Attean::CodeIterator->new(
 				generator => sub {
@@ -1425,10 +1425,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 				}
 
 
-# use Data::Dumper;
-# warn '444444' . $term->as_string . ' ' . Dumper($term->value);
 				my $cast	= Attean::Literal->new( value => $term->value, datatype => $type );
-# warn "- casted: " . $cast->as_string . "\n";
 				if ($cast->does('Attean::API::CanonicalizingLiteral')) {
 					return $cast->canonicalized_term_strict();
 				}

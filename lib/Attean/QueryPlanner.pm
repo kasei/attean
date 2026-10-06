@@ -467,7 +467,8 @@ the supplied C<< $active_graph >>.
 				my $a;
 				if ($s_var and not($o_var)) {
 					my $inv	= Attean::Algebra::InversePath->new( children => [$child] );
-					$a		= Attean::Algebra::Path->new( subject => $end, path => $inv, object => $begin );
+					$a		= Attean::Algebra::Path->new( subject => $begin, path => $inv, object => $end );
+					($s, $o)	= ($o, $s);
 				} else {
 					$a		= Attean::Algebra::Path->new( subject => $begin, path => $child, object => $end );
 				}
