@@ -344,7 +344,7 @@ supplied C<< $active_graph >>.
 				push(@{ $groups{$key}[1] }, $r);
 			}
 			my @keys	= keys %groups;
-			$groups{''}	= [Attean::Result->new( bindings => {} ), []] if (scalar(@keys) == 0);
+			$groups{''}	= [Attean::Result->new( bindings => {} ), []] if (scalar(@groupby) == 0 and scalar(@keys) == 0);
 			my $aggs	= $algebra->aggregates;
 			my @results;
 			my %vars;
