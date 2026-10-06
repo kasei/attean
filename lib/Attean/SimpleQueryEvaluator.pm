@@ -437,20 +437,32 @@ supplied C<< $active_graph >>.
 			} elsif ($path->isa('Attean::Algebra::NegatedPropertySet')) {
 				my $preds	= $path->predicates;
 				my %preds	= map { $_->value => 1 } @$preds;
-				my $filter	= $self->model->get_quads($s, undef, $o, $active_graph)->grep(sub {
-					my $q	= shift;
-					my $p	= $q->predicate;
-					return not exists $preds{ $p->value };
-				});
-				my %vars;
-				$vars{subject}	= $s->value if ($s->does('Attean::API::Variable'));
-				$vars{object}	= $o->value if ($o->does('Attean::API::Variable'));
-				return $filter->map(sub {
-					my $q	= shift;
-					return unless $q;
-					my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
-					return Attean::Result->new( bindings => \%bindings );
-				}, 'Attean::API::Result', variables => [values %vars]);
+				my $rev	= $path->reversed;
+				if (scalar(@$rev)) {
+					# deconstruct
+					my $nps_fwd		= Attean::Algebra::NegatedPropertySet->new( predicates => $preds );
+					my $nps_rev		= Attean::Algebra::NegatedPropertySet->new( predicates => $rev );
+					my $inv			= Attean::Algebra::InversePath->new( children => [$nps_rev] );
+					my $alt			= Attean::Algebra::AlternativePath->new( children => [ $nps_fwd, $inv ] );
+					my $pp			= scalar(@$preds) ? $alt : $inv;
+					my $path		= Attean::Algebra::Path->new( path => $pp, subject => $s, object => $o );
+					return $self->evaluate( $path, $active_graph, %args ) ;
+				} else {
+					my $filter_fwd	= $self->model->get_quads($s, undef, $o, $active_graph)->grep(sub {
+						my $q	= shift;
+						my $p	= $q->predicate;
+						return not exists $preds{ $p->value };
+					});
+					my %vars;
+					$vars{subject}	= $s->value if ($s->does('Attean::API::Variable'));
+					$vars{object}	= $o->value if ($o->does('Attean::API::Variable'));
+					return $filter_fwd->map(sub {
+						my $q	= shift;
+						return unless $q;
+						my %bindings	= map { $vars{$_} => $q->$_() } (keys %vars);
+						return Attean::Result->new( bindings => \%bindings );
+					}, 'Attean::API::Result', variables => [values %vars]);
+				}
 			} elsif ($path->isa('Attean::Algebra::SequencePath')) {
 				if (scalar(@children) == 1) {
 					my $path	= Attean::Algebra::Path->new( subject => $s, path => $children[0], object => $o );
@@ -1201,7 +1213,7 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 							}
 						}
 						if ($agg eq 'AVG') {
-							$sum	= not($count) ? undef : Attean::Literal->new( value => ($sum->numeric_value / $count), datatype => $sum->binary_promotion_type(Attean::Literal->integer($count), '/') );
+							$sum	= not($count) ? Attean::Literal->integer(0) : Attean::Literal->new( value => ($sum->numeric_value / $count), datatype => $sum->binary_promotion_type(Attean::Literal->integer($count), '/') );
 						}
 						return $sum;
 					};
