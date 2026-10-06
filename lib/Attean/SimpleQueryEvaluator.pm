@@ -559,6 +559,8 @@ supplied C<< $active_graph >>.
 			my %seen;
 			return Attean::CodeIterator->new(
 				generator => sub {
+					my $bnode_mapper			= Attean::TermMap->uuid_blank_map;
+
 					my $r	= $iter->next;
 					return unless ($r);
 					my %mapping	= map { my $t = $r->value($_); $t ? ("?$_" => $t) : (); } ($r->variables);
@@ -573,7 +575,10 @@ supplied C<< $active_graph >>.
 						unless (all { $_->does('Attean::API::TermOrTriple') } @terms) {
 							next PATTERN;
 						}
-						push(@triples, Attean::Triple->new(@terms));
+						
+						my $t	= Attean::Triple->new(@terms);
+						$t		= $t->apply_map($bnode_mapper);
+						push(@triples, $t);
 					}
 					return @triples;
 				},
