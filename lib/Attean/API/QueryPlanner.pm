@@ -7,7 +7,7 @@ Attean::API::IDPJoinPlanner - Iterative dynamic programming query planning role
 
 =head1 VERSION
 
-This document describes Attean::API::IDPJoinPlanner version 0.038
+This document describes Attean::API::IDPJoinPlanner version 0.039
 
 =head1 SYNOPSIS
 
@@ -32,7 +32,7 @@ methods that consume the L<Attean::API::CostPlanner> role.
 
 =cut
 
-package Attean::API::QueryPlanner 0.038 {
+package Attean::API::QueryPlanner 0.039 {
 	use Types::Standard qw(CodeRef Object);
 
 	use Moo::Role;
@@ -41,7 +41,7 @@ package Attean::API::QueryPlanner 0.038 {
 	has 'request_signer' => (is => 'rw', isa => Object);
 }
 
-package Attean::API::CostPlanner 0.038 {
+package Attean::API::CostPlanner 0.039 {
 	use Scalar::Util qw(refaddr);
 	use Types::Standard qw(CodeRef);
 
@@ -76,12 +76,12 @@ package Attean::API::CostPlanner 0.038 {
 	}
 }
 
-package Attean::API::JoinPlanner 0.038 {
+package Attean::API::JoinPlanner 0.039 {
 	use Moo::Role;
 	requires 'joins_for_plan_alternatives';
 }
 
-package Attean::API::NaiveJoinPlanner 0.038 {
+package Attean::API::NaiveJoinPlanner 0.039 {
 	use Math::Cartesian::Product;
 
 	use Moo::Role;
@@ -109,7 +109,7 @@ package Attean::API::NaiveJoinPlanner 0.038 {
 	}
 }
 
-package Attean::API::SimpleCostPlanner 0.038 {
+package Attean::API::SimpleCostPlanner 0.039 {
 	use Types::Standard qw(Int);
 	use Scalar::Util qw(blessed);
 
@@ -214,7 +214,7 @@ package Attean::API::SimpleCostPlanner 0.038 {
 	}
 }
 
-package Attean::API::IDPJoinPlanner 0.038 {
+package Attean::API::IDPJoinPlanner 0.039 {
 	use Encode qw(encode);
 	use Attean::RDF;
 	use LWP::UserAgent;

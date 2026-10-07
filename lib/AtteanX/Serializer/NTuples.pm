@@ -4,7 +4,7 @@ AtteanX::Serializer::NTuples - Shared functionality for N-Triples and N-Quads se
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::NTuples version 0.038
+This document describes AtteanX::Serializer::NTuples version 0.039
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ This document describes AtteanX::Serializer::NTuples version 0.038
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::NTuples 0.038 {
+package AtteanX::Serializer::NTuples 0.039 {
 	use Moo;
 	use Encode qw(encode);
 	use Attean::ListIterator;

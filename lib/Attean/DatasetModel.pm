@@ -7,7 +7,7 @@ Attean::DatasetModel - RDF model that restricts the dataset of a sub-model
 
 =head1 VERSION
 
-This document describes Attean::DatasetModel version 0.038
+This document describes Attean::DatasetModel version 0.039
 
 =head1 SYNOPSIS
 
@@ -44,7 +44,7 @@ named graphs that can be queried.
 
 =cut
 
-package Attean::DatasetModel 0.038 {
+package Attean::DatasetModel 0.039 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf HashRef);
@@ -161,7 +161,7 @@ L<Attean::API::QuadIterator>.
 	with 'Attean::API::Model';
 }
 
-package Attean::MutableDatasetModel 0.038 {
+package Attean::MutableDatasetModel 0.039 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf HashRef);
