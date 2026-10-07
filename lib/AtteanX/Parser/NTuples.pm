@@ -237,7 +237,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 			}
 		
 # 			if ($_[0] =~ m/^@(([a-z]+(?:-[a-zA-Z0-9]+)*)(?:--([a-zA-Z]+))?)/) {
-			if ($_[0] =~ m/^@(([a-z]+(?:-[a-zA-Z0-9]+)*)(?:--(ltr|rtl))?)/) {
+			if ($_[0] =~ m/^@(([a-z]{1,3}(?:-[a-zA-Z0-9]+)*)(?:--(ltr|rtl))?)/) {
 				my $lang	= $1;
 				substr($_[0],0,1+length($lang))	= '';
 				return Attean::Literal->new( value => $value, language => $lang );
