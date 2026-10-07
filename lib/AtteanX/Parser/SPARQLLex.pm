@@ -126,7 +126,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 	my $r_STRING_LITERAL2		= qr/"(([^\x{22}\x{5C}\x{0A}\x{0D}])|${r_ECHAR})*"/o;
 	my $r_STRING_LITERAL_LONG1	= qr/'''(('|'')?([^'\\]|${r_ECHAR}))*'''/o;
 	my $r_STRING_LITERAL_LONG2	= qr/"""(("|"")?([^"\\]|${r_ECHAR}))*"""/o;
-	my $r_LANGTAG				= qr/@[a-zA-Z]+(-[a-zA-Z0-9]+)*/o;
+	my $r_LANGTAG				= qr/@[a-zA-Z]+(-[a-zA-Z0-9]+)*(--[a-zA-Z]+)?/o;
 	my $r_IRI_REF				= qr/<([^<>"{}|^`\\\x{00}-\x{20}])*>/o;
 	my $r_PN_CHARS_BASE			= qr/([A-Z]|[a-z]|[\x{00C0}-\x{00D6}]|[\x{00D8}-\x{00F6}]|[\x{00F8}-\x{02FF}]|[\x{0370}-\x{037D}]|[\x{037F}-\x{1FFF}]|[\x{200C}-\x{200D}]|[\x{2070}-\x{218F}]|[\x{2C00}-\x{2FEF}]|[\x{3001}-\x{D7FF}]|[\x{F900}-\x{FDCF}]|[\x{FDF0}-\x{FFFD}]|[\x{10000}-\x{EFFFF}])/o;
 	my $r_PN_CHARS_U			= qr/([_]|${r_PN_CHARS_BASE})/o;
@@ -563,9 +563,9 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 
 	sub _get_lang {
 		my $self	= shift;
-		$self->get_char_safe('@');
-		if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
+		if ($self->buffer =~ $r_LANGTAG) {
 			my $lang	= $self->read_length($+[0]);
+			substr($lang, 0, 1, ''); # remove the '@' prefix
 			return $self->new_token(LANG, $self->start_line, $self->start_column, $lang);
 		}
 		$self->_throw_error("Expected keyword or language tag");
