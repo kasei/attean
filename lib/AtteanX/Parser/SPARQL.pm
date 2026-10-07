@@ -414,11 +414,15 @@ sub _RW_Query {
 	}
 
 	my $algebra	= $self->{build}{triples}[0];
-	
+
+	my %args;
+	if (defined(my $version = $self->{build}{version})) {
+		$args{ version }	= $version;
+	}
 	if ($update) {
-		$self->{build}{triples}[0]	= Attean::Algebra::Update->new( children => [$algebra] );
+		$self->{build}{triples}[0]	= Attean::Algebra::Update->new( children => [$algebra], %args );
 	} else {
-		$self->{build}{triples}[0]	= Attean::Algebra::Query->new( children => [$algebra], dataset => \%dataset );
+		$self->{build}{triples}[0]	= Attean::Algebra::Query->new( children => [$algebra], dataset => \%dataset, %args );
 	}
 }
 
@@ -427,42 +431,66 @@ sub _Query_test {
 	return ($self->_test_token(KEYWORD, qr/^(SELECT|CONSTRUCT|DESCRIBE|ASK|LOAD|CLEAR|DROP|ADD|MOVE|COPY|CREATE|INSERT|DELETE|WITH)/i));
 }
 
-# [2] Prologue ::= BaseDecl? PrefixDecl*
+sub _Prologue_test {
+	my $self	= shift;
+	return 1 if ($self->_test_token(KEYWORD, 'BASE'));
+	return 1 if ($self->_test_token(KEYWORD, 'PREFIX'));
+	return 1 if ($self->_test_token(KEYWORD, 'VERSION'));
+	return 0;
+}
+
+# [2] Prologue ::= 	( BaseDecl | PrefixDecl | VersionDecl )*
 # [3] BaseDecl ::= 'BASE' IRI_REF
 # [4] PrefixDecl ::= 'PREFIX' PNAME_NS IRI_REF
+# VersionDecl	  ::=  	'VERSION' VersionSpecifier
 sub _Prologue {
 	my $self	= shift;
 
 	my $base;
 	my @base;
-	if ($self->_optional_token(KEYWORD, 'BASE')) {
-		my $iriref	= $self->_expected_token(IRI);
-		my $iri		= $iriref->value;
-		$base		= $self->new_iri( value => $iri );
-		@base		= $base;
-		$self->{base}	= $base;
-	}
-
 	my %namespaces;
-	while ($self->_optional_token(KEYWORD, 'PREFIX')) {
-		my $prefix	= $self->_expected_token(PREFIXNAME);
-		my @args	= @{ $prefix->args };
-		if (scalar(@args) > 1) {
-			croak "Syntax error: PREFIX namespace used a full PNAME_LN, not a PNAME_NS";
+	my $version;
+	while ($self->_Prologue_test) {
+		if ($self->_optional_token(KEYWORD, 'BASE')) {
+			my $iriref	= $self->_expected_token(IRI);
+			my $iri		= $iriref->value;
+			$base		= $self->new_iri( value => $iri );
+			@base		= $base;
+			$self->{base}	= $base;
+		} elsif ($self->_optional_token(KEYWORD, 'PREFIX')) {
+			my $prefix	= $self->_expected_token(PREFIXNAME);
+			my @args	= @{ $prefix->args };
+			if (scalar(@args) > 1) {
+				croak "Syntax error: PREFIX namespace used a full PNAME_LN, not a PNAME_NS";
+			}
+			my $ns		= substr($prefix->value, 0, length($prefix->value) - 1);
+			my $iriref	= $self->_expected_token(IRI);
+			my $iri		= $iriref->value;
+			if (@base) {
+				my $r	= $self->new_iri( value => $iri, base => shift(@base) );
+				$iri	= $r->value;
+			}
+			$namespaces{ $ns }	= $iri;
+			$self->namespaces->add_mapping($ns, $iri);
+		} else {
+			# VERSION
+			$self->_expected_token(KEYWORD, 'VERSION');
+			my $t	= $self->_peek_token;
+			if (my $s1 = $self->_optional_token(STRING1D)) {
+				$version	= $s1->value;
+			} elsif (my $s2 = $self->_optional_token(STRING1S)) {
+				$version	= $s2->value;
+			} else {
+				my $got	= AtteanX::SPARQL::Constants::decrypt_constant($t->type);
+				my $value	= $t->value;
+				$self->_token_error($t, "Expecting VERSION specifier but found $got '$value'")
+			}
 		}
-		my $ns		= substr($prefix->value, 0, length($prefix->value) - 1);
-		my $iriref	= $self->_expected_token(IRI);
-		my $iri		= $iriref->value;
-		if (@base) {
-			my $r	= $self->new_iri( value => $iri, base => shift(@base) );
-			$iri	= $r->value;
-		}
-		$namespaces{ $ns }	= $iri;
-		$self->namespaces->add_mapping($ns, $iri);
 	}
 
 	$self->{build}{namespaces}	= \%namespaces;
 	$self->{build}{base}		= $base if (defined($base));
+	$self->{build}{version}		= $version if (defined($version));
 
 # 	push(@data, (base => $base)) if (defined($base));
 # 	return @data;
