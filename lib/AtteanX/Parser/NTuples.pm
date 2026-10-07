@@ -245,7 +245,10 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				substr($_[0],0,3)	= '';
 				my ($uri)	= $_[0] =~ m/^([^>]*)>/;
 				substr($_[0], 0, length($uri)+1)	= '';
-				my $dt	= $self->new_abs_iri(value => _unescape($uri, $lineno));
+				my $lex	= _unescape($uri, $lineno);
+				die 'Explicit use of rdf:dirLangString as a literal datatype is not allowed' if ($lex eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString');
+				die 'Explicit use of rdf:langString as a literal datatype is not allowed' if ($lex eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
+				my $dt	= $self->new_abs_iri(value => $lex);
 				return Attean::Literal->new( value => $value, datatype => $dt );
 			} else {
 				return Attean::Literal->new($value);
