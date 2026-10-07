@@ -68,11 +68,16 @@ sub manifest_paths {
 		));
 
 		push(@files, qw(
+			codepoint-escapes
+			eval-triple-terms
+			expression
+			grouping
 			lang-basedir
 			rdf11
-			syntax-escaping
+			syntax
 			syntax-triple-terms-negative
 			syntax-triple-terms-positive
+			version
 		));
 	}
 	if ($self->run_update_tests) {

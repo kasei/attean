@@ -964,6 +964,9 @@ sub get_actual_results {
 	};
 	if ($@) {
 		warn "Failed to parse query $filename: $@";
+		warn "--------- [contents of $filename]\n";
+		warn $bytes . "\n";
+		warn "---------\n";
 		die $@;
 	}
 	

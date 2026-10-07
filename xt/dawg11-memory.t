@@ -13,7 +13,6 @@ binmode(\*STDOUT, ':encoding(utf8)');
 use autodie;
 use Test::Roo;
 use List::Util qw(all);
-use File::Temp qw(tempdir);
 use FindBin qw($Bin);
 use namespace::clean;
 
