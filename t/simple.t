@@ -95,4 +95,22 @@ use Attean;
 	is($r->as_string, '{o="123"^^<http://www.w3.org/2001/XMLSchema#integer>, s=<http://example.org/p>}');
 }
 
+{
+	note('Attean::Triple with triple term');
+	my $s	= Attean::Blank->new('x');
+	my $p	= Attean::IRI->new('http://example.org/p');
+	my $o	= Attean::Literal->new(value => 'foo', language => 'en-US');
+	my $t1	= Attean::Triple->new($s, $p, $o);
+	my $t	= Attean::Triple->new($s, $p, $t1);
+	
+	does_ok($t, 'Attean::API::Triple');
+	isa_ok($t, 'Attean::Triple');
+	
+	does_ok($t->subject, 'Attean::API::BlankOrIRI');
+	isa_ok($t->predicate, 'Attean::IRI');
+	does_ok($t->object, 'Attean::API::Triple');
+	
+	is($t->tuples_string, '_:x <http://example.org/p> <<( _:x <http://example.org/p> "foo"@en-US )>> .', 'tuples string');
+}
+
 done_testing();
