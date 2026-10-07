@@ -1058,6 +1058,8 @@ sub _AskQuery {
 	
 	$self->_WhereClause;
 	$self->_ValuesClause();
+
+	$self->__solution_modifiers();
 	
 	$self->{build}{variables}	= [];
 	$self->{build}{method}		= 'ASK';
@@ -2198,8 +2200,8 @@ sub _ValuesClause {
 			push(@vbs, $r);
 		}
 		my $table	= Attean::Algebra::Table->new( variables => \@vars, rows => \@vbs );
-		my $pattern	= pop(@{ $self->{build}{triples} });
-		push(@{ $self->{build}{triples} }, $self->_new_join($pattern, $table));
+		$self->{build}{trailing_values}	= $table; # joined into the pattern in __solution_modifiers
+		$self->{build}{trailing_values_vars}	= \@vars;
 	}
 }
 
@@ -3607,6 +3609,13 @@ sub __solution_modifiers {
 		}
 	}
 	
+	if (my $table = $self->{build}{trailing_values}) {
+		my $pattern	= pop(@{ $self->{build}{triples} });
+		push(@{ $self->{build}{triples} }, $self->_new_join($pattern, $table));
+	}
+	
+	my %trailing_values_vars	= map { $_->value => 1 } @{ $self->{build}{trailing_values_vars} || [] };
+	
 	my @project;
 	my @vars;
 	my @extend;
@@ -3624,7 +3633,7 @@ sub __solution_modifiers {
 				my @vars	= $v->does('Attean::API::Variable') ? $v : $v->unaggregated_variables;
 				foreach my $var (@vars) {
 					my $name	= $var->value;
-					unless (exists $agg_vars{$name} or exists $group_vars{$name}) {
+					unless (exists $agg_vars{$name} or exists $group_vars{$name} or exists $trailing_values_vars{$name}) {
 						croak "Cannot project variable ?$name that is not aggregated or used in grouping";
 					}
 				}
