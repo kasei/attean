@@ -238,6 +238,11 @@ sub data_syntax_eval_test {
 	my $is_neg_ttl			= ($model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeEval")));
 	my $is_pos_c14n_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveC14N"));
 
+	my $is_eval_trig		= $model->count_quads($test, $type, iri("${RDFT}TestTrigEval"));
+	my $is_pos_trig			= $model->count_quads($test, $type, iri("${RDFT}TestTrigPositiveSyntax"));
+	my $is_neg_trig			= ($model->count_quads($test, $type, iri("${RDFT}TestTrigNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTrigNegativeEval")));
+	my $is_pos_c14n_trig	= $model->count_quads($test, $type, iri("${RDFT}TestTrigPositiveC14N"));
+
 	my $is_eval_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
 	my $is_pos_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
 	my $is_neg_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
@@ -248,13 +253,21 @@ sub data_syntax_eval_test {
 	my $is_neg_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsNegativeSyntax"));
 	my $is_pos_c14n_nq		= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveC14N"));
 
-	my $is_eval				= ($is_eval_ttl or $is_eval_nt or $is_eval_nq);
+	my $is_eval				= ($is_eval_ttl or $is_eval_trig or $is_eval_nt or $is_eval_nq);
 	my $is_ttl				= ($is_eval_ttl or $is_pos_ttl or $is_neg_ttl or $is_pos_c14n_ttl);
+	my $is_trig				= ($is_eval_trig or $is_pos_trig or $is_neg_trig or $is_pos_c14n_trig);
 	my $is_nt				= ($is_eval_nt or $is_pos_nt or $is_neg_nt or $is_pos_c14n_nt);
 	my $is_nq				= ($is_eval_nq or $is_pos_nq or $is_neg_nq or $is_pos_c14n_nq);
 	
 	
-	my $parser_name		= $is_ttl ? 'Turtle' : 'NTriples';
+	my $parser_name;
+	if ($is_ttl) {
+		$parser_name	= 'Turtle';
+	} elsif ($is_trig) {
+		$parser_name	= 'Trig';
+	} else {
+		$parser_name	= 'NTriples';
+	}
 
 # 	my @types		= $model->objects( $test, $type )->elements();
 # 	warn Dumper([map {$_->value} @types]);
@@ -277,7 +290,7 @@ sub data_syntax_eval_test {
 	
 	my $base;
 	
-	my ($result_filename, $result_bytes, $nt_content);
+	my ($result_filename, $expected_bytes, $nt_content);
 	if ($is_eval) {
 		my $result_uri			= URI->new( $resultd->value );
 		$result_filename		= $result_uri->file;
@@ -285,7 +298,7 @@ sub data_syntax_eval_test {
 		$base					= "file://${base}";
 		warn "Loading expected RDF data from file $result_filename\n" if ($self->debug);
 		$nt_content			= do { local($/) = undef; open(my $fh, '<:utf8', $result_filename) or do { warn("$!: $result_filename; " . $test->as_string); return }; <$fh> };
-		$result_bytes	= encode_utf8($nt_content);
+		$expected_bytes	= encode_utf8($nt_content);
 	}
 	
 	my $uri					= URI->new( $queryd->value );
@@ -296,17 +309,22 @@ sub data_syntax_eval_test {
 	my $content				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
 	my $bytes	= encode_utf8($content);
 
-# 	if ($self->debug) {
-# 		my $q			= $content;
-# 		$q				=~ s/\s+/ /g;
-# 		warn "### test     : " . $test->as_string . "\n";
-# 		warn "# file       : $filename\n";
-# 		warn "# content    : $q\n";
-# 	}
+	if ($self->debug) {
+		my $q			= $content;
+		$q				=~ s/\s+/ /g;
+		my $expected	= $nt_content;
+		$expected		=~ s/\s+/ /g;
+		
+		warn "### test     : " . $test->as_string . "\n";
+		warn "# file       : $filename\n";
+		warn "# expected   : $result_filename\n";
+		warn "# content    : $q\n";
+		warn "# expected   : $expected\n";
+	}
 	
 	my $test_base	= $uri->as_string;
 	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
-	warn "Test base: " . $test_base if ($self->debug);
+	warn "Test base: " . $test_base . "\n" if ($self->debug);
 	
 	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
 	my $nt_parser	= Attean->get_parser('NTriples')->new();
@@ -318,7 +336,7 @@ sub data_syntax_eval_test {
 			if ($is_eval) {
 				my $ser	= Attean->get_serializer('NTriples')->new();
 				my $nt_parser	= Attean->get_parser('NTriples')->new();
-				my @nt_triples	= eval { $nt_parser->parse_iter_from_bytes($result_bytes)->uniq()->elements() };
+				my @nt_triples	= eval { $nt_parser->parse_iter_from_bytes($expected_bytes)->uniq()->elements() };
 				if ($err) {
 					fail("$testname - Failed to parse expected data from $result_filename: $err");
 					return;
@@ -348,12 +366,49 @@ sub data_syntax_eval_test {
 					fail("$testname - $filename: $err");
 				}
 			}
+		} elsif ($is_pos_trig or $is_eval_trig) {
+			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
+			my $err			= $@;
+			if ($is_eval) {
+				my $ser	= Attean->get_serializer('NTriples')->new();
+				my $nq_parser	= Attean->get_parser('NQuads')->new();
+				my @nq_quads	= eval { $nq_parser->parse_iter_from_bytes($expected_bytes)->uniq()->elements() };
+				$err			||= $@;
+				if ($err) {
+					fail("$testname - Failed to parse expected data from $result_filename: $err");
+					return;
+				}
+				my $nq_iter		= Attean::ListIterator->new( values => \@nq_quads, item_type => 'Attean::API::TripleOrQuad' );
+
+				my $test	= Attean::BindingEqualityTest->new();
+				my $trig_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::TripleOrQuad' );
+				my $ok		= $test->equals($trig_iter, $nq_iter);
+				ok($ok, "$testname - $filename");
+				if (not $ok) {
+					warn "BindingEqualityTest failures: " . $test->error();
+					warn "Expecting " . scalar(@nq_quads) . " triples:\n";
+					if (scalar(@nq_quads)) {
+						warn $ser->serialize_list_to_bytes(@nq_quads);
+					}
+					warn "But found " . scalar(@triples) . " triples:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@triples);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= not($err);
+				$self->record_result('syntax', $ok, $test->as_string);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $err");
+				}
+			}
 		} elsif ($is_pos_nt or $is_eval_nt) {
 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
 			my $parse_error	= $@;
 			if ($is_eval) {
 				my $ser	= Attean->get_serializer('NTriples')->new();
-				my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($result_bytes) };
+				my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($expected_bytes) };
 				if ($@) {
 					fail("Failed to parse expected data from $result_filename: $@");
 					return;
@@ -387,7 +442,7 @@ sub data_syntax_eval_test {
 			my $parse_error	= $@;
 			if ($is_eval) {
 				my $ser	= Attean->get_serializer('NQuads')->new();
-				my @nt_triples	= eval { $nq_parser->parse_list_from_bytes($result_bytes) };
+				my @nt_triples	= eval { $nq_parser->parse_list_from_bytes($expected_bytes) };
 				if ($@) {
 					fail("Failed to parse expected data from $result_filename: $@");
 					return;
@@ -417,6 +472,18 @@ sub data_syntax_eval_test {
 				}
 			}
 		} elsif ($is_neg_ttl) {
+			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
+			my $ok	= $@ ? 1 : 0;
+			$self->record_result('syntax', $ok, $test->as_string);
+			if ($ok) {
+				pass("$testname - $filename");
+			} else {
+				if ($self->debug) {
+					warn "Unexpected successful parse of:\n" . $content;
+				}
+				fail("$testname - $filename (unexpected successful parse)");
+			}
+		} elsif ($is_neg_trig) {
 			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
 			my $ok	= $@ ? 1 : 0;
 			$self->record_result('syntax', $ok, $test->as_string);
