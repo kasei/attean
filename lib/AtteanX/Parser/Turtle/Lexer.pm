@@ -155,6 +155,9 @@ Returns the next token present in the input.
 				} elsif ($self->buffer =~ /^PREFIX(?!:)\b/io) {
 					$self->read_length(6);
 					return $self->new_token(PREFIX, $start_line, $start_column);
+				} elsif ($self->buffer =~ /^VERSION(?!:)\b/io) {
+					$self->read_length(7);
+					return $self->new_token(VERSION, $start_line, $start_column);
 				} elsif ($self->buffer =~ /^GRAPH(?!:)\b/io) {
 					$self->read_length(5);
 					return $self->new_token(GRAPH, $start_line, $start_column);
@@ -480,6 +483,9 @@ Returns the next token present in the input.
 		} elsif ($self->buffer =~ /^prefix/o) {
 			$self->read_word('prefix');
 			return $self->new_token(TURTLEPREFIX, $self->start_line, $self->start_column);
+		} elsif ($self->buffer =~ /^version/o) {
+			$self->read_word('version');
+			return $self->new_token(TURTLEVERSION, $self->start_line, $self->start_column);
 		} else {
 			if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*(--[a-zA-Z]+)?\b/o) {
 				my $lang	= $self->read_length($+[0]);

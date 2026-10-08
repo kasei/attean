@@ -56,6 +56,7 @@ package AtteanX::Parser::Turtle::Constants 0.039 {
 			STRING3S
 			TURTLEBASE
 			TURTLEPREFIX
+			TURTLEVERSION
 			GTGT
 			PGTGT
 			LTLT
@@ -63,6 +64,7 @@ package AtteanX::Parser::Turtle::Constants 0.039 {
 			LANNOT
 			RANNOT
 			TILDE
+			VERSION
 			WS
 			decrypt_constant
 		)

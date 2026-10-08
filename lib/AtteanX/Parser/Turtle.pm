@@ -83,6 +83,7 @@ package AtteanX::Parser::Turtle 0.039 {
 
 	sub file_extensions { return [qw(ttl)] }
 
+	has 'version'		=> (is => 'rw', isa => Str, default => '');
 	has 'canonicalize'	=> (is => 'rw', isa => Bool, default => 0);
 	has '_map' => (is => 'ro', isa => HashRef[Str], default => sub { +{} });
 
@@ -142,7 +143,7 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 	sub parse_cb_from_bytes {
 		my $self	= shift;
 		my $data	= shift;
-	
+
 		open(my $fh, '<:encoding(UTF-8)', \$data);
 		my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
 		$self->_parse($l);
@@ -180,8 +181,10 @@ serialization is found at the beginning of C<< $bytes >>.
 	sub _parse {
 		my $self	= shift;
 		my $l		= shift;
+		$self->version(''); # reset the version for a new parse
 		$l->check_for_bom;
 		$self->_turtleDoc($l);
+		$self->version(''); # clear any version specifier found during parsing
 	}
 	
 	################################################################################
@@ -296,6 +299,21 @@ serialization is found at the beginning of C<< $bytes >>.
 	# 			}
 			}
 			$self->base($iri);
+		}
+		elsif ($type == TURTLEVERSION or $type == VERSION) {
+			my $vt	= $self->_peek_nonws($l);
+			unless ($vt->type == STRING1D or $vt->type == STRING1S) {
+				$self->_throw_error("Unexpected version specifier: " . decrypt_constant($type), $vt, $l);
+			}
+			$self->_next_nonws($l);
+			if ($type == TURTLEVERSION) {
+				$t	= $self->_get_token_type($l, DOT);
+	# 			$t	= $self->_next_nonws($l);
+	# 			if ($t and $t->type != DOT) {
+	# 				$self->_unget_token($t);
+	# 			}
+			}
+			$self->version($vt->value);
 		}
 		else {
 			$self->_triples( $l, $t );
@@ -554,21 +572,32 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $obj		= shift;
 		my $t		= $self->_peek_nonws($l);
 		my $reif;
+		my $triple	= Attean::Triple->new($subj, $pred, $obj);
+		my $need_to_assert_reification	= 0;
 		while ($t->type == TILDE or $t->type == LANNOT) {
 			if (not defined($reif)) {
 				$reif	= Attean::Blank->new();
 			}
 			if ($t->type == TILDE) {
+				if ($need_to_assert_reification) {
+					# there was a declared reifier, but it didn't have any annotations
+					$self->_assert_triple($reif, Attean::IRI->new(value => "${RDF}reifies", lazy => 1), $triple);
+				}
 				$reif	= $self->_reifier($l);
+				$need_to_assert_reification	= 1;
 			} elsif ($t->type == LANNOT) {
 				$self->_get_token_type($l, LANNOT);
-				my $triple	= Attean::Triple->new($subj, $pred, $obj);
 				$self->_assert_triple($reif, Attean::IRI->new(value => "${RDF}reifies", lazy => 1), $triple);
+				$reif	= undef; # we've now already handled the reification triple
 				$self->_predicateObjectList( $l, $reif );
 				$self->_get_token_type($l, RANNOT);
-				$reif	= undef;
+				$need_to_assert_reification	= 0;
 			}
 			$t	= $self->_peek_nonws($l);
+		}
+		if ($need_to_assert_reification) {
+			# there was a declared reifier, but it didn't have any annotations
+			$self->_assert_triple($reif, Attean::IRI->new(value => "${RDF}reifies", lazy => 1), $triple);
 		}
 	}
 
