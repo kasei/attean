@@ -23,6 +23,7 @@ use List::Util qw(all);
 use Test::Modern;
 use Test::Roo::Role;
 use Text::CSV;
+use Text::Table;
 use Try::Tiny;
 use URI::file;
 use File::Spec;
@@ -167,8 +168,8 @@ sub sparql_syntax_test {
 		my $q			= $sparql;
 		$q				=~ s/\s+/ /g;
 		warn "### test     : " . $test->as_string . "\n";
-		warn "# file       : $filename\n";
 		warn "# sparql     : $q\n";
+		warn "# file       : $filename\n";
 	}
 	
 	my $pclass	= Attean->get_parser('SPARQL');
@@ -346,6 +347,7 @@ sub data_syntax_eval_test {
 		}
 	}
 
+	my $test_uri	= $uri->as_string;
 	my $test_base	= $uri->as_string;
 	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
 	warn "Test base: " . $test_base . "\n" if ($self->debug);
@@ -355,7 +357,7 @@ sub data_syntax_eval_test {
 	my $nq_parser	= Attean->get_parser('NQuads')->new();
 	SKIP: {
 		if ($is_pos_triples or $is_eval_triples) {
-			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
+			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
 			my $parse_error	= $@;
 			if ($is_eval) {
 				my $ser			= Attean->get_serializer('NTriples')->new();
@@ -366,10 +368,11 @@ sub data_syntax_eval_test {
 				}
 				my $expected_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
 
-				my $test	= Attean::BindingEqualityTest->new();
+				my $eq_test	= Attean::BindingEqualityTest->new();
 				my $actual_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
-				my $ok		= $test->equals($actual_iter, $expected_iter);
+				my $ok		= $eq_test->equals($actual_iter, $expected_iter);
 				ok($ok, "$testname - $filename");
+				$self->record_result('evaluation', $ok, $test->as_string);
 				if (not $ok) {
 					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
 					if (scalar(@nt_triples)) {
@@ -590,6 +593,7 @@ sub update_eval_test {
 	if ($self->debug) {
 		warn "### test     : " . $test->value . "\n";
 		warn "# sparql     : $q\n";
+		warn "# file       : $filename\n";
 		foreach my $data (@data) {
 			warn "# data       : " . $data->value . "\n" if (blessed($data));
 		}
@@ -610,6 +614,7 @@ sub update_eval_test {
 		};
 		if ($@) {
 			fail($test->value);
+			$self->record_result('update', 0, $test->value);
 			print "# died: " . $test->value . ": $@\n";
 			return;
 		}
@@ -623,6 +628,7 @@ sub update_eval_test {
 		};
 		if ($@) {
 			fail($test->as_string);
+			$self->record_result('update', 0, $test->value);
 			print "# died: " . $test->value . ": $@\n";
 			return;
 		};
@@ -639,6 +645,7 @@ sub update_eval_test {
 	};
 	if ($@) {
 		fail($test->as_string);
+		$self->record_result('update', 0, $test->value);
 		print "# died: " . $test->value . ": $@\n";
 		return;
 	};
@@ -653,6 +660,7 @@ sub update_eval_test {
 			};
 			if ($@) {
 				fail($test->as_string);
+				$self->record_result('update', 0, $test->value);
 				print "# died: " . $test->value . ": $@\n";
 				$return	= 1;
 			};
@@ -720,6 +728,7 @@ sub update_eval_test {
 		print "# failed: " . $test->value . "\n";
 	}
 
+	$self->record_result('update', $ok, $test->value);
 	warn "ok\n" if ($self->debug);
 }
 
@@ -753,7 +762,9 @@ sub construct_data {
 	}
 	foreach my $g (@gdata) {
 		my $start = $test_model->size;
-		$test_model->load_urls_into_graph($g, $g);
+		my $file_url	= $g->value;
+		$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+		$test_model->load_urls_into_graph(iri($file_url), $g);
 		my $end	= $test_model->size;
 		unless ($start < $end) {
 			warn "*** Loading file did not result in any new quads: " . $g;
@@ -774,7 +785,10 @@ sub construct_data {
 		warn $q;
 	}
 	
-	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata, %args );
+	my $test_base	= $base;
+	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+
+	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
 	my $sclass				= Attean->get_serializer(media_type => $format);
 	my $s					= $sclass->new();
 	my $bytes				= $s->serialize_iter_to_bytes($iter);
@@ -813,7 +827,11 @@ sub query_eval_test {
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($self->debug);
+	warn "Loading SPARQL query from file $filename\n" if ($self->debug);
+
+	my $test_base	= $base;
+	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+
 	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->value); return }; binmode($fh, ':utf8'); <$fh> };
 	
 	my $q			= $sparql;
@@ -821,6 +839,7 @@ sub query_eval_test {
 	if ($self->debug) {
 		warn "### test           : " . $test->value . "\n";
 		warn "# sparql           : $q\n";
+		warn "# file             : $filename\n";
 		foreach my $data (@data) {
 			warn "# data             : " . ($data->value =~ s#file://##r) . "\n" if (blessed($data));
 		}
@@ -835,13 +854,17 @@ sub query_eval_test {
 	my $next_stress	= 0;
 	try {
 		foreach my $data (@data) {
+			my $file_url	= $data->value;
+			$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
 			if (blessed($data)) {
-				$test_model->load_urls_into_graph($self->default_graph, $data);
+				$test_model->load_urls_into_graph_with_base($self->default_graph, [$data], $file_url);
 			}
 		}
 		foreach my $g (@gdata) {
 			my $start = $test_model->size;
-			$test_model->load_urls_into_graph($g, $g);
+			my $file_url	= $g->value;
+			$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+			$test_model->load_urls_into_graph_with_base(iri($file_url), [$g], $file_url);
 			my $end	= $test_model->size;
 			unless ($start < $end) {
 				warn "*** Loading file did not result in any new quads: " . $g;
@@ -879,7 +902,7 @@ sub query_eval_test {
 			{
 				local($::DEBUG)	= 1;
 				print STDERR "getting actual results... " if ($self->debug);
-				($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata, %args );
+				($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
 				print STDERR "ok\n" if ($self->debug);
 			}
 		
@@ -944,7 +967,7 @@ sub get_actual_results {
 	my $sdata			= shift;
 	my %args			= @_;
 	my $specVersion	= $args{'specVersion'} // '1.1';
-	
+
 	my $bytes	= encode_utf8($sparql);
 
 	my $s 			= AtteanX::Parser::SPARQL->new(base => $base, version => $specVersion);
@@ -968,9 +991,9 @@ sub get_actual_results {
 	if ($self->debug) {
 		my $iter	= $model->get_quads;
 		warn "Dataset:\n-------------\n";
-		while (my $q = $iter->next) {
-			say $q->as_string;
-		}
+		my $s		= Attean->get_serializer('TextTable')->new();
+		my $table	= decode_utf8($s->serialize_iter_to_bytes($iter));
+		warn $table;
 		warn "-------------\n";
 	}
 	
