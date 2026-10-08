@@ -330,6 +330,7 @@ sub data_syntax_eval_test {
 				my $ok		= $test->equals($ttl_iter, $nt_iter);
 				ok($ok, "$testname - $filename");
 				if (not $ok) {
+					warn "BindingEqualityTest failures: " . $test->error();
 					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
 					if (scalar(@nt_triples)) {
 						warn $ser->serialize_list_to_bytes(@nt_triples);
