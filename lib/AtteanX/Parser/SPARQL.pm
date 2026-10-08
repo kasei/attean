@@ -94,6 +94,7 @@ use Scalar::Util qw(blessed looks_like_number reftype refaddr);
 
 use Moo;
 
+has 'version'		=> (is => 'rw', isa => Str, default => '1.1');
 has 'lexer' 		=> (is => 'rw', isa => InstanceOf['AtteanX::Parser::SPARQLLex::Iterator']);
 has 'args'			=> (is => 'ro', isa => HashRef);
 has 'build'			=> (is => 'rw', isa => HashRef);
@@ -126,7 +127,12 @@ sub BUILDARGS {
 	my $class	= shift;
 	my %args	= @_;
 	my $ns		= delete $args{namespaces} // 	URI::NamespaceMap->new();
-	my %a		= (args => \%args, namespaces => $ns);
+	my $version	= delete $args{version};
+	my %passthru	= (namespaces => $ns);
+	if (defined($version)) {
+		$passthru{ version }	= $version;
+	}
+	my %a		= (args => \%args, , %passthru);
 	if (my $handler	= delete $args{handler}) {
 		$a{handler}	= $handler;
 	}
@@ -177,7 +183,7 @@ sub parse_update {
 
 sub parse_list_from_io {
 	my $self	= shift;
-	my $p 		= AtteanX::Parser::SPARQLLex->new();
+	my $p 		= AtteanX::Parser::SPARQLLex->new(version => $self->version);
 	my $l		= $self->_configure_lexer( $p->parse_iter_from_io(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
@@ -194,7 +200,7 @@ sub parse_list_from_io {
 
 sub parse_list_from_bytes {
 	my $self	= shift;
-	my $p 		= AtteanX::Parser::SPARQLLex->new();
+	my $p 		= AtteanX::Parser::SPARQLLex->new(version => $self->version);
 	my $l		= $self->_configure_lexer( $p->parse_iter_from_bytes(@_) );
 	$self->lexer($l);
 	$self->baseURI($self->{args}{base});
@@ -215,7 +221,7 @@ either upon seeing a DOT, or reaching the end of the string.
 
 sub parse_nodes {
 	my $self	= shift;
-	my $p 		= AtteanX::Parser::SPARQLLex->new();
+	my $p 		= AtteanX::Parser::SPARQLLex->new(version => $self->version);
 	my $bytes	= shift;
 	my %args	= @_;
 	my $commas	= $args{'commas'} || 0;
@@ -3453,13 +3459,49 @@ sub _String {
 # 		croak "Expecting string literal but found $got '$value'";
 	}
 
-	$value	=~ s/\\t/\t/g;
-	$value	=~ s/\\b/\n/g;
-	$value	=~ s/\\n/\n/g;
-	$value	=~ s/\\r/\x08/g;
-	$value	=~ s/\\"/"/g;
-	$value	=~ s/\\'/'/g;
-	$value	=~ s/\\\\/\\/g;	# backslash must come last, so it doesn't accidentally create a new escape
+	if ($self->version ge '1.2') {
+		$value		=~ s{\\(?:(?:u([0-9A-Fa-f]{4}))|(?:U([0-9A-Fa-f]{8}))|([tbnr"'\\]))}{
+			use Data::Dumper;
+			my $unescaped	= '';
+			if (defined($3)) {
+				if ($3 eq 't') {
+					$unescaped = "\t";
+				} elsif ($3 eq 'b') {
+					$unescaped = "\b";
+				} elsif ($3 eq 'n') {
+					$unescaped = "\n";
+				} elsif ($3 eq 'r') {
+					$unescaped = "\r";
+				} elsif ($3 eq '"') {
+					$unescaped = "\"";
+				} elsif ($3 eq "'") {
+					$unescaped = "'";
+				} elsif ($3 eq '\\') {
+					$unescaped = "\\";
+				} else {
+					die "Unhandled escape character $3"
+				}
+			} else {
+				no warnings 'uninitialized';
+				my $h			= $1 . $2;
+				my $codepoint	= hex($h);
+				if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+					die "Unicode surrogate U+$h is illegal in UTF-8";
+				}
+				$unescaped = chr($codepoint);
+			}
+			$unescaped;
+		}ge;
+	} else {
+		$value	=~ s/\\t/\t/g;
+		$value	=~ s/\\b/\n/g;
+		$value	=~ s/\\n/\n/g;
+		$value	=~ s/\\r/\x08/g;
+		$value	=~ s/\\"/"/g;
+		$value	=~ s/\\'/'/g;
+		$value	=~ s/\\\\/\\/g;	# backslash must come last, so it doesn't accidentally create a new escape
+	}
+	
 	return $value;
 }
 

@@ -45,6 +45,7 @@ my $update			= 0;
 my $simple_eval		= 0;
 my $out_format		= '';
 my $short			= 0;
+my $version			= '1.2';
 my $result			= GetOptions(
 	"verbose"	=> \$verbose,
 	"debug"		=> \$debug,
@@ -58,6 +59,7 @@ my $result			= GetOptions(
 	'c'			=> \$check_syntax,
 	'short'		=> \$short,
 	'output=s'	=> \$out_format,
+	'specVersion=s'	=> \$version,
 );
 
 my $qfile	= shift;
@@ -89,7 +91,7 @@ try {
 
 	warn "Parsing query...\n" if ($verbose);
 	my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
-	my $s 		= Attean->get_parser('SPARQL')->new(base => $base, namespaces => $map);
+	my $s 		= Attean->get_parser('SPARQL')->new(base => $base, namespaces => $map, version => $version);
 	if ($update) {
 		$s->update(1);
 	}
