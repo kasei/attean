@@ -37,6 +37,7 @@ package AtteanX::Parser::NTuples 0.039 {
 	use utf8;
 	use Moo;
 	use Attean;
+	use Data::Dumper;
 	use Carp qw(carp);
 	use Encode qw(decode);
 	use Types::Standard qw(Bool HashRef ArrayRef HashRef Str Maybe InstanceOf ConsumerOf);
@@ -71,7 +72,8 @@ Parses the given C<< $bytes >> and returns a corresponding L<Attean::API::Term> 
 		unless (ref($self)) {
 			$self	= $self->new();
 		}
-		my $string	= shift;
+		my $bytes	= shift;
+		my $string	= Encode::decode("utf-8", $bytes);
 		my $n = $self->_eat_node( 0, $string );
 		return $n;
 	}
@@ -87,7 +89,6 @@ the data read from the UTF-8 encoded byte string C<< $data >>.
 		my $self	= shift;
 		my $data	= shift;
 	
-		$data	= Encode::encode("utf-8", $data);
 		open(my $fh, '<:encoding(UTF-8)', \$data);
 		return $self->parse_iter_from_io($fh);
 	}
@@ -161,7 +162,7 @@ LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 		return unless length($_[0]);
 		my $char	= substr($_[0], 0, 1);
 		return if ($char eq '.');
-	
+
 		if ($char eq '<') {
 			if ($_[0] =~ m{^<<\(}) {
 				substr($_[0], 0, 3, '');
