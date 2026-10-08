@@ -335,7 +335,7 @@ solutions, the solution returned is arbitrary.
 		
 			my %bb	= %bb_master;
 			foreach my $st (@$ba) {
-				my $mapped_st	= $st->apply_map($mapper)->as_string;
+				my $mapped_st	= $st->apply_map($mapper)->apply_map($canon_map)->as_string;
 # 				warn ">>>>>>>\n";
 # 				warn "-> " . $st->as_string . "\n";
 # 				warn "-> " . $mapped_st . "\n";
