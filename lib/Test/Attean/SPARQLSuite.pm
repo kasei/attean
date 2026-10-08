@@ -120,7 +120,17 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 	my $model		= $self->model;
 	foreach my $m (@manifests) {
 # 		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
-		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
+		my $specVersion	= '1.1';
+		my ($sv)	= $model->objects( $m, iri("${MF}specVersion") )->elements;
+		if ($sv) {
+			my $v	= $sv->value;
+			if ($v =~ m<http://www.w3.org/ns/sparql#version-(.*)>) {
+				$specVersion	= $1;
+			} else {
+				warn "*** Unexpected specVersion $v\n";
+			}
+		}
+		my ($list)		= $model->objects( $m, iri("${MF}entries") )->elements;
 		unless (blessed($list)) {
 			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
 		}
@@ -140,7 +150,7 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 					if ($et + $ct) {
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->query_eval_test( $model, $test );
+						$self->query_eval_test( $model, $test, specVersion => $specVersion );
 					}
 				}
 				

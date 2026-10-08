@@ -724,9 +724,12 @@ sub update_eval_test {
 }
 
 sub construct_data {
-	my $self	= shift;
-	my $model	= shift;
-	my $action	= shift;
+	my $self		= shift;
+	my $model		= shift;
+	my $action		= shift;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
 	my ($queryd)	= $model->objects( $action, iri("${RQ}query") )->elements;
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
@@ -757,7 +760,7 @@ sub construct_data {
 		}
 	}
 	foreach my $n (@cdata) {
-		my ($bytes, $format)	= $self->construct_data($model, $n);
+		my ($bytes, $format)	= $self->construct_data($model, $n, %args);
 		my $p					= Attean->get_parser(media_type => $format)->new();
 		my $iter				= $p->parse_iter_from_bytes($bytes);
 		$test_model->add_iter($iter->as_quads($self->default_graph));
@@ -771,7 +774,7 @@ sub construct_data {
 		warn $q;
 	}
 	
-	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata );
+	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata, %args );
 	my $sclass				= Attean->get_serializer(media_type => $format);
 	my $s					= $sclass->new();
 	my $bytes				= $s->serialize_iter_to_bytes($iter);
@@ -782,7 +785,8 @@ sub query_eval_test {
 	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift // 1;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
 	
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
@@ -826,78 +830,76 @@ sub query_eval_test {
 		warn "# requires         : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
 	}
 	
-STRESS:	foreach (1 .. $count) {
-		print STDERR "constructing model... " if ($self->debug);
-		my $test_model	= $self->test_model();
-		my $next_stress	= 0;
-		try {
-			foreach my $data (@data) {
-				if (blessed($data)) {
-					$test_model->load_urls_into_graph($self->default_graph, $data);
-				}
+	print STDERR "constructing model... " if ($self->debug);
+	my $test_model	= $self->test_model();
+	my $next_stress	= 0;
+	try {
+		foreach my $data (@data) {
+			if (blessed($data)) {
+				$test_model->load_urls_into_graph($self->default_graph, $data);
 			}
-			foreach my $g (@gdata) {
-				my $start = $test_model->size;
-				$test_model->load_urls_into_graph($g, $g);
-				my $end	= $test_model->size;
-				unless ($start < $end) {
-					warn "*** Loading file did not result in any new quads: " . $g;
-				}
+		}
+		foreach my $g (@gdata) {
+			my $start = $test_model->size;
+			$test_model->load_urls_into_graph($g, $g);
+			my $end	= $test_model->size;
+			unless ($start < $end) {
+				warn "*** Loading file did not result in any new quads: " . $g;
 			}
-			foreach my $n (@cdata) {
-				my ($bytes, $format)	= $self->construct_data($model, $n);
-				my $p					= Attean->get_parser(media_type => $format)->new();
-				my $iter				= $p->parse_iter_from_bytes($bytes);
-				$test_model->add_iter($iter->as_quads($self->default_graph));
+		}
+		foreach my $n (@cdata) {
+			my ($bytes, $format)	= $self->construct_data($model, $n, %args);
+			my $p					= Attean->get_parser(media_type => $format)->new();
+			my $iter				= $p->parse_iter_from_bytes($bytes);
+			$test_model->add_iter($iter->as_quads($self->default_graph));
+		}
+	} catch {
+		fail($test->value);
+		$self->record_result('evaluation', 0, $test->value);
+		print "# died: " . $test->value . ": $_\n";
+		$next_stress++;
+	};
+	next STRESS if $next_stress;
+	print STDERR "ok\n" if ($self->debug);
+
+	my $resuri		= URI->new( $result->value );
+	my $resfilename	= $resuri->file;
+
+	TODO: {
+		local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
+		my $comment;
+		eval {
+			if ($self->debug) {
+				my $q	= $sparql;
+				$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
+				warn $q;
 			}
-		} catch {
+			
+			my ($actual, $type);
+			{
+				local($::DEBUG)	= 1;
+				print STDERR "getting actual results... " if ($self->debug);
+				($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata, %args );
+				print STDERR "ok\n" if ($self->debug);
+			}
+		
+			print STDERR "getting expected results... " if ($self->debug);
+			my $expected	= $self->get_expected_results( $resfilename, $type );
+			print STDERR "ok\n" if ($self->debug);
+		
+		#	warn "comparing results...";
+			$self->compare_results( $expected, $actual, $test->value, \$comment );
+		};
+		
+		my $ok	= not($@);
+		unless ($ok) {
+			warn $@;
 			fail($test->value);
 			$self->record_result('evaluation', 0, $test->value);
-			print "# died: " . $test->value . ": $_\n";
-			$next_stress++;
 		};
-		next STRESS if $next_stress;
-		print STDERR "ok\n" if ($self->debug);
-
-		my $resuri		= URI->new( $result->value );
-		my $resfilename	= $resuri->file;
-	
-		TODO: {
-			local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
-			my $comment;
-			eval {
-				if ($self->debug) {
-					my $q	= $sparql;
-					$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
-					warn $q;
-				}
-				
-				my ($actual, $type);
-				{
-					local($::DEBUG)	= 1;
-					print STDERR "getting actual results... " if ($self->debug);
-					($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata );
-					print STDERR "ok\n" if ($self->debug);
-				}
-			
-				print STDERR "getting expected results... " if ($self->debug);
-				my $expected	= $self->get_expected_results( $resfilename, $type );
-				print STDERR "ok\n" if ($self->debug);
-			
-			#	warn "comparing results...";
-				$self->compare_results( $expected, $actual, $test->value, \$comment );
-			};
-			
-			my $ok	= not($@);
-			unless ($ok) {
-				warn $@;
-				fail($test->value);
-				$self->record_result('evaluation', 0, $test->value);
-			};
-			if ($ok) {
-			} else {
-				print "# failed: " . $test->value . "\n";
-			}
+		if ($ok) {
+		} else {
+			print "# failed: " . $test->value . "\n";
 		}
 	}
 }
@@ -940,10 +942,12 @@ sub get_actual_results {
 	my $base			= shift;
 	my $manifest_model	= shift;
 	my $sdata			= shift;
+	my %args			= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
 	
 	my $bytes	= encode_utf8($sparql);
 
-	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
+	my $s 			= AtteanX::Parser::SPARQL->new(base => $base, version => $specVersion);
 	my $algebra;
 	eval {
 		($algebra)	= $s->parse_list_from_bytes($bytes);
