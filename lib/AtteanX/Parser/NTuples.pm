@@ -106,8 +106,9 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 		my $lineno	= 0;
 		my $line;
 		my $gen		= sub {
+			my $version;
 			while (defined($line = <$fh>)) {
-				($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
+LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 				$lineno++;
 		
 				next unless (defined($line) and length($line));
@@ -116,7 +117,17 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				$line	=~ s/^\s*//;
 				$line	=~ s/\s*$//;
 				next if ($line =~ /^#/);
-		
+				
+				if ($line =~ /^VERSION\b/) {
+					$line	=~ s/^VERSION\s*//;
+					my $n = $self->_eat_node( $lineno, $line );
+					die "Unexpected term following VERSION at line $lineno" unless ($n->does('Attean::API::Literal'));
+					die "Unexpected language-tagged literal following VERSION at line $lineno" if ($n->has_language);
+					die "Unexpected datatyped literal following VERSION at line $lineno" unless ($n->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string');
+					$version	= $n->value;
+					next;
+				}
+
 				my @nodes	= ();
 				while (my $n = $self->_eat_node( $lineno, $line )) {
 					push(@nodes, $n);
@@ -128,6 +139,7 @@ the data read from the L<IO::Handle> object C<< $fh >>.
 				}
 		
 				my $binding	= $self->_binding( \@nodes, $lineno );
+				
 				if (@extra and $extra[0] ne '') {
 					$line	= shift(@extra);
 					goto LINE;
