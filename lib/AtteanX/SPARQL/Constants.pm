@@ -29,7 +29,6 @@ package AtteanX::SPARQL::Constants 0.039 {
 	BEGIN {
 		@LOCAL_TYPES	= qw(
 			ANDAND
-			ANON
 			BANG
 			GE
 			GT

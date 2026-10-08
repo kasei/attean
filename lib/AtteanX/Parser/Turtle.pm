@@ -362,7 +362,7 @@ serialization is found at the beginning of C<< $bytes >>.
 				}
 				$self->_assert_list($subj, @objects);
 			}
-		} elsif (not($type==IRI or $type==PREFIXNAME or $type==BNODE)) {
+		} elsif (not($type==IRI or $type==PREFIXNAME or $type==BNODE or $type==ANON)) {
 			$self->_throw_error("Expecting resource or bnode but got " . decrypt_constant($type), $t, $l);
 		} else {
 			$subj	= $self->_token_to_node($t);
@@ -384,7 +384,7 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $type	= $t->type;
 		my $subj;
 		my $bnode_plist	= 0;
-		if (not($type==IRI or $type==PREFIXNAME or $type==BNODE)) {
+		if (not($type==IRI or $type==PREFIXNAME or $type==BNODE or $type==ANON)) {
 			$self->_throw_error("Expecting resource or bnode but got " . decrypt_constant($type), $t, $l);
 		} else {
 			$subj	= $self->_token_to_node($t);
@@ -484,7 +484,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			$self->_next_nonws($l);
 			my $t		= $self->_peek_nonws($l);
 			my $type	= $t->type;
-			if ($type==IRI or $type==PREFIXNAME or $type==BNODE) {
+			if ($type==IRI or $type==PREFIXNAME or $type==BNODE or $type==ANON) {
 				$self->_get_token_type($l, $type);
 				return $self->_token_to_node($t);
 			}
@@ -513,6 +513,11 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $t		= $self->_next_nonws($l);
 		while (1) {
 			my $type = $t->type;
+			if ($type==RBRACE) {
+				# needed for TriG parsing which shares this codepath
+				$self->_unget_token($t);
+				return;
+			}
 			unless ($type==IRI or $type==PREFIXNAME or $type==A) {
 				$self->_throw_error("Expecting verb but got " . decrypt_constant($type), $t, $l);
 			}
@@ -644,7 +649,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			$args{language}	= $lang if (defined($lang));
 			$args{datatype}	= $dt if (defined($dt));
 			$obj	= $self->new_literal(%args);
-		} elsif ($type==IRI or $type==PREFIXNAME or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN) {
+		} elsif ($type==IRI or $type==PREFIXNAME or $type==BNODE or $type==ANON or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN) {
 			$obj	= $self->_token_to_node($t, $type);
 		} elsif ($type==LTLTP) {
 			$obj	= $self->_tripleTerm($l);
@@ -697,7 +702,7 @@ serialization is found at the beginning of C<< $bytes >>.
 				}
 				$self->_assert_list($obj, @objects);
 			}
-		} elsif (not($type==IRI or $type==PREFIXNAME or $type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S or $type==BNODE or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN)) {
+		} elsif (not($type==IRI or $type==PREFIXNAME or $type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S or $type==BNODE or $type==ANON or $type==INTEGER or $type==DECIMAL or $type==DOUBLE or $type==BOOLEAN)) {
 			$self->_throw_error("Expecting object but got " . decrypt_constant($type), $t, $l);
 		} else {
 			if ($type==STRING1D or $type==STRING3D or $type==STRING1S or $type==STRING3S) {
@@ -787,6 +792,9 @@ serialization is found at the beginning of C<< $bytes >>.
 			$self->blank_nodes->{$t->value}	= $b;
 			return $b;
 		}
+		elsif ($type eq ANON) {
+			return Attean::Blank->new();
+		}
 		elsif ($type eq STRING1D) {
 			return $self->new_literal($t->value);
 		}
@@ -794,7 +802,7 @@ serialization is found at the beginning of C<< $bytes >>.
 			return $self->new_literal($t->value);
 		}
 		else {
-			$self->_throw_error("Converting $type to node not implemented", $t);
+			$self->_throw_error(sprintf("Converting %s to node not implemented", decrypt_constant($type)), $t);
 		}
 	}
 

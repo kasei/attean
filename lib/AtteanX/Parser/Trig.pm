@@ -175,11 +175,11 @@ package AtteanX::Parser::Trig 0.039 {
 			$t		= $self->_next_nonws($l);
 			$type	= $t->type;
 			while ($type != RBRACE) {
-				$self->_triple($l, $t);
+				$self->_triples($l, $t);
 				$t		= $self->_next_nonws($l);
 				$type	= $t->type;
 				unless ($type == RBRACE or $type == DOT) {
-					carp "Expected DOT or closing brace";
+# 					carp "Expected DOT or closing brace";
 				}
 				if ($type == DOT) {
 					$t		= $self->_next_nonws($l);
@@ -187,7 +187,23 @@ package AtteanX::Parser::Trig 0.039 {
 				}
 			}
 		} else {
-			$self->_triple($l, $t);
+			$self->_triplesOrGraph($l, $t);
+		}
+	}
+	
+	sub _triplesOrGraph {
+		my $self	= shift;
+		my $l		= shift;
+		my $t		= shift;
+		my $next	= $self->_peek_nonws($l);
+
+		if ($next->type == LBRACE) {
+			my $graph	= $self->_token_to_node($t);
+			local($self->{graph})	= $graph;
+			$t	= $self->_get_token_type($l, LBRACE);
+			$self->_block($l, $t);
+		} else {
+			$self->_triples($l, $t);
 			$t	= $self->_get_token_type($l, DOT);
 		}
 	}
@@ -196,7 +212,7 @@ package AtteanX::Parser::Trig 0.039 {
 		my $self	= shift;
 		my $l		= shift;
 		my $t		= $self->_next_nonws($l);
-		if ($t->type == IRI or $t->type == PREFIXNAME or $t->type == BNODE) {
+		if ($t->type == IRI or $t->type == PREFIXNAME or $t->type == BNODE or $t->type == ANON) {
 			return $self->_token_to_node($t);
 		} else {
 			$self->_throw_error(sprintf("Expecting graph name but got %s", decrypt_constant($t->type)), $t, $l);
@@ -232,7 +248,7 @@ package AtteanX::Parser::Trig 0.039 {
 		if (defined($t->value)) {
 			$text	.= " (near '" . $t->value . "')";
 		}
-		Carp::cluck "TriG parser error";
+# 		Carp::cluck "TriG parser error: $text";
 		die $text;
 	}
 }
