@@ -226,6 +226,9 @@ LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 						} elsif ($1 eq '"') {
 							$value	.= '"';
 							substr($_[0],0,2)	= '';
+						} elsif ($1 eq "'") {
+							$value	.= "'";
+							substr($_[0],0,2)	= '';
 						} elsif ($1 eq '\\') {
 							$value	.= "\\";
 							substr($_[0],0,2)	= '';
