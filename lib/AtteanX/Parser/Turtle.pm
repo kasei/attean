@@ -407,12 +407,15 @@ serialization is found at the beginning of C<< $bytes >>.
 			#predicateObjectList?
 			$t	= $self->_next_nonws($l);
 			$self->_unget_token($t);
-			if ($t->type != DOT) {
+			unless ($t->type == DOT) {
 				$self->_predicateObjectList($l, $subj);
 			}
 		} else {
 			#predicateObjectList
-			$self->_predicateObjectList($l, $subj);
+			my $count	= $self->_predicateObjectList($l, $subj);
+			unless ($count) {
+				$self->_throw_error("Expecting predicate-object list, but found none", $t, $l);
+			}
 		}
 	}
 
@@ -511,19 +514,22 @@ serialization is found at the beginning of C<< $bytes >>.
 		my $l		= shift;
 		my $subj	= shift;
 		my $t		= $self->_next_nonws($l);
+		my $counter	= 0;
 		while (1) {
 			my $type = $t->type;
 			if ($type==RBRACE) {
 				# needed for TriG parsing which shares this codepath
 				$self->_unget_token($t);
-				return;
+				return $counter;
 			}
+			
 			unless ($type==IRI or $type==PREFIXNAME or $type==A) {
 				$self->_throw_error("Expecting verb but got " . decrypt_constant($type), $t, $l);
 			}
 			my $pred	= $self->_token_to_node($t);
 			$self->_objectList($l, $subj, $pred);
-		
+			$counter++;
+			
 			$t		= $self->_next_nonws($l);
 			last unless ($t);
 			if ($t->type == SEMICOLON) {
@@ -538,13 +544,14 @@ serialization is found at the beginning of C<< $bytes >>.
 					next;
 				} else {
 					$self->_unget_token($t);
-					return;
+					return $counter;
 				}
 			} else {
 				$self->_unget_token($t);
-				return;
+				return $counter;
 			}
 		}
+		return $counter;
 	}
 
 	sub _objectList {
