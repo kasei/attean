@@ -600,9 +600,9 @@ serialization is found at the beginning of C<< $bytes >>.
 			} elsif ($t->type == LANNOT) {
 				$self->_get_token_type($l, LANNOT);
 				$self->_assert_triple($reif, Attean::IRI->new(value => "${RDF}reifies", lazy => 1), $triple);
-				$reif	= undef; # we've now already handled the reification triple
 				$self->_predicateObjectList( $l, $reif );
 				$self->_get_token_type($l, RANNOT);
+				$reif	= undef; # we've now already handled the reification triple
 				$need_to_assert_reification	= 0;
 			}
 			$t	= $self->_peek_nonws($l);
