@@ -19,8 +19,10 @@ use namespace::clean;
 with 'Test::Attean::SPARQLSuite';
 
 sub BUILD {
-	my $self	= shift;
-	my $path	= File::Spec->catfile( $Bin, 'data', 'sparql', 'sparql11' );
+	my $self		= shift;
+	my $env_path	= $ENV{'W3C_RDF_TESTS_PATH'};
+	my $base		= (defined($env_path) and -d $env_path) ? $env_path : File::Spec->catfile( $Bin, 'data', 'rdf-tests' );
+	my $path		= File::Spec->catfile( $base, 'sparql', 'sparql11' );
 	$self->tests_dir($path);
 }
 
