@@ -337,6 +337,19 @@ package Attean::API::Literal 0.039 {
 		my $base_dir	= $self->base_dir;
 		return (defined($base_dir) and length($base_dir) > 0);
 	}
+
+	sub lang_dir {
+		my $self	= shift;
+		my $lang_key	= '';
+		if (my $l = $self->language) {
+			$lang_key	= $l;
+			if (my $d = $self->base_dir) {
+				$lang_key	.= '--' . $d;
+			}
+		}
+		return $lang_key;
+	}
+
 }
 
 package Attean::API::DateTimeLiteral 0.039 {

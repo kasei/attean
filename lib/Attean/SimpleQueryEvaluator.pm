@@ -962,35 +962,32 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 					} elsif ($func eq 'ROUND') {
 						return Attean::Literal->new( value => sprintf('%.0f', (0.000000000000001 + $operands[0]->numeric_value)), $operands[0]->construct_args );
 					} elsif ($func eq 'CONCAT') {
-						my $all_lang	= 1;
-						my $all_str		= 1;
 						my $lang;
+						my $base_dir;
 						if (scalar(@operands) == 0) {
 							return Attean::Literal->new(value => '');
 						}
+						my $lang_key	= $operands[0]->lang_dir();
 						foreach my $n (@operands) {
 							die "CONCAT called with a non-literal argument" unless ($n->does('Attean::API::Literal'));
 							if ($n->language) {
-								$all_str	= 0;
-								if (defined($lang) and $lang ne $n->language) {
-									$all_lang	= 0;
-								} else {
-									$lang	= $n->language;
-								}
 							} elsif ($n->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string') {
 								die "CONCAT called with a datatyped-literal other than xsd:string";
-							} else {
-								$all_lang	= 0;
-								$all_str	= 0;
+							}
+							my $new_lang_key	= $n->lang_dir();
+							if ($new_lang_key ne $lang_key) {
+								$lang_key	= '';
 							}
 						}
-						my %strtype;
-						if ($all_lang and $lang) {
-							$strtype{language}	= $lang;
-						} elsif ($all_str) {
-							$strtype{datatype}	= 'http://www.w3.org/2001/XMLSchema#string'
+						my %args;
+						if ($lang_key) {
+							my ($lang, $dir)	= split('--', $lang_key);
+							$args{language}		= $lang;
+							if ($dir) {
+								$args{base_dir}	= $dir;
+							}
 						}
-						return Attean::Literal->new( value => join('', map { $_->value } @operands), %strtype );
+						return Attean::Literal->new( value => join('', map { $_->value } @operands), %args );
 					} elsif ($func eq 'SUBSTR') {
 						my $str		= shift(@operands);
 						my @args	= map { $_->numeric_value } @operands;

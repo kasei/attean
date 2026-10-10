@@ -1074,38 +1074,20 @@ package Attean::Plan::Extend 0.039 {
 					}
 	# 				die "CONCAT called with terms that are not argument compatible" unless ($strings[0]->argument_compatible(@strings));
 					my %args;
-					if (my $l = $strings[0]->language) {
-						if (my $d = $strings[0]->base_dir) {
-							$args{base_dir}	= $d;
-						}
-						$args{language}	= $l;
-					} else {
-						my $dt	= $strings[0]->datatype;
-						if ($dt->value eq '') {
-							$args{datatype}	= 'http://www.w3.org/2001/XMLSchema#string';
-						}
-					}
+					my $lang_key	= $strings[0]->lang_dir();
 					foreach my $s (@strings) {
 						die unless ($s->does('Attean::API::Literal'));
 						die if ($s->datatype and not($s->datatype->value =~ m<http://www.w3.org/(1999/02/22-rdf-syntax-ns#(lang|dirLang)String|2001/XMLSchema#string)>));
-						if (my $l2 = $s->language) {
-							if (my $l1 = $args{language}) {
-								if ($l1 ne $l2) {
-									delete $args{language};
-									delete $args{base_dir};
-								}
-							}
-
-							if (my $d2 = $s->base_dir) {
-								if (my $d1 = $args{base_dir}) {
-									if ($d1 ne $d2) {
-										delete $args{base_dir};
-									}
-								}
-							}
-						} else {
-							delete $args{language};
-							delete $args{base_dir};
+						my $new_lang_key	= $s->lang_dir();
+						if ($new_lang_key ne $lang_key) {
+							$lang_key	= '';
+						}
+					}
+					if ($lang_key) {
+						my ($lang, $dir)	= split('--', $lang_key);
+						$args{language}		= $lang;
+						if ($dir) {
+							$args{base_dir}	= $dir;
 						}
 					}
 					my $c	= Attean::Literal->new(value => join('', map { $_->value } @strings), %args);
@@ -1213,10 +1195,10 @@ package Attean::Plan::Extend 0.039 {
 					return Attean::Literal->new(value => $substring, $term->construct_args);
 				} elsif ($func eq 'CONTAINS') {
 					my ($term, $pattern)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-					if ($term->has_language and $pattern->has_language) {
-						if ($term->literal_value_language ne $pattern->literal_value_language) {
-							die "CONTAINS called with literals of different languages";
-						}
+					my $t_key	= $term->lang_dir();
+					my $p_key	= $pattern->lang_dir();
+					if ($t_key ne $p_key and $p_key ne '') {
+						die "CONTAINS called with literals of different languages and/or base direction";
 					}
 					my ($string, $pat)	= map { $_->value } ($term, $pattern);
 					my $pos		= index($string, $pat);
@@ -1366,6 +1348,9 @@ package Attean::Plan::Extend 0.039 {
 					my $pos	= lc($func);
 					my $term	= $operands[0]->$pos();
 					return $term;
+				} elsif ($func eq 'TRIPLE') {
+					my ($s, $p, $o)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					return Attean::Triple->new($s, $p, $o);
 				} else {
 					warn "Expression evaluation unimplemented: " . $expr->as_string;
 					$self->log->warn("Expression evaluation unimplemented: " . $expr->as_string);
