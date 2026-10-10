@@ -2,6 +2,7 @@ use v5.14;
 use utf8;
 use Data::Dumper;
 use Test::Modern;
+use Test::Exception;
 use Type::Tiny::Role;
 use Attean::RDF;
 
@@ -18,8 +19,8 @@ ok(Attean::Literal->integer(1)->ebv, '1 EBV');
 ok(not(Attean::Literal->integer(0)->ebv), '0 EBV');
 ok(not(literal('')->ebv), '"" EBV');
 ok(literal('foo')->ebv, '"foo" EBV');
-ok(blank('foo')->ebv, '_:foo EBV');
-ok(iri('foo')->ebv, '<foo> EBV');
+dies_ok( sub { blank('foo')->ebv }, '_:foo EBV: TypeError');
+dies_ok(sub { iri('foo')->ebv }, '<foo> EBV');
 
 is(dtliteral('1', "${XSD}integer")->numeric_value, 1, 'integer numeric value');
 is(dtliteral('1.5', "${XSD}float")->numeric_value, 1.5, 'float numeric value');

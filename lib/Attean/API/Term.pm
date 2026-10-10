@@ -215,9 +215,19 @@ package Attean::API::Literal 0.039 {
 		my $value	= $self->value;
 		my $dt		= $self->datatype->value;
 		if ($dt eq 'http://www.w3.org/2001/XMLSchema#boolean') {
-			return ($value eq 'true' or $value eq '1');
-		} else {
+			if ($value eq 'true' or $value eq '1') {
+				return 1;
+			} elsif ($value eq 'false' or $value eq '0') {
+				return 0;
+			} else {
+				die "TypeError: EBV of an xsd:boolean with invalid lexical form";
+			}
+		} elsif ($dt eq 'http://www.w3.org/2001/XMLSchema#string') {
 			return (length($value) > 0);
+		} elsif ($self->language) {
+			die "TypeError: EBV of a language-tagged literal";
+		} else {
+			die "TypeError: EBV of a datatyped literal: $dt";
 		}
 	}
 	
@@ -664,7 +674,9 @@ package Attean::API::Blank 0.039 {
 
 	use Moo::Role;
 	
-	sub ebv { return 1; }
+	sub ebv {
+		die "TypeError: EBV of a blank";
+	 }
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI', 'Attean::API::BlankOrIRIOrTriple';
 ;
 	with 'Attean::API::SPARQLSerializable';
@@ -704,7 +716,9 @@ package Attean::API::IRI 0.039 {
 
 	use Moo::Role;
 	
-	sub ebv { return 1; }
+	sub ebv {
+		die "TypeError: EBV of a blank";
+	}
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI', 'Attean::API::BlankOrIRIOrTriple';
 	with 'Attean::API::SPARQLSerializable';
 	
