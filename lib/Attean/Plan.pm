@@ -2651,11 +2651,12 @@ package Attean::Plan::TripleTemplateToModelQuadMethod 0.039 {
 			my $iter	= $child->();
 			my @results;
 			while (my $t = $iter->next) {
+				my $bnode_mapper	= Attean::TermMap->uuid_blank_map; # used to create fresh bnodes in the pattern for each input row
 				if (scalar(@order)) {
 					push(@results, $t);
 				}
 				foreach my $p (@$pattern) {
-					my $q		= $p->apply_bindings($t);
+					my $q		= $p->apply_map($bnode_mapper)->apply_bindings($t);
 					my $quad	= $q->does('Attean::API::QuadPattern') ? $q : $q->as_quad_pattern($graph);
 					if ($quad->is_ground) {
 						# warn "# $method: " . $quad->as_string . "\n";
@@ -2668,8 +2669,9 @@ package Attean::Plan::TripleTemplateToModelQuadMethod 0.039 {
 			foreach my $method (@order) {
 				my $pattern	= $self->patterns->{ $method };
 				foreach my $t (@results) {
+					my $bnode_mapper	= Attean::TermMap->uuid_blank_map; # used to create fresh bnodes in the pattern for each input row
 					foreach my $p (@$pattern) {
-						my $q		= $p->apply_bindings($t);
+						my $q		= $p->apply_map($bnode_mapper)->apply_bindings($t);
 						my $quad	= $q->does('Attean::API::QuadPattern') ? $q : $q->as_quad_pattern($graph);
 						if ($quad->is_ground) {
 							# warn "# $method: " . $quad->as_string . "\n";

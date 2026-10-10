@@ -583,14 +583,12 @@ supplied C<< $active_graph >>.
 							($_->does('Attean::API::TriplePattern'))
 								? $_->as_triple
 								: $_
-						} $p->apply_map($mapper)->values;
+						} $p->apply_map($bnode_mapper)->apply_map($mapper)->values;
 						unless (all { $_->does('Attean::API::TermOrTriple') } @terms) {
 							next PATTERN;
 						}
-						
-						my $t	= Attean::Triple->new(@terms);
-						$t		= $t->apply_map($bnode_mapper);
-						push(@triples, $t);
+
+						push(@triples, Attean::Triple->new(@terms));
 					}
 					return @triples;
 				},
@@ -626,12 +624,23 @@ appended to C<< @new_vars >> as it is created.
 		my $q				= $t->as_quad_pattern($active_graph);
 		my @values;
 		foreach my $v ($q->values) {
-			if (not($self->ground_blanks) and $v->does('Attean::API::Blank')) {
-				unless (exists $blanks->{$v->value}) {
-					$blanks->{$v->value}	= Attean::Variable->new();
-					push(@$new_vars, $blanks->{$v->value}->value);
+			if (not($self->ground_blanks)) {
+				if ($v->does('Attean::API::Blank')) {
+					unless (exists $blanks->{$v->value}) {
+						$blanks->{$v->value}	= Attean::Variable->new();
+						push(@$new_vars, $blanks->{$v->value}->value);
+					}
+					push(@values, $blanks->{$v->value});
+				} elsif ($v->does('Attean::API::TriplePattern')) {
+					my $tt	= [$v];
+					# The replace_blanks_with_variables logic probably belongs somewhere more appropriate
+					# for shared use between the planner and this evaluator, but for now we just call into
+					# the planner.
+					my $changed	= Attean::QueryPlanner->replace_blanks_with_variables($blanks, $tt);
+					push(@values, $tt->[0]);
+				} else {
+					push(@values, $v);
 				}
-				push(@values, $blanks->{$v->value});
 			} else {
 				push(@values, $v);
 			}
