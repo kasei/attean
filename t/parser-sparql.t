@@ -78,10 +78,10 @@ END
 	isa_ok($a, 'Attean::Algebra::Slice')
 }
 
-subtest 'escaping' => sub {
+subtest '1.1 escaping' => sub {
 	my $sparql	= q[ASK { <s> ex:p "\\"", '\\'', '\\u706b\\U0000661F' \\u007d];
 	open(my $fh, '<:encoding(UTF-8)', \$sparql);
-	my $l		= AtteanX::Parser::SPARQLLex->new();
+	my $l		= AtteanX::Parser::SPARQLLex->new(version => '1.1');
 	my $iter	= $l->parse_iter_from_io($fh);
 	
 	expect($iter->next, KEYWORD, ['ASK']);

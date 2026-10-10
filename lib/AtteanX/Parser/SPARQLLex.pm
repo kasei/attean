@@ -52,7 +52,7 @@ package AtteanX::Parser::SPARQLLex 0.039 {
 
 	# these pass through to the lexer iterator
 	has extend		=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
-	has 'version'	=> (is => 'rw', isa => Str, default => '1.1');
+	has 'version'	=> (is => 'rw', isa => Str, default => '1.2');
 
 	sub media_types {
 		return [qw(application/x-sparql-query-tokens)];
@@ -120,7 +120,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 	has lookahead_tokens		=> ( is => 'ro', isa => HashRef, default => sub { +{} } );
 	has extend					=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
 	has token_buffer			=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
-	has 'version'				=> (is => 'rw', isa => Str, default => '1.1');
+	has 'version'				=> (is => 'rw', isa => Str, default => '1.2');
 	
 	with 'AtteanX::API::Lexer';
 	

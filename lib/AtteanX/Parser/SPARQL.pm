@@ -94,7 +94,7 @@ use Scalar::Util qw(blessed looks_like_number reftype refaddr);
 
 use Moo;
 
-has 'version'		=> (is => 'rw', isa => Str, default => '1.1');
+has 'version'		=> (is => 'rw', isa => Str, default => '1.2');
 has 'lexer' 		=> (is => 'rw', isa => InstanceOf['AtteanX::Parser::SPARQLLex::Iterator']);
 has 'args'			=> (is => 'ro', isa => HashRef);
 has 'build'			=> (is => 'rw', isa => HashRef);
@@ -2287,6 +2287,7 @@ sub _TriplesSameSubject {
 		}
 	} elsif ($self->_test_token(LTLT)) {
 		$self->_ReifiedTripleBlock();
+		push(@triples, splice(@{ $self->{_stack} }));
 	} else {
 		$self->_VarOrTerm;
 		my ($s)	= splice(@{ $self->{_stack} });
@@ -3014,11 +3015,11 @@ sub _MultiplicativeExpression {
 	$self->_add_stack( $expr );
 }
 
-# [54] UnaryExpression ::= '!' PrimaryExpression  | '+' PrimaryExpression  | '-' PrimaryExpression  | PrimaryExpression
+# [54] UnaryExpression ::= '!' UnaryExpression  | '+' PrimaryExpression  | '-' PrimaryExpression  | PrimaryExpression
 sub _UnaryExpression {
 	my $self	= shift;
 	if ($self->_optional_token(BANG)) {
-		$self->_PrimaryExpression;
+		$self->_UnaryExpression;
 		my ($expr)	= splice(@{ $self->{_stack} });
 		my $not		= Attean::UnaryExpression->new( operator => '!', children => [$expr] );
 		$self->_add_stack( $not );
@@ -3788,7 +3789,7 @@ sub _ReifiedTripleBlock {
 	foreach my $data (@list) {
 		push(@triples, $self->__new_statement( $s, @$data ));
 	}
-	# XXX
+	push( @{ $self->{_stack} }, @triples );
 }
 
 sub _ReifiedTriple {
@@ -3894,7 +3895,7 @@ sub _TripleTermData {
 	$self->_TripleTermDataObject;
 	$self->_expected_token(PGTGT);
 	my ($s, $p, $o)	= splice(@{ $self->{_stack} }, -3);
-	my $t	= $self->__new_statement( $s, $p, $o );
+	my ($t)	= $self->__new_statement( $s, $p, $o );
 	return $t;
 }
 
@@ -4102,6 +4103,7 @@ sub __solution_modifiers {
 			croak "Cannot SELECT * in an aggregate query";
 		}
 	} else {
+		my %already_projected;
 		for (my $i = 0; $i < $#exprs; $i += 2) {
 			my $k	= $exprs[$i];
 			my $v	= $exprs[$i+1];
@@ -4109,9 +4111,11 @@ sub __solution_modifiers {
 				my @vars	= $v->does('Attean::API::Variable') ? $v : $v->unaggregated_variables;
 				foreach my $var (@vars) {
 					my $name	= $var->value;
-					unless (exists $agg_vars{$name} or exists $group_vars{$name} or exists $trailing_values_vars{$name}) {
+					unless (exists $agg_vars{$name} or exists $group_vars{$name} or exists $trailing_values_vars{$name} or exists $already_projected{ $name }) {
+						Carp::confess "Cannot project variable ?$name that is not aggregated or used in grouping";
 						croak "Cannot project variable ?$name that is not aggregated or used in grouping";
 					}
+					$already_projected{ $k }++;
 				}
 			}
 			
