@@ -1174,6 +1174,18 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 							my $ok	= ($a->value eq $b->value);
 							return $ok ? $true : $false;
 						}
+					} elsif ($func eq 'TRIPLE') {
+						my ($s, $p, $o)	= @operands;
+						unless ($s->does('Attean::API::BlankOrIRI')) {
+							die 'TRIPLE() constructor failed with bad subject type';
+						}
+						unless ($p->does('Attean::API::IRI')) {
+							die 'TRIPLE() constructor failed with bad predicate type';
+						}
+						unless ($o->does('Attean::API::TermOrTriple')) {
+							die 'TRIPLE() constructor failed with bad object type';
+						}
+						return Attean::Triple->new($s, $p, $o);
 					} elsif ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
 						return $operands[0]->does("Attean::API::$type_roles{$1}") ? $true : $false;
 					} elsif ($func eq 'REGEX') {

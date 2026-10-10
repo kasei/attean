@@ -1350,6 +1350,15 @@ package Attean::Plan::Extend 0.039 {
 					return $term;
 				} elsif ($func eq 'TRIPLE') {
 					my ($s, $p, $o)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					unless ($s->does('Attean::API::BlankOrIRI')) {
+						die 'TRIPLE() constructor failed with bad subject type';
+					}
+					unless ($p->does('Attean::API::IRI')) {
+						die 'TRIPLE() constructor failed with bad predicate type';
+					}
+					unless ($o->does('Attean::API::TermOrTriple')) {
+						die 'TRIPLE() constructor failed with bad object type';
+					}
 					return Attean::Triple->new($s, $p, $o);
 				} else {
 					warn "Expression evaluation unimplemented: " . $expr->as_string;
