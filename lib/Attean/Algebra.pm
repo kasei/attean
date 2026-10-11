@@ -1300,7 +1300,7 @@ package Attean::Algebra::Construct 0.039 {
 	sub algebra_as_string {
 		my $self	= shift;
 		my $triples	= $self->triples;
-		return sprintf('Construct { %s }', join(' . ', map { $_->as_string } @$triples));
+		return sprintf('Construct { %s }', join(' ', map { $_->as_string } @$triples));
 	}
 }
 
