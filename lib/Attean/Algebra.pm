@@ -1228,7 +1228,10 @@ package Attean::Algebra::Table 0.039 {
 		return map { $_->value } @{ $self->variables };
 	}
 	sub tree_attributes { return qw(variables rows) };
-	sub algebra_as_string { return 'Table' }
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Table (%d rows)', scalar(@{ $self->rows }));
+	}
 
 	sub sparql_tokens {
 		my $self	= shift;
