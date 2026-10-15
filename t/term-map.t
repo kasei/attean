@@ -6,6 +6,7 @@ use Type::Tiny::Role;
 use Attean::RDF qw(iri blank literal dtliteral langliteral triple quad);
 my $t = triple(blank('xxx'), iri('p'), literal('1'));
 my $u = triple(blank('yyy'), iri('p'), literal('2'));
+my $v = triple(blank('yyy'), iri('p'), $t);
 
 subtest 'short blank node label mapping' => sub {
 	my $mapper			= Attean::TermMap->short_blank_map;
@@ -72,6 +73,14 @@ subtest 'UUID blank node label mapping' => sub {
 		my $c		= $mapped->next;
 		like($c->subject->ntriples_string, $uuid_blank);
 		like($d->subject->ntriples_string, $uuid_blank);
+	}
+	
+	{
+		note('Mapping triple terms');
+		my $iter	= Attean::ListIterator->new(values => [$t, $v], item_type => 'Attean::API::Triple');
+		my $c		= $iter->next->apply_map($mapper);
+		my $d		= $iter->next->apply_map($mapper);
+		is($c->subject->ntriples_string, $d->object->subject->ntriples_string, 'blank node in triple and separate triple term');
 	}
 };
 
