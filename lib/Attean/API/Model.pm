@@ -436,7 +436,7 @@ package Attean::API::MutableModel 0.039 {
 					die "No parser found for content type $ct: $url";
 				}
 			} else {
-				die $resp->status_line;
+				die "Failed to load URL <$url>: " . $resp->status_line;
 			}
 		}
 	}
