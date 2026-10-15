@@ -585,7 +585,8 @@ package Attean::API::Triple 0.039 {
 	sub as_quad {
 		my $self	= shift;
 		my $graph	= shift;
-		return Attean::Quad->new($self->values, $graph);
+		my @terms	= map { $_->does('Attean::API::TriplePattern') ? $_->as_triple : $_ } $self->values;
+		return Attean::Quad->new(@terms[0..2], $graph);
 	}
 
 	sub ntriples_string {
@@ -666,7 +667,8 @@ package Attean::API::QuadPattern 0.039 {
 		unless ($self->is_ground) {
 			die "Not a ground quad: " . $self->as_string;
 		}
-		return Attean::Quad->new($self->values);
+		my @terms	= map { $_->does('Attean::API::TriplePattern') ? $_->as_triple : $_ } $self->values;
+		return Attean::Quad->new(@terms);
 	}
 	
 	sub apply_quad {
