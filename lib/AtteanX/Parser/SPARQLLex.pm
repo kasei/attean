@@ -739,6 +739,20 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 		$self->_throw_error("Unrecognized string escape '$esc'");
 	}
 	
+	sub current_location {
+		my $self	= shift;
+		return ($self->line, $self->column, $self->buffer);
+	}
+	
+	sub throw_near_error {
+		my $self	= shift;
+		my $message	= shift;
+		my $line	= shift // $self->line;
+		my $col		= shift // $self->column;
+		my $buffer	= shift // $self->buffer;
+		die "$message near $line:$col: " . $buffer;
+	}
+	
 	sub _throw_error {
 		my $self	= shift;
 		my $error	= shift;

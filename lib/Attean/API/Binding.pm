@@ -379,7 +379,7 @@ package Attean::API::TripleOrQuadPattern 0.039 {
 
 	sub ground {
 		my $self	= shift;
-		my $result	= shift;
+		my $result	= shift || Attean::Result->new(bindings => {});
 		
 		my %bindings;
 		my @vars	= $self->variables();
@@ -395,9 +395,11 @@ package Attean::API::TripleOrQuadPattern 0.039 {
 			}
 		}
 		
-		return scalar(@vars) == 3
+		my $st	= scalar(@vars) == 3
 			? Attean::Triple->new( %bindings )
 			: Attean::Quad->new( %bindings );
+		$st->validate;
+		return $st;
 	}
 	
 	sub unify {
@@ -476,7 +478,7 @@ package Attean::API::TripleOrQuad 0.039 {
 	sub BUILD {
 		my $self = shift;
 		if (any { $_->does('Attean::API::Variable') } $self->values) {
-			croak 'Use a Pattern class to construct when using variables';
+			confess 'Use a Pattern class to construct when using variables';
 		}
 	}
 }
@@ -511,7 +513,9 @@ package Attean::API::TriplePattern 0.039 {
 			die "Not a ground triple: " . $self->as_string;
 		}
 		my @terms	= map { $_->does('Attean::API::TriplePattern') ? $_->as_triple : $_ } $self->values;
-		return Attean::Triple->new(@terms);
+		my $t	= Attean::Triple->new(@terms);
+		$t->validate();
+		return $t;
 	}
 	
 	sub apply_triple {
@@ -559,14 +563,14 @@ package Attean::API::Triple 0.039 {
 	use Scalar::Util qw(blessed);
 	use Moo::Role;
 	
+	my %validation_map	= (
+		subject		=> 'Attean::API::BlankOrIRI',
+		predicate	=> 'Attean::API::IRI',
+		object		=> 'Attean::API::TermOrTriple'
+	);
 	if ($ENV{ATTEAN_TYPECHECK}) {
-		my %map	= (
-			subject		=> 'Attean::API::BlankOrIRI',
-			predicate	=> 'Attean::API::IRI',
-			object		=> 'Attean::API::TermOrTriple'
-		);
-		foreach my $method (keys %map) {
-			my $role	= $map{$method};
+		foreach my $method (keys %validation_map) {
+			my $role	= $validation_map{$method};
 			around $method => sub {
 				my $orig	= shift;
 				my $self	= shift;
@@ -579,6 +583,18 @@ package Attean::API::Triple 0.039 {
 				}
 				return $term;
 			};
+		}
+	}
+	
+	sub validate {
+		my $self	= shift;
+		my $class	= ref($self);
+		foreach my $method (keys %validation_map) {
+			my $role	= $validation_map{$method};
+			my $term	= $self->$method();
+			unless ($term->does($role)) {
+				die "${class}'s $method failed conformance check for role $role: " . $term->as_string . "\n";
+			}
 		}
 	}
 	
@@ -723,6 +739,13 @@ package Attean::API::QuadPattern 0.039 {
 package Attean::API::Quad 0.039 {
 	use Moo::Role;
 	
+	my %validation_map	= (
+		subject		=> 'Attean::API::BlankOrIRI',
+		predicate	=> 'Attean::API::IRI',
+		object		=> 'Attean::API::TermOrTriple',
+		graph		=> 'Attean::API::BlankOrIRI'
+	);
+
 	if ($ENV{ATTEAN_TYPECHECK}) {
 		my $type	= Type::Tiny::Role->new( role => 'Attean::API::BlankOrIRI' );
 		around 'graph' => sub {
@@ -736,10 +759,24 @@ package Attean::API::Quad 0.039 {
 		};
 	}
 
+	sub validate {
+		my $self	= shift;
+		my $class	= ref($self);
+		foreach my $method (keys %validation_map) {
+			my $role	= $validation_map{$method};
+			my $term	= $self->$method();
+			unless ($term->does($role)) {
+				Carp::confess "${class}'s $method failed conformance check for role $role: " . $term->as_string;
+			}
+		}
+	}
+
 	sub as_triple {
 		my $self	= shift;
 		my @values	= $self->values;
-		return Attean::Triple->new(@values[0..2]);
+		my $t	= Attean::Triple->new(@values[0..2]);
+		$t->validate();
+		return $t;
 	}
 
 	with 'Attean::API::QuadPattern';

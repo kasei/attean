@@ -1223,6 +1223,16 @@ package Attean::Algebra::Table 0.039 {
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
 
+	sub BUILD {
+		my $self	= shift;
+		my %seen;
+		foreach my $v (@{ $self->variables }) {
+			if ($seen{$v->value}++) {
+				die "Repeated use of variable " . $v->value . " in VALUES clause";
+			}
+		}
+	}
+
 	sub in_scope_variables {
 		my $self	= shift;
 		return map { $_->value } @{ $self->variables };

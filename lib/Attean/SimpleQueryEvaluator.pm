@@ -174,7 +174,10 @@ supplied C<< $active_graph >>.
 					my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
 					if (blessed($val) and $val->does('Attean::API::Binding')) {
 						# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
-						$val	= $val->ground($r);
+						$val	= eval { $val->ground($r) };
+						if ($@) {
+							$val	= undef;
+						}
 					}
 # 					warn "Extend error: $@" if ($@);
 					$r	= Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);

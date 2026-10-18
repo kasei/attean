@@ -1433,7 +1433,11 @@ package Attean::Plan::Extend 0.039 {
 								
 								if ($term->does('Attean::API::Binding')) {
 									# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
-									$term	= $term->ground($r);
+									$term	= eval{ $term->ground($r) };
+									if ($@) {
+										# validation failed ; skip this variable
+										next;
+									}
 								}
 								
 								$row{ $var }	= $term;

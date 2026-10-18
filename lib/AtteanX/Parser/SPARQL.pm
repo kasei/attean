@@ -1219,7 +1219,12 @@ sub _BindingValue {
 	if ($self->_optional_token(KEYWORD, 'UNDEF')) {
 		push(@{ $self->{_stack} }, undef);
 	} elsif ($self->_test_token(LTLTP)) {
-		my $t	= $self->_TripleTermData();
+		my @loc		= $self->lexer->current_location;
+		my $tp	= $self->_TripleTermData();
+		my $t	= eval { $tp->as_triple };
+		if ($@) {
+			$self->lexer->throw_near_error("Invalid triple term", @loc);
+		}
 		push(@{ $self->{_stack} }, $t);
 	} else {
 		$self->_GraphTerm;
@@ -1949,6 +1954,7 @@ sub _Bind {
 sub _Unfold {
 	my $self	= shift;
 	$self->_expected_token(KEYWORD, 'UNFOLD');
+	local($self->{__require_ground_triple_terms})	= 1;
 	my ($var, $expr)	= $self->_BrackettedAliasExpression(1);
 	$self->_add_stack( ['Attean::Algebra::Unfold', $var, $expr] );
 }
@@ -2808,6 +2814,9 @@ sub _VarOrTerm {
 	my $self	= shift;
 	if ($self->_test_token(VAR)) {
 		$self->_Var;
+	} elsif ($self->_test_token(LTLTP)) {
+		my $t	= $self->_TripleTerm();
+		$self->_add_stack( $t );
 	} else {
 		$self->_GraphTerm;
 	}
@@ -3132,6 +3141,12 @@ sub _BrackettedExpression {
 sub _Aggregate {
 	my $self	= shift;
 	
+	unless ($self->{__aggregate_call_ok}) {
+		my $t		= $self->_peek_token;
+		$self->_token_error($t, "Aggregate function not valid in this location")
+		# 	local($self->{__aggregate_call_ok})	= 1;
+	}
+
 	my $op;
 	my $custom_agg_iri;
 	if (scalar(@_)) {
@@ -3142,6 +3157,7 @@ sub _Aggregate {
 		$op		= $t->value;
 	}
 	$self->_expected_token(LPAREN);
+	
 	my $distinct	= 0;
 	if ($self->_optional_token(KEYWORD, 'DISTINCT')) {
 		$distinct	= 1;
@@ -3152,7 +3168,10 @@ sub _Aggregate {
 	if ($self->_optional_token(STAR)) {
 		$star	= 1;
 	} else {
-		$self->_Expression;
+		{
+			local($self->{__aggregate_call_ok})	= 0; # aggregates cannot be nested in the expression
+			$self->_Expression;
+		}
 		
 		push(@expr, splice(@{ $self->{_stack} }));
 		if ($op =~ /^(GROUP_CONCAT|FOLD)$/) { # aggs that can take multiple arguments
@@ -3841,9 +3860,9 @@ sub _ReifiedTripleSubject {
 		$self->_add_stack( $l );
 	} elsif ($self->_test_token(LTLT)) {
 		$self->_ReifiedTriple();
-# 	} elsif ($self->_test_token(LTLTP)) {	# Not in official grammar yet
-# 		my $t	= $self->_TripleTerm();
-# 		$self->_add_stack( $t );
+	} elsif ($self->_test_token(LTLTP)) {	# Not in official grammar yet
+		my $t	= $self->_TripleTerm();
+		$self->_add_stack( $t );
 	} else {
 		$self->_IRIref;
 	}
@@ -3903,21 +3922,24 @@ sub _TripleTermSubject {
 	my $self	= shift;
 	if ($self->_test_token(VAR)) {
 		$self->_Var();
-	} elsif ($self->_test_token(BOOLEAN)) {
-		my $b	= $self->_BooleanLiteral;
-		$self->_add_stack( $b );
+	} elsif ($self->_test_token(LTLTP)) {
+		my $t   = $self->_TripleTerm();
+		$self->_add_stack( $t );
+# 	} elsif ($self->_test_token(BOOLEAN)) {
+# 		my $b	= $self->_BooleanLiteral;
+# 		$self->_add_stack( $b );
 	} elsif ($self->_test_token(NIL)) {
 		my $n	= $self->_NIL;
 		$self->_add_stack( $n );
 	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
 		my $b	= $self->_BlankNode;
 		$self->_add_stack( $b );
-	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
-		my $l	= $self->_NumericLiteral;
-		$self->_add_stack( $l );
-	} elsif ($self->_test_literal_token) {
-		my $l	= $self->_RDFLiteral;
-		$self->_add_stack( $l );
+# 	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+# 		my $l	= $self->_NumericLiteral;
+# 		$self->_add_stack( $l );
+# 	} elsif ($self->_test_literal_token) {
+# 		my $l	= $self->_RDFLiteral;
+# 		$self->_add_stack( $l );
 	} else {
 		$self->_IRIref;
 	}
@@ -3949,18 +3971,18 @@ sub _TripleTermObject {
 
 sub _TripleTermDataSubject {
 	my $self	= shift;
-	if ($self->_test_token(BOOLEAN)) {
-		my $b	= $self->_BooleanLiteral;
-		$self->_add_stack( $b );
-	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
-		my $l	= $self->_NumericLiteral;
-		$self->_add_stack( $l );
-	} elsif ($self->_test_literal_token) {
-		my $l	= $self->_RDFLiteral;
-		$self->_add_stack( $l );
-	} else {
+# 	if ($self->_test_token(BOOLEAN)) {
+# 		my $b	= $self->_BooleanLiteral;
+# 		$self->_add_stack( $b );
+# 	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+# 		my $l	= $self->_NumericLiteral;
+# 		$self->_add_stack( $l );
+# 	} elsif ($self->_test_literal_token) {
+# 		my $l	= $self->_RDFLiteral;
+# 		$self->_add_stack( $l );
+# 	} else {
 		$self->_IRIref;
-	}
+# 	}
 }
 
 sub _TripleTermDataObject {
@@ -3998,15 +4020,15 @@ sub _ExprTripleTermSubject {
 	my $self	= shift;
 	if ($self->_test_token(VAR)) {
 		$self->_Var();
-	} elsif ($self->_test_token(BOOLEAN)) {
-		my $b	= $self->_BooleanLiteral;
-		$self->_add_stack( $b );
-	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
-		my $l	= $self->_NumericLiteral;
-		$self->_add_stack( $l );
-	} elsif ($self->_test_literal_token) {
-		my $l	= $self->_RDFLiteral;
-		$self->_add_stack( $l );
+# 	} elsif ($self->_test_token(BOOLEAN)) {
+# 		my $b	= $self->_BooleanLiteral;
+# 		$self->_add_stack( $b );
+# 	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
+# 		my $l	= $self->_NumericLiteral;
+# 		$self->_add_stack( $l );
+# 	} elsif ($self->_test_literal_token) {
+# 		my $l	= $self->_RDFLiteral;
+# 		$self->_add_stack( $l );
 	} else {
 		$self->_IRIref;
 	}
@@ -4289,6 +4311,9 @@ sub __new_statement {
 		$o		= $o->value;
 	}
 	my $t	= Attean::TriplePattern->new($s, $p, $o);
+	if ($self->{__require_ground_triple_terms}) {
+		$t	= $t->ground();
+	}
 	my @st	= ($t);
 	if ($annot) {
 		$s	= $t;
@@ -4297,6 +4322,7 @@ sub __new_statement {
 			push(@st, $self->__new_statement($s, $p, $o));
 		}
 	}
+	
 	return @st;
 }
 
