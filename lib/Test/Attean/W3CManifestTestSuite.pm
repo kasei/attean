@@ -112,6 +112,7 @@ sub setup {
 			}
 		}
 	}
+	
 	my @manifests	= values %manifests;
 	
 	if ($self->debug) {
@@ -160,7 +161,7 @@ sub sparql_syntax_test {
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($self->debug);
+# 	warn "Loading SPARQL query from file $filename" if ($self->debug);
 	my $sparql				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
 	my $bytes	= encode_utf8($sparql);
 
@@ -349,7 +350,7 @@ sub data_syntax_eval_test {
 
 	my $test_uri	= $uri->as_string;
 	my $test_base	= $uri->as_string;
-	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+	$test_base		= $self->fix_local_to_w3c($test_base);
 	warn "Test base: " . $test_base . "\n" if ($self->debug);
 	
 	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
@@ -732,6 +733,13 @@ sub update_eval_test {
 	warn "ok\n" if ($self->debug);
 }
 
+sub fix_local_to_w3c {
+	my $self		= shift;
+	my $file_url	= shift;
+	$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+	return $file_url;
+}
+
 sub construct_data {
 	my $self		= shift;
 	my $model		= shift;
@@ -763,7 +771,7 @@ sub construct_data {
 	foreach my $g (@gdata) {
 		my $start = $test_model->size;
 		my $file_url	= $g->value;
-		$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+		$file_url		= $self->fix_local_to_w3c($file_url);
 		$test_model->load_urls_into_graph(iri($file_url), $g);
 		my $end	= $test_model->size;
 		unless ($start < $end) {
@@ -786,7 +794,7 @@ sub construct_data {
 	}
 	
 	my $test_base	= $base;
-	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+	$test_base		= $self->fix_local_to_w3c($test_base);
 
 	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
 	my $sclass				= Attean->get_serializer(media_type => $format);
@@ -830,7 +838,7 @@ sub query_eval_test {
 	warn "Loading SPARQL query from file $filename\n" if ($self->debug);
 
 	my $test_base	= $base;
-	$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+	$test_base		= $self->fix_local_to_w3c($test_base);
 
 	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->value); return }; binmode($fh, ':utf8'); <$fh> };
 	
@@ -855,7 +863,7 @@ sub query_eval_test {
 	try {
 		foreach my $data (@data) {
 			my $file_url	= $data->value;
-			$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+			$file_url		= $self->fix_local_to_w3c($file_url);
 			if (blessed($data)) {
 				$test_model->load_urls_into_graph_with_base($self->default_graph, [$data], $file_url);
 			}
@@ -863,7 +871,7 @@ sub query_eval_test {
 		foreach my $g (@gdata) {
 			my $start = $test_model->size;
 			my $file_url	= $g->value;
-			$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+			$file_url		= $self->fix_local_to_w3c($file_url);
 			$test_model->load_urls_into_graph_with_base(iri($file_url), [$g], $file_url);
 			my $end	= $test_model->size;
 			unless ($start < $end) {
@@ -1132,7 +1140,7 @@ sub get_expected_results {
 		my $model	= memory_model();
 		my $file_url	= "file://$file";
 		my $base		= $file_url;
-		$base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+		$base		= $self->fix_local_to_w3c($base);
 		$model->load_urls_into_graph_with_base($self->default_graph, [iri($file_url)], iri($base));
 		my ($res)	= $model->subjects( iri("${RDF}type"), iri("${RS}ResultSet") )->elements;
 		if (my($b) = $model->objects( $res, iri("${RS}boolean") )->elements) {
