@@ -2775,6 +2775,10 @@ sub _GraphNode_test {
 	return 1 if ($self->_test_token(LPAREN));
 	return 1 if ($self->_test_token(ANON));
 	return 1 if ($self->_test_token(NIL));
+	return 1 if ($self->_test_token(BNODE));
+	return 1 if ($self->_test_token(BOOLEAN));
+	return 1 if ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS));
+	return 1 if ($self->_test_literal_token);
 	return 1 if ($self->_test_token(LTLT));
 	return 1 if ($self->_test_token(LTLTP));
 	return 0;
@@ -2864,6 +2868,10 @@ sub _GraphTerm {
 		my $n	= $self->_NIL;
 		$self->_add_stack( $n );
 	} elsif ($self->_test_token(ANON) or $self->_test_token(BNODE)) {
+		my $b	= $self->_BlankNode;
+		$self->_add_stack( $b );
+	} elsif ($self->_optional_token(LBRACKET)) { # not parsed as ANON for some reason
+		$self->_expected_token(RBRACKET);
 		my $b	= $self->_BlankNode;
 		$self->_add_stack( $b );
 	} elsif ($self->_test_token(INTEGER) or $self->_test_token(DECIMAL) or $self->_test_token(DOUBLE) or $self->_test_token(MINUS) or $self->_test_token(PLUS)) {
