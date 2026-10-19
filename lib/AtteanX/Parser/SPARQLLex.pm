@@ -623,11 +623,7 @@ AGAIN:
 						$quote_count	= 0;
 					}
 					if (substr($self->buffer, 0, 1) eq '\\') {
-						if ($self->sparql12) {
-							$string	.= $self->read_length(1);
-						} else {
-							$string	.= $self->_get_escaped_char();
-						}
+						$string	.= $self->read_backslash_escape();
 					} else {
 						$self->buffer	=~ /^[^"\\]+/;
 						$string	.= $self->read_length($+[0]);
@@ -640,11 +636,7 @@ AGAIN:
 			my $string	= '';
 			while (1) {
 				if (substr($self->buffer, 0, 1) eq '\\') {
-					if ($self->sparql12) {
-						$string	.= $self->read_length(1);
-					} else {
-						$string	.= $self->_get_escaped_char();
-					}
+					$string	.= $self->read_backslash_escape();
 				} elsif ($self->buffer =~ /^[^"\\]+/o) {
 					$string	.= $self->read_length($+[0]);
 				} elsif (substr($self->buffer, 0, 1) eq '"') {
@@ -683,11 +675,7 @@ AGAIN:
 						$quote_count	= 0;
 					}
 					if (substr($self->buffer, 0, 1) eq '\\') {
-						if ($self->sparql12) {
-							$string	.= $self->read_length(1);
-						} else {
-							$string	.= $self->_get_escaped_char();
-						}
+						$string	.= $self->read_backslash_escape();
 					} else {
 						$self->buffer	=~ /^[^'\\]+/;
 						$string	.= $self->read_length($+[0]);
@@ -700,11 +688,7 @@ AGAIN:
 			my $string	= '';
 			while (1) {
 				if (substr($self->buffer, 0, 1) eq '\\') {
-					if ($self->sparql12) {
-						$string	.= $self->read_length(1);
-					} else {
-						$string	.= $self->_get_escaped_char();
-					}
+					$string	.= $self->read_backslash_escape();
 				} elsif ($self->buffer =~ /^[^'\\]+/o) {
 					$string	.= $self->read_length($+[0]);
 				} elsif (substr($self->buffer, 0, 1) eq "'") {
@@ -719,8 +703,23 @@ AGAIN:
 		}
 	}
 
-	sub _get_escaped_char {
+	sub read_backslash_escape {
 		my $self	= shift;
+		if ($self->sparql12) {
+			# In SPARQL 1.2 all escape logic happens here, including multi-character
+			# escape sequences such as \uXXXX and \UXXXXXXXX.
+			return $self->_get_escaped_char(1);
+		} else {
+			# In SPARQL 1.1, multi-character codepoint escape sequences \uXXXX and \UXXXXXXXX
+			# are handled before parsing begins. What is left should only be single-character
+			# escapes such as \t and \n.
+			return $self->_get_escaped_char(0);
+		}
+	}
+
+	sub _get_escaped_char {
+		my $self		= shift;
+		my $allow_mb	= shift; # allow multi-byte escape sequences such as \uXXXX
 		my $c	= $self->peek_char;
 		$self->get_char_safe('\\');
 		my $esc	= $self->get_char;
@@ -731,14 +730,16 @@ AGAIN:
 		elsif ($esc eq 'n') { return "\n" }
 		elsif ($esc eq 'b') { return "\b" }
 		elsif ($esc eq 'f') { return "\f" }
-		elsif ($esc eq 'U') {
-			my $codepoint	= $self->read_length(8);
-			$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
-			return chr(hex($codepoint));
-		} elsif ($esc eq 'u'){
-			my $codepoint	= $self->read_length(4);
-			$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
-			return chr(hex($codepoint));
+		elsif ($allow_mb) {
+			if ($esc eq 'U') {
+				my $codepoint	= $self->read_length(8);
+				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
+				return chr(hex($codepoint));
+			} elsif ($esc eq 'u'){
+				my $codepoint	= $self->read_length(4);
+				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
+				return chr(hex($codepoint));
+			}
 		}
 		$self->_throw_error("Unrecognized string escape '$esc'");
 	}
