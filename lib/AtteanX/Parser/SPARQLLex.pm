@@ -251,6 +251,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 	sub fill_buffer {
 		my $self	= shift;
 		unless (length($self->buffer)) {
+AGAIN:
 			my $line	= $self->file->getline;
 			if (defined($line)) {
 				if ($self->version lt '1.2') {
@@ -258,6 +259,9 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 					$line	= $self->codepoint_unescape($line);
 				}
 				$self->{buffer}	.= $line;
+				if ($line =~ /[[(]\s*$/) { # might be a NIL or ANON that spans a line
+					goto AGAIN;
+				}
 			}
 		}
 	}
