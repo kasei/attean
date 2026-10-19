@@ -332,7 +332,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 				if ($self->buffer =~ /^a(?!:)\s/o) {
 					$self->get_char;
 					return $self->new_token(A, $start_line, $start_column, 'a');
-				} elsif ($self->buffer =~ /^(?:true|false)(?!:)\b/o) {
+				} elsif ($self->buffer =~ /^(?i:true|false)(?!:)\b/o) {
 					my $bool	= $self->read_length($+[0]);
 					return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
 # 				} elsif ($self->buffer =~ /^$r_KEYWORDS/) {
