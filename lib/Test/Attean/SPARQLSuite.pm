@@ -151,7 +151,7 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 					if ($total) {
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->sparql_syntax_test( 'query', $model, $test );
+						$self->sparql_syntax_test( 'query', $model, $test, specVersion => $specVersion );
 					}
 				}
 			}
@@ -165,7 +165,7 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 							next;
 						}
 						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->update_eval_test( $model, $test, );
+						$self->update_eval_test( $model, $test, specVersion => $specVersion );
 					}
 				}
 				
