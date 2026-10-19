@@ -29,24 +29,24 @@ subtest 'parser construction and metadata' => sub {
 	}
 };
 
-{
+subtest 'parser handled_type' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	isa_ok($parser, 'AtteanX::Parser::SPARQL');
 	my $type	= $parser->handled_type;
 	can_ok($type, 'role');
 	is($type->role, 'Attean::API::Algebra');
-}
+};
 
-{
+subtest 'expected shape of simple algebra 1' => sub {
 	my $parser	= Attean->get_parser('SPARQL')->new();
 	my $q		= $parser->parse("SELECT * { ?s <p> '''hello!''' OPTIONAL { ?s <q> ?x } FILTER(!BOUND(?x)) } LIMIT 5 OFFSET 5");
 	does_ok($q, 'Attean::API::Algebra');
 	isa_ok($q, 'Attean::Algebra::Query');
 	my $s		= $q->child;
 	isa_ok($s, 'Attean::Algebra::Slice');
-}
+};
 
-{
+subtest 'expected shape of simple algebra 1' => sub {
 	my $data	= "ASK { ?s ?p ?o FILTER(?o > -2.0 && ?o < +3e0 ) }";
 	open(my $fh, '<', \$data);
 	my $parser	= Attean->get_parser('SPARQL')->new();
@@ -56,9 +56,9 @@ subtest 'parser construction and metadata' => sub {
 	does_ok($q, 'Attean::API::Algebra');
 	my $a		= $q->child;
 	isa_ok($a, 'Attean::Algebra::Ask');
-}
+};
 
-{
+subtest 'NamespaceMap population' => sub {
 	my $map		= URI::NamespaceMap->new();
 	my $parser	= Attean->get_parser('SPARQL')->new( namespaces => $map );
 	my $content	= <<'END';
@@ -76,10 +76,24 @@ END
 	is($foaf->as_string, 'http://xmlns.com/foaf/0.1/');
 	my $a	= $q->child;
 	isa_ok($a, 'Attean::Algebra::Slice')
-}
+};
+
+subtest 'booleans' => sub {
+	my $sparql	= q[true TRUE tRuE false FALSE fAlSe];
+	open(my $fh, '<:encoding(UTF-8)', \$sparql);
+	my $l		= AtteanX::Parser::SPARQLLex->new(version => '1.1');
+	my $iter	= $l->parse_iter_from_io($fh);
+	
+	expect($iter->next, BOOLEAN, ['true']);
+	expect($iter->next, BOOLEAN, ['true']);
+	expect($iter->next, BOOLEAN, ['true']);
+	expect($iter->next, BOOLEAN, ['false']);
+	expect($iter->next, BOOLEAN, ['false']);
+	expect($iter->next, BOOLEAN, ['false']);
+};
 
 subtest '1.1 escaping' => sub {
-	my $sparql	= q[ASK { <s> ex:p "\\"", '\\'', '\\u706b\\U0000661F' \\u007d];
+	my $sparql	= q[ASK { <s> ex:p "\\"", '\\'', '\\u706b\\U0000661F', "x\"y'z" \\u007d];
 	open(my $fh, '<:encoding(UTF-8)', \$sparql);
 	my $l		= AtteanX::Parser::SPARQLLex->new(version => '1.1');
 	my $iter	= $l->parse_iter_from_io($fh);
@@ -93,6 +107,8 @@ subtest '1.1 escaping' => sub {
 	expect($iter->next, STRING1S, ["'"], 'single quote');
 	expect($iter->next, COMMA, [',']);
 	expect($iter->next, STRING1S, ["火星"], 'unicode \\u and \\U escapes');
+	expect($iter->next, COMMA, [',']);
+	expect($iter->next, STRING1D, [q[x"y'z]], 'unicode \\u and \\U escapes');
 	expect($iter->next, RBRACE, ['}'], 'escaped closing brace');
 };
 
@@ -200,6 +216,24 @@ subtest 'parse_cb_from_bytes' => sub {
 	my $data	= "ASK { ?s ?p ?o }";
 	open(my $fh, '<', \$data);
 	$p->parse_cb_from_io($fh);
+};
+
+subtest 'VERSION 1.1 escaping' => sub {
+	my $sparql	= q["\u005Ct"];
+	open(my $fh, '<:encoding(UTF-8)', \$sparql);
+	my $l		= AtteanX::Parser::SPARQLLex->new(version => '1.1');
+	my $iter	= $l->parse_iter_from_io($fh);
+	
+	expect($iter->next, STRING1D, ["\t"]);
+};
+
+subtest 'VERSION 1.2 escaping' => sub {
+	my $sparql	= q["\u005Ct"];
+	open(my $fh, '<:encoding(UTF-8)', \$sparql);
+	my $l		= AtteanX::Parser::SPARQLLex->new(version => '1.2');
+	my $iter	= $l->parse_iter_from_io($fh);
+	
+	expect($iter->next, STRING1D, ["\\t"]);
 };
 
 subtest 'SPARQL 1.2 HINT syntax' => sub {
