@@ -1192,8 +1192,18 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 					} elsif ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
 						return $operands[0]->does("Attean::API::$type_roles{$1}") ? $true : $false;
 					} elsif ($func eq 'REGEX') {
-						my ($value, $pattern)	= map { $_->value } @operands;
-						return ($value =~ /$pattern/) ? $true : $false;
+						my ($value, $pattern, $flags)	= map { $_->value } @operands;
+						my $flag_str	= '';
+						if (defined $flags) {
+							$flag_str	.= 'i' if ($flags =~ /i/);
+							$flag_str	.= 's' if ($flags =~ /s/);
+							$flag_str	.= 'm' if ($flags =~ /m/);
+							$flag_str	.= 'x' if ($flags =~ /x/);
+						}
+						if ($flags =~ /q/) {
+							$pattern	= quotemeta($pattern);
+						}
+						return ($value =~ /(?${flag_str}:$pattern)/) ? $true : $false;
 					}
 					die "Unimplemented FunctionExpression evaluation: " . $expr->operator;
 				}

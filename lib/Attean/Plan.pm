@@ -1015,11 +1015,15 @@ package Attean::Plan::Extend 0.039 {
 					# TODO: ensure that $string is a literal
 					($string, $pattern, $flags)	= map { blessed($_) ? $_->value : '' } ($string, $pattern, $flags);
 					my $re;
-					if ($flags =~ /i/) {
-						$re	= qr/$pattern/i;
-					} else {
-						$re	= qr/$pattern/;
+					my $flag_str	= '';
+					$flag_str	.= 'i' if ($flags =~ /i/);
+					$flag_str	.= 's' if ($flags =~ /s/);
+					$flag_str	.= 'm' if ($flags =~ /m/);
+					$flag_str	.= 'x' if ($flags =~ /x/);
+					if ($flags =~ /q/) {
+						$pattern	= quotemeta($pattern);
 					}
+					$re	= qr/(?${flag_str}:$pattern)/;
 					return ($string =~ $re) ? $true : $false;
 				} elsif ($func =~ /^(NOT)?IN$/) {
 					my $ok			= ($func eq 'IN') ? $true : $false;
