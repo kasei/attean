@@ -427,6 +427,11 @@ package Attean::API::QuadIterator 0.039 {
 	sub variables {
 		return qw(subject predicate object graph);
 	}
+	
+	sub as_triples {
+		my $self	= shift;
+		return $self->map(sub { Attean::Triple->new(($_->values)[0..2]) }, 'Attean::API::Triple');
+	}
 }
 
 package Attean::API::MixedStatementIterator 0.039 {
