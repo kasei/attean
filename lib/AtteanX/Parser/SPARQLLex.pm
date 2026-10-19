@@ -338,7 +338,7 @@ AGAIN:
 					return $self->new_token(A, $start_line, $start_column, 'a');
 				} elsif ($self->buffer =~ /^(?i:true|false)(?!:)\b/o) {
 					my $bool	= $self->read_length($+[0]);
-					return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
+					return $self->new_token(BOOLEAN, $start_line, $start_column, lc($bool));
 # 				} elsif ($self->buffer =~ /^$r_KEYWORDS/) {
 # 					my $bool	= $self->read_length($+[0]);
 # 					return $self->new_token(KEYWORD, $start_line, $start_column, $bool);
