@@ -2709,6 +2709,10 @@ sub _BlankNodePropertyList {
 	}
 	$self->_expected_token(LBRACKET);
 	my $subj	= Attean::Blank->new();
+	if ($self->_optional_token(RBRACKET)) { # not parsed as ANON for some reason
+		$self->_add_stack( $subj );
+		return;
+	}
 #	$self->_PropertyListNotEmpty($subj);
 	$self->_PropertyListNotEmptyPath($subj);
 	$self->_expected_token(RBRACKET);
@@ -3043,8 +3047,10 @@ sub _UnaryExpression {
 			my $lexpr	= Attean::ValueExpression->new( value => $l );
 			$self->_add_stack( $lexpr );
 		} else {
-			my $lexpr	= Attean::ValueExpression->new( value => $expr );
-			$self->_add_stack( $lexpr );
+			my $int		= 'http://www.w3.org/2001/XMLSchema#integer';
+			my $l		= $self->new_literal( value => '0', datatype => $int );
+			my $neg		= $self->new_binary_expression( '+', Attean::ValueExpression->new( value => $l ), $expr );
+			$self->_add_stack( $neg );
 		}
 	} elsif ($self->_optional_token(MINUS)) {
 		$self->_PrimaryExpression;
@@ -3060,8 +3066,7 @@ sub _UnaryExpression {
 			my $int		= 'http://www.w3.org/2001/XMLSchema#integer';
 			my $l		= $self->new_literal( value => '-1', datatype => $int );
 			my $neg		= $self->new_binary_expression( '*', Attean::ValueExpression->new( value => $l ), $expr );
-			my $lexpr	= Attean::ValueExpression->new( value => $neg );
-			$self->_add_stack( $lexpr );
+			$self->_add_stack( $neg );
 		}
 	} else {
 		$self->_PrimaryExpression;
