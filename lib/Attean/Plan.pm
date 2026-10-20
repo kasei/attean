@@ -1350,8 +1350,19 @@ package Attean::Plan::Extend 0.039 {
 						my $ok	= ($a->sameTerms($b));
 						return $ok ? $true : $false;
 					} else {
-						my $ok	= ($a->value eq $b->value);
-						return $ok ? $true : $false;
+						return $false unless ($a->value eq $b->value);
+						if ($a->does('Attean::API::Literal') and $b->does('Attean::API::Literal')) {
+							return $false unless ($a->lang_dir eq $b->lang_dir);
+							my $ad	= $a->datatype;
+							my $bd	= $b->datatype;
+							if ($ad and $bd) {
+								my $bd	= $b->datatype;
+								return $false unless ($ad->value eq $bd->value);
+							} elsif ($ad or $bd) {
+								return $false;
+							}
+						}
+						return $true;
 					}
 				} elsif ($func =~ /^(SUBJECT|PREDICATE|OBJECT)$/) {
 					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
