@@ -58,6 +58,7 @@ has model				=> (is => 'rw', isa => ConsumerOf['Attean::API::Model'], init_arg =
 has manifests			=> (is => 'rw', isa => ArrayRef, init_arg => undef);
 has default_graph		=> (is => 'rw');
 has failures			=> (is => 'rw', isa => HashRef, default => sub { +{} });
+has supported_extensions	=> (is => 'rw', isa => HashRef, default => sub { +{} });
 
 sub BUILD {
 	my $self	= shift;
@@ -181,7 +182,7 @@ sub sparql_syntax_test {
 	if ($is_pos_query or $is_pos_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= blessed($query);
-		$self->record_result('syntax', $ok, $test->as_string);
+		$self->record_result('syntax', $ok, $test->as_string, $TODO);
 		$handled++;
 		if ($ok) {
 			pass("$testname - $filename");
@@ -191,7 +192,7 @@ sub sparql_syntax_test {
 	} elsif ($is_neg_query or $is_neg_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= $@ ? 1 : 0;
-		$self->record_result('syntax', $ok, $test->as_string);
+		$self->record_result('syntax', $ok, $test->as_string, $TODO);
 		$handled++;
 		if ($ok) {
 			pass("$testname - $filename");
@@ -373,7 +374,7 @@ sub data_syntax_eval_test {
 				my $actual_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
 				my $ok		= $eq_test->equals($actual_iter, $expected_iter);
 				ok($ok, "$testname - $filename");
-				$self->record_result('evaluation', $ok, $test->as_string);
+				$self->record_result('evaluation', $ok, $test->as_string, $TODO);
 				if (not $ok) {
 					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
 					if (scalar(@nt_triples)) {
@@ -385,7 +386,7 @@ sub data_syntax_eval_test {
 				}
 			} else {
 				my $ok	= scalar(not $parse_error);
-				$self->record_result('syntax', $ok, $test->as_string);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
 				if ($ok) {
 					pass("$testname - $filename");
 				} else {
@@ -422,7 +423,7 @@ sub data_syntax_eval_test {
 				}
 			} else {
 				my $ok	= not($err);
-				$self->record_result('syntax', $ok, $test->as_string);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
 				if ($ok) {
 					pass("$testname - $filename");
 				} else {
@@ -432,7 +433,7 @@ sub data_syntax_eval_test {
 		} elsif ($is_neg) {
 			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
 			my $ok	= $@ ? 1 : 0;
-			$self->record_result('syntax', $ok, $test->as_string);
+			$self->record_result('syntax', $ok, $test->as_string, $TODO);
 			if ($ok) {
 				pass("$testname - $filename");
 			} else {
@@ -565,7 +566,7 @@ sub update_eval_test {
 	
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
-	my ($req)		= $model->objects( $test, iri("${MF}requires") )->elements;
+	my @reqs		= $model->objects( $test, iri("${MF}requires") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($queryd)	= $model->objects( $action, iri("${UT}request") )->elements;
 	my @data		= $model->objects( $action, iri("${UT}data") )->elements;
@@ -600,137 +601,153 @@ sub update_eval_test {
 		}
 		warn "# graph data : " . $_->value . "\n" for (@gdata);
 		warn "# result     : " . $result->value . "\n";
-		warn "# requires   : " . $req->value . "\n" if (blessed($req));
+		foreach my $req (@reqs) {
+			warn "# requires   : " . $req->value . "\n" if (blessed($req));
+		}
 	}
+	
+	my $todo_because_of_test_req	= 0;
+	my @unsupported_reqs;
+	foreach my $req (@reqs) {
+		unless (exists ${ $self->supported_extensions }{ $req->value }) {
+			$todo_because_of_test_req++;
+			push(@unsupported_reqs, $req->value);
+		}
+	}
+	
+	
 	
 	# TODO: set up remote endpoint mock
+	TODO: {
+		local($TODO)	= $todo_because_of_test_req ? "requires " . join(', ', @unsupported_reqs) : '';
 
-	warn "constructing model...\n" if ($self->debug);
-	my $test_model	= $self->test_model();
-	foreach my $data (@data) {
-		eval {
-			if (blessed($data)) {
-				$test_model->load_urls_into_graph($self->default_graph, $data);
-			}
-		};
-		if ($@) {
-			fail($test->value);
-			$self->record_result('update', 0, $test->value);
-			print "# died: " . $test->value . ": $@\n";
-			return;
-		}
-	}
-	foreach my $gdata (@gdata) {
-		my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
-		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
-		my $uri		= $graph->value;
-		eval {
-			$test_model->load_urls_into_graph(iri($uri), $data);
-		};
-		if ($@) {
-			fail($test->as_string);
-			$self->record_result('update', 0, $test->value);
-			print "# died: " . $test->value . ": $@\n";
-			return;
-		};
-	}
-	
-	my ($result_status)	= $model->objects( $result, iri("${UT}result") )->elements;
-	my @resgdata		= $model->objects( $result, iri("${UT}graphData") )->elements;
-	my ($resdata)		= $model->objects( $result, iri("${UT}data") )->elements;
-	my $expected_model	= memory_model;
-	eval {
-		if (blessed($resdata)) {
-			$expected_model->load_urls_into_graph($self->default_graph, $resdata);
-		}
-	};
-	if ($@) {
-		fail($test->as_string);
-		$self->record_result('update', 0, $test->value);
-		print "# died: " . $test->value . ": $@\n";
-		return;
-	};
-	foreach my $gdata (@resgdata) {
-		my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
-		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
-		my $uri		= $graph->value;
-		my $return	= 0;
-		if ($data) {
+		warn "constructing model...\n" if ($self->debug);
+		my $test_model	= $self->test_model();
+		foreach my $data (@data) {
 			eval {
-				$expected_model->load_urls_into_graph(iri($uri), $data);
+				if (blessed($data)) {
+					$test_model->load_urls_into_graph($self->default_graph, $data);
+				}
+			};
+			if ($@) {
+				fail($test->value);
+				$self->record_result('update', 0, $test->value, $TODO);
+				print "# died: " . $test->value . ": $@\n";
+				return;
+			}
+		}
+		foreach my $gdata (@gdata) {
+			my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
+			my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
+			my $uri		= $graph->value;
+			eval {
+				$test_model->load_urls_into_graph(iri($uri), $data);
 			};
 			if ($@) {
 				fail($test->as_string);
-				$self->record_result('update', 0, $test->value);
+				$self->record_result('update', 0, $test->value, $TODO);
 				print "# died: " . $test->value . ": $@\n";
-				$return	= 1;
+				return;
 			};
-			return if ($return);
 		}
-	}
-
-	if ($self->debug) {
-		warn "Dataset before update operation:\n";
-		warn $self->model_as_string($test_model);
-	}
-	
-	my $ok	= 0;
-	eval {
-		my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
+		
+		my ($result_status)	= $model->objects( $result, iri("${UT}result") )->elements;
+		my @resgdata		= $model->objects( $result, iri("${UT}graphData") )->elements;
+		my ($resdata)		= $model->objects( $result, iri("${UT}data") )->elements;
+		my $expected_model	= memory_model;
+		eval {
+			if (blessed($resdata)) {
+				$expected_model->load_urls_into_graph($self->default_graph, $resdata);
+			}
+		};
 		if ($@) {
-			warn "Failed to parse query $filename: $@";
-			die $@;
-		}
-		unless ($algebra) {
-			warn "No algebra generated for update\n";
-			fail($test->value);
+			fail($test->as_string);
+			$self->record_result('update', 0, $test->value, $TODO);
+			print "# died: " . $test->value . ": $@\n";
 			return;
-		}
-		if ($self->debug) {
-			warn "# Algebra:\n" . $algebra->as_string . "\n";
+		};
+		foreach my $gdata (@resgdata) {
+			my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
+			my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
+			my $uri		= $graph->value;
+			my $return	= 0;
+			if ($data) {
+				eval {
+					$expected_model->load_urls_into_graph(iri($uri), $data);
+				};
+				if ($@) {
+					fail($test->as_string);
+					$self->record_result('update', 0, $test->value, $TODO);
+					print "# died: " . $test->value . ": $@\n";
+					$return	= 1;
+				};
+				return if ($return);
+			}
 		}
 	
-		my $default_graphs	= [$self->default_graph];
-		my $planner	= Attean::IDPQueryPlanner->new();
-		my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
 		if ($self->debug) {
-			warn "# Plan:\n" . $plan->as_string . "\n";
+			warn "Dataset before update operation:\n";
+			warn $self->model_as_string($test_model);
 		}
-
-		if ($self->debug) {
-			warn "Running update...\n";
+		
+		my $ok	= 0;
+		eval {
+			my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
+			if ($@) {
+				warn "Failed to parse query $filename: $@";
+				die $@;
+			}
+			unless ($algebra) {
+				warn "No algebra generated for update\n";
+				fail($test->value);
+				return;
+			}
+			if ($self->debug) {
+				warn "# Algebra:\n" . $algebra->as_string . "\n";
+			}
+		
+			my $default_graphs	= [$self->default_graph];
+			my $planner	= Attean::IDPQueryPlanner->new();
+			my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
+			if ($self->debug) {
+				warn "# Plan:\n" . $plan->as_string . "\n";
+			}
+	
+			if ($self->debug) {
+				warn "Running update...\n";
+			}
+			my $iter	= $plan->evaluate($test_model);
+			$iter->elements;
+			if ($self->debug) {
+				warn "done.\n";
+			}
+		
+			if ($self->debug) {
+				warn "Comparing results...\n";
+			}
+			my $eqtest	= Attean::BindingEqualityTest->new();
+			my $eq		= $eqtest->equals($test_model, $expected_model);
+			if ($self->debug) {
+				warn "done.\n";
+			}
+			$ok			= is( $eq, 1, $test->value );
+			unless ($ok) {
+				warn $eqtest->error;
+				warn "Got model:\n" . $self->model_as_string($test_model);
+				warn "Expected model:\n" . $self->model_as_string($expected_model);
+			}
+		};
+		if ($@) {
+			warn "Failed to execute update: $@";
+			fail($test->value);
 		}
-		my $iter	= $plan->evaluate($test_model);
-		$iter->elements;
-		if ($self->debug) {
-			warn "done.\n";
+		if (not($ok)) {
+			print "# failed: " . $test->value . "\n";
 		}
 	
-		if ($self->debug) {
-			warn "Comparing results...\n";
-		}
-		my $eqtest	= Attean::BindingEqualityTest->new();
-		my $eq		= $eqtest->equals($test_model, $expected_model);
-		if ($self->debug) {
-			warn "done.\n";
-		}
-		$ok			= is( $eq, 1, $test->value );
-		unless ($ok) {
-			warn $eqtest->error;
-			warn "Got model:\n" . $self->model_as_string($test_model);
-			warn "Expected model:\n" . $self->model_as_string($expected_model);
-		}
-	};
-	if ($@) {
-		warn "Failed to execute update: $@";
-		fail($test->value);
+		$self->record_result('update', $ok, $test->value, $TODO);
+		warn "ok\n" if ($self->debug);
 	}
-	if (not($ok)) {
-		print "# failed: " . $test->value . "\n";
-	}
-
-	$self->record_result('update', $ok, $test->value);
-	warn "ok\n" if ($self->debug);
 }
 
 sub fix_local_to_w3c {
@@ -857,7 +874,7 @@ sub query_eval_test {
 		warn "# requires         : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
 	}
 	
-	print STDERR "constructing model... " if ($self->debug);
+	print STDERR "constructing model...\n" if ($self->debug);
 	my $test_model	= $self->test_model();
 	my $next_stress	= 0;
 	try {
@@ -886,7 +903,7 @@ sub query_eval_test {
 		}
 	} catch {
 		fail($test->value);
-		$self->record_result('evaluation', 0, $test->value);
+		$self->record_result('evaluation', 0, $test->value, $TODO);
 		print "# died: " . $test->value . ": $_\n";
 		$next_stress++;
 	};
@@ -909,12 +926,12 @@ sub query_eval_test {
 			my ($actual, $type);
 			{
 				local($::DEBUG)	= 1;
-				print STDERR "getting actual results... " if ($self->debug);
+				print STDERR "getting actual results...\n" if ($self->debug);
 				($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
 				print STDERR "ok\n" if ($self->debug);
 			}
 		
-			print STDERR "getting expected results... " if ($self->debug);
+			print STDERR "getting expected results...\n" if ($self->debug);
 			my $expected	= $self->get_expected_results( $resfilename, $type );
 			print STDERR "ok\n" if ($self->debug);
 		
@@ -926,7 +943,7 @@ sub query_eval_test {
 		unless ($ok) {
 			warn $@;
 			fail($test->value);
-			$self->record_result('evaluation', 0, $test->value);
+			$self->record_result('evaluation', 0, $test->value, $TODO);
 		};
 		if ($ok) {
 		} else {
@@ -1202,14 +1219,14 @@ sub compare_results {
 		if ($@) {
 			diag($@);
 		}
-		$self->record_result('evaluation', $ok, $test);
+		$self->record_result('evaluation', $ok, $test, $TODO);
 		return $ok;
 	} elsif ($actual->does('Attean::API::TermIterator')) {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
 		my $name	= $self->debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
 		my $ok		= ok( $a->equals($e), $name );
-		$self->record_result('evaluation', $ok, $test);
+		$self->record_result('evaluation', $ok, $test, $TODO);
 		return $ok;
 	} else {
 		die "Unexpected result type $actual";
@@ -1221,6 +1238,10 @@ sub record_result {
 	my $type	= shift;
 	my $ok		= shift;
 	my $name	= shift;
+	my $TODO	= shift;
+	if ($TODO) {
+		$name	.= ' TODO';
+	}
 	unless ($ok) {
 		push(@{ $self->failures->{$type} }, $name);
 	}
