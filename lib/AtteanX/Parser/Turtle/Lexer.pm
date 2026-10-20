@@ -140,7 +140,7 @@ Returns the next token present in the input.
 				return $self->_get_number();
 			}
 		
-			if ($c eq '[' and $self->buffer =~ /\[\s*\]/) {
+			if ($c eq '[' and $self->buffer =~ /^\[\s*\]/) {
 				$self->read_length($+[0]);
 				return $self->new_token(ANON, $start_line, $start_column);
 			} elsif (defined(my $name = $CHAR_TOKEN{$c})) { $self->get_char; return $self->new_token($name, $start_line, $start_column, $c); }
@@ -194,7 +194,7 @@ Returns the next token present in the input.
 			$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 			return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns, $local);
 		} else {
-			$self->buffer =~ $r_PNAME_NS;
+			$self->buffer =~ /^$r_PNAME_NS/;
 			my $ns	= $self->read_length($+[0]);
 			return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns);
 		}
