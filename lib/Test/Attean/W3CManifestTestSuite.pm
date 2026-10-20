@@ -9,6 +9,7 @@ use AtteanX::Parser::SPARQL;
 use Attean::SimpleQueryEvaluator;
 use Test::Attean::TestSimpleQueryEvaluator;
 use Test::Attean::TestIDPQueryPlanner;
+use Module::Load::Conditional qw[can_load];
 
 use Carp;
 use HTTP::Request;
@@ -59,6 +60,8 @@ has manifests			=> (is => 'rw', isa => ArrayRef, init_arg => undef);
 has default_graph		=> (is => 'rw');
 has failures			=> (is => 'rw', isa => HashRef, default => sub { +{} });
 has supported_extensions	=> (is => 'rw', isa => HashRef, default => sub { +{} });
+
+has earl				=> (is => 'rw', isa => InstanceOf['RDF::EARL']);
 
 sub BUILD {
 	my $self	= shift;
@@ -131,7 +134,9 @@ sub sparql_syntax_test {
 	my $test_type	= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift // 1;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
 	my $handled		= 0;
 	
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
@@ -175,7 +180,7 @@ sub sparql_syntax_test {
 	}
 	
 	my $pclass	= Attean->get_parser('SPARQL');
-	my $parser	= $pclass->new();
+	my $parser	= $pclass->new(version => $specVersion);
 	if ($test_type eq 'update') {
 		$parser->update(1);
 	}
@@ -563,8 +568,9 @@ sub update_eval_test {
 	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift // 1;
-	
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
 	my @reqs		= $model->objects( $test, iri("${MF}requires") )->elements;
@@ -832,11 +838,13 @@ sub query_eval_test {
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
 	my ($req)		= $model->objects( $test, iri("${MF}requires") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
+	my ($res_card)	= $model->objects( $test, iri("${MF}resultCardinality") )->elements;
 	my ($queryd)	= $model->objects( $action, iri("${RQ}query") )->elements;
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
 	my @cdata		= $model->objects( $action, iri("${RQ}constructDataFile") )->elements;
+	my $reduced_mode	= (defined($res_card) and $res_card->value eq "${MF}LaxCardinality");
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -937,7 +945,7 @@ sub query_eval_test {
 			print STDERR "ok\n" if ($self->debug);
 		
 		#	warn "comparing results...";
-			$self->compare_results( $expected, $actual, $test->value, \$comment, $TODO );
+			$self->compare_results( $expected, $actual, $test->value, \$comment, $reduced_mode, $TODO );
 		};
 		
 		my $ok	= not($@);
@@ -1200,7 +1208,17 @@ sub compare_results {
 	my $actual		= shift->canonicalize->materialize;
 	my $test		= shift;
 	my $comment		= shift || do { my $foo; \$foo };
+	my $reduced_mode	= shift;
 	my $todo		= shift;
+	if ($reduced_mode) {
+		for ($actual, $expected) {
+			$_	= $_->uniq();
+		}
+	}
+	
+	if ($reduced_mode and $self->debug) {
+		warn "Comparing data using REDUCED cardinality semantics\n";
+	}
 	
 	if ($actual->does('Attean::API::ResultIterator') or $actual->does('Attean::API::TripleIterator')) {
 		my $eqtest	= Attean::BindingEqualityTest->new();
@@ -1247,7 +1265,14 @@ sub record_result {
 			push(@{ $self->failures->{$type} }, $name);
 		}
 	}
-	warn Dumper($self->failures);
+	
+	if (my $earl = $self->earl) {
+		if ($ok) {
+			$earl->pass($name);
+		} else {
+			$earl->fail($name);
+		}
+	}
 }
 
 sub model_as_string {
@@ -1273,18 +1298,38 @@ sub DESTROY {
 		}
 		$count	+= scalar(@$failures);
 	}
+	my $timestamp	= scalar(time);
 	if ($self->run_query_tests and ($count or $todo)) {
 		my $d	= Data::Dumper->new([$self->failures], [qw(tests)]);
 		$d->Sortkeys(1)->Indent(2);
 		my $msg	= "Failing and/or TODO tests: " . $d->Dump;
 		warn $msg;
 		unless ($self->pattern) {
-			open(my $fh, '>', sprintf('.sparql-test-suite-%d', scalar(time)));
+			open(my $fh, '>', sprintf('.sparql-test-suite-%d', $timestamp));
 			while (my ($type, $failures) = each(%{ $self->failures })) {
+				if ($type eq 'TODO') {
+					while (my ($type, $failures) = each(%$failures)) {
+						say $fh "$type - TODO";
+						say $fh join("\n", sort @$failures);
+					}
+					next;
+				}
 				say $fh $type;
 				say $fh join("\n", sort @$failures);
 			}
 		}
+	}
+	if (my $earl = $self->earl) {
+		my $filename	= sprintf('.sparql-test-suite-%d.ttl', $timestamp);
+		open(my $fh, '>', $filename);
+		my $model	= $earl->model;
+		my $iter	= $model->get_quads()->as_triples();
+		my $rdf		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+		my $EARL	= 'http://www.w3.org/ns/earl#';
+		my $map		= URI::NamespaceMap->new( { earl => iri($EARL), rdf => iri($rdf) } );
+		my $ser		= Attean->get_serializer('Turtle')->new(namespaces => $map);
+		$ser->serialize_iter_to_io($fh, $iter);
+		warn "EARL results: $filename\n";
 	}
 }
 
