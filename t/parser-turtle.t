@@ -111,6 +111,19 @@ subtest 'pre-defined base IRI' => sub {
 	is($t->object->value, 'http://example.org/base/obj/value');
 };
 
+subtest 'ANON bug' => sub {
+	my $turtle	= q[<s> <p> [ <q> [] ]];
+	open(my $fh, '<:encoding(UTF-8)', \$turtle);
+	my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+	
+	expect($l->get_token, IRI, ['s'], 'subject');
+	expect($l->get_token, IRI, ['p'], 'predicate');
+	expect($l->get_token, LBRACKET, ['[']);
+	expect($l->get_token, IRI, ['q'], 'predicate');
+	expect($l->get_token, ANON, []);
+	expect($l->get_token, RBRACKET, [']']);
+};
+
 done_testing();
 
 sub expect {
@@ -121,6 +134,8 @@ sub expect {
 	if (length($name)) {
 		$name	= "${name}: ";
 	}
-	is($token->type, $type, "${name}token type");
+	my $expected	= decrypt_constant($type);
+	my $got			= decrypt_constant($token->type);
+	is($token->type, $type, "${name}token type (expecting ${expected}; got ${got})");
 	is_deeply($token->args, $values, "${name}token values");
 }
