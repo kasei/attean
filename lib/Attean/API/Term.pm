@@ -439,6 +439,8 @@ package Attean::API::NumericLiteral 0.039 {
 	sub equals {
 		my ($a, $b)	= @_;
 		return 0 unless ($b->does('Attean::API::NumericLiteral'));
+		return 0 unless (defined $a->numeric_value);
+		return 0 unless (defined $b->numeric_value);
 		return $a->numeric_value == $b->numeric_value;
 	}
 
