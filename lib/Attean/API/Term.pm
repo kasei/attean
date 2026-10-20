@@ -621,6 +621,89 @@ package Attean::API::NumericLiteral 0.039 {
 			'unsignedByte'			=> 'unsignedShort',
 			'positiveInteger'		=> 'nonNegativeInteger',
 		);
+		sub is_base_type {
+			my $type	= shift;
+			return ($type =~ m/\b(integer|decimal|float|double)$/);
+		}
+		sub _lowest_base_type {
+			my ($lhs, $rhs)	= @_;
+			for ($lhs, $rhs) {
+				s/^.*#//;
+			}
+			if ($lhs eq $rhs) {
+				if (is_base_type($lhs)) {
+					return "http://www.w3.org/2001/XMLSchema#$lhs";
+				}
+			}
+			my $cur	= $lhs;
+			my %ancestors;
+			do {
+				$ancestors{$cur}++;
+				if ($cur eq $rhs) {
+					if (is_base_type($cur)) {
+						return "http://www.w3.org/2001/XMLSchema#$cur";
+					}
+				}
+			} while ($cur = $type_hierarchy{$cur});
+
+			$cur	= $rhs;
+			my $seen_float		= 0;
+			my $seen_decimal	= 0;
+			
+			while ($cur = $type_hierarchy{$cur}) {
+				if (exists $ancestors{$cur}) {
+					if (is_base_type($cur)) {
+						return "http://www.w3.org/2001/XMLSchema#$cur";
+					}
+				}
+				if ($cur eq 'float') {
+					$seen_float++;
+					if (my $r = _lowest_base_type($lhs, 'double')) {
+						return $r;
+					}
+				}
+				if ($cur eq 'decimal') {
+					$seen_decimal++;
+					if (my $r = _lowest_base_type($lhs, 'float')) {
+						return $r;
+					}
+					if (my $r = _lowest_base_type($lhs, 'double')) {
+						return $r;
+					}
+				}
+			}
+			if ($ancestors{'float'}) {
+				# seen a float type on the lhs
+				return "http://www.w3.org/2001/XMLSchema#double" if ($rhs eq 'float');
+			} elsif ($seen_float) {
+				# seen a float type on the rhs
+				return "http://www.w3.org/2001/XMLSchema#double" if (exists $ancestors{'float'});
+			}
+			if ($ancestors{'decimal'}) {
+				# seen a decimal type on the lhs
+				return "http://www.w3.org/2001/XMLSchema#float" if ($rhs eq "float");
+				return "http://www.w3.org/2001/XMLSchema#double" if ($rhs eq "double");
+			} elsif ($seen_decimal) {
+				# seen a decimal type on the rhs
+				return "http://www.w3.org/2001/XMLSchema#float" if (exists $ancestors{"float"});
+				return "http://www.w3.org/2001/XMLSchema#double" if (exists $ancestors{"double"});
+			}
+			if ($rhs eq 'float') {
+				$seen_float++;
+				if (my $r = _lowest_base_type($lhs, 'double')) {
+					return $r;
+				}
+			} elsif ($rhs eq 'decimal') {
+				$seen_decimal++;
+				if (my $r = _lowest_base_type($lhs, 'float')) {
+					return $r;
+				}
+				if (my $r = _lowest_base_type($lhs, 'double')) {
+					return $r;
+				}
+			}
+			return;
+		}
 		sub _lca {
 			my ($lhs, $rhs)	= @_;
 			for ($lhs, $rhs) {
@@ -634,8 +717,21 @@ package Attean::API::NumericLiteral 0.039 {
 				return "http://www.w3.org/2001/XMLSchema#$cur" if ($cur eq $rhs);
 			}
 			$cur	= $rhs;
+			my $seen_float		= 0;
+			my $seen_decimal	= 0;
 			while ($cur = $type_hierarchy{$cur}) {
+				$seen_float++ if ($cur eq 'float');
+				$seen_decimal++ if ($cur eq 'decimal');
 				return "http://www.w3.org/2001/XMLSchema#$cur" if exists $ancestors{$cur};
+			}
+			if ($ancestors{'decimal'}) {
+				# seen decimal on the lhs
+				return "http://www.w3.org/2001/XMLSchema#float" if ($rhs eq "float");
+				return "http://www.w3.org/2001/XMLSchema#double" if ($rhs eq "double");
+			} elsif ($seen_decimal) {
+				# seen decimal on the rhs
+				return "http://www.w3.org/2001/XMLSchema#float" if (exists $ancestors{"float"});
+				return "http://www.w3.org/2001/XMLSchema#double" if (exists $ancestors{"double"});
 			}
 			return;
 		}
@@ -646,8 +742,10 @@ package Attean::API::NumericLiteral 0.039 {
 			
 			if ($op =~ m<^[-+*]$>) {
 				# return common numeric type
-				if (my $type = _lca($self->datatype->value, $rhs->datatype->value)) {
-					return $type;
+				if (my $lbtype = _lowest_base_type($self->datatype->value, $rhs->datatype->value)) {
+					return $lbtype;
+				} elsif (my $lctype = _lca($self->datatype->value, $rhs->datatype->value)) {
+					return $lctype;
 				}
 				return 'http://www.w3.org/2001/XMLSchema#double';
 			} elsif ($op eq '/') {
@@ -657,6 +755,14 @@ package Attean::API::NumericLiteral 0.039 {
 				}
 				if (my $type = _lca($self->datatype->value, $rhs->datatype->value)) {
 					return $type;
+				} else {
+					my $lt	= $self->datatype->value;
+					my $rt	= $rhs->datatype->value;
+					if ($lt =~ /#double$/ or $rt =~ /#double$/) {
+						return "http://www.w3.org/2001/XMLSchema#double";
+					} elsif ($lt =~ /#float$/ or $rt =~ /#float$/) {
+						return "http://www.w3.org/2001/XMLSchema#float";
+					}
 				}
 				return 'http://www.w3.org/2001/XMLSchema#double';
 			}
