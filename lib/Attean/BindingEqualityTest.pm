@@ -341,7 +341,32 @@ solutions, the solution returned is arbitrary.
 			$blank_node_cache{$b}	= Attean::Blank->new($b);
 		}
 		
+		my ($ba_counts, $should_use)	= $self->count_bindings_by_blank($ba);
+		my ($bb_counts)	= $self->count_bindings_by_blank($bb);
+		my $quick_check_permutation	= sub { return 1; };
+		if ($should_use) {
+			$quick_check_permutation	= sub {
+				# TODO: quickly rule-out permutations that will not lead to valid solutions
+				my $mapping	= shift;
+				my %mapping_str;
+				@mapping_str{ @ka }	= @$mapping;
+				if (scalar(@$mapping) > 1) {
+					foreach my $k (keys %mapping_str) {
+						my $a_count	= $ba_counts->{ $k };
+						my $b_count	= $bb_counts->{ $mapping_str{ $k } };
+						unless ($a_count == $b_count) {
+							# Early rejection of this mapping, because the number of statements this blank node
+							# appears in differs between the lhs and rhs bindings.
+							return 0;
+						}
+					}
+				}
+				return 1;
+			};
+		}
+		
 		MAPPING: while (my $mapping = $kbp->next) {
+			next unless $quick_check_permutation->($mapping);
 			$count++;
 			my %mapping_str;
 			@mapping_str{ @ka }	= @$mapping;
@@ -377,6 +402,26 @@ solutions, the solution returned is arbitrary.
 		return 0;
 	}
 
+	sub count_bindings_by_blank {
+		my $self		= shift;
+		my $bindings	= shift;
+		my %bindings;
+		foreach my $st (@$bindings) {
+			if ($st->has_blanks) {
+				foreach my $n ($st->blanks) {
+					push( @{ $bindings{ $n->value } }, $st );
+				}
+			}
+		}
+		my %counts;
+		foreach my $k (keys %bindings) {
+			$counts{ $k }	= scalar(@{ $bindings{ $k } });
+		}
+		my %distinct_counts	= map { $_ => 1 } (values %counts);
+		my @distinct_counts	= keys %distinct_counts;
+		my $should_use	= (scalar(@distinct_counts) > 1);
+		return (\%counts, $should_use);
+	}
 =item C<< split_blank_statements( $iter ) >>
 
 Returns two array refs containing bindings from C<< $iter >>, with bindings
