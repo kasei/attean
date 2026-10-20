@@ -732,13 +732,21 @@ AGAIN:
 		elsif ($esc eq 'f') { return "\f" }
 		elsif ($allow_mb) {
 			if ($esc eq 'U') {
-				my $codepoint	= $self->read_length(8);
-				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
-				return chr(hex($codepoint));
+				my $h			= $self->read_length(8);
+				my $codepoint	= hex($h);
+				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($h =~ /^[0-9A-Fa-f]+$/o);
+				if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+					die "Surrogate U+$h is illegal as a codepoint escape value";
+				}
+				return chr($codepoint);
 			} elsif ($esc eq 'u'){
-				my $codepoint	= $self->read_length(4);
-				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
-				return chr(hex($codepoint));
+				my $h			= $self->read_length(4);
+				my $codepoint	= hex($h);
+				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($h =~ /^[0-9A-Fa-f]+$/o);
+				if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+					die "Surrogate U+$h is illegal as a codepoint escape value";
+				}
+				return chr($codepoint);
 			}
 		}
 		$self->_throw_error("Unrecognized string escape '$esc'");

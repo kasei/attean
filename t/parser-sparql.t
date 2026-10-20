@@ -290,6 +290,18 @@ END
 	is($hint->[2]->value, 'Ordered', 'third term of HINT');
 };
 
+subtest 'SPARQL 1.2 bade uncode codepoint escape' => sub {
+	dies_ok {
+		my $parser	= AtteanX::Parser::SPARQL->new(version => 1.2);
+		my $a	= $parser->parse('SELECT * WHERE { ?s ?p "\uD800" }');
+	} 'Use of unicode surrogate escape';
+# 	
+# 	dies_ok {
+# 		my $a	= AtteanX::Parser::SPARQL->parse_update('INSERT { <s> <p> <o> }');
+# 	} 'unexpected EOF in update';
+	
+};
+
 done_testing();
 
 sub expect {
