@@ -1013,6 +1013,12 @@ package Attean::Plan::Extend 0.039 {
 					my ($string, $pattern, $flags)	= @terms;
 	# 				my ($string, $pattern, $flags)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 					# TODO: ensure that $string is a literal
+					unless ($string->does('Attean::API::Literal')) {
+						die 'REGEX called with non-literal value';
+					}
+					unless ($pattern->does('Attean::API::Literal')) {
+						die 'REGEX called with non-literal pattern';
+					}
 					($string, $pattern, $flags)	= map { blessed($_) ? $_->value : '' } ($string, $pattern, $flags);
 					my $re;
 					my $flag_str	= '';

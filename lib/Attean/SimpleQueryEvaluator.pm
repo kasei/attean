@@ -1193,6 +1193,12 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						return $operands[0]->does("Attean::API::$type_roles{$1}") ? $true : $false;
 					} elsif ($func eq 'REGEX') {
 						my ($value, $pattern, $flags)	= map { $_->value } @operands;
+						unless ($operands[0]->does('Attean::API::Literal')) {
+							die 'REGEX called with non-literal value';
+						}
+						unless ($operands[1]->does('Attean::API::Literal')) {
+							die 'REGEX called with non-literal pattern';
+						}
 						my $flag_str	= '';
 						if (defined $flags) {
 							$flag_str	.= 'i' if ($flags =~ /i/);
