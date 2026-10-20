@@ -410,6 +410,7 @@ sub data_syntax_eval_test {
 				my $test	= Attean::BindingEqualityTest->new();
 				my $trig_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::TripleOrQuad' );
 				my $ok		= $test->equals($trig_iter, $nq_iter);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
 				ok($ok, "$testname - $filename");
 				if (not $ok) {
 					warn "BindingEqualityTest failures: " . $test->error();
@@ -877,44 +878,44 @@ sub query_eval_test {
 	print STDERR "constructing model...\n" if ($self->debug);
 	my $test_model	= $self->test_model();
 	my $next_stress	= 0;
-	try {
-		foreach my $data (@data) {
-			my $file_url	= $data->value;
-			$file_url		= $self->fix_local_to_w3c($file_url);
-			if (blessed($data)) {
-				$test_model->load_urls_into_graph_with_base($self->default_graph, [$data], $file_url);
-			}
-		}
-		foreach my $g (@gdata) {
-			my $start = $test_model->size;
-			my $file_url	= $g->value;
-			$file_url		= $self->fix_local_to_w3c($file_url);
-			$test_model->load_urls_into_graph_with_base(iri($file_url), [$g], $file_url);
-			my $end	= $test_model->size;
-			unless ($start < $end) {
-				warn "*** Loading file did not result in any new quads: " . $g;
-			}
-		}
-		foreach my $n (@cdata) {
-			my ($bytes, $format)	= $self->construct_data($model, $n, %args);
-			my $p					= Attean->get_parser(media_type => $format)->new();
-			my $iter				= $p->parse_iter_from_bytes($bytes);
-			$test_model->add_iter($iter->as_quads($self->default_graph));
-		}
-	} catch {
-		fail($test->value);
-		$self->record_result('evaluation', 0, $test->value, $TODO);
-		print "# died: " . $test->value . ": $_\n";
-		$next_stress++;
-	};
-	next STRESS if $next_stress;
-	print STDERR "ok\n" if ($self->debug);
-
-	my $resuri		= URI->new( $result->value );
-	my $resfilename	= $resuri->file;
-
 	TODO: {
 		local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
+		try {
+			foreach my $data (@data) {
+				my $file_url	= $data->value;
+				$file_url		= $self->fix_local_to_w3c($file_url);
+				if (blessed($data)) {
+					$test_model->load_urls_into_graph_with_base($self->default_graph, [$data], $file_url);
+				}
+			}
+			foreach my $g (@gdata) {
+				my $start = $test_model->size;
+				my $file_url	= $g->value;
+				$file_url		= $self->fix_local_to_w3c($file_url);
+				$test_model->load_urls_into_graph_with_base(iri($file_url), [$g], $file_url);
+				my $end	= $test_model->size;
+				unless ($start < $end) {
+					warn "*** Loading file did not result in any new quads: " . $g;
+				}
+			}
+			foreach my $n (@cdata) {
+				my ($bytes, $format)	= $self->construct_data($model, $n, %args);
+				my $p					= Attean->get_parser(media_type => $format)->new();
+				my $iter				= $p->parse_iter_from_bytes($bytes);
+				$test_model->add_iter($iter->as_quads($self->default_graph));
+			}
+		} catch {
+			fail($test->value);
+			$self->record_result('evaluation', 0, $test->value, $TODO);
+			print "# died: " . $test->value . ": $_\n";
+			$next_stress++;
+		};
+		next STRESS if $next_stress;
+		print STDERR "ok\n" if ($self->debug);
+	
+		my $resuri		= URI->new( $result->value );
+		my $resfilename	= $resuri->file;
+	
 		my $comment;
 		eval {
 			if ($self->debug) {
@@ -936,7 +937,7 @@ sub query_eval_test {
 			print STDERR "ok\n" if ($self->debug);
 		
 		#	warn "comparing results...";
-			$self->compare_results( $expected, $actual, $test->value, \$comment );
+			$self->compare_results( $expected, $actual, $test->value, \$comment, $TODO );
 		};
 		
 		my $ok	= not($@);
@@ -1199,7 +1200,7 @@ sub compare_results {
 	my $actual		= shift->canonicalize->materialize;
 	my $test		= shift;
 	my $comment		= shift || do { my $foo; \$foo };
-	my $TODO		= shift;
+	my $todo		= shift;
 	
 	if ($actual->does('Attean::API::ResultIterator') or $actual->does('Attean::API::TripleIterator')) {
 		my $eqtest	= Attean::BindingEqualityTest->new();
@@ -1219,14 +1220,14 @@ sub compare_results {
 		if ($@) {
 			diag($@);
 		}
-		$self->record_result('evaluation', $ok, $test, $TODO);
+		$self->record_result('evaluation', $ok, $test, $todo);
 		return $ok;
 	} elsif ($actual->does('Attean::API::TermIterator')) {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
 		my $name	= $self->debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
 		my $ok		= ok( $a->equals($e), $name );
-		$self->record_result('evaluation', $ok, $test, $TODO);
+		$self->record_result('evaluation', $ok, $test, $todo);
 		return $ok;
 	} else {
 		die "Unexpected result type $actual";
@@ -1238,13 +1239,15 @@ sub record_result {
 	my $type	= shift;
 	my $ok		= shift;
 	my $name	= shift;
-	my $TODO	= shift;
-	if ($TODO) {
-		$name	.= ' TODO';
-	}
+	my $todo	= shift;
 	unless ($ok) {
-		push(@{ $self->failures->{$type} }, $name);
+		if ($todo) {
+			push(@{ $self->failures->{'TODO'}{$type} }, $name);
+		} else {
+			push(@{ $self->failures->{$type} }, $name);
+		}
 	}
+	warn Dumper($self->failures);
 }
 
 sub model_as_string {
@@ -1260,13 +1263,20 @@ sub model_as_string {
 sub DESTROY {
 	my $self	= shift;
 	my $count	= 0;
+	my $todo	= 0;
 	while (my ($type, $failures) = each(%{ $self->failures })) {
+		if ($type eq 'TODO') {
+			while (my ($type, $failures) = each(%$failures)) {
+				$todo	+= scalar(@$failures);
+			}
+			next;
+		}
 		$count	+= scalar(@$failures);
 	}
-	if ($self->run_query_tests and $count) {
-		my $d	= Data::Dumper->new([$self->failures], [qw(failures)]);
+	if ($self->run_query_tests and ($count or $todo)) {
+		my $d	= Data::Dumper->new([$self->failures], [qw(tests)]);
 		$d->Sortkeys(1)->Indent(2);
-		my $msg	= "Failing tests: " . $d->Dump;
+		my $msg	= "Failing and/or TODO tests: " . $d->Dump;
 		warn $msg;
 		unless ($self->pattern) {
 			open(my $fh, '>', sprintf('.sparql-test-suite-%d', scalar(time)));
