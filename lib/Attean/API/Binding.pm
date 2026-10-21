@@ -487,7 +487,8 @@ package Attean::API::TriplePattern 0.039 {
 
 	use Moo::Role;
 	
-	sub variables { return qw(subject predicate object) }
+	my @vars	= qw(subject predicate object);
+	sub variables { return @vars }
 
 	sub value {
 		my $self	= shift;
@@ -518,6 +519,20 @@ package Attean::API::TriplePattern 0.039 {
 		return $self->apply_statement(@_);
 	}
 
+	sub matches {
+		my $self	= shift;
+		my $ground	= shift;
+		return 0 unless (ref($ground) eq 'Attean::Triple' or $ground->does('Attean::API::Triple'));
+		foreach my $method (@vars) {
+			my $term	= $self->$method();
+			unless (ref($term) eq 'Attean::Variable' or $term->does('Attean::API::Variable')) {
+				my $gterm	= $ground->$method();
+				return 0 unless ($term->equals($gterm));
+			}
+		}
+		return 1;
+	}
+	
 	sub sparql_tokens {
 		my $self	= shift;
 		my @tokens;
@@ -637,7 +652,8 @@ package Attean::API::QuadPattern 0.039 {
 
 	use Moo::Role;
 	
-	sub variables { return qw(subject predicate object graph) }
+	my @vars	= qw(subject predicate object graph);
+	sub variables { return @vars }
 	sub value {
 		my $self	= shift;
 		my $key		= shift;
@@ -666,6 +682,20 @@ package Attean::API::QuadPattern 0.039 {
 		return Attean::TriplePattern->new(mesh \@keys, \@values);
 	}
 
+	sub matches {
+		my $self	= shift;
+		my $ground	= shift;
+		return 0 unless (ref($ground) eq 'Attean::Quad' or $ground->does('Attean::API::Quad'));
+		foreach my $method (@vars) {
+			my $term	= $self->$method();
+			unless (ref($term) eq 'Attean::Variable' or $term->does('Attean::API::Variable')) {
+				my $gterm	= $ground->$method();
+				return 0 unless ($term->equals($gterm));
+			}
+		}
+		return 1;
+	}
+	
 	sub sparql_tokens {
 		my $self	= shift;
 		my @tokens;
