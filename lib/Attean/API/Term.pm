@@ -428,6 +428,17 @@ package Attean::API::BooleanLiteral 0.039 {
 			return $self;
 		}
 	}
+
+	sub equals {
+		my ($a, $b)	= @_;
+		if ($b->does('Attean::API::BooleanLiteral')) {
+			my $l	= $a->canonicalized_term;
+			my $r	= $b->canonicalized_term;
+			return $l->value eq $r->value;
+		}
+		return $a->SUPER::equals($b);
+	}
+
 	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
 }
 
