@@ -178,6 +178,23 @@ package Attean::API::Literal 0.039 {
 			}
 		}
 	};
+
+	sub is_recognized_type {
+		my $self	= shift;
+		if (my $dt = $self->datatype) {
+			my $type	= $dt->value;
+			if ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
+				return 1;
+			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+				return 1;
+			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#dateTime') {
+				return 1;
+			} elsif (my $role = Attean->get_datatype_role($type)) {
+				return 1;
+			}
+			return 0;
+		}
+	}
 	
 	sub sparql_tokens {
 		my $self	= shift;
@@ -238,6 +255,25 @@ package Attean::API::Literal 0.039 {
 		return -1 if ($b->does('Attean::API::Binding'));
 		my $c	= ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
 		return $c;
+	}
+	
+	sub equals {
+		my $a	= shift;
+		my $b	= shift;
+		if ($a->as_string eq $b->as_string) {
+			return 1;
+		}
+		if (my $adt = $a->datatype and my $bdt = $b->datatype) {
+			if (!$a->is_recognized_type or !$b->is_recognized_type) {
+				# Either different lexical values in the same datatype, or different
+				# datatypes. Either way, it's datatypes that were not caught by some
+				# some more-specific implementation of equals(). So we don't know
+				# anything about the value space, so we raise a type error, indicating
+				# that we can't say whether the values are equal or not.
+				die 'TypeError';
+			}
+		}
+		return $a->SUPER::equals($b);
 	}
 	
 =item C<< sameTerms( $other ) >>
@@ -392,6 +428,20 @@ package Attean::API::DateTimeLiteral 0.039 {
 		return 0 if ($dt->time_zone->is_floating != $odt->time_zone->is_floating);
 		return (0 == $dt->compare($odt));
 	}
+
+	sub compare {
+		my ($a, $b)	= @_;
+		if ($b->does('Attean::API::DateTimeLiteral')) {
+			if (my $adt = $a->datetime and my $bdt = $b->datetime) {
+				my $af	= $adt->time_zone->is_floating;
+				my $bf	= $bdt->time_zone->is_floating;
+				# TODO: handle case of one floating datetime
+				return DateTime->compare($adt, $bdt);
+			}
+		}
+		return $a->SUPER::compare($b);
+	}
+	
 }
 
 package Attean::API::CanonicalizingLiteral 0.039 {
@@ -448,7 +498,11 @@ package Attean::API::NumericLiteral 0.039 {
 	use Moo::Role;
 
 	sub equals {
-		my ($a, $b)	= @_;
+		my ($a, $b)		= @_;
+		my $does_num	= $b->does('Attean::API::NumericLiteral');
+		if ($b->does('Attean::API::Literal') and not($does_num)) {
+			die "TypeError: numeric and non-numeric literals are not comparable";
+		}
 		return 0 unless ($b->does('Attean::API::NumericLiteral'));
 		return 0 unless (defined $a->numeric_value);
 		return 0 unless (defined $b->numeric_value);
@@ -457,6 +511,10 @@ package Attean::API::NumericLiteral 0.039 {
 
 	sub compare {
 		my ($a, $b)	= @_;
+		my $does_num	= $b->does('Attean::API::NumericLiteral');
+		if ($b->does('Attean::API::Literal') and not($does_num)) {
+			die "TypeError: numeric and non-numeric literals are not comparable";
+		}
 		return 1 unless blessed($b);
 		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
 		return -1 if ($b->does('Attean::API::Binding'));
