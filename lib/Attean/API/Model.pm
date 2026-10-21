@@ -406,6 +406,8 @@ package Attean::API::MutableModel 0.039 {
 		$ua->default_headers->push_header( 'Accept' => $accept );
 		
 		foreach my $u (@urls) {
+			my $mapper	= Attean::TermMap->uuid_blank_map;
+			my $bindings_mapper	= $mapper->binding_mapper;
 			my $url		= blessed($u) ? $u->value : $u;
 			my $resp	= $ua->get($url);
 			if ($resp->is_success) {
@@ -419,7 +421,7 @@ package Attean::API::MutableModel 0.039 {
 					if ($@) {
 						die "Failed to parse URL $url: $@";
 					}
-					$self->add_iter($iter->as_quads($graph));
+					$self->add_iter($iter->map($bindings_mapper)->as_quads($graph));
 				} else {
 					die "No parser found for content type $ct: $url";
 				}
