@@ -114,4 +114,23 @@ subtest 'blank comparison' => sub {
 	is($b2->compare($b3), -1, 'blank term equality comparison');
 };
 
+subtest 'dateTime terms' => sub {
+	my $dtlit1	= Attean::Literal->new( value => '1999-12-31T23:59:59', datatype => 'http://www.w3.org/2001/XMLSchema#dateTime' );
+	does_ok($dtlit1, 'Attean::API::DateTimeLiteral');
+	my $dt1	= $dtlit1->datetime;
+	isa_ok($dt1, 'DateTime');
+
+	my $dtlit2	= Attean::Literal->new( value => '2000-01-01T00:00:00', datatype => 'http://www.w3.org/2001/XMLSchema#dateTime' );
+	does_ok($dtlit2, 'Attean::API::DateTimeLiteral');
+	my $dt2	= $dtlit2->datetime;
+	isa_ok($dt2, 'DateTime');
+
+	my $dtlit3	= Attean::Literal->new( value => '1999-12-31T24:00:00', datatype => 'http://www.w3.org/2001/XMLSchema#dateTime' );
+	does_ok($dtlit3, 'Attean::API::DateTimeLiteral');
+	my $dt3	= $dtlit3->datetime;
+	isa_ok($dt3, 'DateTime');
+	
+	is(0, $dt2->compare($dt3), 'support for 24:00:00 lexical format');
+};
+
 done_testing();
