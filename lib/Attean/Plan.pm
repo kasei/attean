@@ -614,7 +614,8 @@ package Attean::Plan::EBVFilter 0.039 {
 				my $r		= shift;
 				my $term	= $r->value($var);
 				return 0 unless (blessed($term) and $term->does('Attean::API::Term'));
-				return $term->ebv;
+				my $ok	= eval { $term->ebv } || 0;
+				return $ok;
 			});
 		};
 	}
@@ -922,7 +923,8 @@ package Attean::Plan::Extend 0.039 {
 				return $eq ? $true : $false; # TODO: this may not be using value-space comparision for numerics...
 			} elsif ($op eq '!=') {
 				my ($lhs, $rhs)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
-				return not($lhs->equals($rhs)) ? $true : $false; # TODO: this may not be using value-space comparision for numerics...
+				my $neq	= not($lhs->equals($rhs));
+				return $neq ? $true : $false; # TODO: this may not be using value-space comparision for numerics...
 			} elsif ($op =~ m#[<>]=?#) {
 				my ($lhs, $rhs)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 				my $cmp	= $lhs->compare($rhs);
