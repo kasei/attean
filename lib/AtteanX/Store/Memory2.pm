@@ -55,6 +55,10 @@ A trie index in the SPOG order.
 
 A trie index in the POGS order.
 
+=item C<< gpso >>
+
+A trie index in the GPSO order.
+
 =back
 
 =head1 METHODS
@@ -72,11 +76,13 @@ Returns a new memory-backed storage object.
 
 has spog		=> (is => 'rw', isa => InstanceOf['AtteanX::Store::Memory2::SPOGIndex']);
 has pogs		=> (is => 'rw', isa => InstanceOf['AtteanX::Store::Memory2::SPOGIndex']);
+has gpso		=> (is => 'rw', isa => InstanceOf['AtteanX::Store::Memory2::SPOGIndex']);
 
 sub BUILD {
 	my $self	= shift;
 	$self->spog(AtteanX::Store::Memory2::SPOGIndex->new(order => [qw(subject predicate object graph)]));
 	$self->pogs(AtteanX::Store::Memory2::SPOGIndex->new(order => [qw(predicate object graph subject)]));
+	$self->gpso(AtteanX::Store::Memory2::SPOGIndex->new(order => [qw(graph predicate subject object)]));
 }
 
 sub indexes {
@@ -84,6 +90,7 @@ sub indexes {
 	my @i;
 	push(@i, $self->spog);
 	push(@i, $self->pogs);
+	push(@i, $self->gpso);
 	return @i;
 }
 
@@ -120,8 +127,16 @@ sub _get_quads {
 	my @nodes	= @_;
 	my $iter;
 	my $s	= $nodes[0];
+	my $g	= $nodes[3];
+	
+	# Simple heuristics to choose which index to use:
+	# - SPOG if subject is bound
+	# - GPSO if graph is bound
+	# - POGS for any other pattern
 	if (blessed($s) and $s->does('Attean::API::Term')) {
 		$iter	= eval { $self->spog->match(@nodes) };
+	} elsif (blessed($g) and $g->does('Attean::API::Term')) {
+		$iter	= eval { $self->gpso->match(@nodes) };
 	} else {
 		$iter	= eval { $self->pogs->match(@nodes) };
 	}
@@ -138,16 +153,20 @@ the set of graphs of the stored quads.
 
 sub get_graphs {
 	my $self	= shift;
-	my %graphs;
-	eval {
-		my $iter	= $self->spog->match();
-		while (my $q = $iter->next) {
-			my $g	= $q->graph;
-			$graphs{ $g->as_string }	= $g;
-		}
-	};
-	warn $@ if ($@);
-	return Attean::ListIterator->new( values => [values %graphs], item_type => 'Attean::API::Term' );
+	if (my $gpso = $self->gpso) {
+		return $gpso->head_values();
+	} else {
+		my %graphs;
+		eval {
+			my $iter	= $self->spog->match();
+			while (my $q = $iter->next) {
+				my $g	= $q->graph;
+				$graphs{ $g->as_string }	= $g;
+			}
+		};
+		warn $@ if ($@);
+		return Attean::ListIterator->new( values => [values %graphs], item_type => 'Attean::API::Term' );
+	}
 }
 
 =item C<< add_quad ( $quad ) >>

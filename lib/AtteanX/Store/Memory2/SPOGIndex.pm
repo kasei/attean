@@ -164,6 +164,30 @@ sub remove_prefix {
 	%{ $trie }	= ();
 }
 
+sub head_values {
+	my $self	= shift;
+	my $trie	= shift // $self->trie;
+	my @values;
+	foreach my $k (sort keys %$trie) {
+		my $t		= $trie->{$k};
+		my $q		= $self->get_first_quad($t);
+		my @terms	= $self->map_quad_to_index_order($q);
+		push(@values, $terms[0]);
+	}
+	return Attean::ListIterator->new( values => \@values, item_type => 'Attean::API::Term' );
+}
+
+sub get_first_quad {
+	my $self	= shift;
+	my $trie	= shift // $self->trie;
+	if (ref($trie) eq 'HASH') {
+		my ($k)	= sort keys %$trie;
+		return $self->get_first_quad($trie->{$k});
+	} else {
+		return $trie;
+	}
+}
+
 sub debug {
 	my $self	= shift;
 	my $trie	= shift // $self->trie;
