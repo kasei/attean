@@ -183,7 +183,9 @@ package Attean::API::Literal 0.039 {
 		my $self	= shift;
 		if (my $dt = $self->datatype) {
 			my $type	= $dt->value;
-			if ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
+			if ($type eq 'http://www.w3.org/2001/XMLSchema#string') {
+				return 1;
+			} elsif ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
 				return 1;
 			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#boolean') {
 				return 1;
@@ -273,7 +275,7 @@ package Attean::API::Literal 0.039 {
 				die 'TypeError';
 			}
 		}
-		return $a->SUPER::equals($b);
+		return 0;
 	}
 	
 =item C<< sameTerms( $other ) >>
