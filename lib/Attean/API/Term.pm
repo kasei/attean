@@ -332,7 +332,27 @@ package Attean::API::DateTimeLiteral 0.039 {
 	sub datetime {
 		my $self	= shift;
 		my $w3c	= DateTime::Format::W3CDTF->new;
-		return $w3c->parse_datetime( $self->value );
+		my $lex	= $self->value;
+		my $add	= 0;
+		if ($lex =~ /T24:00:00/) {
+			$add++;
+			$lex	=~ s/24:00:00/00:00:00/;
+		}
+		my $dt	= $w3c->parse_datetime( $lex );
+		if ($add) {
+			$dt->add( days => 1 );
+		}
+		return $dt;
+	}
+	
+	sub equals {
+		my $self	= shift;
+		my $other	= shift;
+		return 0 unless ($other->does('Attean::API::DateTimeLiteral'));
+		my $dt	= $self->datetime;
+		my $odt	= $other->datetime;
+		return 0 if ($dt->time_zone->is_floating != $odt->time_zone->is_floating);
+		return (0 == $dt->compare($odt));
 	}
 }
 
