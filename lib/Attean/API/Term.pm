@@ -483,12 +483,23 @@ package Attean::API::BooleanLiteral 0.039 {
 
 	sub equals {
 		my ($a, $b)	= @_;
-		if ($b->does('Attean::API::BooleanLiteral')) {
+		my $does_bool	= $b->does('Attean::API::BooleanLiteral');
+		if ($b->does('Attean::API::Literal') and not($does_bool)) {
+			if (!$a->is_recognized_type or !$b->is_recognized_type) {
+				# Either different lexical values in the same datatype, or different
+				# datatypes. Either way, it's datatypes that were not caught by some
+				# some more-specific implementation of equals(). So we don't know
+				# anything about the value space, so we raise a type error, indicating
+				# that we can't say whether the values are equal or not.
+				die "TypeError: boolean and non-boolean literals are not comparable";
+			}
+		}
+		if ($does_bool) {
 			my $l	= $a->canonicalized_term;
 			my $r	= $b->canonicalized_term;
 			return $l->value eq $r->value;
 		}
-		return $a->SUPER::equals($b);
+		return 0;
 	}
 
 	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
@@ -503,7 +514,14 @@ package Attean::API::NumericLiteral 0.039 {
 		my ($a, $b)		= @_;
 		my $does_num	= $b->does('Attean::API::NumericLiteral');
 		if ($b->does('Attean::API::Literal') and not($does_num)) {
-			die "TypeError: numeric and non-numeric literals are not comparable";
+			if (!$a->is_recognized_type or !$b->is_recognized_type) {
+				# Either different lexical values in the same datatype, or different
+				# datatypes. Either way, it's datatypes that were not caught by some
+				# some more-specific implementation of equals(). So we don't know
+				# anything about the value space, so we raise a type error, indicating
+				# that we can't say whether the values are equal or not.
+				die "TypeError: numeric and non-numeric literals are not comparable";
+			}
 		}
 		return 0 unless ($b->does('Attean::API::NumericLiteral'));
 		return 0 unless (defined $a->numeric_value);
