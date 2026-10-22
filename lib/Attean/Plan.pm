@@ -1042,7 +1042,7 @@ package Attean::Plan::Extend 0.039 {
 	# 				foreach my $child (@{ $expr->children }) {
 					foreach my $value (@children) {
 	# 					my $value	= $self->evaluate_expression($model, $child, $r);
-						if ($term->equals($value)) {
+						if (eval { $term->equals($value) }) {
 							return $ok;
 						}
 					}
