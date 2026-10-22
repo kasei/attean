@@ -100,7 +100,7 @@ sub recursively_find_manifest_files {
 ###############################################################################
 
 
-Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
+Test::Roo::top_test 'SPARQL tests' => sub {
 	my $self		= shift;
 	my $PATTERN		= $self->pattern;
 	my @manifests	= @{ $self->manifests };
@@ -179,7 +179,7 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 					if ($total) {
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->sparql_syntax_test( 'update', $model, $test );
+						$self->sparql_syntax_test( 'update', $model, $test, specVersion => $specVersion );
 					}
 				}
 			}
