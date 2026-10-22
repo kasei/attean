@@ -301,7 +301,8 @@ the supplied C<< $active_graph >>.
 				}
 				
 				my @branches;
-				my %ignore	= map { $_->value => 1 } @$default_graphs;
+				# ignore default graphs unless they are listed as available named graphs
+				my %ignore	= map { $_->value => 1 } grep { not exists $available{ $_->value} } @$default_graphs;
 				while (my $graph = $graphs->next) {
 					next if $ignore{ $graph->value };
 					my %exprs	= ($gvar => Attean::ValueExpression->new(value => $graph));
