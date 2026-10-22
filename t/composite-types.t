@@ -191,4 +191,11 @@ END
 	}
 };
 
+subtest 'cdt:List: rewrite lexical' => sub {
+	my $l1		= Attean::Literal->new(value => '[]', datatype => 'http://w3id.org/awslabs/neptune/SPARQL-CDTs/List');
+	my $r1		= AtteanX::Functions::CompositeLists::rewrite_lexical($l1, {}, 0);
+	is($r1->value, '[]');
+};
+
+
 done_testing();
