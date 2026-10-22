@@ -3492,49 +3492,6 @@ sub _String {
 # 		croak "Expecting string literal but found $got '$value'";
 	}
 
-	if ($self->version ge '1.2') {
-		$value		=~ s{\\(?:(?:u([0-9A-Fa-f]{4}))|(?:U([0-9A-Fa-f]{8}))|([tbnr"'\\]))}{
-			use Data::Dumper;
-			my $unescaped	= '';
-			if (defined($3)) {
-				if ($3 eq 't') {
-					$unescaped = "\t";
-				} elsif ($3 eq 'b') {
-					$unescaped = "\b";
-				} elsif ($3 eq 'n') {
-					$unescaped = "\n";
-				} elsif ($3 eq 'r') {
-					$unescaped = "\r";
-				} elsif ($3 eq '"') {
-					$unescaped = "\"";
-				} elsif ($3 eq "'") {
-					$unescaped = "'";
-				} elsif ($3 eq '\\') {
-					$unescaped = "\\";
-				} else {
-					die "Unhandled escape character $3"
-				}
-			} else {
-				no warnings 'uninitialized';
-				my $h			= $1 . $2;
-				my $codepoint	= hex($h);
-				if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
-					die "Unicode surrogate U+$h is illegal in UTF-8";
-				}
-				$unescaped = chr($codepoint);
-			}
-			$unescaped;
-		}ge;
-	} else {
-		$value	=~ s/\\t/\t/g;
-		$value	=~ s/\\b/\n/g;
-		$value	=~ s/\\n/\n/g;
-		$value	=~ s/\\r/\x08/g;
-		$value	=~ s/\\"/"/g;
-		$value	=~ s/\\'/'/g;
-		$value	=~ s/\\\\/\\/g;	# backslash must come last, so it doesn't accidentally create a new escape
-	}
-	
 	return $value;
 }
 
