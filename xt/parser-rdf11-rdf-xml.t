@@ -23,6 +23,7 @@ sub BUILD {
 	my $path		= File::Spec->catfile( $base, 'rdf', 'rdf11', 'rdf-xml' );
 # 	$self->debug(0);
 	$self->tests_dir($path);
+	plan skip_all => "No such W3C tests directory: " . $path unless (-d $path);
 }
 
 my %args	= (run_update_tests => 0, use_idp_planner => 0);
