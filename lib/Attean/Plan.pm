@@ -148,7 +148,17 @@ package Attean::Plan::NestedLoopJoin 0.039 {
 
 	with 'Attean::API::BindingSubstitutionPlan';
 	with 'Attean::API::Plan::Join';
-	sub plan_as_string {
+
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		if (exists $args{'expression'}) {
+			die "TODO: expression passed to NestedLoopJoin";
+		}
+		return $class->SUPER::BUILDARGS(%args);
+	}
+
+	sub plan_name {
 		my $self	= shift;
 		if ($self->left) {
 			return 'NestedLoop Left Join';
@@ -157,6 +167,11 @@ package Attean::Plan::NestedLoopJoin 0.039 {
 		} else {
 			return 'NestedLoop Join';
 		}
+	}
+
+	sub plan_as_string {
+		my $self	= shift;
+		return $self->plan_name;
 	}
 
 	sub impl {
@@ -235,6 +250,15 @@ package Attean::Plan::HashJoin 0.039 {
 	use List::Util qw(all);
 	use namespace::clean;
 	
+	sub BUILDARGS {
+		my $class		= shift;
+		my %args		= @_;
+		if (exists $args{'expression'}) {
+			die "TODO: expression passed to HashJoin";
+		}
+		return $class->SUPER::BUILDARGS(%args);
+	}
+
 	sub BUILD {
 		my $self	= shift;
 		if ($self->anti) {
