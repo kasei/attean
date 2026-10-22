@@ -1205,9 +1205,9 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 							$flag_str	.= 's' if ($flags =~ /s/);
 							$flag_str	.= 'm' if ($flags =~ /m/);
 							$flag_str	.= 'x' if ($flags =~ /x/);
-						}
-						if ($flags =~ /q/) {
-							$pattern	= quotemeta($pattern);
+							if ($flags =~ /q/) {
+								$pattern	= quotemeta($pattern);
+							}
 						}
 						return ($value =~ /(?${flag_str}:$pattern)/) ? $true : $false;
 					}
