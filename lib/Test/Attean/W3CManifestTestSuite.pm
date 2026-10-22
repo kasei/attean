@@ -412,13 +412,13 @@ sub data_syntax_eval_test {
 				}
 				my $nq_iter		= Attean::ListIterator->new( values => \@nq_quads, item_type => 'Attean::API::TripleOrQuad' );
 
-				my $test	= Attean::BindingEqualityTest->new();
+				my $eq_test	= Attean::BindingEqualityTest->new();
 				my $trig_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::TripleOrQuad' );
-				my $ok		= $test->equals($trig_iter, $nq_iter);
+				my $ok		= $eq_test->equals($trig_iter, $nq_iter);
 				$self->record_result('syntax', $ok, $test->as_string, $TODO);
 				ok($ok, "$testname - $filename");
 				if (not $ok) {
-					warn "BindingEqualityTest failures: " . $test->error();
+					warn "BindingEqualityTest failures: " . $eq_test->error();
 					warn "Expecting " . scalar(@nq_quads) . " triples:\n";
 					if (scalar(@nq_quads)) {
 						warn $ser->serialize_list_to_bytes(@nq_quads);
