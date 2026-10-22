@@ -92,7 +92,7 @@ Returns a list of file extensions that may be parsed with the parser.
 		my $nodes	= shift;
 		my $lineno	= shift;
 		if (scalar(@$nodes) == 3) {
-			return Attean::Triple->new(@$nodes);
+			return Attean::Triple->new(@$nodes)->validate;
 		} else {
 			die qq[Not valid N-Triples data at line $lineno];
 		}

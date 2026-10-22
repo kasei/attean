@@ -596,6 +596,7 @@ package Attean::API::Triple 0.039 {
 				die "${class}'s $method failed conformance check for role $role: " . $term->as_string . "\n";
 			}
 		}
+		return $self;
 	}
 	
 	sub as_quad {
@@ -769,6 +770,7 @@ package Attean::API::Quad 0.039 {
 				Carp::confess "${class}'s $method failed conformance check for role $role: " . $term->as_string;
 			}
 		}
+		return $self;
 	}
 
 	sub as_triple {
