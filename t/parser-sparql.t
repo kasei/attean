@@ -302,6 +302,23 @@ subtest 'SPARQL 1.2 bade uncode codepoint escape' => sub {
 	
 };
 
+subtest 'OPTIONAL handling of top-level FILTERs' => sub {
+	my $parser	= Attean->get_parser('SPARQL')->new();
+	my $q		= $parser->parse("SELECT * { ?s <p> ?o OPTIONAL { ?s <q> ?x FILTER(?o > ?x) } }");
+	does_ok($q, 'Attean::API::Algebra');
+	isa_ok($q, 'Attean::Algebra::Query');
+	my $p		= $q->child;
+	isa_ok($p, 'Attean::Algebra::Project');
+	my $l		= $p->child;
+	isa_ok($l, 'Attean::Algebra::LeftJoin');
+	my $expr	= $l->expression;
+	isa_ok($expr, 'Attean::BinaryExpression');
+
+	my ($lhs, $rhs)	= @{ $l->children };
+	isa_ok($lhs, 'Attean::Algebra::BGP');
+	isa_ok($rhs, 'Attean::Algebra::BGP');
+};
+
 done_testing();
 
 sub expect {

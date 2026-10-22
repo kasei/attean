@@ -1594,8 +1594,16 @@ sub __handle_GraphPatternNotTriples {
 		unless ($ggp) {
 			$ggp	= Attean::Algebra::BGP->new();
 		}
-		
-		my $opt	= $class->new( children => [$ggp, @args] );
+		my %args;
+		if ($class eq 'Attean::Algebra::LeftJoin') {
+			if (scalar(@args) == 1 and $args[0]->isa('Attean::Algebra::Filter')) {
+				my $filter	= $args[0];
+				my $expr	= $filter->expression;
+				$args[0]	= $filter->child;
+				$args{ expression }	= $expr;
+			}
+		}
+		my $opt	= $class->new( children => [$ggp, @args], %args );
 		$self->_add_patterns( $opt );
 	} elsif ($class eq 'Attean::Algebra::Table') {
  		my ($table)	= @args;
