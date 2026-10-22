@@ -636,6 +636,12 @@ sub update_eval_test {
 					$test_model->load_urls_into_graph($self->default_graph, $data);
 				}
 			};
+			
+			if ($self->debug) {
+				warn "TEST MODEL AFTER DEFAULT GRAPH LOAD:\n";
+				$self->debug_model($test_model);
+			}
+			
 			if ($@) {
 				fail($test->value);
 				$self->record_result('update', 0, $test->value, $TODO);
@@ -896,6 +902,12 @@ sub query_eval_test {
 					$test_model->load_urls_into_graph_with_base($self->default_graph, [$data], $file_url);
 				}
 			}
+			
+			if ($self->debug) {
+				warn "TEST MODEL AFTER DEFAULT GRAPH LOAD:\n";
+				$self->debug_model($test_model);
+			}
+
 			foreach my $g (@gdata) {
 				my $start = $test_model->size;
 				my $file_url	= $g->value;
@@ -991,6 +1003,19 @@ sub mock_endpoints {
 	}
 }
 
+sub debug_model {
+	my $self			= shift;
+	my $model			= shift;
+	if ($self->debug) {
+		my $iter	= $model->get_quads;
+		warn "Dataset:\n-------------\n";
+		my $s		= Attean->get_serializer('TextTable')->new();
+		my $table	= decode_utf8($s->serialize_iter_to_bytes($iter));
+		warn $table;
+		warn "-------------\n";
+	}
+}
+
 sub get_actual_results {
 	my $self			= shift;
 	my $filename		= shift;
@@ -1022,14 +1047,7 @@ sub get_actual_results {
 		warn $algebra->as_string;
 	}
 	
-	if ($self->debug) {
-		my $iter	= $model->get_quads;
-		warn "Dataset:\n-------------\n";
-		my $s		= Attean->get_serializer('TextTable')->new();
-		my $table	= decode_utf8($s->serialize_iter_to_bytes($iter));
-		warn $table;
-		warn "-------------\n";
-	}
+	$self->debug_model($model);
 	
 	my $testns	= 'http://example.com/test-results#';
 	my $rmodel	= memory_model();
