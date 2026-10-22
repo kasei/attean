@@ -193,10 +193,11 @@ Returns the next token present in the input.
 			no warnings 'uninitialized';
 			$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 			return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns, $local);
-		} else {
-			$self->buffer =~ /^$r_PNAME_NS/;
+		} elsif ($self->buffer =~ /^$r_PNAME_NS/) {
 			my $ns	= $self->read_length($+[0]);
 			return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns);
+		} else {
+			$self->_throw_error("Invalid PrefixedName");
 		}
 	}
 
