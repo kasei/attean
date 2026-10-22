@@ -1072,6 +1072,10 @@ sub get_actual_results {
 	}
 	my $count	= 1;
 	
+	unless (blessed($results)) {
+		die 'Failed to produce actual results';
+	}
+	
 	$results	= $results->materialize;
 	my $item	= $results->peek;
 	
@@ -1262,7 +1266,8 @@ sub compare_results {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
 		my $name	= $self->debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
-		my $ok		= ok( $a->equals($e), $name );
+		my $eq	= $a->equals($e);
+		my $ok	= ok( $eq, $name );
 		$self->record_result('evaluation', $ok, $test, $todo);
 		return $ok;
 	} else {
@@ -1347,7 +1352,7 @@ sub DESTROY {
 		my $map		= URI::NamespaceMap->new( { earl => iri($EARL), rdf => iri($rdf) } );
 		my $ser		= Attean->get_serializer('Turtle')->new(namespaces => $map);
 		$ser->serialize_iter_to_io($fh, $iter);
-		warn "EARL results: $filename\n";
+		warn "EARL results: $filename\n" if ($self->debug);
 	}
 }
 
