@@ -120,7 +120,7 @@ subtest 'ANON bug' => sub {
 	expect($l->get_token, IRI, ['p'], 'predicate');
 	expect($l->get_token, LBRACKET, ['[']);
 	expect($l->get_token, IRI, ['q'], 'predicate');
-	expect($l->get_token, ANON, []);
+	expect($l->get_token, ANON, ['[]']);
 	expect($l->get_token, RBRACKET, [']']);
 };
 
