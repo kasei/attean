@@ -265,7 +265,7 @@ package Attean::API::Literal 0.039 {
 		if ($a->as_string eq $b->as_string) {
 			return 1;
 		}
-		if (my $adt = $a->datatype and my $bdt = $b->datatype) {
+		if ($a->can('datatype') and $b->can('datatype') and my $adt = $a->datatype and my $bdt = $b->datatype) {
 			if (!$a->is_recognized_type or !$b->is_recognized_type) {
 				# Either different lexical values in the same datatype, or different
 				# datatypes. Either way, it's datatypes that were not caught by some
