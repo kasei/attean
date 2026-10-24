@@ -812,8 +812,8 @@ subtest 'Update sequence' => sub {
 };
 
 subtest 'SPARQL-star' => sub {
-	my $s	= Attean->get_parser('SPARQL')->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { << ?s a foaf:Person >> foaf:believedBy <http://kasei.us/about/#greg> }")->as_sparql;
-	ws_is($s, 'SELECT * WHERE{ << ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person> >> <http://xmlns.com/foaf/0.1/believedBy> <http://kasei.us/about/#greg> . }');
+	my $s	= Attean->get_parser('SPARQL')->parse("PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { << ?s a foaf:Person ~ <tag:x> >> foaf:believedBy <http://kasei.us/about/#greg> }")->as_sparql;
+	ws_is($s, 'SELECT * WHERE{ <tag:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies> <<(?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/Person>)>> . <tag:x> <http://xmlns.com/foaf/0.1/believedBy> <http://kasei.us/about/#greg> . }');
 };
 
 subtest 'Regressions' => sub {

@@ -14,15 +14,19 @@ use Test::Roo;
 use List::Util qw(all);
 use FindBin qw($Bin);
 
-with 'Test::Attean::SPARQLStarSuite';
+with 'Test::Attean::RDFSyntaxTestSuite';
 
 sub BUILD {
-	my $self	= shift;
-	my $path	= File::Spec->catfile( $Bin, 'data', 'rdf-star', 'sparql', 'eval' );
+	my $self		= shift;
+	my $env_path	= $ENV{'W3C_RDF_TESTS_PATH'};
+	my $base		= (defined($env_path) and -d $env_path) ? $env_path : File::Spec->catfile( $Bin, 'data', 'rdf-tests' );
+	my $path		= File::Spec->catfile( $base, 'rdf', 'rdf12', 'rdf-turtle' );
+# 	$self->debug(0);
 	$self->tests_dir($path);
+	plan skip_all => "No such W3C tests directory: " . $path unless (-d $path);
 }
 
-my %args	= (run_update_tests => 0);
+my %args	= (run_update_tests => 0, use_idp_planner => 0);
 while (defined(my $opt = shift)) {
 	if ($opt eq '-v') {
 		$args{debug}++;

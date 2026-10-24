@@ -41,84 +41,86 @@ with 'Test::Attean::W3CManifestTestSuite';
 
 sub manifest_paths {
 	my $self	= shift;
-	my @files;
-	if ($self->run_query_tests) {
-		push(@files, qw(
-			aggregates
-			bind
-			cast
-			bindings
-			construct
-			csv-tsv-res
-			exists
-			functions
-			grouping
-			json-res
-			negation
-			project-expression
-			property-path
-			subquery
-		));
 
-		push(@files, qw(
-			syntax-query
-			syntax-fed
-			syntax-update-1
-			syntax-update-2
-		));
-
-		push(@files, qw(
-			lang-basedir
-			rdf11
-			syntax-escaping
-			syntax-triple-terms-negative
-			syntax-triple-terms-positive
-		));
-	}
-	if ($self->run_update_tests) {
-		push(@files, qw(
-			add
-			basic-update
-			clear
-			copy
-			delete
-			delete-data
-			delete-insert
-			delete-where
-			drop
-			move
-			update-silent
-		));
-	}
-	
 	my $dir		= $self->tests_dir;
 	unless (defined($dir)) {
 		plan skip_all => "No manifest directory given";
 		exit(0);
 	}
 	
-	unless (-d $dir and -r $dir) {
-		plan skip_all => "Manifest directory not readable: $dir";
-		exit(0);
+	my $manifest	= File::Spec->catfile($dir, 'manifest.ttl');
+	if (-r $manifest) {
+		return ($manifest);
+	} else {
+		die "Manifest is not readable: $manifest\n";
+	}
+}
+
+sub recursively_find_manifest_files {
+	my $self		= shift;
+	my $manifest	= shift;
+
+	my $model		= $self->memory_model();
+	my $class		= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
+
+	my %loaded;
+	
+	my %manifests;
+	my %manifest_files	= ($manifest => 1);
+	my @load	= map { iri("file://" . File::Spec->rel2abs($_)) } ($manifest);
+	while (scalar(@load)) {
+		foreach my $iri (@load) {
+# 			warn "Loading " . $iri->value . "\n" if ($self->debug);
+			$loaded{ $iri->value }++;
+		}
+		$model->load_urls_into_graph($self->default_graph, @load);
+		@load	= ();
+
+		my $subjects = $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") );
+		my @manifest_matches	= $subjects->elements;
+		foreach my $m (@manifest_matches) {
+			if (not exists $manifests{ $m->value }) {
+				$manifests{ $m->value }	= $m;
+				my @list_heads	= $model->objects( $m, iri("${MF}include") )->elements;
+				my @elements	= map { $model->get_list(undef, $_)->elements() } @list_heads;
+				my @new			= grep { not exists($loaded{$_->value}) } @elements;
+				push(@load, @new);
+				foreach my $n (@new) {
+					my $url	= $n->value;
+					$url	=~ s{file://}{};
+					$manifest_files{ $url }++;
+				}
+			}
+		}
 	}
 	
-	my @manifests	= grep { -r $_ } map { File::Spec->catfile($dir, $_, 'manifest.ttl') } @files;
+	return keys %manifest_files;
 }
 
 ###############################################################################
 
 
-Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
+Test::Roo::top_test 'SPARQL tests' => sub {
 	my $self		= shift;
 	my $PATTERN		= $self->pattern;
 	my @manifests	= @{ $self->manifests };
 	my $model		= $self->model;
 	foreach my $m (@manifests) {
 # 		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
-		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
-		unless (blessed($list)) {
-			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
+		my $specVersion	= '1.1';
+		my ($sv)	= $model->objects( $m, iri("${MF}specVersion") )->elements;
+		if ($sv) {
+			my $v	= $sv->value;
+			if ($v =~ m<http://www.w3.org/ns/sparql#version-(.*)>) {
+				$specVersion	= $1;
+			} else {
+				warn "*** Unexpected specVersion $v\n";
+			}
 		}
+		my ($list)		= $model->objects( $m, iri("${MF}entries") )->elements;
+# 		unless (blessed($list)) {
+# 			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
+# 		}
 		my @tests	= $model->get_list( $self->default_graph, $list )->elements;
 		foreach my $test (@tests) {
 			unless ($test->value =~ /$PATTERN/) {
@@ -135,21 +137,21 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 					if ($et + $ct) {
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->query_eval_test( $model, $test );
+						$self->query_eval_test( $model, $test, specVersion => $specVersion );
 					}
 				}
 				
 				{
 					# Syntax Tests
 					my $total	= 0;
-					foreach my $type (qw(PositiveSyntaxTest11 NegativeSyntaxTest11)) {
+					foreach my $type (qw(PositiveSyntaxTest PositiveSyntaxTest11 NegativeSyntaxTest NegativeSyntaxTest11)) {
 						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
 					}
 
 					if ($total) {
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->syntax_test( 'query', $model, $test );
+						$self->sparql_syntax_test( 'query', $model, $test, specVersion => $specVersion );
 					}
 				}
 			}
@@ -163,21 +165,21 @@ Test::Roo::top_test 'SPARQL 1.1 tests' => sub {
 							next;
 						}
 						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->update_eval_test( $model, $test, );
+						$self->update_eval_test( $model, $test, specVersion => $specVersion );
 					}
 				}
 				
 				{
 					# Syntax Tests
 					my $total	= 0;
-					foreach my $type (qw(PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest11)) {
+					foreach my $type (qw(PositiveUpdateSyntaxTest PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest NegativeUpdateSyntaxTest11)) {
 						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
 					}
 
 					if ($total) {
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
-						$self->syntax_test( 'update', $model, $test );
+						$self->sparql_syntax_test( 'update', $model, $test, specVersion => $specVersion );
 					}
 				}
 			}

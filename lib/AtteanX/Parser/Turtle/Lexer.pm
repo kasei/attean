@@ -80,10 +80,10 @@ current line and column of the input data.
 		'['	=> LBRACKET,
 		']'	=> RBRACKET,
 		'('	=> LPAREN,
-		')'	=> RPAREN,
 		'}'	=> RBRACE,
 		','	=> COMMA,
 		'='	=> EQUALS,
+		'~' => TILDE,
 	);
 
 	my %METHOD_TOKEN	= (
@@ -91,6 +91,7 @@ current line and column of the input data.
 		q[@]	=> '_get_keyword',
 		q[<]	=> '_get_iriref_or_ltlt',
 		q[>]	=> '_get_gtgt',
+		q[)]	=> '_get_rparen_or_pgtgt',
 		q[|]	=> '_get_rannot',
 		q[{]	=> '_get_lbrace_or_lannot',
 		q[_]	=> '_get_bnode',
@@ -139,7 +140,10 @@ Returns the next token present in the input.
 				return $self->_get_number();
 			}
 		
-			if (defined(my $name = $CHAR_TOKEN{$c})) { $self->get_char; return $self->new_token($name, $start_line, $start_column, $c); }
+			if ($c eq '[' and $self->buffer =~ /^\[\s*\]/) {
+				$self->read_length($+[0]);
+				return $self->new_token(ANON, $start_line, $start_column, '[]');
+			} elsif (defined(my $name = $CHAR_TOKEN{$c})) { $self->get_char; return $self->new_token($name, $start_line, $start_column, $c); }
 			elsif (defined(my $method = $METHOD_TOKEN{$c})) { return $self->$method() }
 			elsif ($c =~ /[A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{037F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/o) {
 				if ($self->buffer =~ /^a(?!:)\s/o) {
@@ -154,6 +158,9 @@ Returns the next token present in the input.
 				} elsif ($self->buffer =~ /^PREFIX(?!:)\b/io) {
 					$self->read_length(6);
 					return $self->new_token(PREFIX, $start_line, $start_column);
+				} elsif ($self->buffer =~ /^VERSION(?!:)\b/io) {
+					$self->read_length(7);
+					return $self->new_token(VERSION, $start_line, $start_column);
 				} elsif ($self->buffer =~ /^GRAPH(?!:)\b/io) {
 					$self->read_length(5);
 					return $self->new_token(GRAPH, $start_line, $start_column);
@@ -186,10 +193,11 @@ Returns the next token present in the input.
 			no warnings 'uninitialized';
 			$local	=~ s{\\([-~.!&'()*+,;=:/?#@%_\$])}{$1}g;
 			return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns, $local);
-		} else {
-			$self->buffer =~ $r_PNAME_NS;
+		} elsif ($self->buffer =~ /^$r_PNAME_NS/) {
 			my $ns	= $self->read_length($+[0]);
 			return $self->new_token(PREFIXNAME, $self->start_line, $self->start_column, $ns);
+		} else {
+			$self->_throw_error("Invalid PrefixedName");
 		}
 	}
 
@@ -215,10 +223,26 @@ Returns the next token present in the input.
 		return $self->new_token(RANNOT, $self->start_line, $self->start_column, '|}');
 	}
 	
+	sub _get_rparen_or_pgtgt {
+		my $self	= shift;
+		$self->get_char_safe(q[)]);
+		if ($self->buffer =~ /^>>/o) {
+			$self->get_char_safe(q[>]);
+			$self->get_char_safe(q[>]);
+			return $self->new_token(PGTGT, $self->start_line, $self->start_column, 'PGTGT');
+		} else {
+			return $self->new_token(RPAREN, $self->start_line, $self->start_column, ')');
+		}
+	}
+	
 	sub _get_iriref_or_ltlt {
 		my $self	= shift;
 		$self->get_char_safe(q[<]);
-		if ($self->buffer =~ /^</o) {
+		if ($self->buffer =~ /^<\(/o) {
+			$self->get_char_safe(q[<]);
+			$self->get_char_safe(q[(]);
+			return $self->new_token(LTLTP, $self->start_line, $self->start_column, '<<(');
+		} elsif ($self->buffer =~ /^</o) {
 			$self->get_char_safe(q[<]);
 			return $self->new_token(LTLT, $self->start_line, $self->start_column, '<<');
 		}
@@ -361,7 +385,11 @@ Returns the next token present in the input.
 					last;
 				} else {
 					my $c	= $self->peek_char;
-					$self->_throw_error("Got '$c' while expecting string character");
+					if (defined($c)) {
+						$self->_throw_error("Got '$c' while expecting string character");
+					} else {
+						$self->_throw_error("Got EOF while expecting string character");
+					}
 				}
 			}
 			$self->get_char_safe(q["]);
@@ -414,7 +442,11 @@ Returns the next token present in the input.
 					last;
 				} else {
 					my $c		= $self->peek_char();
-					$self->_throw_error("Got '$c' while expecting string character");
+					if (defined($c)) {
+						$self->_throw_error("Got '$c' while expecting string character");
+					} else {
+						$self->_throw_error("Got EOF while expecting string character");
+					}
 				}
 			}
 			$self->get_char_safe(q[']);
@@ -455,9 +487,15 @@ Returns the next token present in the input.
 		} elsif ($self->buffer =~ /^prefix/o) {
 			$self->read_word('prefix');
 			return $self->new_token(TURTLEPREFIX, $self->start_line, $self->start_column);
+		} elsif ($self->buffer =~ /^version/o) {
+			$self->read_word('version');
+			return $self->new_token(TURTLEVERSION, $self->start_line, $self->start_column);
 		} else {
-			if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
+			if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*(--[a-zA-Z]+)?\b/o) {
 				my $lang	= $self->read_length($+[0]);
+				if ($lang !~ /--(ltr|rtl)$/ and $lang =~ /--(\w+)$/) {
+					$self->_throw_error("Expected base direction to be 'ltr' or 'rtl', but found '$1'");
+				}
 				return $self->new_token(LANG, $self->start_line, $self->start_column, $lang);
 			}
 			$self->_throw_error("Expected keyword or language tag");

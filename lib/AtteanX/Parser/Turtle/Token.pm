@@ -112,10 +112,15 @@ my %token_strings;
 		rparen		=> [RPAREN, ')'],
 		lbracket	=> [LBRACKET, '['],
 		rbracket	=> [RBRACKET, ']'],
+		ltlt		=> [LTLT, '<<'],
+		gtgt		=> [GTGT, '>>'],
+		ltltp		=> [LTLT, '<<('],
+		pgtgt		=> [GTGT, ')>>'],
 		dot			=> [DOT, '.'],
 		comma		=> [COMMA, ','],
 		semicolon	=> [SEMICOLON, ';'],
 		hathat		=> [HATHAT, '^^'],
+		tilde		=> [TILDE, '~'],
 	);
 	for my $name (keys %tokens) {
 		my ($type, $value)	= @{ $tokens{ $name } };

@@ -1223,12 +1223,25 @@ package Attean::Algebra::Table 0.039 {
 	has variables => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Variable']]);
 	has rows => (is => 'ro', isa => ArrayRef[ConsumerOf['Attean::API::Result']]);
 
+	sub BUILD {
+		my $self	= shift;
+		my %seen;
+		foreach my $v (@{ $self->variables }) {
+			if ($seen{$v->value}++) {
+				die "Repeated use of variable " . $v->value . " in VALUES clause";
+			}
+		}
+	}
+
 	sub in_scope_variables {
 		my $self	= shift;
 		return map { $_->value } @{ $self->variables };
 	}
 	sub tree_attributes { return qw(variables rows) };
-	sub algebra_as_string { return 'Table' }
+	sub algebra_as_string {
+		my $self	= shift;
+		return sprintf('Table (%d rows)', scalar(@{ $self->rows }));
+	}
 
 	sub sparql_tokens {
 		my $self	= shift;
@@ -1300,7 +1313,7 @@ package Attean::Algebra::Construct 0.039 {
 	sub algebra_as_string {
 		my $self	= shift;
 		my $triples	= $self->triples;
-		return sprintf('Construct { %s }', join(' . ', map { $_->as_string } @$triples));
+		return sprintf('Construct { %s }', join(' ', map { $_->as_string } @$triples));
 	}
 }
 

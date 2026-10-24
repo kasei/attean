@@ -243,16 +243,39 @@ sub start_element {
 	my $self	= shift;
 	my $el		= shift;
 
+	foreach my $withdrawn (qw(aboutEach aboutEachPrefix bagID)) {
+		if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${withdrawn}"}) {
+			die "XML attribute rdf:${withdrawn} not allowed";
+		}
+		if ($el->{NamespaceURI} eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' and $el->{LocalName} eq $withdrawn) {
+			die "XML node rdf:${withdrawn} not allowed";
+		}
+	}
+
 	$self->{depth}++;
 	$self->handle_scoped_values( $el ) unless ($self->expect == LITERAL);
 	if ($self->{depth} == 1 and $el->{NamespaceURI} eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' and $el->{LocalName} eq 'RDF') {
 		# ignore the wrapping rdf:RDF element
 	} else {
-		my $prefix	= $el->{Prefix};
 		my $expect	= $self->expect;
+		if ($self->{depth} > 1) {
+			my @props	= (qw(RDF ID about aboutEach bagID parseType resource nodeID));
+			push(@props, 'li') if ($expect == SUBJECT);
+			foreach my $prop (@props) {
+				if ($el->{NamespaceURI} eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' and $el->{LocalName} eq $prop) {
+					die "rdf:${prop} is forbidden as a node element name";
+				}
+			}
+		}
+		
+		my $prefix	= $el->{Prefix};
 		$self->new_expect( $expect = SUBJECT ) if ($expect == NIL);
 	
 		if ($expect == SUBJECT or $expect == OBJECT) {
+			if (my $data = $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}li'}) {
+				die "rdf:li is not allowed as as an attribute";
+			}
+
 			my $ns		= $self->get_namespace( $prefix );
 			my $local	= $el->{LocalName};
 			my $uri		= join('', $ns, $local);
@@ -296,6 +319,10 @@ sub start_element {
 			my $local	= $el->{LocalName};
 			my $uri		= join('', $ns, $local);
 			my $node	= $self->new_resource( $uri );
+
+			if ($node->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#Description') {
+				die "rdf:Description is forbidden as a property element name";
+			}
 		
 			if ($node->value eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#li') {
 				my $id	= ++(${ $self }{seqs}[0]);
@@ -308,7 +335,13 @@ sub start_element {
 			}
 		
 			if (my $data = $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID'}) {
+# 				foreach my $prop (qw(nodeID)) {
+# 					if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${prop}"}) {
+# 						die "Node cannot have both rdf:ID and rdf:${prop}";
+# 					}
+# 				}
 				my $id	= $data->{Value};
+				$self->validate_id($id, 'rdf:ID');
 				unshift(@{ $self->{reify_id} }, $id);
 			} else {
 				unshift(@{ $self->{reify_id} }, undef);
@@ -324,6 +357,10 @@ sub start_element {
 				
 					$self->new_expect( PREDICATE );
 				} elsif ($pt->{Value} eq 'Literal') {
+					if (exists $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource'}) {
+						die "specifying an rdf:parseType of 'Literal' and an rdf:resource attribute at the same time is not allowed";
+					}
+					
 					$self->{datatype}		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral';
 					my $depth				= $self->{depth};
 					$self->{literal_depth}	= $depth - 1;
@@ -334,8 +371,14 @@ sub start_element {
 					unshift( @{ $self->{ collection_last } }, undef );
 					$self->new_expect( COLLECTION );
 					$self->new_expect( OBJECT );
+					unshift(@{ $self->{reify_id} }, undef);	# temporarily mask the reifier to allow the collection triples to be non-reified ; this will be restored during the end_element handling that closes the COLLECTION mode
 				}
 			} elsif (my $data = $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource'}) {
+				foreach my $prop (qw(nodeID about)) {
+					if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${prop}"}) {
+						die "Node cannot have both rdf:resource and rdf:${prop}";
+					}
+				}
 				# stash the uri away so that we can use it when we get the end_element call for this predicate
 				my $uri	= $self->new_resource( $data->{Value} );
 				$self->parse_literal_property_attributes( $el, $uri );
@@ -343,7 +386,13 @@ sub start_element {
 				$self->new_expect( OBJECT );
 				$self->{chars_ok}	= 1;
 			} elsif (my $ndata = $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}nodeID'}) {
+				foreach my $prop (qw(resource)) {
+					if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${prop}"}) {
+						die "Node cannot have both rdf:nodeID and rdf:${prop}";
+					}
+				}
 				my $node_name	= $ndata->{Value};
+				$self->validate_id($node_name, 'rdf:nodeID');
 				# stash the bnode away so that we can use it when we get the end_element call for this predicate
 				my $bnode	= $self->get_named_bnode( $node_name );
 				$self->parse_literal_property_attributes( $el, $uri );
@@ -450,13 +499,14 @@ sub end_element {
 			my $head	= $self->{ collection_head }[0] || iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#nil");
 			my @nodes	= (@{ $nodes }[ $#{$nodes} - 1, $#{$nodes} ], $head);
 			my $st		= Attean::Triple->new( @nodes );
-			$self->assert( $st );
 		
 			if (my $last = $self->{ collection_last }[0]) {
 				my @nodes	= ( $last, iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"), iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#nil") );
 				my $st		= Attean::Triple->new( @nodes );
 				$self->assert( $st );
 			}
+			shift(@{ $self->{reify_id} });	# restore any reifier that was pending for the triple pointing to the collectionhead
+			$self->assert( $st );
 		
 			shift( @{ $self->{ collection_last } } );
 			shift( @{ $self->{ collection_head } } );
@@ -558,16 +608,49 @@ sub node_id {
 	my $el		= shift;
 
 	if ($el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}about'}) {
+		foreach my $prop (qw(nodeID)) {
+			if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${prop}"}) {
+				die "Node cannot have both rdf:about and rdf:${prop}";
+			}
+		}
 		my $uri	= $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}about'}{Value};
 		return $self->new_resource( $uri );
 	} elsif ($el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID'}) {
+		foreach my $prop (qw(nodeID)) {
+			if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${prop}"}) {
+				die "Node cannot have both rdf:ID and rdf:${prop}";
+			}
+		}
 		my $uri	= $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}ID'}{Value};
-		return $self->new_resource( '#' . $uri );
+		$self->validate_id($uri, 'rdf:ID');
+		my $i	= $self->new_resource( '#' . $uri );
+		if ($self->{seen_rdf_ID_values}{$i->value}++) {
+			die "Two nodes cannot use the same rdf:ID value [$uri]";
+		}
+		return $i;
 	} elsif ($el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}nodeID'}) {
+		foreach my $prop (qw(ID)) {
+			if (exists $el->{Attributes}{"{http://www.w3.org/1999/02/22-rdf-syntax-ns#}${prop}"}) {
+				die "Node cannot have both rdf:nodeID and rdf:${prop}";
+			}
+		}
 		my $name	= $el->{Attributes}{'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}nodeID'}{Value};
+		$self->validate_id($name, 'rdf:nodeID');
 		return $self->get_named_bnode( $name );
 	} else {
 		return $self->new_bnode;
+	}
+}
+
+sub validate_id {
+	my $self	= shift;
+	my $id		= shift;
+	my $prop	= shift;
+	my $startChar	= qr/[:A-Za-z\x{00C0}-\x{00D6}\x{00D8}-\x{00F6}\x{00F8}-\x{02FF}\x{0370}-\x{037D}\x{37F}-\x{1FFF}\x{200C}-\x{200D}\x{2070}-\x{218F}\x{2C00}-\x{2FEF}\x{3001}-\x{D7FF}\x{F900}-\x{FDCF}\x{FDF0}-\x{FFFD}\x{10000}-\x{EFFFF}]/;
+	my $nameChar	= qr/${startChar}|[-.0-9\x{b7}\x{300}-\x{36f}\x{203f}-\x{2040}]/;
+	my $name		= qr/^${startChar}(?:$nameChar)*$/;
+	unless ($id =~ $name) {
+		die "${prop} value [$id] does not match XML Name production";
 	}
 }
 

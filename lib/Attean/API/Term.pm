@@ -135,6 +135,7 @@ package Attean::API::Literal 0.039 {
 	with 'Attean::API::TermOrVariableOrTriplePattern';
 	
 	requires 'language'; # => (is => 'ro', isa => 'Maybe[Str]', predicate => 'has_language');
+	requires 'base_dir'; # => (is => 'ro', isa => 'Maybe[Str]');
 	requires 'datatype'; # => (is => 'ro', isa => 'Attean::API::IRI', required => 1, coerce => 1, default => sub { IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string') });
 	
 	sub BUILD {}
@@ -177,6 +178,25 @@ package Attean::API::Literal 0.039 {
 			}
 		}
 	};
+
+	sub is_recognized_type {
+		my $self	= shift;
+		if (my $dt = $self->datatype) {
+			my $type	= $dt->value;
+			if ($type eq 'http://www.w3.org/2001/XMLSchema#string') {
+				return 1;
+			} elsif ($type =~ qr<^http://www[.]w3[.]org/2001/XMLSchema#(?:integer|decimal|float|double|non(?:Positive|Negative)Integer|(?:positive|negative)Integer|long|int|short|byte|unsigned(?:Long|Int|Short|Byte))$>) {
+				return 1;
+			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#boolean') {
+				return 1;
+			} elsif ($type eq 'http://www.w3.org/2001/XMLSchema#dateTime') {
+				return 1;
+			} elsif (my $role = Attean->get_datatype_role($type)) {
+				return 1;
+			}
+			return 0;
+		}
+	}
 	
 	sub sparql_tokens {
 		my $self	= shift;
@@ -194,6 +214,10 @@ package Attean::API::Literal 0.039 {
 		my $t	= AtteanX::SPARQL::Token->fast_constructor( $qtype, -1, -1, -1, -1, [$self->value] );
 		push(@tokens, $t);
 		if (my $lang = $self->language) {
+			my $lex	= "$lang";
+			if (my $d = $self->base_dir) {
+				$lex	.= '--' . $d;
+			}
 			my $l	= AtteanX::SPARQL::Token->fast_constructor( LANG, -1, -1, -1, -1, ["$lang"] );
 			push(@tokens, $l);
 		} else {
@@ -210,9 +234,19 @@ package Attean::API::Literal 0.039 {
 		my $value	= $self->value;
 		my $dt		= $self->datatype->value;
 		if ($dt eq 'http://www.w3.org/2001/XMLSchema#boolean') {
-			return ($value eq 'true' or $value eq '1');
-		} else {
+			if ($value eq 'true' or $value eq '1') {
+				return 1;
+			} elsif ($value eq 'false' or $value eq '0') {
+				return 0;
+			} else {
+				die "TypeError: EBV of an xsd:boolean with invalid lexical form";
+			}
+		} elsif ($dt eq 'http://www.w3.org/2001/XMLSchema#string') {
 			return (length($value) > 0);
+		} elsif ($self->language) {
+			die "TypeError: EBV of a language-tagged literal";
+		} else {
+			die "TypeError: EBV of a datatyped literal: $dt";
 		}
 	}
 	
@@ -223,6 +257,25 @@ package Attean::API::Literal 0.039 {
 		return -1 if ($b->does('Attean::API::Binding'));
 		my $c	= ((($a->language // '') cmp ($b->language // '')) || ($a->datatype->value cmp $b->datatype->value) || ($a->value cmp $b->value));
 		return $c;
+	}
+	
+	sub equals {
+		my $a	= shift;
+		my $b	= shift;
+		if ($a->as_string eq $b->as_string) {
+			return 1;
+		}
+		if ($a->can('datatype') and $b->can('datatype') and my $adt = $a->datatype and my $bdt = $b->datatype) {
+			if (!$a->is_recognized_type or !$b->is_recognized_type) {
+				# Either different lexical values in the same datatype, or different
+				# datatypes. Either way, it's datatypes that were not caught by some
+				# some more-specific implementation of equals(). So we don't know
+				# anything about the value space, so we raise a type error, indicating
+				# that we can't say whether the values are equal or not.
+				die 'TypeError';
+			}
+		}
+		return 0;
 	}
 	
 =item C<< sameTerms( $other ) >>
@@ -300,7 +353,11 @@ package Attean::API::Literal 0.039 {
 		my $self	= shift;
 		my $str		= sprintf('"%s"', $self->__ntriples_string);
 		if (my $l = $self->language) {
-			return join('@', $str, $l);
+			if (my $d = $self->base_dir) {
+				return join('', $str, '@', $l, '--', $d);
+			} else {
+				return join('@', $str, $l);
+			}
 		} else {
 			my $dt	= $self->datatype;
 			if ($dt->value eq 'http://www.w3.org/2001/XMLSchema#string') {
@@ -322,6 +379,25 @@ package Attean::API::Literal 0.039 {
 		
 		return $s;
 	};
+
+	sub has_base_dir {
+		my $self	= shift;
+		my $base_dir	= $self->base_dir;
+		return (defined($base_dir) and length($base_dir) > 0);
+	}
+
+	sub lang_dir {
+		my $self	= shift;
+		my $lang_key	= '';
+		if (my $l = $self->language) {
+			$lang_key	= $l;
+			if (my $d = $self->base_dir) {
+				$lang_key	.= '--' . $d;
+			}
+		}
+		return $lang_key;
+	}
+
 }
 
 package Attean::API::DateTimeLiteral 0.039 {
@@ -354,6 +430,20 @@ package Attean::API::DateTimeLiteral 0.039 {
 		return 0 if ($dt->time_zone->is_floating != $odt->time_zone->is_floating);
 		return (0 == $dt->compare($odt));
 	}
+
+	sub compare {
+		my ($a, $b)	= @_;
+		if ($b->does('Attean::API::DateTimeLiteral')) {
+			if (my $adt = $a->datetime and my $bdt = $b->datetime) {
+				my $af	= $adt->time_zone->is_floating;
+				my $bf	= $bdt->time_zone->is_floating;
+				# TODO: handle case of one floating datetime
+				return DateTime->compare($adt, $bdt);
+			}
+		}
+		return $a->SUPER::compare($b);
+	}
+	
 }
 
 package Attean::API::CanonicalizingLiteral 0.039 {
@@ -390,6 +480,28 @@ package Attean::API::BooleanLiteral 0.039 {
 			return $self;
 		}
 	}
+
+	sub equals {
+		my ($a, $b)	= @_;
+		my $does_bool	= $b->does('Attean::API::BooleanLiteral');
+		if ($b->does('Attean::API::Literal') and not($does_bool)) {
+			if (!$a->is_recognized_type or !$b->is_recognized_type) {
+				# Either different lexical values in the same datatype, or different
+				# datatypes. Either way, it's datatypes that were not caught by some
+				# some more-specific implementation of equals(). So we don't know
+				# anything about the value space, so we raise a type error, indicating
+				# that we can't say whether the values are equal or not.
+				die "TypeError: boolean and non-boolean literals are not comparable";
+			}
+		}
+		if ($does_bool) {
+			my $l	= $a->canonicalized_term;
+			my $r	= $b->canonicalized_term;
+			return $l->value eq $r->value;
+		}
+		return 0;
+	}
+
 	with 'Attean::API::Literal', 'Attean::API::CanonicalizingLiteral';
 }
 
@@ -399,13 +511,30 @@ package Attean::API::NumericLiteral 0.039 {
 	use Moo::Role;
 
 	sub equals {
-		my ($a, $b)	= @_;
+		my ($a, $b)		= @_;
+		my $does_num	= $b->does('Attean::API::NumericLiteral');
+		if ($b->does('Attean::API::Literal') and not($does_num)) {
+			if (!$a->is_recognized_type or !$b->is_recognized_type) {
+				# Either different lexical values in the same datatype, or different
+				# datatypes. Either way, it's datatypes that were not caught by some
+				# some more-specific implementation of equals(). So we don't know
+				# anything about the value space, so we raise a type error, indicating
+				# that we can't say whether the values are equal or not.
+				die "TypeError: numeric and non-numeric literals are not comparable";
+			}
+		}
 		return 0 unless ($b->does('Attean::API::NumericLiteral'));
+		return 0 unless (defined $a->numeric_value);
+		return 0 unless (defined $b->numeric_value);
 		return $a->numeric_value == $b->numeric_value;
 	}
 
 	sub compare {
 		my ($a, $b)	= @_;
+		my $does_num	= $b->does('Attean::API::NumericLiteral');
+		if ($b->does('Attean::API::Literal') and not($does_num)) {
+			die "TypeError: numeric and non-numeric literals are not comparable";
+		}
 		return 1 unless blessed($b);
 		return 1 unless ($b->does('Attean::API::Literal') or $b->does('Attean::API::Binding'));
 		return -1 if ($b->does('Attean::API::Binding'));
@@ -583,6 +712,89 @@ package Attean::API::NumericLiteral 0.039 {
 			'unsignedByte'			=> 'unsignedShort',
 			'positiveInteger'		=> 'nonNegativeInteger',
 		);
+		sub is_base_type {
+			my $type	= shift;
+			return ($type =~ m/\b(integer|decimal|float|double)$/);
+		}
+		sub _lowest_base_type {
+			my ($lhs, $rhs)	= @_;
+			for ($lhs, $rhs) {
+				s/^.*#//;
+			}
+			if ($lhs eq $rhs) {
+				if (is_base_type($lhs)) {
+					return "http://www.w3.org/2001/XMLSchema#$lhs";
+				}
+			}
+			my $cur	= $lhs;
+			my %ancestors;
+			do {
+				$ancestors{$cur}++;
+				if ($cur eq $rhs) {
+					if (is_base_type($cur)) {
+						return "http://www.w3.org/2001/XMLSchema#$cur";
+					}
+				}
+			} while ($cur = $type_hierarchy{$cur});
+
+			$cur	= $rhs;
+			my $seen_float		= 0;
+			my $seen_decimal	= 0;
+			
+			while ($cur = $type_hierarchy{$cur}) {
+				if (exists $ancestors{$cur}) {
+					if (is_base_type($cur)) {
+						return "http://www.w3.org/2001/XMLSchema#$cur";
+					}
+				}
+				if ($cur eq 'float') {
+					$seen_float++;
+					if (my $r = _lowest_base_type($lhs, 'double')) {
+						return $r;
+					}
+				}
+				if ($cur eq 'decimal') {
+					$seen_decimal++;
+					if (my $r = _lowest_base_type($lhs, 'float')) {
+						return $r;
+					}
+					if (my $r = _lowest_base_type($lhs, 'double')) {
+						return $r;
+					}
+				}
+			}
+			if ($ancestors{'float'}) {
+				# seen a float type on the lhs
+				return "http://www.w3.org/2001/XMLSchema#double" if ($rhs eq 'float');
+			} elsif ($seen_float) {
+				# seen a float type on the rhs
+				return "http://www.w3.org/2001/XMLSchema#double" if (exists $ancestors{'float'});
+			}
+			if ($ancestors{'decimal'}) {
+				# seen a decimal type on the lhs
+				return "http://www.w3.org/2001/XMLSchema#float" if ($rhs eq "float");
+				return "http://www.w3.org/2001/XMLSchema#double" if ($rhs eq "double");
+			} elsif ($seen_decimal) {
+				# seen a decimal type on the rhs
+				return "http://www.w3.org/2001/XMLSchema#float" if (exists $ancestors{"float"});
+				return "http://www.w3.org/2001/XMLSchema#double" if (exists $ancestors{"double"});
+			}
+			if ($rhs eq 'float') {
+				$seen_float++;
+				if (my $r = _lowest_base_type($lhs, 'double')) {
+					return $r;
+				}
+			} elsif ($rhs eq 'decimal') {
+				$seen_decimal++;
+				if (my $r = _lowest_base_type($lhs, 'float')) {
+					return $r;
+				}
+				if (my $r = _lowest_base_type($lhs, 'double')) {
+					return $r;
+				}
+			}
+			return;
+		}
 		sub _lca {
 			my ($lhs, $rhs)	= @_;
 			for ($lhs, $rhs) {
@@ -596,8 +808,21 @@ package Attean::API::NumericLiteral 0.039 {
 				return "http://www.w3.org/2001/XMLSchema#$cur" if ($cur eq $rhs);
 			}
 			$cur	= $rhs;
+			my $seen_float		= 0;
+			my $seen_decimal	= 0;
 			while ($cur = $type_hierarchy{$cur}) {
+				$seen_float++ if ($cur eq 'float');
+				$seen_decimal++ if ($cur eq 'decimal');
 				return "http://www.w3.org/2001/XMLSchema#$cur" if exists $ancestors{$cur};
+			}
+			if ($ancestors{'decimal'}) {
+				# seen decimal on the lhs
+				return "http://www.w3.org/2001/XMLSchema#float" if ($rhs eq "float");
+				return "http://www.w3.org/2001/XMLSchema#double" if ($rhs eq "double");
+			} elsif ($seen_decimal) {
+				# seen decimal on the rhs
+				return "http://www.w3.org/2001/XMLSchema#float" if (exists $ancestors{"float"});
+				return "http://www.w3.org/2001/XMLSchema#double" if (exists $ancestors{"double"});
 			}
 			return;
 		}
@@ -608,8 +833,10 @@ package Attean::API::NumericLiteral 0.039 {
 			
 			if ($op =~ m<^[-+*]$>) {
 				# return common numeric type
-				if (my $type = _lca($self->datatype->value, $rhs->datatype->value)) {
-					return $type;
+				if (my $lbtype = _lowest_base_type($self->datatype->value, $rhs->datatype->value)) {
+					return $lbtype;
+				} elsif (my $lctype = _lca($self->datatype->value, $rhs->datatype->value)) {
+					return $lctype;
 				}
 				return 'http://www.w3.org/2001/XMLSchema#double';
 			} elsif ($op eq '/') {
@@ -619,6 +846,14 @@ package Attean::API::NumericLiteral 0.039 {
 				}
 				if (my $type = _lca($self->datatype->value, $rhs->datatype->value)) {
 					return $type;
+				} else {
+					my $lt	= $self->datatype->value;
+					my $rt	= $rhs->datatype->value;
+					if ($lt =~ /#double$/ or $rt =~ /#double$/) {
+						return "http://www.w3.org/2001/XMLSchema#double";
+					} elsif ($lt =~ /#float$/ or $rt =~ /#float$/) {
+						return "http://www.w3.org/2001/XMLSchema#float";
+					}
 				}
 				return 'http://www.w3.org/2001/XMLSchema#double';
 			}
@@ -636,7 +871,9 @@ package Attean::API::Blank 0.039 {
 
 	use Moo::Role;
 	
-	sub ebv { return 1; }
+	sub ebv {
+		die "TypeError: EBV of a blank";
+	 }
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI', 'Attean::API::BlankOrIRIOrTriple';
 ;
 	with 'Attean::API::SPARQLSerializable';
@@ -676,7 +913,9 @@ package Attean::API::IRI 0.039 {
 
 	use Moo::Role;
 	
-	sub ebv { return 1; }
+	sub ebv {
+		die "TypeError: EBV of a blank";
+	}
 	with 'Attean::API::Term', 'Attean::API::BlankOrIRI', 'Attean::API::BlankOrIRIOrTriple';
 	with 'Attean::API::SPARQLSerializable';
 	

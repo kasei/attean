@@ -9,6 +9,7 @@ use AtteanX::Parser::SPARQL;
 use Attean::SimpleQueryEvaluator;
 use Test::Attean::TestSimpleQueryEvaluator;
 use Test::Attean::TestIDPQueryPlanner;
+use Module::Load::Conditional qw[can_load];
 
 use Carp;
 use HTTP::Request;
@@ -23,6 +24,7 @@ use List::Util qw(all);
 use Test::Modern;
 use Test::Roo::Role;
 use Text::CSV;
+use Text::Table;
 use Try::Tiny;
 use URI::file;
 use File::Spec;
@@ -32,6 +34,7 @@ require XML::Simple;
 my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
 my $RDF		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my $RDFS	= 'http://www.w3.org/2000/01/rdf-schema#';
+my $RDFT	= 'http://www.w3.org/ns/rdftest#';
 my $RS		= 'http://www.w3.org/2001/sw/DataAccess/tests/result-set#';
 my $MF		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#';
 my $UT		= 'http://www.w3.org/2009/sparql/tests/test-update#';
@@ -43,6 +46,7 @@ requires 'manifest_paths';
 
 has run_update_tests	=> (is => 'rw', isa => Bool, default => 1);
 has run_query_tests		=> (is => 'rw', isa => Bool, default => 1);
+has run_syntax_tests	=> (is => 'rw', isa => Bool, default => 1);
 
 has debug				=> (is => 'rw', isa => Bool, default => 0);
 has results				=> (is => 'rw', isa => Bool, default => 0);
@@ -55,6 +59,9 @@ has model				=> (is => 'rw', isa => ConsumerOf['Attean::API::Model'], init_arg =
 has manifests			=> (is => 'rw', isa => ArrayRef, init_arg => undef);
 has default_graph		=> (is => 'rw');
 has failures			=> (is => 'rw', isa => HashRef, default => sub { +{} });
+has supported_extensions	=> (is => 'rw', isa => HashRef, default => sub { +{} });
+
+has earl				=> (is => 'rw', isa => InstanceOf['RDF::EARL']);
 
 sub BUILD {
 	my $self	= shift;
@@ -83,11 +90,12 @@ sub setup {
 	}
 
 	my $model	= $self->memory_model();
+	$self->model($model);
 	my $class	= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
 
 	my %loaded;
 	
-	my @manifests;
+	my %manifests;
 	my @load	= map { iri("file://" . File::Spec->rel2abs($_)) } @manifests_iris;
 	while (scalar(@load)) {
 		foreach my $iri (@load) {
@@ -97,35 +105,47 @@ sub setup {
 		$model->load_urls_into_graph($self->default_graph, @load);
 		@load	= ();
 
-		warn "done parsing manifests" if $self->debug;
-		$self->model($model);
 		my $subjects = $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") );
 		my @manifest_matches	= $subjects->elements;
-		push(@manifests, @manifest_matches);
-	
 		foreach my $m (@manifest_matches) {
-			my @list_heads	= $model->objects( $m, iri("${MF}include") )->elements;
-			my @elements	= map { $model->get_list(undef, $_)->elements() } @list_heads;
-			push(@load, grep { not exists($loaded{$_->value}) } @elements);
+			if (not exists $manifests{ $m->value }) {
+				$manifests{ $m->value }	= $m;
+				my @list_heads	= $model->objects( $m, iri("${MF}include") )->elements;
+				my @elements	= map { $model->get_list(undef, $_)->elements() } @list_heads;
+				push(@load, grep { not exists($loaded{$_->value}) } @elements);
+			}
 		}
 	}
 	
+	my @manifests	= values %manifests;
+	
+	if ($self->debug) {
+		warn "done parsing manifests" if $self->debug;
+		warn "setting manifests:\n";
+		foreach my $m (@manifests) {
+			warn "- " . $m->as_string . "\n";
+		}
+	}
 	$self->manifests(\@manifests);
 }
 
-sub syntax_test {
+sub sparql_syntax_test {
 	my $self		= shift;
 	my $test_type	= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift // 1;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
+	my $handled		= 0;
 	
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
 	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($name)		= $model->objects( $test, $mfname )->elements;
-	my $namevalue	= $name->value;
+	my $testname	= $test->value;
+	$testname		=~ s{^.*[/#]}{};
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -138,16 +158,16 @@ sub syntax_test {
 		}
 	}
 
-	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
-	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
+	my $is_pos_query	= $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}PositiveSyntaxTest11"));
+	my $is_pos_update	= $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}PositiveUpdateSyntaxTest11"));
 	my $is_neg_query	= $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeSyntaxTest11"));
 	my $is_neg_update	= $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest")) + $model->count_quads($test, $type, iri("${MF}NegativeUpdateSyntaxTest11"));
-	
+
 	my $uri					= URI->new( $queryd->value );
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($self->debug);
+# 	warn "Loading SPARQL query from file $filename" if ($self->debug);
 	my $sparql				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
 	my $bytes	= encode_utf8($sparql);
 
@@ -155,48 +175,405 @@ sub syntax_test {
 		my $q			= $sparql;
 		$q				=~ s/\s+/ /g;
 		warn "### test     : " . $test->as_string . "\n";
-		warn "# file       : $filename\n";
 		warn "# sparql     : $q\n";
+		warn "# file       : $filename\n";
 	}
 	
 	my $pclass	= Attean->get_parser('SPARQL');
-	my $parser	= $pclass->new();
+	my $parser	= $pclass->new(version => $specVersion);
 	if ($test_type eq 'update') {
 		$parser->update(1);
 	}
 	if ($is_pos_query or $is_pos_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= blessed($query);
-		$self->record_result('syntax', $ok, $test->as_string);
+		$self->record_result('syntax', $ok, $test->as_string, $TODO);
+		$handled++;
 		if ($ok) {
-			pass("syntax $namevalue: $filename");
+			pass("$testname - $filename");
 		} else {
-			fail("syntax $namevalue; $filename: $@");
+			fail("$testname - $filename: $@");
 		}
 	} elsif ($is_neg_query or $is_neg_update) {
 		my ($query)	= eval { $parser->parse_list_from_bytes($bytes) };
 		my $ok	= $@ ? 1 : 0;
-		$self->record_result('syntax', $ok, $test->as_string);
+		$self->record_result('syntax', $ok, $test->as_string, $TODO);
+		$handled++;
 		if ($ok) {
-			pass("syntax $namevalue: $filename");
+			pass("$testname - $filename");
 		} else {
 			if ($self->debug) {
 				warn $query->as_string;
 			}
-			fail("syntax $namevalue; $filename (unexpected successful parse)");
+			fail("$testname - $filename (unexpected successful parse)");
 		}
 	}
+	
+	unless ($handled) {
+		fail("Unhandled test: $testname");
+	}
+	
 }
 
-sub update_eval_test {
+sub data_syntax_eval_test {
 	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
 	my $count		= shift // 1;
 	
+	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
+	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
+	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
+	my ($resultd)	= $model->objects( $test, iri("${MF}result") )->elements;
+	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
+	my ($name)		= $model->objects( $test, $mfname )->elements;
+	my $testname	= $test->value;
+	$testname		=~ s{^.*[/#]([^/#]+[/#])}{$1};
+	
+	if ($self->strict_approval) {
+		unless ($approved) {
+			warn "- skipping test because it isn't approved\n" if ($self->debug);
+			return;
+		}
+		if ($approved->equal("${DAWGT}NotClassified")) {
+			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($self->debug);
+			return;
+		}
+	}
+
+	my $is_eval_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
+	my $is_pos_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
+	my $is_neg_ttl			= ($model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeEval")));
+	my $is_pos_c14n_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveC14N"));
+
+	my $is_eval_trig		= $model->count_quads($test, $type, iri("${RDFT}TestTrigEval"));
+	my $is_pos_trig			= $model->count_quads($test, $type, iri("${RDFT}TestTrigPositiveSyntax"));
+	my $is_neg_trig			= ($model->count_quads($test, $type, iri("${RDFT}TestTrigNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTrigNegativeEval")));
+	my $is_pos_c14n_trig	= $model->count_quads($test, $type, iri("${RDFT}TestTrigPositiveC14N"));
+
+	my $is_eval_xml			= $model->count_quads($test, $type, iri("${RDFT}TestXMLEval"));
+	my $is_pos_xml			= $model->count_quads($test, $type, iri("${RDFT}TestXMLPositiveSyntax"));
+	my $is_neg_xml			= ($model->count_quads($test, $type, iri("${RDFT}TestXMLNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestXMLNegativeEval")));
+	my $is_pos_c14n_xml		= $model->count_quads($test, $type, iri("${RDFT}TestXMLPositiveC14N"));
+
+	my $is_eval_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
+	my $is_pos_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
+	my $is_neg_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
+	my $is_pos_c14n_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveC14N"));
+
+	my $is_eval_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsEval"));
+	my $is_pos_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveSyntax"));
+	my $is_neg_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsNegativeSyntax"));
+	my $is_pos_c14n_nq		= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveC14N"));
+
+	my $is_eval				= ($is_eval_ttl or $is_eval_nt or $is_eval_xml or $is_eval_trig or $is_eval_nq);
+	my $is_eval_triples		= ($is_eval_ttl or $is_eval_nt or $is_eval_xml);
+	my $is_pos_triples		= ($is_pos_ttl or $is_pos_nt or $is_pos_xml);
+	my $is_eval_quads		= ($is_eval_trig or $is_eval_nq);
+	my $is_pos_quads		= ($is_pos_trig or $is_pos_nq);
+	my $is_pos				= ($is_pos_ttl or $is_pos_trig or $is_pos_xml or $is_pos_nt or $is_pos_nq);
+	my $is_neg				= ($is_neg_ttl or $is_neg_trig or $is_neg_xml or $is_neg_nt or $is_neg_nq);
+	my $is_pos_c14n			= ($is_pos_c14n_ttl or $is_pos_c14n_nt or $is_pos_c14n_nq);
+
+	my $is_ttl				= ($is_eval_ttl or $is_pos_ttl or $is_neg_ttl or $is_pos_c14n_ttl);
+	my $is_trig				= ($is_eval_trig or $is_pos_trig or $is_neg_trig or $is_pos_c14n_trig);
+	my $is_xml				= ($is_eval_xml or $is_pos_xml or $is_neg_xml or $is_pos_c14n_xml);
+	my $is_nt				= ($is_eval_nt or $is_pos_nt or $is_neg_nt or $is_pos_c14n_nt);
+	my $is_nq				= ($is_eval_nq or $is_pos_nq or $is_neg_nq or $is_pos_c14n_nq);
+	
+	my $parser_name;
+	if ($is_ttl) {
+		$parser_name	= 'Turtle';
+	} elsif ($is_trig) {
+		$parser_name	= 'Trig';
+	} elsif ($is_xml) {
+		$parser_name	= 'RDFXML';
+	} elsif ($is_nq) {
+		$parser_name	= 'NQuads';
+	} elsif ($is_nt) {
+		$parser_name	= 'NTriples';
+	} else {
+		die "Unexpected format";
+	}
+
+# 	my @types		= $model->objects( $test, $type )->elements();
+# 	warn Dumper([map {$_->value} @types]);
+	
+	
+# warn "is_eval_ttl		= $is_eval_ttl\n";
+# warn "is_pos_ttl		= $is_pos_ttl\n";
+# warn "is_neg_ttl		= $is_neg_ttl\n";
+# warn "\n";
+# warn "is_eval_nt		= $is_eval_nt\n";
+# warn "is_pos_nt			= $is_pos_nt\n";
+# warn "is_neg_nt			= $is_neg_nt\n";
+# warn "\n";
+# warn "is_eval			= $is_eval\n";
+# warn "is_ttl			= $is_ttl\n";
+# warn "is_nt				= $is_nt\n";
+	
+	
+	
+	
+	my $base;
+	
+	my ($result_filename, $expected_bytes, $nt_content);
+	if ($is_eval) {
+		my $result_uri			= URI->new( $resultd->value );
+		$result_filename		= $result_uri->file;
+		(undef,$base,undef)	= File::Spec->splitpath( $result_filename );
+		$base					= "file://${base}";
+		warn "Loading expected RDF data from file $result_filename\n" if ($self->debug);
+		$nt_content			= do { local($/) = undef; open(my $fh, '<:utf8', $result_filename) or do { warn("$!: $result_filename; " . $test->as_string); return }; <$fh> };
+		unless (defined($nt_content)) {
+			warn "*** Undefined expected data from $result_filename...\n";
+		}
+		$expected_bytes	= encode_utf8($nt_content);
+	}
+	
+	my $uri					= URI->new( $queryd->value );
+	my $filename			= $uri->file;
+	(undef,$base,undef)	= File::Spec->splitpath( $filename );
+	$base					= "file://${base}";
+	warn "Loading test RDF data from file $filename\n" if ($self->debug);
+	my $content				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
+	my $bytes				= encode_utf8($content);
+
+	if ($self->debug) {
+		my $q			= $content;
+		$q				=~ s/\s+/ /g;
+		
+		warn "### test     : " . $test->as_string . "\n";
+		warn "# file       : $filename\n";
+		warn "# content    : $q\n";
+		if ($is_eval) {
+			my $expected	= $nt_content;
+			$expected		=~ s/\s+/ /g;
+			warn "# expected   : $result_filename\n";
+			warn "# expected   : $expected\n";
+		}
+	}
+
+	my $test_uri	= $uri->as_string;
+	my $test_base	= $uri->as_string;
+	$test_base		= $self->fix_local_to_w3c($test_base);
+	warn "Test base: " . $test_base . "\n" if ($self->debug);
+	
+	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
+	my $nt_parser	= Attean->get_parser('NTriples')->new();
+	my $nq_parser	= Attean->get_parser('NQuads')->new();
+	SKIP: {
+		if ($is_pos_triples or $is_eval_triples) {
+			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
+			my $parse_error	= $@;
+			if ($is_eval) {
+				my $ser			= Attean->get_serializer('NTriples')->new();
+				my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($expected_bytes) };
+				if ($@) {
+					fail("Failed to parse expected data from $result_filename: $@");
+					return;
+				}
+				my $expected_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
+
+				my $eq_test	= Attean::BindingEqualityTest->new();
+				my $actual_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
+				my $ok		= $eq_test->equals($actual_iter, $expected_iter);
+				ok($ok, "$testname - $filename");
+				$self->record_result('evaluation', $ok, $test->as_string, $TODO);
+				if (not $ok) {
+					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
+					if (scalar(@nt_triples)) {
+						warn $ser->serialize_list_to_bytes(@nt_triples);
+					}
+					warn "But found " . scalar(@triples) . " triples:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@triples);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= scalar(not $parse_error);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $@");
+				}
+			}
+		} elsif ($is_pos_quads or $is_eval_quads) {
+			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
+			my $err			= $@;
+			if ($is_eval) {
+				my $ser			= Attean->get_serializer('NQuads')->new();
+				my $nq_parser	= Attean->get_parser('NQuads')->new();
+				my @nq_quads	= eval { $nq_parser->parse_iter_from_bytes($expected_bytes)->uniq()->elements() };
+				$err			||= $@;
+				if ($err) {
+					fail("$testname - Failed to parse expected data from $result_filename: $err");
+					return;
+				}
+				my $nq_iter		= Attean::ListIterator->new( values => \@nq_quads, item_type => 'Attean::API::TripleOrQuad' );
+
+				my $eq_test	= Attean::BindingEqualityTest->new();
+				my $trig_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::TripleOrQuad' );
+				my $ok		= $eq_test->equals($trig_iter, $nq_iter);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
+				ok($ok, "$testname - $filename");
+				if (not $ok) {
+					warn "BindingEqualityTest failures: " . $eq_test->error();
+					warn "Expecting " . scalar(@nq_quads) . " triples:\n";
+					if (scalar(@nq_quads)) {
+						warn $ser->serialize_list_to_bytes(@nq_quads);
+					}
+					warn "But found " . scalar(@triples) . " triples:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@triples);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= not($err);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $err");
+				}
+			}
+		} elsif ($is_neg) {
+			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
+			my $ok	= $@ ? 1 : 0;
+			$self->record_result('syntax', $ok, $test->as_string, $TODO);
+			if ($ok) {
+				pass("$testname - $filename");
+			} else {
+				if ($self->debug) {
+					warn "Unexpected successful parse of:\n" . $content;
+				}
+				fail("$testname - $filename (unexpected successful parse)");
+			}
+		} elsif ($is_pos_c14n) {
+			skip("$testname - C14N tests not supported");
+		} else {
+			my @types		= $model->objects( $test, $type )->elements();
+			my $types		= join(',', map {$_->value} @types);
+			fail("$testname - unrecognized test type(s): $types");
+		}
+	}
+}
+
+# sub data_syntax_test {
+# 	my $self		= shift;
+# 	my $model		= shift;
+# 	my $test		= shift;
+# 	my $count		= shift // 1;
+# 	
+# 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
+# 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
+# 	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
+# 	my ($resultd)	= $model->objects( $test, iri("${MF}result") )->elements;
+# 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
+# 	my ($name)		= $model->objects( $test, $mfname )->elements;
+# 	
+# 	if ($self->strict_approval) {
+# 		unless ($approved) {
+# 			warn "- skipping test because it isn't approved\n" if ($self->debug);
+# 			return;
+# 		}
+# 		if ($approved->equal("${DAWGT}NotClassified")) {
+# 			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($self->debug);
+# 			return;
+# 		}
+# 	}
+# 
+# 	my $is_eval_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
+# 	my $is_pos_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
+# 	my $is_neg_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax"));
+# 
+# 	my $is_eval_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
+# 	my $is_pos_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
+# 	my $is_neg_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
+# 
+# 
+# # 	my @types		= $model->objects( $test, $type )->elements();
+# # 	warn Dumper([map {$_->value} @types]);
+# 	
+# 	my $base;
+# 	
+# 	my $uri					= URI->new( $queryd->value );
+# 	my $filename			= $uri->file;
+# 	(undef,$base,undef)	= File::Spec->splitpath( $filename );
+# 	$base					= "file://${base}";
+# 	warn "Loading test RDF data from file $filename\n" if ($self->debug);
+# 	my $content				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
+# 	my $bytes	= encode_utf8($content);
+# 
+# # 	if ($self->debug) {
+# # 		my $q			= $content;
+# # 		$q				=~ s/\s+/ /g;
+# # 		warn "### test     : " . $test->as_string . "\n";
+# # 		warn "# file       : $filename\n";
+# # 		warn "# content    : $q\n";
+# # 	}
+# 	
+# 	if ($is_pos_ttl or $is_neg_ttl or $is_eval_ttl) {
+# 		my $test_base	= $uri->as_string;
+# 		$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+# 		
+# 		my $ttl_parser	= Attean->get_parser('Turtle')->new(base => $test_base);
+# 		my $nt_parser	= Attean->get_parser('NTriples')->new();
+# 		if ($is_pos_ttl or $is_eval_ttl) {
+# 			my (@triples)	= eval { $ttl_parser->parse_list_from_bytes($bytes) };
+# 			my $ok	= scalar(@triples);
+# 			$self->record_result('syntax', $ok, $test->as_string);
+# 			if ($ok) {
+# 				pass("$testname - $filename");
+# 			} else {
+# 				fail("$testname - $filename: $@");
+# 			}
+# 		} elsif ($is_pos_nt or $is_eval_nt) {
+# 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
+# 			my $ok	= scalar(@triples);
+# 			$self->record_result('syntax', $ok, $test->as_string);
+# 			if ($ok) {
+# 				pass("$testname - $filename");
+# 			} else {
+# 				fail("$testname - $filename: $@");
+# 			}
+# 		} elsif ($is_neg_ttl) {
+# 			my (@triples)	= eval { $ttl_parser->parse_list_from_bytes($bytes) };
+# 			my $ok	= $@ ? 1 : 0;
+# 			$self->record_result('syntax', $ok, $test->as_string);
+# 			if ($ok) {
+# 				pass("$testname - $filename");
+# 			} else {
+# # 				if ($self->debug) {
+# # 					warn $query->as_string;
+# # 				}
+# 				fail("$testname - $filename (unexpected successful parse)");
+# 			}
+# 		} elsif ($is_neg_nt) {
+# 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
+# 			my $ok	= $@ ? 1 : 0;
+# 			$self->record_result('syntax', $ok, $test->as_string);
+# 			if ($ok) {
+# 				pass("$testname - $filename");
+# 			} else {
+# # 				if ($self->debug) {
+# # 					warn $query->as_string;
+# # 				}
+# 				fail("$testname - $filename (unexpected successful parse)");
+# 			}
+# 		}
+# 	}
+# }
+
+sub update_eval_test {
+	my $self		= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
-	my ($req)		= $model->objects( $test, iri("${MF}requires") )->elements;
+	my @reqs		= $model->objects( $test, iri("${MF}requires") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
 	my ($queryd)	= $model->objects( $action, iri("${UT}request") )->elements;
 	my @data		= $model->objects( $action, iri("${UT}data") )->elements;
@@ -225,143 +602,181 @@ sub update_eval_test {
 	if ($self->debug) {
 		warn "### test     : " . $test->value . "\n";
 		warn "# sparql     : $q\n";
+		warn "# file       : $filename\n";
 		foreach my $data (@data) {
 			warn "# data       : " . $data->value . "\n" if (blessed($data));
 		}
 		warn "# graph data : " . $_->value . "\n" for (@gdata);
 		warn "# result     : " . $result->value . "\n";
-		warn "# requires   : " . $req->value . "\n" if (blessed($req));
+		foreach my $req (@reqs) {
+			warn "# requires   : " . $req->value . "\n" if (blessed($req));
+		}
 	}
+	
+	my $todo_because_of_test_req	= 0;
+	my @unsupported_reqs;
+	foreach my $req (@reqs) {
+		unless (exists ${ $self->supported_extensions }{ $req->value }) {
+			$todo_because_of_test_req++;
+			push(@unsupported_reqs, $req->value);
+		}
+	}
+	
+	
 	
 	# TODO: set up remote endpoint mock
+	TODO: {
+		local($TODO)	= $todo_because_of_test_req ? "requires " . join(', ', @unsupported_reqs) : '';
 
-	warn "constructing model...\n" if ($self->debug);
-	my $test_model	= $self->test_model();
-	foreach my $data (@data) {
-		eval {
-			if (blessed($data)) {
-				$test_model->load_urls_into_graph($self->default_graph, $data);
-			}
-		};
-		if ($@) {
-			fail($test->value);
-			print "# died: " . $test->value . ": $@\n";
-			return;
-		}
-	}
-	foreach my $gdata (@gdata) {
-		my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
-		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
-		my $uri		= $graph->value;
-		eval {
-			$test_model->load_urls_into_graph(iri($uri), $data);
-		};
-		if ($@) {
-			fail($test->as_string);
-			print "# died: " . $test->value . ": $@\n";
-			return;
-		};
-	}
-	
-	my ($result_status)	= $model->objects( $result, iri("${UT}result") )->elements;
-	my @resgdata		= $model->objects( $result, iri("${UT}graphData") )->elements;
-	my ($resdata)		= $model->objects( $result, iri("${UT}data") )->elements;
-	my $expected_model	= memory_model;
-	eval {
-		if (blessed($resdata)) {
-			$expected_model->load_urls_into_graph($self->default_graph, $resdata);
-		}
-	};
-	if ($@) {
-		fail($test->as_string);
-		print "# died: " . $test->value . ": $@\n";
-		return;
-	};
-	foreach my $gdata (@resgdata) {
-		my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
-		my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
-		my $uri		= $graph->value;
-		my $return	= 0;
-		if ($data) {
+		warn "constructing model...\n" if ($self->debug);
+		my $test_model	= $self->test_model();
+		foreach my $data (@data) {
 			eval {
-				$expected_model->load_urls_into_graph(iri($uri), $data);
+				if (blessed($data)) {
+					$test_model->load_urls_into_graph($self->default_graph, $data);
+				}
+			};
+			
+			if ($self->debug) {
+				warn "TEST MODEL AFTER DEFAULT GRAPH LOAD:\n";
+				$self->debug_model($test_model);
+			}
+			
+			if ($@) {
+				fail($test->value);
+				$self->record_result('update', 0, $test->value, $TODO);
+				print "# died: " . $test->value . ": $@\n";
+				return;
+			}
+		}
+		foreach my $gdata (@gdata) {
+			my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
+			my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
+			my $uri		= $graph->value;
+			eval {
+				$test_model->load_urls_into_graph(iri($uri), $data);
 			};
 			if ($@) {
 				fail($test->as_string);
+				$self->record_result('update', 0, $test->value, $TODO);
 				print "# died: " . $test->value . ": $@\n";
-				$return	= 1;
+				return;
 			};
-			return if ($return);
 		}
-	}
-
-	if ($self->debug) {
-		warn "Dataset before update operation:\n";
-		warn $self->model_as_string($test_model);
-	}
-	
-	my $ok	= 0;
-	eval {
-		my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
+		
+		my ($result_status)	= $model->objects( $result, iri("${UT}result") )->elements;
+		my @resgdata		= $model->objects( $result, iri("${UT}graphData") )->elements;
+		my ($resdata)		= $model->objects( $result, iri("${UT}data") )->elements;
+		my $expected_model	= memory_model;
+		eval {
+			if (blessed($resdata)) {
+				$expected_model->load_urls_into_graph($self->default_graph, $resdata);
+			}
+		};
 		if ($@) {
-			warn "Failed to parse query $filename: $@";
-			die $@;
-		}
-		unless ($algebra) {
-			warn "No algebra generated for update\n";
-			fail($test->value);
+			fail($test->as_string);
+			$self->record_result('update', 0, $test->value, $TODO);
+			print "# died: " . $test->value . ": $@\n";
 			return;
-		}
-		if ($self->debug) {
-			warn "# Algebra:\n" . $algebra->as_string . "\n";
+		};
+		foreach my $gdata (@resgdata) {
+			my ($data)	= ($model->objects( $gdata, iri("${UT}data") )->elements)[0] || ($model->objects( $gdata, iri("${UT}graph") )->elements)[0];
+			my ($graph)	= $model->objects( $gdata, iri("${RDFS}label") )->elements;
+			my $uri		= $graph->value;
+			my $return	= 0;
+			if ($data) {
+				eval {
+					$expected_model->load_urls_into_graph(iri($uri), $data);
+				};
+				if ($@) {
+					fail($test->as_string);
+					$self->record_result('update', 0, $test->value, $TODO);
+					print "# died: " . $test->value . ": $@\n";
+					$return	= 1;
+				};
+				return if ($return);
+			}
 		}
 	
-		my $default_graphs	= [$self->default_graph];
-		my $planner	= Attean::IDPQueryPlanner->new();
-		my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
 		if ($self->debug) {
-			warn "# Plan:\n" . $plan->as_string . "\n";
+			warn "Dataset before update operation:\n";
+			warn $self->model_as_string($test_model);
 		}
-
-		if ($self->debug) {
-			warn "Running update...\n";
+		
+		my $ok	= 0;
+		eval {
+			my $algebra	= eval { Attean->get_parser('SPARQL')->parse_update($sparql) };
+			if ($@) {
+				warn "Failed to parse query $filename: $@";
+				die $@;
+			}
+			unless ($algebra) {
+				warn "No algebra generated for update\n";
+				fail($test->value);
+				return;
+			}
+			if ($self->debug) {
+				warn "# Algebra:\n" . $algebra->as_string . "\n";
+			}
+		
+			my $default_graphs	= [$self->default_graph];
+			my $planner	= Attean::IDPQueryPlanner->new();
+			my $plan	= $planner->plan_for_algebra($algebra, $test_model, $default_graphs);
+			if ($self->debug) {
+				warn "# Plan:\n" . $plan->as_string . "\n";
+			}
+	
+			if ($self->debug) {
+				warn "Running update...\n";
+			}
+			my $iter	= $plan->evaluate($test_model);
+			$iter->elements;
+			if ($self->debug) {
+				warn "done.\n";
+			}
+		
+			if ($self->debug) {
+				warn "Comparing results...\n";
+			}
+			my $eqtest	= Attean::BindingEqualityTest->new();
+			my $eq		= $eqtest->equals($test_model, $expected_model);
+			if ($self->debug) {
+				warn "done.\n";
+			}
+			$ok			= is( $eq, 1, $test->value );
+			unless ($ok) {
+				warn $eqtest->error;
+				warn "Got model:\n" . $self->model_as_string($test_model);
+				warn "Expected model:\n" . $self->model_as_string($expected_model);
+			}
+		};
+		if ($@) {
+			warn "Failed to execute update: $@";
+			fail($test->value);
 		}
-		my $iter	= $plan->evaluate($test_model);
-		$iter->elements;
-		if ($self->debug) {
-			warn "done.\n";
+		if (not($ok)) {
+			print "# failed: " . $test->value . "\n";
 		}
 	
-		if ($self->debug) {
-			warn "Comparing results...\n";
-		}
-		my $eqtest	= Attean::BindingEqualityTest->new();
-		my $eq		= $eqtest->equals($test_model, $expected_model);
-		if ($self->debug) {
-			warn "done.\n";
-		}
-		$ok			= is( $eq, 1, $test->value );
-		unless ($ok) {
-			warn $eqtest->error;
-			warn "Got model:\n" . $self->model_as_string($test_model);
-			warn "Expected model:\n" . $self->model_as_string($expected_model);
-		}
-	};
-	if ($@) {
-		warn "Failed to execute update: $@";
-		fail($test->value);
+		$self->record_result('update', $ok, $test->value, $TODO);
+		warn "ok\n" if ($self->debug);
 	}
-	if (not($ok)) {
-		print "# failed: " . $test->value . "\n";
-	}
+}
 
-	warn "ok\n" if ($self->debug);
+sub fix_local_to_w3c {
+	my $self		= shift;
+	my $file_url	= shift;
+	$file_url		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
+	return $file_url;
 }
 
 sub construct_data {
-	my $self	= shift;
-	my $model	= shift;
-	my $action	= shift;
+	my $self		= shift;
+	my $model		= shift;
+	my $action		= shift;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
 	my ($queryd)	= $model->objects( $action, iri("${RQ}query") )->elements;
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
@@ -385,14 +800,16 @@ sub construct_data {
 	}
 	foreach my $g (@gdata) {
 		my $start = $test_model->size;
-		$test_model->load_urls_into_graph($g, $g);
+		my $file_url	= $g->value;
+		$file_url		= $self->fix_local_to_w3c($file_url);
+		$test_model->load_urls_into_graph(iri($file_url), $g);
 		my $end	= $test_model->size;
 		unless ($start < $end) {
 			warn "*** Loading file did not result in any new quads: " . $g;
 		}
 	}
 	foreach my $n (@cdata) {
-		my ($bytes, $format)	= $self->construct_data($model, $n);
+		my ($bytes, $format)	= $self->construct_data($model, $n, %args);
 		my $p					= Attean->get_parser(media_type => $format)->new();
 		my $iter				= $p->parse_iter_from_bytes($bytes);
 		$test_model->add_iter($iter->as_quads($self->default_graph));
@@ -406,7 +823,10 @@ sub construct_data {
 		warn $q;
 	}
 	
-	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata );
+	my $test_base	= $base;
+	$test_base		= $self->fix_local_to_w3c($test_base);
+
+	my ($iter, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
 	my $sclass				= Attean->get_serializer(media_type => $format);
 	my $s					= $sclass->new();
 	my $bytes				= $s->serialize_iter_to_bytes($iter);
@@ -417,17 +837,20 @@ sub query_eval_test {
 	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
-	my $count		= shift // 1;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
 	
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
 	my ($req)		= $model->objects( $test, iri("${MF}requires") )->elements;
 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
+	my ($res_card)	= $model->objects( $test, iri("${MF}resultCardinality") )->elements;
 	my ($queryd)	= $model->objects( $action, iri("${RQ}query") )->elements;
 	my @data		= $model->objects( $action, iri("${RQ}data") )->elements;
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
 	my @cdata		= $model->objects( $action, iri("${RQ}constructDataFile") )->elements;
+	my $reduced_mode	= (defined($res_card) and $res_card->value eq "${MF}LaxCardinality");
 	
 	if ($self->strict_approval) {
 		unless ($approved) {
@@ -444,7 +867,11 @@ sub query_eval_test {
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
-	warn "Loading SPARQL query from file $filename" if ($self->debug);
+	warn "Loading SPARQL query from file $filename\n" if ($self->debug);
+
+	my $test_base	= $base;
+	$test_base		= $self->fix_local_to_w3c($test_base);
+
 	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->value); return }; binmode($fh, ':utf8'); <$fh> };
 	
 	my $q			= $sparql;
@@ -452,6 +879,7 @@ sub query_eval_test {
 	if ($self->debug) {
 		warn "### test           : " . $test->value . "\n";
 		warn "# sparql           : $q\n";
+		warn "# file             : $filename\n";
 		foreach my $data (@data) {
 			warn "# data             : " . ($data->value =~ s#file://##r) . "\n" if (blessed($data));
 		}
@@ -461,78 +889,86 @@ sub query_eval_test {
 		warn "# requires         : " . ($req->value =~ s#file://##r) . "\n" if (blessed($req));
 	}
 	
-STRESS:	foreach (1 .. $count) {
-		print STDERR "constructing model... " if ($self->debug);
-		my $test_model	= $self->test_model();
-		my $next_stress	= 0;
+	print STDERR "constructing model...\n" if ($self->debug);
+	my $test_model	= $self->test_model();
+	my $next_stress	= 0;
+	TODO: {
+		local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
 		try {
 			foreach my $data (@data) {
+				my $file_url	= $data->value;
+				$file_url		= $self->fix_local_to_w3c($file_url);
 				if (blessed($data)) {
-					$test_model->load_urls_into_graph($self->default_graph, $data);
+					$test_model->load_urls_into_graph_with_base($self->default_graph, [$data], $file_url);
 				}
 			}
+			
+			if ($self->debug) {
+				warn "TEST MODEL AFTER DEFAULT GRAPH LOAD:\n";
+				$self->debug_model($test_model);
+			}
+
 			foreach my $g (@gdata) {
 				my $start = $test_model->size;
-				$test_model->load_urls_into_graph($g, $g);
+				my $file_url	= $g->value;
+				$file_url		= $self->fix_local_to_w3c($file_url);
+				$test_model->load_urls_into_graph_with_base(iri($file_url), [$g], $file_url);
 				my $end	= $test_model->size;
 				unless ($start < $end) {
 					warn "*** Loading file did not result in any new quads: " . $g;
 				}
 			}
 			foreach my $n (@cdata) {
-				my ($bytes, $format)	= $self->construct_data($model, $n);
+				my ($bytes, $format)	= $self->construct_data($model, $n, %args);
 				my $p					= Attean->get_parser(media_type => $format)->new();
 				my $iter				= $p->parse_iter_from_bytes($bytes);
 				$test_model->add_iter($iter->as_quads($self->default_graph));
 			}
 		} catch {
 			fail($test->value);
-			$self->record_result('evaluation', 0, $test->value);
+			$self->record_result('evaluation', 0, $test->value, $TODO);
 			print "# died: " . $test->value . ": $_\n";
 			$next_stress++;
 		};
 		next STRESS if $next_stress;
 		print STDERR "ok\n" if ($self->debug);
-
+	
 		my $resuri		= URI->new( $result->value );
 		my $resfilename	= $resuri->file;
 	
-		TODO: {
-			local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
-			my $comment;
-			eval {
-				if ($self->debug) {
-					my $q	= $sparql;
-					$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
-					warn $q;
-				}
-				
-				my ($actual, $type);
-				{
-					local($::DEBUG)	= 1;
-					print STDERR "getting actual results... " if ($self->debug);
-					($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $base, $model, \@sdata );
-					print STDERR "ok\n" if ($self->debug);
-				}
-			
-				print STDERR "getting expected results... " if ($self->debug);
-				my $expected	= $self->get_expected_results( $resfilename, $type );
-				print STDERR "ok\n" if ($self->debug);
-			
-			#	warn "comparing results...";
-				$self->compare_results( $expected, $actual, $test->value, \$comment );
-			};
-			
-			my $ok	= not($@);
-			unless ($ok) {
-				warn $@;
-				fail($test->value);
-				$self->record_result('evaluation', 0, $test->value);
-			};
-			if ($ok) {
-			} else {
-				print "# failed: " . $test->value . "\n";
+		my $comment;
+		eval {
+			if ($self->debug) {
+				my $q	= $sparql;
+				$q		=~ s/([\x{256}-\x{1000}])/'\x{' . sprintf('%x', ord($1)) . '}'/eg;
+				warn $q;
 			}
+			
+			my ($actual, $type);
+			{
+				local($::DEBUG)	= 1;
+				print STDERR "getting actual results...\n" if ($self->debug);
+				($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
+				print STDERR "ok\n" if ($self->debug);
+			}
+		
+			print STDERR "getting expected results...\n" if ($self->debug);
+			my $expected	= $self->get_expected_results( $resfilename, $type );
+			print STDERR "ok\n" if ($self->debug);
+		
+		#	warn "comparing results...";
+			$self->compare_results( $expected, $actual, $test->value, \$comment, $reduced_mode, $TODO );
+		};
+		
+		my $ok	= not($@);
+		unless ($ok) {
+			warn $@;
+			fail($test->value);
+			$self->record_result('evaluation', 0, $test->value, $TODO);
+		};
+		if ($ok) {
+		} else {
+			print "# failed: " . $test->value . "\n";
 		}
 	}
 }
@@ -567,6 +1003,19 @@ sub mock_endpoints {
 	}
 }
 
+sub debug_model {
+	my $self			= shift;
+	my $model			= shift;
+	if ($self->debug) {
+		my $iter	= $model->get_quads;
+		warn "Dataset:\n-------------\n";
+		my $s		= Attean->get_serializer('TextTable')->new();
+		my $table	= decode_utf8($s->serialize_iter_to_bytes($iter));
+		warn $table;
+		warn "-------------\n";
+	}
+}
+
 sub get_actual_results {
 	my $self			= shift;
 	my $filename		= shift;
@@ -575,16 +1024,21 @@ sub get_actual_results {
 	my $base			= shift;
 	my $manifest_model	= shift;
 	my $sdata			= shift;
-	
+	my %args			= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
 	my $bytes	= encode_utf8($sparql);
 
-	my $s 			= AtteanX::Parser::SPARQL->new(base => $base);
+	my $s 			= AtteanX::Parser::SPARQL->new(base => $base, version => $specVersion);
 	my $algebra;
 	eval {
 		($algebra)	= $s->parse_list_from_bytes($bytes);
 	};
 	if ($@) {
 		warn "Failed to parse query $filename: $@";
+		warn "--------- [contents of $filename]\n";
+		warn $bytes . "\n";
+		warn "---------\n";
 		die $@;
 	}
 	
@@ -593,14 +1047,7 @@ sub get_actual_results {
 		warn $algebra->as_string;
 	}
 	
-	if ($self->debug) {
-		my $iter	= $model->get_quads;
-		warn "Dataset:\n-------------\n";
-		while (my $q = $iter->next) {
-			say $q->as_string;
-		}
-		warn "-------------\n";
-	}
+	$self->debug_model($model);
 	
 	my $testns	= 'http://example.com/test-results#';
 	my $rmodel	= memory_model();
@@ -624,6 +1071,10 @@ sub get_actual_results {
 		warn $@ if $@;
 	}
 	my $count	= 1;
+	
+	unless (blessed($results)) {
+		die 'Failed to produce actual results';
+	}
 	
 	$results	= $results->materialize;
 	my $item	= $results->peek;
@@ -735,7 +1186,10 @@ sub get_expected_results {
 		return $iter;
 	} elsif ($file =~ /[.](ttl|rdf|nt)/) {
 		my $model	= memory_model();
-		$model->load_urls_into_graph($self->default_graph, iri("file://$file"));
+		my $file_url	= "file://$file";
+		my $base		= $file_url;
+		$base		= $self->fix_local_to_w3c($base);
+		$model->load_urls_into_graph_with_base($self->default_graph, [iri($file_url)], iri($base));
 		my ($res)	= $model->subjects( iri("${RDF}type"), iri("${RS}ResultSet") )->elements;
 		if (my($b) = $model->objects( $res, iri("${RS}boolean") )->elements) {
 			my $bool	= $b->value;
@@ -776,7 +1230,17 @@ sub compare_results {
 	my $actual		= shift->canonicalize->materialize;
 	my $test		= shift;
 	my $comment		= shift || do { my $foo; \$foo };
-	my $TODO		= shift;
+	my $reduced_mode	= shift;
+	my $todo		= shift;
+	if ($reduced_mode) {
+		for ($actual, $expected) {
+			$_	= $_->uniq();
+		}
+	}
+	
+	if ($reduced_mode and $self->debug) {
+		warn "Comparing data using REDUCED cardinality semantics\n";
+	}
 	
 	if ($actual->does('Attean::API::ResultIterator') or $actual->does('Attean::API::TripleIterator')) {
 		my $eqtest	= Attean::BindingEqualityTest->new();
@@ -796,14 +1260,15 @@ sub compare_results {
 		if ($@) {
 			diag($@);
 		}
-		$self->record_result('evaluation', $ok, $test);
+		$self->record_result('evaluation', $ok, $test, $todo);
 		return $ok;
 	} elsif ($actual->does('Attean::API::TermIterator')) {
 		my $a	= $actual->next;
 		my $e	= $expected->next;
 		my $name	= $self->debug ? sprintf("$test: %s == %s", $a->as_string, $e->as_string) : $test;
-		my $ok		= ok( $a->equals($e), $name );
-		$self->record_result('evaluation', $ok, $test);
+		my $eq	= $a->equals($e);
+		my $ok	= ok( $eq, $name );
+		$self->record_result('evaluation', $ok, $test, $todo);
 		return $ok;
 	} else {
 		die "Unexpected result type $actual";
@@ -815,8 +1280,21 @@ sub record_result {
 	my $type	= shift;
 	my $ok		= shift;
 	my $name	= shift;
+	my $todo	= shift;
 	unless ($ok) {
-		push(@{ $self->failures->{$type} }, $name);
+		if ($todo) {
+			push(@{ $self->failures->{'TODO'}{$type} }, $name);
+		} else {
+			push(@{ $self->failures->{$type} }, $name);
+		}
+	}
+	
+	if (my $earl = $self->earl) {
+		if ($ok) {
+			$earl->pass($name);
+		} else {
+			$earl->fail($name);
+		}
 	}
 }
 
@@ -833,21 +1311,48 @@ sub model_as_string {
 sub DESTROY {
 	my $self	= shift;
 	my $count	= 0;
+	my $todo	= 0;
 	while (my ($type, $failures) = each(%{ $self->failures })) {
+		if ($type eq 'TODO') {
+			while (my ($type, $failures) = each(%$failures)) {
+				$todo	+= scalar(@$failures);
+			}
+			next;
+		}
 		$count	+= scalar(@$failures);
 	}
-	if ($self->run_query_tests and $count) {
-		my $d	= Data::Dumper->new([$self->failures], [qw(failures)]);
+	my $timestamp	= scalar(time);
+	if ($self->run_query_tests and ($count or $todo)) {
+		my $d	= Data::Dumper->new([$self->failures], [qw(tests)]);
 		$d->Sortkeys(1)->Indent(2);
-		my $msg	= "Failing tests: " . $d->Dump;
+		my $msg	= "Failing and/or TODO tests: " . $d->Dump;
 		warn $msg;
 		unless ($self->pattern) {
-			open(my $fh, '>', sprintf('.sparql-test-suite-%d', scalar(time)));
+			open(my $fh, '>', sprintf('.sparql-test-suite-%d', $timestamp));
 			while (my ($type, $failures) = each(%{ $self->failures })) {
+				if ($type eq 'TODO') {
+					while (my ($type, $failures) = each(%$failures)) {
+						say $fh "$type - TODO";
+						say $fh join("\n", sort @$failures);
+					}
+					next;
+				}
 				say $fh $type;
 				say $fh join("\n", sort @$failures);
 			}
 		}
+	}
+	if (my $earl = $self->earl) {
+		my $filename	= sprintf('.sparql-test-suite-%d.ttl', $timestamp);
+		open(my $fh, '>', $filename);
+		my $model	= $earl->model;
+		my $iter	= $model->get_quads()->as_triples();
+		my $rdf		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+		my $EARL	= 'http://www.w3.org/ns/earl#';
+		my $map		= URI::NamespaceMap->new( { earl => iri($EARL), rdf => iri($rdf) } );
+		my $ser		= Attean->get_serializer('Turtle')->new(namespaces => $map);
+		$ser->serialize_iter_to_io($fh, $iter);
+		warn "EARL results: $filename\n" if ($self->debug);
 	}
 }
 

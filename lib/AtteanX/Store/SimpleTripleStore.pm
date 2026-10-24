@@ -77,7 +77,8 @@ predicate and objects. Any of the arguments may be undef to match any value.
 			my $q	= shift;
 			foreach my $key (keys %bound) {
 				my $term	= $q->$key();
-				unless ($term->equals( $bound{$key} )) {
+				my $eq		= eval { $term->equals( $bound{$key} ) } || 0;
+				unless ($eq) {
 					return 0;
 				}
 			}

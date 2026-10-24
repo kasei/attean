@@ -147,7 +147,9 @@ there exists a bijection between the RDF statements of the invocant and $graph).
 # 				foreach my $t (@$nbb) {
 # 					warn $t . "\n";
 # 				}
-				$self->error("non-blank triples don't match:\n" . Dumper($nba->[$i], $nbb->[$i]));
+				unless ($self->error) {
+					$self->error("non-blank triples don't match:\n" . Dumper($nba->[$i], $nbb->[$i]));
+				}
 				return 0;
 			}
 		}
@@ -315,7 +317,14 @@ solutions, the solution returned is arbitrary.
 			$kbp	= permutations( [shuffle @kb] );
 # 		}
 		
+		
 		my $canon_map	= Attean::TermMap->canonicalization_map;
+		my @canon_ba;
+		foreach my $st (@$ba) {
+			push(@canon_ba, $st->apply_map($canon_map));
+		}
+		$ba	= \@canon_ba;
+		
 		my %bb_master;
 		foreach my $bb_item (@$bb) {
 			my $k	= $bb_item->apply_map($canon_map)->as_string;
@@ -324,51 +333,95 @@ solutions, the solution returned is arbitrary.
 # 		my %bb_master	= map { $_->apply_map($canon_map)->as_string => 1 } @$bb;
 	
 		my $count	= 0;
+		my %blank_node_cache;
+		foreach my $b (@ka) {
+			$blank_node_cache{$b}	= Attean::Blank->new($b);
+		}
+		foreach my $b (@kb) {
+			$blank_node_cache{$b}	= Attean::Blank->new($b);
+		}
+		
+		my ($ba_counts, $should_use)	= $self->count_bindings_by_blank($ba);
+		my ($bb_counts)	= $self->count_bindings_by_blank($bb);
+		my $quick_check_permutation	= sub { return 1; };
+		if ($should_use) {
+			$quick_check_permutation	= sub {
+				# TODO: quickly rule-out permutations that will not lead to valid solutions
+				my $mapping	= shift;
+				my %mapping_str;
+				@mapping_str{ @ka }	= @$mapping;
+				if (scalar(@$mapping) > 1) {
+					foreach my $k (keys %mapping_str) {
+						my $a_count	= $ba_counts->{ $k };
+						my $b_count	= $bb_counts->{ $mapping_str{ $k } };
+						unless ($a_count == $b_count) {
+							# Early rejection of this mapping, because the number of statements this blank node
+							# appears in differs between the lhs and rhs bindings.
+							return 0;
+						}
+					}
+				}
+				return 1;
+			};
+		}
+		
 		MAPPING: while (my $mapping = $kbp->next) {
+			next unless $quick_check_permutation->($mapping);
+			$count++;
 			my %mapping_str;
 			@mapping_str{ @ka }	= @$mapping;
 			my %mapping			= map {
-				Attean::Blank->new($_)->as_string => Attean::Blank->new($mapping_str{$_})
+				die unless exists $blank_node_cache{$_};
+				die unless exists $blank_node_cache{ $mapping_str{$_} };
+				$blank_node_cache{$_}->as_string => $blank_node_cache{ $mapping_str{$_} }
 			} (keys %mapping_str);
 			my $mapper	= Attean::TermMap->rewrite_map(\%mapping);
-			$self->log->trace("trying mapping: " . Dumper($mapping));
+# 			$self->log->trace("trying mapping: " . Dumper($mapping));
 		
 			my %bb	= %bb_master;
 			foreach my $st (@$ba) {
 				my $mapped_st	= $st->apply_map($mapper)->as_string;
-# 				warn ">>>>>>>\n";
-# 				warn "-> " . $st->as_string . "\n";
-# 				warn "-> " . $mapped_st . "\n";
-				$self->log->trace("checking for '$mapped_st' in " . Dumper(\%bb));
+# 				$self->log->trace("checking for '$mapped_st' in " . Dumper(\%bb));
 				if ($bb{ $mapped_st }) {
-					$self->log->trace("Found mapping for binding: " . Dumper($mapped_st));
+# 					$self->log->trace("Found mapping for binding: " . Dumper($mapped_st));
 					if (--$bb{ $mapped_st } == 0) {
 						delete $bb{ $mapped_st };
 					}
 				} else {
-					$self->log->trace("No mapping found for binding: " . Dumper($mapped_st));
-# 					warn "No mapping found for binding: " . Dumper($mapped_st);
-# 					warn Dumper(\%bb);
+# 					$self->log->trace("No mapping found for binding: " . Dumper($mapped_st));
 					next MAPPING;
 				}
 			}
+			# warn "FOUND MAPPING after $count attempts.\n";
 			$self->error("found mapping: " . Dumper(\%mapping_str));
 			return \%mapping_str;
 		}
 		
 # 		warn "didn't find blank node mapping:\n";
-# 		warn "============ A\n";
-# 		foreach my $t (@$ba) {
-# 			warn $t->as_string . "\n";
-# 		}
-# 		warn "============ B\n";
-# 		foreach my $t (@$bb) {
-# 			warn $t->as_string . "\n";
-# 		}
 		$self->error("didn't find blank node mapping\n");
 		return 0;
 	}
 
+	sub count_bindings_by_blank {
+		my $self		= shift;
+		my $bindings	= shift;
+		my %bindings;
+		foreach my $st (@$bindings) {
+			if ($st->has_blanks) {
+				foreach my $n ($st->blanks) {
+					push( @{ $bindings{ $n->value } }, $st );
+				}
+			}
+		}
+		my %counts;
+		foreach my $k (keys %bindings) {
+			$counts{ $k }	= scalar(@{ $bindings{ $k } });
+		}
+		my %distinct_counts	= map { $_ => 1 } (values %counts);
+		my @distinct_counts	= keys %distinct_counts;
+		my $should_use	= (scalar(@distinct_counts) > 1);
+		return (\%counts, $should_use);
+	}
 =item C<< split_blank_statements( $iter ) >>
 
 Returns two array refs containing bindings from C<< $iter >>, with bindings

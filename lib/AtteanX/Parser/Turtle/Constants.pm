@@ -27,6 +27,7 @@ package AtteanX::Parser::Turtle::Constants 0.039 {
 	BEGIN {
 		@EXPORT = qw(
 			A
+			ANON
 			BASE
 			BNODE
 			BOOLEAN
@@ -56,10 +57,15 @@ package AtteanX::Parser::Turtle::Constants 0.039 {
 			STRING3S
 			TURTLEBASE
 			TURTLEPREFIX
+			TURTLEVERSION
 			GTGT
+			PGTGT
 			LTLT
+			LTLTP
 			LANNOT
 			RANNOT
+			TILDE
+			VERSION
 			WS
 			decrypt_constant
 		)

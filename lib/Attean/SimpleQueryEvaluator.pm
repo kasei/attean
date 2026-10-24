@@ -174,7 +174,10 @@ supplied C<< $active_graph >>.
 					my $val		= $expr_eval->evaluate_expression( $expr, $r, $active_graph, \%row_cache );
 					if (blessed($val) and $val->does('Attean::API::Binding')) {
 						# patterns need to be made ground to be bound as values (e.g. TriplePattern -> Triple)
-						$val	= $val->ground($r);
+						$val	= eval { $val->ground($r) };
+						if ($@) {
+							$val	= undef;
+						}
 					}
 # 					warn "Extend error: $@" if ($@);
 					$r	= Attean::Result->new( bindings => { $var => $val } )->join($r) if ($val);
@@ -583,14 +586,12 @@ supplied C<< $active_graph >>.
 							($_->does('Attean::API::TriplePattern'))
 								? $_->as_triple
 								: $_
-						} $p->apply_map($mapper)->values;
+						} $p->apply_map($bnode_mapper)->apply_map($mapper)->values;
 						unless (all { $_->does('Attean::API::TermOrTriple') } @terms) {
 							next PATTERN;
 						}
-						
-						my $t	= Attean::Triple->new(@terms);
-						$t		= $t->apply_map($bnode_mapper);
-						push(@triples, $t);
+
+						push(@triples, Attean::Triple->new(@terms));
 					}
 					return @triples;
 				},
@@ -626,12 +627,23 @@ appended to C<< @new_vars >> as it is created.
 		my $q				= $t->as_quad_pattern($active_graph);
 		my @values;
 		foreach my $v ($q->values) {
-			if (not($self->ground_blanks) and $v->does('Attean::API::Blank')) {
-				unless (exists $blanks->{$v->value}) {
-					$blanks->{$v->value}	= Attean::Variable->new();
-					push(@$new_vars, $blanks->{$v->value}->value);
+			if (not($self->ground_blanks)) {
+				if ($v->does('Attean::API::Blank')) {
+					unless (exists $blanks->{$v->value}) {
+						$blanks->{$v->value}	= Attean::Variable->new();
+						push(@$new_vars, $blanks->{$v->value}->value);
+					}
+					push(@values, $blanks->{$v->value});
+				} elsif ($v->does('Attean::API::TriplePattern')) {
+					my $tt	= [$v];
+					# The replace_blanks_with_variables logic probably belongs somewhere more appropriate
+					# for shared use between the planner and this evaluator, but for now we just call into
+					# the planner.
+					my $changed	= Attean::QueryPlanner->replace_blanks_with_variables($blanks, $tt);
+					push(@values, $tt->[0]);
+				} else {
+					push(@values, $v);
 				}
-				push(@values, $blanks->{$v->value});
 			} else {
 				push(@values, $v);
 			}
@@ -935,6 +947,19 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						} else {
 							return (I18N::LangTags::is_dialect_of( $lang, $match )) ? $true : $false;
 						}
+					} elsif ($func eq 'HASLANG') {
+						my ($string)	= @operands;
+						return $false unless ($string->does('Attean::API::Literal'));
+						return $string->has_language ? $true : $false;
+					} elsif ($func eq 'HASLANGDIR') {
+						my ($string)	= @operands;
+						return $false unless ($string->does('Attean::API::Literal'));
+						return $string->has_base_dir ? $true : $false;
+					} elsif ($func eq 'LANGDIR') {
+						my ($string)	= @operands;
+						die unless ($string->does('Attean::API::Literal'));
+						my $dir	= $string->base_dir // '';
+						return Attean::Literal->new(value => $dir);
 					} elsif ($func eq 'DATATYPE') {
 						return $operands[0]->datatype;
 					} elsif ($func eq 'BOUND') {
@@ -949,35 +974,32 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 					} elsif ($func eq 'ROUND') {
 						return Attean::Literal->new( value => sprintf('%.0f', (0.000000000000001 + $operands[0]->numeric_value)), $operands[0]->construct_args );
 					} elsif ($func eq 'CONCAT') {
-						my $all_lang	= 1;
-						my $all_str		= 1;
 						my $lang;
+						my $base_dir;
 						if (scalar(@operands) == 0) {
 							return Attean::Literal->new(value => '');
 						}
+						my $lang_key	= $operands[0]->lang_dir();
 						foreach my $n (@operands) {
 							die "CONCAT called with a non-literal argument" unless ($n->does('Attean::API::Literal'));
 							if ($n->language) {
-								$all_str	= 0;
-								if (defined($lang) and $lang ne $n->language) {
-									$all_lang	= 0;
-								} else {
-									$lang	= $n->language;
-								}
 							} elsif ($n->datatype->value ne 'http://www.w3.org/2001/XMLSchema#string') {
 								die "CONCAT called with a datatyped-literal other than xsd:string";
-							} else {
-								$all_lang	= 0;
-								$all_str	= 0;
+							}
+							my $new_lang_key	= $n->lang_dir();
+							if ($new_lang_key ne $lang_key) {
+								$lang_key	= '';
 							}
 						}
-						my %strtype;
-						if ($all_lang and $lang) {
-							$strtype{language}	= $lang;
-						} elsif ($all_str) {
-							$strtype{datatype}	= 'http://www.w3.org/2001/XMLSchema#string'
+						my %args;
+						if ($lang_key) {
+							my ($lang, $dir)	= split('--', $lang_key);
+							$args{language}		= $lang;
+							if ($dir) {
+								$args{base_dir}	= $dir;
+							}
 						}
-						return Attean::Literal->new( value => join('', map { $_->value } @operands), %strtype );
+						return Attean::Literal->new( value => join('', map { $_->value } @operands), %args );
 					} elsif ($func eq 'SUBSTR') {
 						my $str		= shift(@operands);
 						my @args	= map { $_->numeric_value } @operands;
@@ -1121,7 +1143,18 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 						my @values	= map { $_->value } @operands;
 						die "TypeError: STRLANG must be called with two plain literals" unless (blessed($str) and $str->does('Attean::API::Literal') and blessed($lang) and $lang->does('Attean::API::Literal'));
 						die "TypeError: STRLANG not called with a simple literal" unless ($str->datatype->value eq 'http://www.w3.org/2001/XMLSchema#string' and not($str->language));
+						die unless (length($lang->value));
 						return Attean::Literal->new( value => $values[0], language => $values[1] );
+					} elsif ($func eq 'STRLANGDIR') {
+						my ($term, $lang, $dir)	= @operands;
+						die unless ($term->does('Attean::API::Literal'));
+						die unless ($lang->does('Attean::API::Literal'));
+						die unless ($dir->does('Attean::API::Literal'));
+						die unless ($term->datatype->value =~ m<http://www.w3.org/2001/XMLSchema#string>);
+						die unless ($lang->value);
+						die unless ($dir->value =~ /^(ltr|rtl)$/);
+						my $v	= Attean::Literal->new(value => $term->value, language => $lang->value, base_dir => $dir->value);
+						return $v;
 					} elsif ($func eq 'STRDT') {
 						die "TypeError: STRDT" unless ($operands[0]->does('Attean::API::Literal') and not($operands[0]->language));
 						if (my $dt = $operands[0]->datatype) {
@@ -1144,11 +1177,39 @@ package Attean::SimpleQueryEvaluator::ExpressionEvaluator 0.039 {
 							my $ok	= ($a->value eq $b->value);
 							return $ok ? $true : $false;
 						}
+					} elsif ($func eq 'TRIPLE') {
+						my ($s, $p, $o)	= @operands;
+						unless ($s->does('Attean::API::BlankOrIRI')) {
+							die 'TRIPLE() constructor failed with bad subject type';
+						}
+						unless ($p->does('Attean::API::IRI')) {
+							die 'TRIPLE() constructor failed with bad predicate type';
+						}
+						unless ($o->does('Attean::API::TermOrTriple')) {
+							die 'TRIPLE() constructor failed with bad object type';
+						}
+						return Attean::Triple->new($s, $p, $o);
 					} elsif ($func =~ /^IS([UI]RI|BLANK|LITERAL|NUMERIC|TRIPLE)$/) {
 						return $operands[0]->does("Attean::API::$type_roles{$1}") ? $true : $false;
 					} elsif ($func eq 'REGEX') {
-						my ($value, $pattern)	= map { $_->value } @operands;
-						return ($value =~ /$pattern/) ? $true : $false;
+						my ($value, $pattern, $flags)	= map { $_->value } @operands;
+						unless ($operands[0]->does('Attean::API::Literal')) {
+							die 'REGEX called with non-literal value';
+						}
+						unless ($operands[1]->does('Attean::API::Literal')) {
+							die 'REGEX called with non-literal pattern';
+						}
+						my $flag_str	= '';
+						if (defined $flags) {
+							$flag_str	.= 'i' if ($flags =~ /i/);
+							$flag_str	.= 's' if ($flags =~ /s/);
+							$flag_str	.= 'm' if ($flags =~ /m/);
+							$flag_str	.= 'x' if ($flags =~ /x/);
+							if ($flags =~ /q/) {
+								$pattern	= quotemeta($pattern);
+							}
+						}
+						return ($value =~ /(?${flag_str}:$pattern)/) ? $true : $false;
 					}
 					die "Unimplemented FunctionExpression evaluation: " . $expr->operator;
 				}

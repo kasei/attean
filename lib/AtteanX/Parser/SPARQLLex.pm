@@ -45,13 +45,14 @@ package AtteanX::Parser::SPARQLLex 0.039 {
 	use Attean;
 	use Encode;
 	use Encode qw(decode);
-	use Types::Standard qw(ArrayRef);
+	use Types::Standard qw(ArrayRef Str);
 	use namespace::clean;
 
 	sub canonical_media_type { return "application/x-sparql-query-tokens" }
 
 	# these pass through to the lexer iterator
 	has extend		=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
+	has 'version'	=> (is => 'rw', isa => Str, default => '1.2');
 
 	sub media_types {
 		return [qw(application/x-sparql-query-tokens)];
@@ -97,8 +98,9 @@ the SPARQL query/update read from the L<IO::Handle> object C<< $fh >>.
 		my $self	= shift;
 		my $fh		= shift;
 		return AtteanX::Parser::SPARQLLex::Iterator->new(
-			extend => $self->extend,
-			file => $fh,
+			extend		=> $self->extend,
+			file		=> $fh,
+			version		=> $self->version,
 		);
 	}
 }
@@ -118,6 +120,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 	has lookahead_tokens		=> ( is => 'ro', isa => HashRef, default => sub { +{} } );
 	has extend					=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
 	has token_buffer			=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
+	has 'version'				=> (is => 'rw', isa => Str, default => '1.2');
 	
 	with 'AtteanX::API::Lexer';
 	
@@ -127,6 +130,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 	my $r_STRING_LITERAL_LONG1	= qr/'''(('|'')?([^'\\]|${r_ECHAR}))*'''/o;
 	my $r_STRING_LITERAL_LONG2	= qr/"""(("|"")?([^"\\]|${r_ECHAR}))*"""/o;
 	my $r_LANGTAG				= qr/@[a-zA-Z]+(-[a-zA-Z0-9]+)*/o;
+	my $r_LANGTAG_12			= qr/@[a-zA-Z]+(-[a-zA-Z0-9]+)*(--[a-zA-Z]+)?/o;
 	my $r_IRI_REF				= qr/<([^<>"{}|^`\\\x{00}-\x{20}])*>/o;
 	my $r_PN_CHARS_BASE			= qr/([A-Z]|[a-z]|[\x{00C0}-\x{00D6}]|[\x{00D8}-\x{00F6}]|[\x{00F8}-\x{02FF}]|[\x{0370}-\x{037D}]|[\x{037F}-\x{1FFF}]|[\x{200C}-\x{200D}]|[\x{2070}-\x{218F}]|[\x{2C00}-\x{2FEF}]|[\x{3001}-\x{D7FF}]|[\x{F900}-\x{FDCF}]|[\x{FDF0}-\x{FFFD}]|[\x{10000}-\x{EFFFF}])/o;
 	my $r_PN_CHARS_U			= qr/([_]|${r_PN_CHARS_BASE})/o;
@@ -147,7 +151,8 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 	my $r_BLANK_NODE_LABEL		= qr/_:${r_PN_LOCAL_BNODE}/o;
 	my $r_ANON					= qr/\[[\t\r\n ]*\]/o;
 	my $r_NIL					= qr/\([\n\r\t ]*\)/o;
-	my $r_KEYWORDS				= qr/(VERSION|ABS|ADD|ALL|ASC|ASK|AS|AVG|BASE|BIND|BNODE|BOUND|BY|CEIL|CLEAR|COALESCE|CONCAT|CONSTRUCT|CONTAINS|COPY|COUNT|CREATE|DATA|DATATYPE|DAY|DEFAULT|DELETE|DELETE WHERE|DESCRIBE|DESC|DISTINCT|DISTINCT|DROP|ENCODE_FOR_URI|EXISTS|FILTER|FLOOR|FOLD|FROM|GRAPH|GROUP_CONCAT|GROUP|HASLANG|HASLANGDIR|HAVING|HINT|HOURS|IF|IN|INSERT|INTO|IRI|ISBLANK|ISIRI|ISLITERAL|ISNUMERIC|ISTRIPLE|ISURI|LANGDIR|LANGMATCHES|LANG|LCASE|LIMIT|LOAD|MAX|MD5|MINUS|MINUTES|MIN|MONTH|MOVE|NAMED|NOT|NOW|OBJECT|OFFSET|OPTIONAL|ORDER|PREDICATE|PREFIX|RAND|REDUCED|REGEX|REPLACE|ROUND|SAMETERM|SAMPLE|SECONDS|SELECT|SEPARATOR|SERVICE|SHA1|SHA256|SHA384|SHA512|SILENT|STR|STRAFTER|STRBEFORE|STRDT|STRENDS|STRLANGDIR|STRLANG|STRLEN|STRSTARTS|STRUUID|SUBJECT|SUBSTR|SUM|TIMEZONE|TO|TRIPLE|TZ|UCASE|UNDEF|UNFOLD|UNION|URI|USING|UUID|VALUES|WHERE|WITH|YEAR)(?!:)\b/io;
+	my $r_KEYWORDS				= qr/(ABS|ADD|ALL|ASC|ASK|AS|AVG|BASE|BIND|BNODE|BOUND|BY|CEIL|CLEAR|COALESCE|CONCAT|CONSTRUCT|CONTAINS|COPY|COUNT|CREATE|DATA|DATATYPE|DAY|DEFAULT|DELETE|DELETE WHERE|DESCRIBE|DESC|DISTINCT|DISTINCT|DROP|ENCODE_FOR_URI|EXISTS|FILTER|FLOOR|FOLD|FROM|GRAPH|GROUP_CONCAT|GROUP|HASLANG|HASLANGDIR|HAVING|HINT|HOURS|IF|IN|INSERT|INTO|IRI|ISBLANK|ISIRI|ISLITERAL|ISNUMERIC|ISURI|LANGDIR|LANGMATCHES|LANG|LCASE|LIMIT|LOAD|MAX|MD5|MINUS|MINUTES|MIN|MONTH|MOVE|NAMED|NOT|NOW|OFFSET|OPTIONAL|ORDER|PREFIX|RAND|REDUCED|REGEX|REPLACE|ROUND|SAMETERM|SAMPLE|SECONDS|SELECT|SEPARATOR|SERVICE|SHA1|SHA256|SHA384|SHA512|SILENT|STR|STRAFTER|STRBEFORE|STRDT|STRENDS|STRLANG|STRLEN|STRSTARTS|STRUUID|SUBSTR|SUM|TIMEZONE|TO|TZ|UCASE|UNDEF|UNFOLD|UNION|URI|USING|UUID|VALUES|WHERE|WITH|YEAR)(?!:)\b/io;
+	my $r_KEYWORDS_12			= qr/(VERSION|ABS|ADD|ALL|ASC|ASK|AS|AVG|BASE|BIND|BNODE|BOUND|BY|CEIL|CLEAR|COALESCE|CONCAT|CONSTRUCT|CONTAINS|COPY|COUNT|CREATE|DATA|DATATYPE|DAY|DEFAULT|DELETE|DELETE WHERE|DESCRIBE|DESC|DISTINCT|DISTINCT|DROP|ENCODE_FOR_URI|EXISTS|FILTER|FLOOR|FOLD|FROM|GRAPH|GROUP_CONCAT|GROUP|HASLANG|HASLANGDIR|HAVING|HINT|HOURS|IF|IN|INSERT|INTO|IRI|ISBLANK|ISIRI|ISLITERAL|ISNUMERIC|ISTRIPLE|ISURI|LANGDIR|LANGMATCHES|LANG|LCASE|LIMIT|LOAD|MAX|MD5|MINUS|MINUTES|MIN|MONTH|MOVE|NAMED|NOT|NOW|OBJECT|OFFSET|OPTIONAL|ORDER|PREDICATE|PREFIX|RAND|REDUCED|REGEX|REPLACE|ROUND|SAMETERM|SAMPLE|SECONDS|SELECT|SEPARATOR|SERVICE|SHA1|SHA256|SHA384|SHA512|SILENT|STR|STRAFTER|STRBEFORE|STRDT|STRENDS|STRLANGDIR|STRLANG|STRLEN|STRSTARTS|STRUUID|SUBJECT|SUBSTR|SUM|TIMEZONE|TO|TRIPLE|TZ|UCASE|UNDEF|UNFOLD|UNION|URI|USING|UUID|VALUES|WHERE|WITH|YEAR)(?!:)\b/io;
 
 	sub BUILD {
 		my $self	= shift;
@@ -168,6 +173,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 			q[>]	=> '_get_iriref_or_relational',
 			q([)	=> '_get_lbracket_or_anon',
 			q[(]	=> '_get_lparen_or_nil',
+			q[)]	=> '_get_rparen_or_pgtgt',
 			(map {$_ => '_get_number'} (0 .. 9, '-', '+'))
 		);
 		while (my ($k,$v) = each(%METHOD_TOKEN)) {
@@ -182,12 +188,12 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 			'.'	=> DOT,
 			'='	=> EQUALS,
 			']'	=> RBRACKET,
-			')'	=> RPAREN,
 			'-'	=> MINUS,
 			'+'	=> PLUS,
 			';'	=> SEMICOLON,
 			'/'	=> SLASH,
 			'*'	=> STAR,
+			'~'	=> TILDE,
 		);
 		while (my ($k,$v) = each(%CHAR_TOKEN)) {
 			if (length($k) != 1) {
@@ -196,9 +202,18 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 			$self->lookahead_tokens->{$k}	//= $v;
 		}
 		
-		$self->add_regex_rule( $r_KEYWORDS, KEYWORD, sub { return uc(shift) } );
+		if ($self->version ge '1.2') {
+			$self->add_regex_rule( $r_KEYWORDS_12, KEYWORD, sub { return uc(shift) } );
+		} else {
+			$self->add_regex_rule( $r_KEYWORDS, KEYWORD, sub { return uc(shift) } );
+		}
 	}
-	
+
+	sub sparql12 {
+		my $self	= shift;
+		return ($self->version ge '1.2');
+	}
+
 	sub peek {
 		my $self	= shift;
 		my $b		= $self->token_buffer;
@@ -218,23 +233,35 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 		}
 	}
 	
+	sub codepoint_unescape {
+		my $self	= shift;
+		my $value	= shift;
+		no warnings 'uninitialized';
+		$value		=~ s{\\(?:(?:u([0-9A-Fa-f]{4}))|(?:U([0-9A-Fa-f]{8})))}{
+			my $h			= $1 . $2;
+			my $codepoint	= hex($h);
+			if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+				die "Unicode surrogate U+$h is illegal in UTF-8";
+			}
+			chr($codepoint);
+		}ge;
+		return $value;
+	}
+	
 	sub fill_buffer {
 		my $self	= shift;
 		unless (length($self->buffer)) {
+AGAIN:
 			my $line	= $self->file->getline;
 			if (defined($line)) {
-				no warnings 'uninitialized';
-				$line		=~ s{\\(?:(?:u([0-9A-Fa-f]{4}))|(?:U([0-9A-Fa-f]{8})))}{
-					my $h			= $1 . $2;
-					my $codepoint	= hex($h);
-					if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
-						die "Unicode surrogate U+$h is illegal in UTF-8";
-					}
-					chr($codepoint);
-				}ge;
-# 				$line		=~ s/\\u([0-9A-Fa-f]{4})/chr(hex($1))/ge;
-# 				$line		=~ s/\\U([0-9A-Fa-f]{8})/chr(hex($1))/ge;
+				if ($self->version lt '1.2') {
+					# codepoint escape handling has moved into the literal and IRI handling in SPARQL 1.2+
+					$line	= $self->codepoint_unescape($line);
+				}
 				$self->{buffer}	.= $line;
+				if ($line =~ /[[(]\s*$/) { # might be a NIL or ANON that spans a line
+					goto AGAIN;
+				}
 			}
 		}
 	}
@@ -309,9 +336,9 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 				if ($self->buffer =~ /^a(?!:)\s/o) {
 					$self->get_char;
 					return $self->new_token(A, $start_line, $start_column, 'a');
-				} elsif ($self->buffer =~ /^(?:true|false)(?!:)\b/o) {
+				} elsif ($self->buffer =~ /^(?i:true|false)(?!:)\b/o) {
 					my $bool	= $self->read_length($+[0]);
-					return $self->new_token(BOOLEAN, $start_line, $start_column, $bool);
+					return $self->new_token(BOOLEAN, $start_line, $start_column, lc($bool));
 # 				} elsif ($self->buffer =~ /^$r_KEYWORDS/) {
 # 					my $bool	= $self->read_length($+[0]);
 # 					return $self->new_token(KEYWORD, $start_line, $start_column, $bool);
@@ -436,10 +463,13 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 		} elsif (substr($buffer, 0, 2) eq '>=') {
 			$self->read_length(2);
 			return $self->new_token(GE, $self->start_line, $self->start_column, '>=');
-		} elsif (substr($buffer, 0, 2) eq '<<') {
+		} elsif ($self->sparql12 and substr($buffer, 0, 3) eq '<<(') {
+			$self->read_length(3);
+			return $self->new_token(LTLTP, $self->start_line, $self->start_column, '<<(');
+		} elsif ($self->sparql12 and substr($buffer, 0, 2) eq '<<') {
 			$self->read_length(2);
 			return $self->new_token(LTLT, $self->start_line, $self->start_column, '<<');
-		} elsif (substr($buffer, 0, 2) eq '>>') {
+		} elsif ($self->sparql12 and substr($buffer, 0, 2) eq '>>') {
 			$self->read_length(2);
 			return $self->new_token(GTGT, $self->start_line, $self->start_column, '>>');
 		} elsif (substr($buffer, 0, 1) eq '>') {
@@ -497,12 +527,23 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 		}
 	}
 	
+	sub _get_rparen_or_pgtgt {
+		my $self	= shift;
+		if ($self->sparql12 and substr($self->buffer, 0, 3) eq ')>>') {
+			$self->read_length(3);
+			return $self->new_token(PGTGT, $self->start_line, $self->start_column, ')>>');
+		} else {
+			$self->get_char_safe(')');
+			return $self->new_token(RPAREN, $self->start_line, $self->start_column, ')');
+		}
+	}
+	
 	sub _get_brace_or_annotation_or_or {
 		my $self	= shift;
-		if (substr($self->buffer, 0, 2) eq '{|') {
+		if ($self->sparql12 and substr($self->buffer, 0, 2) eq '{|') {
 			$self->read_length(2);
 			return $self->new_token(LANNOT, $self->start_line, $self->start_column, '{|');
-		} elsif (substr($self->buffer, 0, 2) eq '|}') {
+		} elsif ($self->sparql12 and substr($self->buffer, 0, 2) eq '|}') {
 			$self->read_length(2);
 			return $self->new_token(RANNOT, $self->start_line, $self->start_column, '|}');
 		} elsif (substr($self->buffer, 0, 2) eq '||') {
@@ -548,9 +589,10 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 
 	sub _get_lang {
 		my $self	= shift;
-		$self->get_char_safe('@');
-		if ($self->buffer =~ /^[a-zA-Z]+(-[a-zA-Z0-9]+)*\b/o) {
+		my $lang_re	= ($self->version ge '1.2') ? $r_LANGTAG_12 : $r_LANGTAG;
+		if ($self->buffer =~ $lang_re) {
 			my $lang	= $self->read_length($+[0]);
+			substr($lang, 0, 1, ''); # remove the '@' prefix
 			return $self->new_token(LANG, $self->start_line, $self->start_column, $lang);
 		}
 		$self->_throw_error("Expected keyword or language tag");
@@ -581,7 +623,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 						$quote_count	= 0;
 					}
 					if (substr($self->buffer, 0, 1) eq '\\') {
-						$string	.= $self->_get_escaped_char();
+						$string	.= $self->read_backslash_escape();
 					} else {
 						$self->buffer	=~ /^[^"\\]+/;
 						$string	.= $self->read_length($+[0]);
@@ -594,7 +636,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 			my $string	= '';
 			while (1) {
 				if (substr($self->buffer, 0, 1) eq '\\') {
-					$string	.= $self->_get_escaped_char();
+					$string	.= $self->read_backslash_escape();
 				} elsif ($self->buffer =~ /^[^"\\]+/o) {
 					$string	.= $self->read_length($+[0]);
 				} elsif (substr($self->buffer, 0, 1) eq '"') {
@@ -633,7 +675,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 						$quote_count	= 0;
 					}
 					if (substr($self->buffer, 0, 1) eq '\\') {
-						$string	.= $self->_get_escaped_char();
+						$string	.= $self->read_backslash_escape();
 					} else {
 						$self->buffer	=~ /^[^'\\]+/;
 						$string	.= $self->read_length($+[0]);
@@ -646,7 +688,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 			my $string	= '';
 			while (1) {
 				if (substr($self->buffer, 0, 1) eq '\\') {
-					$string	.= $self->_get_escaped_char();
+					$string	.= $self->read_backslash_escape();
 				} elsif ($self->buffer =~ /^[^'\\]+/o) {
 					$string	.= $self->read_length($+[0]);
 				} elsif (substr($self->buffer, 0, 1) eq "'") {
@@ -661,8 +703,23 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 		}
 	}
 
-	sub _get_escaped_char {
+	sub read_backslash_escape {
 		my $self	= shift;
+		if ($self->sparql12) {
+			# In SPARQL 1.2 all escape logic happens here, including multi-character
+			# escape sequences such as \uXXXX and \UXXXXXXXX.
+			return $self->_get_escaped_char(1);
+		} else {
+			# In SPARQL 1.1, multi-character codepoint escape sequences \uXXXX and \UXXXXXXXX
+			# are handled before parsing begins. What is left should only be single-character
+			# escapes such as \t and \n.
+			return $self->_get_escaped_char(0);
+		}
+	}
+
+	sub _get_escaped_char {
+		my $self		= shift;
+		my $allow_mb	= shift; # allow multi-byte escape sequences such as \uXXXX
 		my $c	= $self->peek_char;
 		$self->get_char_safe('\\');
 		my $esc	= $self->get_char;
@@ -673,16 +730,40 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.039 {
 		elsif ($esc eq 'n') { return "\n" }
 		elsif ($esc eq 'b') { return "\b" }
 		elsif ($esc eq 'f') { return "\f" }
-		elsif ($esc eq 'U') {
-			my $codepoint	= $self->read_length(8);
-			$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
-			return chr(hex($codepoint));
-		} elsif ($esc eq 'u'){
-			my $codepoint	= $self->read_length(4);
-			$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($codepoint =~ /^[0-9A-Fa-f]+$/o);
-			return chr(hex($codepoint));
+		elsif ($allow_mb) {
+			if ($esc eq 'U') {
+				my $h			= $self->read_length(8);
+				my $codepoint	= hex($h);
+				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($h =~ /^[0-9A-Fa-f]+$/o);
+				if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+					die "Surrogate U+$h is illegal as a codepoint escape value";
+				}
+				return chr($codepoint);
+			} elsif ($esc eq 'u'){
+				my $h			= $self->read_length(4);
+				my $codepoint	= hex($h);
+				$self->_throw_error("Bad unicode escape codepoint '$codepoint'") unless ($h =~ /^[0-9A-Fa-f]+$/o);
+				if ($codepoint >= 0xD800 and $codepoint <= 0xDFFF) {
+					die "Surrogate U+$h is illegal as a codepoint escape value";
+				}
+				return chr($codepoint);
+			}
 		}
 		$self->_throw_error("Unrecognized string escape '$esc'");
+	}
+	
+	sub current_location {
+		my $self	= shift;
+		return ($self->line, $self->column, $self->buffer);
+	}
+	
+	sub throw_near_error {
+		my $self	= shift;
+		my $message	= shift;
+		my $line	= shift // $self->line;
+		my $col		= shift // $self->column;
+		my $buffer	= shift // $self->buffer;
+		die "$message near $line:$col: " . $buffer;
 	}
 	
 	sub _throw_error {

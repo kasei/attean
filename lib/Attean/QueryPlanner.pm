@@ -150,26 +150,7 @@ the supplied C<< $active_graph >>.
 			my $triples	= $algebra->triples;
 			my @triples	= @$triples;
 			my %blanks;
-			foreach my $i (0 .. $#triples) {
-				my $t	= $triples[$i];
-				my @nodes	= $t->values;
-				my $changed	= 0;
-				foreach (@nodes) {
-					if ($_->does('Attean::API::Blank')) {
-						$changed++;
-						my $id	= $_->value;
-						unless (exists $blanks{$id}) {
-							$blanks{$id}	= Attean::Variable->new(value => $self->new_temporary('blank'));
-						}
-						$_	= $blanks{$id};
-					}
-				}
-				
-				if ($changed) {
-					my $new	= Attean::TriplePattern->new(@nodes);
-					$triples[$i]	= $new;
-				}
-			}
+			$self->replace_blanks_with_variables(\%blanks, \@triples);
 			my $bgp		= Attean::Algebra::BGP->new( triples => \@triples );
 			my @plans	= $self->bgp_join_plans($bgp, $model, $active_graphs, $default_graphs, $interesting, map {
 				[$self->access_plans($model, $active_graphs, $_)]
@@ -320,7 +301,8 @@ the supplied C<< $active_graph >>.
 				}
 				
 				my @branches;
-				my %ignore	= map { $_->value => 1 } @$default_graphs;
+				# ignore default graphs unless they are listed as available named graphs
+				my %ignore	= map { $_->value => 1 } grep { not exists $available{ $_->value} } @$default_graphs;
 				while (my $graph = $graphs->next) {
 					next if $ignore{ $graph->value };
 					my %exprs	= ($gvar => Attean::ValueExpression->new(value => $graph));
@@ -669,6 +651,41 @@ the supplied C<< $active_graph >>.
 			return @unfold;
 		}
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
+	}
+	
+	sub replace_blanks_with_variables {
+		my $self	= shift;
+		my $blanks	= shift;
+		my $triples	= shift;
+		my $any_changed	= 0;
+		foreach my $i (0 .. $#{ $triples }) {
+			my $t	= $triples->[$i];
+			my @nodes	= $t->values;
+			my $changed	= 0;
+			foreach (@nodes) {
+				if ($_->does('Attean::API::Blank')) {
+					$changed++;
+					my $id	= $_->value;
+					unless (exists $blanks->{$id}) {
+						$blanks->{$id}	= Attean::Variable->new(value => $self->new_temporary('blank'));
+					}
+					$_	= $blanks->{$id};
+				} elsif ($_->does('Attean::API::TriplePattern')) {
+					my $tt	= [$_];
+					my $changed	= $self->replace_blanks_with_variables($blanks, $tt);
+					if ($changed) {
+						$_	= $tt->[0];
+					}
+				}
+			}
+			
+			if ($changed) {
+				$any_changed++;
+				my $new	= Attean::TriplePattern->new(@nodes);
+				$triples->[$i]	= $new;
+			}
+		}
+		return $any_changed;
 	}
 	
 # 	sub plans_for_unbounded_path {

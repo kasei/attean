@@ -130,10 +130,9 @@ and returns the serialization as a UTF-8 encoded byte string.
 
 	sub serialize_iter_to_bytes {
 		my $self	= shift;
-		my $io		= shift;
 		my $iter	= shift;
 		
-		my @vars	= @{ $iter->variables };
+		my @vars	= ($iter->does('Attean::API::TripleIterator') or $iter->does('Attean::API::QuadIterator')) ? $iter->variables : @{ $iter->variables };
 		my @header_names	= @vars;
 		if ($self->number_rows) {
 			unshift(@header_names, '#');
