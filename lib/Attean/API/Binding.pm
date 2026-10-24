@@ -163,7 +163,8 @@ package Attean::API::Binding 0.039 {
 					return 0;
 				}
 			} else {
-				unless (0 == $value->compare($other_value)) {
+				my $cmp	= eval { $value->compare($other_value) };
+				unless (defined($cmp) and 0 == $cmp) {
 					return 0;
 				}
 			}
@@ -821,7 +822,7 @@ package Attean::API::Result 0.039 {
 		foreach my $key (@shared) {
 			my $val_a	= $self->value($key);
 			my $val_b	= $rowb->value($key);
-			my $equal	= (refaddr($val_a) == refaddr($val_b)) || $val_a->equals( $val_b );
+			my $equal	= (refaddr($val_a) == refaddr($val_b)) || eval { $val_a->equals( $val_b ) };
 			unless ($equal) {
 				return;
 			}
