@@ -532,7 +532,14 @@ package Attean::API::TriplePattern 0.039 {
 			my $term	= $self->$method();
 			unless (ref($term) eq 'Attean::Variable' or $term->does('Attean::API::Variable')) {
 				my $gterm	= $ground->$method();
-				return 0 unless ($term->equals($gterm));
+				my $eq;
+				if ($term->does('Attean::API::TripleOrQuadPattern')) {
+					$eq	= $term->matches($gterm);
+				} else {
+					$eq	= eval { $term->equals($gterm) };
+					warn $@ if ($@);
+				}
+				return 0 unless ($eq);
 			}
 		}
 		return 1;
@@ -710,7 +717,14 @@ package Attean::API::QuadPattern 0.039 {
 			my $term	= $self->$method();
 			unless (ref($term) eq 'Attean::Variable' or $term->does('Attean::API::Variable')) {
 				my $gterm	= $ground->$method();
-				return 0 unless ($term->equals($gterm));
+				my $eq;
+				if ($term->does('Attean::API::TripleOrQuadPattern')) {
+					$eq	= $term->matches($gterm);
+				} else {
+					$eq	= eval { $term->equals($gterm) };
+					warn $@ if ($@);
+				}
+				return 0 unless ($eq);
 			}
 		}
 		return 1;
