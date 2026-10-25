@@ -891,7 +891,6 @@ sub query_eval_test {
 	
 	print STDERR "constructing model...\n" if ($self->debug);
 	my $test_model	= $self->test_model();
-	my $next_stress	= 0;
 	TODO: {
 		local($TODO)	= (blessed($req)) ? "requires " . $req->value : '';
 		try {
@@ -928,9 +927,8 @@ sub query_eval_test {
 			fail($test->value);
 			$self->record_result('evaluation', 0, $test->value, $TODO);
 			print "# died: " . $test->value . ": $_\n";
-			$next_stress++;
+			return;
 		};
-		next STRESS if $next_stress;
 		print STDERR "ok\n" if ($self->debug);
 	
 		my $resuri		= URI->new( $result->value );
