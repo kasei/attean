@@ -365,7 +365,7 @@ Returns the next token present in the input.
 					if (substr($self->buffer, 0, 1) eq '\\') {
 						$string	.= $self->_get_escaped_char();
 					} else {
-						$self->buffer	=~ /^[^"\\]+/;
+						$self->{buffer}	=~ /^[^"\\]+/;
 						$string	.= $self->read_length($+[0]);
 					}
 				}
@@ -423,7 +423,7 @@ Returns the next token present in the input.
 					if (substr($self->buffer, 0, 1) eq '\\') {
 						$string	.= $self->_get_escaped_char();
 					} else {
-						$self->buffer	=~ /^[^'\\]+/;
+						$self->{buffer}	=~ /^[^'\\]+/;
 						$string	.= $self->read_length($+[0]);
 					}
 				}

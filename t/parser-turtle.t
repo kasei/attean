@@ -124,6 +124,32 @@ subtest 'ANON bug' => sub {
 	expect($l->get_token, RBRACKET, [']']);
 };
 
+subtest 'long literals with UTF-8 buffer' => sub {
+	# perl 5.18 regression: matching against the temporary returned by the
+	# buffer accessor in void context left @+ pointing at freed memory
+	my $turtle	= qq[<s> <p> '''hello!''', """hello!""", '''火星 x''', """x 火星""" .];
+	utf8::encode($turtle);
+	open(my $fh, '<:encoding(UTF-8)', \$turtle);
+	my $l	= AtteanX::Parser::Turtle::Lexer->new($fh);
+	my @tokens;
+	my @w	= warnings {
+		while (my $t = $l->get_token) {
+			push(@tokens, $t);
+		}
+	};
+	is_deeply(\@w, [], 'no warnings');
+	expect($tokens[0], IRI, ['s'], 'subject');
+	expect($tokens[1], IRI, ['p'], 'predicate');
+	expect($tokens[2], STRING3S, ['hello!'], 'single quote long literal');
+	expect($tokens[3], COMMA, [',']);
+	expect($tokens[4], STRING3D, ['hello!'], 'double quote long literal');
+	expect($tokens[5], COMMA, [',']);
+	expect($tokens[6], STRING3S, ['火星 x'], 'single quote long literal with non-ASCII');
+	expect($tokens[7], COMMA, [',']);
+	expect($tokens[8], STRING3D, ['x 火星'], 'double quote long literal with non-ASCII');
+	expect($tokens[9], DOT, ['.']);
+};
+
 done_testing();
 
 sub expect {

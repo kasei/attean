@@ -299,7 +299,38 @@ subtest 'SPARQL 1.2 bade uncode codepoint escape' => sub {
 # 	dies_ok {
 # 		my $a	= AtteanX::Parser::SPARQL->parse_update('INSERT { <s> <p> <o> }');
 # 	} 'unexpected EOF in update';
-	
+
+};
+
+subtest 'long literals with UTF-8 buffer' => sub {
+	# perl 5.18 regression: matching against the temporary returned by the
+	# buffer accessor in void context left @+ pointing at freed memory
+	foreach my $version ('1.1', '1.2') {
+		my $sparql	= qq[ASK { <s> <p> '''hello!''', """hello!""", '''火星 x''', """x 火星""" }];
+		utf8::encode($sparql);
+		open(my $fh, '<:encoding(UTF-8)', \$sparql);
+		my $l		= AtteanX::Parser::SPARQLLex->new(version => $version);
+		my $iter	= $l->parse_iter_from_io($fh);
+		my @tokens;
+		my @w		= warnings {
+			while (my $t = $iter->next) {
+				push(@tokens, $t);
+			}
+		};
+		is_deeply(\@w, [], "no warnings (SPARQL $version)");
+		expect($tokens[0], KEYWORD, ['ASK']);
+		expect($tokens[1], LBRACE, ['{']);
+		expect($tokens[2], IRI, ['s'], 'subject');
+		expect($tokens[3], IRI, ['p'], 'predicate');
+		expect($tokens[4], STRING3S, ['hello!'], 'single quote long literal');
+		expect($tokens[5], COMMA, [',']);
+		expect($tokens[6], STRING3D, ['hello!'], 'double quote long literal');
+		expect($tokens[7], COMMA, [',']);
+		expect($tokens[8], STRING3S, ['火星 x'], 'single quote long literal with non-ASCII');
+		expect($tokens[9], COMMA, [',']);
+		expect($tokens[10], STRING3D, ['x 火星'], 'double quote long literal with non-ASCII');
+		expect($tokens[11], RBRACE, ['}']);
+	}
 };
 
 done_testing();

@@ -625,7 +625,7 @@ AGAIN:
 					if (substr($self->buffer, 0, 1) eq '\\') {
 						$string	.= $self->read_backslash_escape();
 					} else {
-						$self->buffer	=~ /^[^"\\]+/;
+						$self->{buffer}	=~ /^[^"\\]+/;
 						$string	.= $self->read_length($+[0]);
 					}
 				}
@@ -677,7 +677,7 @@ AGAIN:
 					if (substr($self->buffer, 0, 1) eq '\\') {
 						$string	.= $self->read_backslash_escape();
 					} else {
-						$self->buffer	=~ /^[^'\\]+/;
+						$self->{buffer}	=~ /^[^'\\]+/;
 						$string	.= $self->read_length($+[0]);
 					}
 				}
