@@ -35,8 +35,43 @@ my:project
 							my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
 							my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
 							my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 , my:v_0-035 ,
-							my:v_0-036 , my:v_0-037 , my:v_0-038 , my:v_0-039 ;
+							my:v_0-036 , my:v_0-037 , my:v_0-038 , my:v_0-039 , my:v_0-040 ;
 	.
+
+my:v_0-040
+	a					:Version ;
+	dc:issued			"2026-10-26"^^xsd:date ;
+	:revision			"0.040" ;
+	dcterms:replaces	my:v_0-039 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "New RDF 1.2 and SPARQL 1.2 support." ],
+			[ a dcs:Addition ; rdfs:label "Add new trie-based Memory2 store implementation." ],
+			[ a dcs:Update ; rdfs:label "Fix Attean::API::MutableModel->load_urls_into_graph_with_base to rename bnode labels per document." ],
+			[ a dcs:Update ; rdfs:label "Add Attean::API::DateTimeLiteral->equals and add support for special 24:00:00 xsd:dateTime format." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of VALUES in ASK and aggregation SELECT queries." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of zero-length property paths in both simple and plan-based evaluation." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of NPS with inverted predicates in SimpleQueryEvaluator." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in SimpleQueryEvaluator handling of empty aggregation with grouping." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of fresh bnodes during CONSTRUCT template instantiation in SimpleQueryEvaluator." ],
+			[ a dcs:Update ; rdfs:label "Fix dataset definition in queries using FROM NAMED." ],
+			[ a dcs:Update ; rdfs:label "Fix bugs in string and casting expression function evaluation." ],
+			[ a dcs:Update ; rdfs:label "Fix handling of solution modifiers in CONSTRUCT queries." ],
+			[ a dcs:Update ; rdfs:label "Fix bugs relating to VALUES clauses." ],
+			[ a dcs:Update ; rdfs:label "Fix TestIDPQueryPlanner to accurately mimic document-scoped bnodes in federation tests." ],
+			[ a dcs:Update ; rdfs:label "Fix bug that was not allowing fourth flags argument to REPLACE function." ],
+			[ a dcs:Update ; rdfs:label "Fix plan-based GROUP_CONCAT to drop language-tag data in aggregate result." ],
+			[ a dcs:Update ; rdfs:label "Fix plan-based evaluation of DISTINCT GROUP_CONCAT aggregation." ],
+			[ a dcs:Update ; rdfs:label "Fix SPARQL parser to allow multiple HAVING conditions." ],
+			[ a dcs:Update ; rdfs:label "Add tests for xsd:dateTime handling in Attean::API::NumericLiteral." ],
+			[ a dcs:Update ; rdfs:label "Add Attean::API::QuadIterator->as_triples method." ],
+			[ a dcs:Update ; rdfs:label "Add matches method to Attean::API::TriplePattern and Attean::API::QuadPattern." ],
+			[ a dcs:Update ; rdfs:label "Update copyright notice." ],
+			[ a dcs:Update ; rdfs:label "Add Attean::API::TermIterator->get_boolean and improve boolean serialization tests." ],
+			[ a dcs:Update ; rdfs:label "Fix SPARQL and Turtle parsing bug on perl 5.18." ]
+	]
+	.
+
 
 my:v_0-039
 	a					:Version ;
