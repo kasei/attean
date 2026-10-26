@@ -7,7 +7,7 @@ Attean::SPARQLClient - RDF blank nodes
 
 =head1 VERSION
 
-This document describes Attean::SPARQLClient version 0.039
+This document describes Attean::SPARQLClient version 0.040
 
 =head1 SYNOPSIS
 
@@ -49,7 +49,7 @@ is a L<Attean::API::IRI>, but can be coerced from a string.
 
 =cut
 
-package Attean::SPARQLClient 0.039 {
+package Attean::SPARQLClient 0.040 {
 	use Moo;
 	use Types::Standard qw(ConsumerOf Bool Str InstanceOf);
 	use Encode qw(encode);

@@ -1,7 +1,7 @@
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Memory2::SPOGIndex 0.039 {
+package AtteanX::Store::Memory2::SPOGIndex 0.040 {
 use Moo;
 use Type::Tiny::Role;
 use Types::Standard qw(Str Int ArrayRef HashRef ConsumerOf InstanceOf);
