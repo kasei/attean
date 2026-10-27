@@ -193,6 +193,11 @@ t/term.t
 t/treerewrite.t
 t/types-general.t
 t/types-iri.t
+xt/dawg10-memory-simpleeval.t
+xt/dawg10-memory.t
+xt/dawg11-memory-simpleeval.t
 xt/dawg11-memory.t
+xt/dawg12-memory-simpleeval.t
+xt/dawg12-memory.t
 xt/pod-coverage.t
 xt/pod.t
