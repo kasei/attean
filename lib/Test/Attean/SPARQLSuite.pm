@@ -17,6 +17,7 @@ use HTTP::Message::PSGI;
 use Data::Dumper;
 use Encode qw(encode encode_utf8);
 use Getopt::Long;
+use Module::Load::Conditional qw(can_load);
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
 use List::Util qw(all);
@@ -38,6 +39,58 @@ my $RQ		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-query#';
 my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 
 with 'Test::Attean::W3CManifestTestSuite';
+
+sub enable_earl {
+	my $self	= shift;
+	my %args	= @_;
+	my $conf	= $args{ conf } || {};
+	if (can_load( modules => { 'RDF::EARL' => 0.002 })) {
+		my $v			= $Attean::VERSION;
+		$v				=~ s/[.]/-/;
+		my $def_subject	= "http://purl.org/NET/cpan-uri/dist/Attean/v_$v";
+		my $subject		= $conf->{ subject } || $def_subject;
+		my $assertor	= $conf->{ assertor } || "${def_subject}#Test-Attean-SPARQLSuite";
+		$assertor		= iri($assertor) unless (ref($assertor));
+		$subject		= iri($subject) unless (ref($subject));
+		
+		my $EARL		= 'http://www.w3.org/ns/earl#';
+		my $foaf		= 'http://xmlns.com/foaf/0.1/';
+		my $type		= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+		my $partOf		= iri('http://purl.org/dc/terms/isPartOf');
+		my $desc		= iri('http://purl.org/dc/elements/1.1/description');
+
+		my @triples;
+		my @config_notes;
+		if (my $store = $conf->{store}) {
+			push(@config_notes, "Configured with the ${store} quadstore");
+		}
+		if (my $eval = $conf->{'eval'}) {
+			push(@config_notes, "Configured with ${eval}-based evaluation");
+		}
+		if (scalar(@config_notes)) {
+			my $proj	= $subject;
+			$subject	= iri('foo:bar');
+			push(@triples, triple($proj, $type, iri("${EARL}Software")));
+			push(@triples, triple($subject, $partOf, $proj));
+			foreach my $note (@config_notes) {
+				push(@triples, triple($subject, $desc, literal($note)));
+			}
+		}
+		
+		my $earl		= RDF::EARL->new( subject => $subject, assertor => $assertor );
+		$self->earl($earl);
+
+		my $graph		= $earl->graph;
+		my $model		= $earl->model;
+		foreach my $t (@triples) {
+			warn "Adding metadata: " . $t->as_string . "\n";
+			$model->add_quad($t->as_quad($graph));
+		}
+			
+		return $earl;
+	}
+	return;
+}
 
 sub manifest_paths {
 	my $self	= shift;

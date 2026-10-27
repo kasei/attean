@@ -15,7 +15,6 @@ use Test::Roo;
 use List::Util qw(all);
 use FindBin qw($Bin);
 use Attean;
-use Module::Load::Conditional qw(can_load);
 use namespace::clean;
 
 with 'Test::Attean::SPARQLSuite';
@@ -26,14 +25,7 @@ sub BUILD {
 	my $base		= (defined($env_path) and -d $env_path) ? $env_path : File::Spec->catfile( $Bin, 'data', 'rdf-tests' );
 	my $path		= File::Spec->catfile( $base, 'sparql', 'sparql12' );
 	$self->tests_dir($path);
-
-	if (can_load( modules => { 'RDF::EARL' => 0.002 })) {
-		my $v			= $Attean::VERSION;
-		$v				=~ s/[.]/-/;
-		my $subject		= "http://purl.org/NET/cpan-uri/dist/Attean/v_$v";
-		my $earl		= RDF::EARL->new( subject => $subject );
-		$self->earl($earl);
-	}
+	$self->enable_earl(conf => { store => 'Memory', 'eval' => 'QueryPlanner' });
 }
 
 my %args	= (use_idp_planner => 1);
