@@ -7,7 +7,7 @@ Attean::API::Parser - Parser role
 
 =head1 VERSION
 
-This document describes Attean::API::Parser version 0.039
+This document describes Attean::API::Parser version 0.040
 
 =head1 DESCRIPTION
 
@@ -58,7 +58,7 @@ File extensions should NOT include a leading dot.
 
 use Type::Tiny::Role;
 
-package Attean::API::Parser 0.039 {
+package Attean::API::Parser 0.040 {
 	use Types::Standard qw(CodeRef Bool);
 
 	use Moo::Role;
@@ -114,7 +114,7 @@ Constructs and returns a new L<Attean::Literal> object.
 	sub file_extensions { return [] }
 }
 
-package Attean::API::AbbreviatingParser 0.039 {
+package Attean::API::AbbreviatingParser 0.040 {
 	use Types::Standard qw(ConsumerOf InstanceOf Maybe);
 	use Types::Namespace qw( NamespaceMap );
 	use Scalar::Util qw(blessed);
@@ -126,7 +126,7 @@ package Attean::API::AbbreviatingParser 0.039 {
 	has 'namespaces'	=> (is => 'ro', isa => Maybe[NamespaceMap]);
 }
 
-package Attean::API::CDTBlankNodeMappingParser 0.039 {
+package Attean::API::CDTBlankNodeMappingParser 0.040 {
 	use Types::Standard qw(HashRef ConsumerOf InstanceOf Maybe Bool);
 	use Scalar::Util qw(blessed);
 	use UUID::Tiny ':std';
@@ -163,7 +163,7 @@ package Attean::API::CDTBlankNodeMappingParser 0.039 {
 	};
 }
 
-package Attean::API::PushParser 0.039 {
+package Attean::API::PushParser 0.040 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 
@@ -227,7 +227,7 @@ package Attean::API::PushParser 0.039 {
 	}
 }
 
-package Attean::API::PullParser 0.039 {
+package Attean::API::PullParser 0.040 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 	
@@ -269,7 +269,7 @@ package Attean::API::PullParser 0.039 {
 	}
 }
 
-package Attean::API::AtOnceParser 0.039 {
+package Attean::API::AtOnceParser 0.040 {
 	use Moo::Role;
 	with 'Attean::API::Parser';
 	
@@ -330,7 +330,7 @@ package Attean::API::AtOnceParser 0.039 {
 	
 }
 
-package Attean::API::TermParser 0.039 {
+package Attean::API::TermParser 0.040 {
 	# Parser returns objects that conform to Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -340,7 +340,7 @@ package Attean::API::TermParser 0.039 {
 	}
 }
 
-package Attean::API::TripleParser 0.039 {
+package Attean::API::TripleParser 0.040 {
 	# Parser returns objects that conform to Attean::API::Triple
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -350,7 +350,7 @@ package Attean::API::TripleParser 0.039 {
 	}
 }
 
-package Attean::API::QuadParser 0.039 {
+package Attean::API::QuadParser 0.040 {
 	# Parser returns objects that conform to Attean::API::Quad
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -360,7 +360,7 @@ package Attean::API::QuadParser 0.039 {
 	}
 }
 
-package Attean::API::MixedStatementParser 0.039 {
+package Attean::API::MixedStatementParser 0.040 {
 	# Parser returns objects that conform to either Attean::API::Triple or Attean::API::Quad
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -370,7 +370,7 @@ package Attean::API::MixedStatementParser 0.039 {
 	}
 }
 
-package Attean::API::ResultOrTermParser 0.039 {
+package Attean::API::ResultOrTermParser 0.040 {
 	# Parser returns objects that conform to either Attean::API::Result or Attean::API::Term
 	use Moo::Role;
 	with 'Attean::API::Parser';
@@ -380,7 +380,7 @@ package Attean::API::ResultOrTermParser 0.039 {
 	}
 }
 
-package Attean::API::ResultParser 0.039 {
+package Attean::API::ResultParser 0.040 {
 	# Parser returns objects that conform to Attean::API::Result
 	use Moo::Role;
 	with 'Attean::API::Parser';

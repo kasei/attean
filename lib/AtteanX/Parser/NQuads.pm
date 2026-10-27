@@ -7,7 +7,7 @@ AtteanX::Parser::NQuads - N-Quads Parser
 
 =head1 VERSION
 
-This document describes AtteanX::Parser::NQuads version 0.039
+This document describes AtteanX::Parser::NQuads version 0.040
 
 =head1 SYNOPSIS
 
@@ -48,7 +48,7 @@ the UTF-8 encoded byte string C<< $data >>.
 
 =cut
 
-package AtteanX::Parser::NQuads 0.039 {
+package AtteanX::Parser::NQuads 0.040 {
 	use utf8;
 	
 	use Attean;

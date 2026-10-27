@@ -136,4 +136,20 @@ subtest 'Attean::API::Binding convenience parse method' => sub {
 	}
 };
 
+subtest 'TriplePattern and QuadPattern matches()' => sub {
+	my $reifies	= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+	my $t0	= triple(iri('s2'), iri('p2'), iri('o2'));
+	my $t1	= triple(iri('s4'), iri('p'), $t0);
+	my $t2	= triple(blank('b'), $reifies, $t1);
+	is($t2->as_string, q[_:b <http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies> <<( <s4> <p> <<( <s2> <p2> <o2> )>> )>> .]);
+	my $q	= quad(blank('b'), $reifies, $t1, iri('g'));
+
+	my $tp0	= triplepattern(variable('st'), variable('pt'), variable('ot'));
+	my $tp1	= triplepattern( variable('s'), variable('p'), $tp0 );
+	ok($tp1->matches($t1), 'triple pattern matches triple with triple term');
+	
+	my $qp	= quadpattern( blank('b'), $reifies, $tp1, iri('g') );
+	ok($qp->matches($q), 'quad pattern matches quad with nested triple terms');
+};
+
 done_testing();

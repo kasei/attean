@@ -167,7 +167,6 @@ t/parser-sparql.t
 t/parser-sparqljson.t
 t/parser-sparqltsv.t
 t/parser-sparqlxml.t
-t/parser-turtle-star.t
 t/parser-turtle.t
 t/parser.t
 t/plan.t
@@ -195,7 +194,5 @@ t/treerewrite.t
 t/types-general.t
 t/types-iri.t
 xt/dawg11-memory.t
-xt/eval-sparql-star-memory-simpleeval.t
-xt/eval-sparql-star-memory.t
 xt/pod-coverage.t
 xt/pod.t

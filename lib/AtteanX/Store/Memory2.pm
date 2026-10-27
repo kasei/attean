@@ -4,7 +4,7 @@ AtteanX::Store::Memory2 - Simple in-memory RDF store
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Memory2 version 0.039
+This document describes AtteanX::Store::Memory2 version 0.040
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ roles.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Memory2 0.039 {
+package AtteanX::Store::Memory2 0.040 {
 use Moo;
 use Type::Tiny::Role;
 use Types::Standard qw(Int ArrayRef HashRef ConsumerOf InstanceOf);
