@@ -64,7 +64,9 @@ package Attean::Literal 0.040 {
 	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
-	my $XSD_STRING	= IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
+	my $XSD_STRING			= Attean::IRI->new(value => 'http://www.w3.org/2001/XMLSchema#string');
+	my $XSD_LANGSTRING		= Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
+	my $XSD_LANGDIRSTRING	= Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString');
 	has 'value'				=> (is => 'ro', isa => Str, required => 1);
 	has 'language'			=> (is => 'ro', isa => Maybe[Str], predicate => 'has_language');
 	has 'base_dir'			=> (is => 'ro', isa => Maybe[Str]);
@@ -91,8 +93,7 @@ package Attean::Literal 0.040 {
 		my $class	= shift;
 		return $class->$orig(@_) if (scalar(@_) == 1 and ref($_[0]) eq "HASH");
 		if (scalar(@_) == 1) {
-			my $dt	= IRI->new('http://www.w3.org/2001/XMLSchema#string');
-			return $class->$orig(value => shift, datatype => $dt);
+			return $class->$orig(value => shift, datatype => $XSD_STRING);
 		}
 		return $class->$orig(@_);
 	};
@@ -101,9 +102,9 @@ package Attean::Literal 0.040 {
 		my $orig	= shift;
 		my $self	= shift;
 		if ($self->has_base_dir) {
-			return Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString');
+			return $XSD_LANGDIRSTRING;
 		} elsif ($self->has_language) {
-			return Attean::IRI->new(value => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString');
+			return $XSD_LANGSTRING;
 		} else {
 			return $self->$orig(@_);
 		}
@@ -155,10 +156,12 @@ The xsd:false term.
 	}
 	
 	{
+		my %datatypes;
 		for my $method (qw(integer decimal float double)) {
+			$datatypes{$method}	= Attean::IRI->new( "http://www.w3.org/2001/XMLSchema#$method" );
 			my $code	= sub {
 				my $class	= shift;
-				return $class->new( value => shift, datatype => "http://www.w3.org/2001/XMLSchema#$method" );
+				return $class->new( value => shift, datatype => $datatypes{$method} );
 			};
 			Sub::Install::install_sub({
 				code	=> set_subname("${method}", $code),
