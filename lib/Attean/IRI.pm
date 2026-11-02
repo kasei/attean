@@ -37,6 +37,7 @@ package Attean::IRI 0.040 {
 	extends 'IRI';
 	
 	has 'ntriples_string'	=> (is => 'ro', isa => Str, lazy => 1, builder => '_ntriples_string');
+	has 'string'			=> (is => 'ro', lazy => 1, builder => '_as_string', reader => 'as_string');
 
 =item C<< equals ( $iri ) >>
 
@@ -84,7 +85,7 @@ Returns the IRI value.
 
 =cut
 
-	sub as_string {
+	sub _as_string {
 		my $self	= shift;
 		return $self->abs;
 	}
