@@ -32,6 +32,7 @@ require XML::Simple;
 my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
 my $RDF		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my $RDFS	= 'http://www.w3.org/2000/01/rdf-schema#';
+my $RDFT	= 'http://www.w3.org/ns/rdftest#';
 my $RS		= 'http://www.w3.org/2001/sw/DataAccess/tests/result-set#';
 my $MF		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#';
 my $UT		= 'http://www.w3.org/2009/sparql/tests/test-update#';
@@ -40,65 +41,17 @@ my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 
 with 'Test::Attean::W3CManifestTestSuite';
 
-sub enable_earl {
-	my $self	= shift;
-	my %args	= @_;
-	my $conf	= $args{ conf } || {};
-	if (can_load( modules => { 'RDF::EARL' => 0.002 })) {
-		my $v			= $Attean::VERSION;
-		$v				=~ s/[.]/-/;
-		my $def_subject	= "http://purl.org/NET/cpan-uri/dist/Attean/v_$v";
-		my $subject		= $conf->{ subject } || $def_subject;
-		my $assertor	= $conf->{ assertor } || "${def_subject}#Test-Attean-SPARQLSuite";
-		$assertor		= iri($assertor) unless (ref($assertor));
-		$subject		= iri($subject) unless (ref($subject));
-		
-		my $EARL		= 'http://www.w3.org/ns/earl#';
-		my $foaf		= 'http://xmlns.com/foaf/0.1/';
-		my $type		= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-		my $partOf		= iri('http://purl.org/dc/terms/isPartOf');
-		my $desc		= iri('http://purl.org/dc/elements/1.1/description');
-
-		my @triples;
-		my @config_notes;
-		if (my $store = $conf->{store}) {
-			push(@config_notes, "Configured with the ${store} quadstore");
-		}
-		if (my $eval = $conf->{'eval'}) {
-			push(@config_notes, "Configured with ${eval}-based evaluation");
-		}
-		if (scalar(@config_notes)) {
-			my $proj	= $subject;
-			$subject	= iri('foo:bar');
-			push(@triples, triple($proj, $type, iri("${EARL}Software")));
-			push(@triples, triple($subject, $partOf, $proj));
-			foreach my $note (@config_notes) {
-				push(@triples, triple($subject, $desc, literal($note)));
-			}
-		}
-		
-		my $earl		= RDF::EARL->new( subject => $subject, assertor => $assertor );
-		$self->earl($earl);
-
-		my $graph		= $earl->graph;
-		my $model		= $earl->model;
-		foreach my $t (@triples) {
-			warn "Adding metadata: " . $t->as_string . "\n";
-			$model->add_quad($t->as_quad($graph));
-		}
-			
-		return $earl;
-	}
-	return;
-}
-
 sub manifest_paths {
 	my $self	= shift;
-
 	my $dir		= $self->tests_dir;
 	unless (defined($dir)) {
 		plan skip_all => "No manifest directory given";
 		exit(0);
+	}
+	
+	unless (-d $dir and -r $dir) {
+		plan skip_all => "Manifest directory not readable: $dir";
+		exit(1);
 	}
 	
 	my $manifest	= File::Spec->catfile($dir, 'manifest.ttl');
@@ -109,49 +62,7 @@ sub manifest_paths {
 	}
 }
 
-sub recursively_find_manifest_files {
-	my $self		= shift;
-	my $manifest	= shift;
-
-	my $model		= $self->memory_model();
-	my $class		= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
-
-	my %loaded;
-	
-	my %manifests;
-	my %manifest_files	= ($manifest => 1);
-	my @load	= map { iri("file://" . File::Spec->rel2abs($_)) } ($manifest);
-	while (scalar(@load)) {
-		foreach my $iri (@load) {
-# 			warn "Loading " . $iri->value . "\n" if ($self->debug);
-			$loaded{ $iri->value }++;
-		}
-		$model->load_urls_into_graph($self->default_graph, @load);
-		@load	= ();
-
-		my $subjects = $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") );
-		my @manifest_matches	= $subjects->elements;
-		foreach my $m (@manifest_matches) {
-			if (not exists $manifests{ $m->value }) {
-				$manifests{ $m->value }	= $m;
-				my @list_heads	= $model->objects( $m, iri("${MF}include") )->elements;
-				my @elements	= map { $model->get_list(undef, $_)->elements() } @list_heads;
-				my @new			= grep { not exists($loaded{$_->value}) } @elements;
-				push(@load, @new);
-				foreach my $n (@new) {
-					my $url	= $n->value;
-					$url	=~ s{file://}{};
-					$manifest_files{ $url }++;
-				}
-			}
-		}
-	}
-	
-	return keys %manifest_files;
-}
-
 ###############################################################################
-
 
 Test::Roo::top_test 'SPARQL tests' => sub {
 	my $self		= shift;
@@ -179,6 +90,7 @@ Test::Roo::top_test 'SPARQL tests' => sub {
 			unless ($test->value =~ /$PATTERN/) {
 				next;
 			}
+# 			warn 'TEST: ' . $test->value if ($self->debug);
 # 			if ($LIST_TESTS) {
 # 				say $test->value;
 # 			}

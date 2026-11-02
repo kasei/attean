@@ -28,7 +28,8 @@ use Text::Table;
 use Try::Tiny;
 use URI::file;
 use File::Spec;
-use Types::Standard qw(Str Bool ArrayRef HashRef InstanceOf ConsumerOf);
+use UUID::Tiny ':std';
+use Types::Standard qw(Str Bool Int ArrayRef HashRef InstanceOf ConsumerOf);
 require XML::Simple;
 
 my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
@@ -61,13 +62,17 @@ has default_graph		=> (is => 'rw');
 has failures			=> (is => 'rw', isa => HashRef, default => sub { +{} });
 has supported_extensions	=> (is => 'rw', isa => HashRef, default => sub { +{} });
 
+has timestamp			=> (is => 'rw', isa => Int, default => sub { scalar(time) });
 has earl				=> (is => 'rw', isa => InstanceOf['RDF::EARL']);
+has earl_filename		=> (is => 'rw', isa => Str);
 
 sub BUILD {
 	my $self	= shift;
 	if ($self->pattern) {
 		$self->results(1);
 	}
+	
+	$self->earl_filename(sprintf('.sparql-test-suite-%d', $self->timestamp));
 }
 
 sub memory_model {
@@ -1004,7 +1009,7 @@ sub mock_endpoints {
 sub debug_model {
 	my $self			= shift;
 	my $model			= shift;
-	if ($self->debug) {
+	if (shift || $self->debug) {
 		my $iter	= $model->get_quads;
 		warn "Dataset:\n-------------\n";
 		my $s		= Attean->get_serializer('TextTable')->new();
@@ -1279,6 +1284,7 @@ sub record_result {
 	my $ok		= shift;
 	my $name	= shift;
 	my $todo	= shift;
+	$name		= $self->fix_local_to_w3c($name);
 	unless ($ok) {
 		if ($todo) {
 			push(@{ $self->failures->{'TODO'}{$type} }, $name);
@@ -1306,6 +1312,112 @@ sub model_as_string {
 	return $sep . $s . $sep;
 }
 
+sub enable_earl {
+	my $self	= shift;
+	my %args	= @_;
+	my $conf	= $args{ conf } || {};
+	if (my $filename = $args{ filename }) {
+		$self->earl_filename($filename);
+	}
+	
+	if (can_load( modules => { 'RDF::EARL' => 0.002 })) {
+		my $v			= $Attean::VERSION;
+		$v				=~ s/[.]/-/;
+		my $def_subject	= "http://purl.org/NET/cpan-uri/dist/Attean/v_$v";
+		my $subject		= $conf->{ subject } || $def_subject;
+		my $assertor	= $conf->{ assertor } || "${def_subject}#Test-Attean-SPARQLSuite";
+		$assertor		= iri($assertor) unless (ref($assertor));
+		$subject		= iri($subject) unless (ref($subject));
+		
+		my $EARL		= 'http://www.w3.org/ns/earl#';
+		my $foaf		= 'http://xmlns.com/foaf/0.1/';
+		my $type		= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+		my $partOf		= iri('http://purl.org/dc/terms/isPartOf');
+		my $desc		= iri('http://purl.org/dc/elements/1.1/description');
+
+		my @triples;
+		my @config_notes;
+		if (my $store = $conf->{store}) {
+			push(@config_notes, "Configured with the ${store} quadstore");
+		}
+		if (my $eval = $conf->{'eval'}) {
+			push(@config_notes, "Configured with ${eval}-based evaluation");
+		}
+		if (scalar(@config_notes)) {
+			my $proj	= $subject;
+			my $uuid	= 'urn:uuid:' . uc(uuid_to_string(create_uuid()));
+			$subject	= iri($uuid);
+			push(@triples, triple($proj, $type, iri("${EARL}Software")));
+			push(@triples, triple($subject, $partOf, $proj));
+			foreach my $note (@config_notes) {
+				push(@triples, triple($subject, $desc, literal($note)));
+			}
+		}
+		
+		my $earl		= RDF::EARL->new( subject => $subject, assertor => $assertor );
+		$self->earl($earl);
+
+		my $graph		= $earl->graph;
+		my $model		= $earl->model;
+		foreach my $t (@triples) {
+# 			warn "Adding metadata: " . $t->as_string . "\n";
+			$model->add_quad($t->as_quad($graph));
+		}
+		foreach my $t ($self->earl_metadata($subject->value)) {
+# 			warn "Adding metadata: " . $t->as_string . "\n";
+			$model->add_quad($t->as_quad($graph));
+		}
+			
+		return $earl;
+	}
+	return;
+}
+
+sub earl_metadata {
+	my $self	= shift;
+	my $subj	= shift;
+	my $prefixes	= q[
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix doap: <http://usefulinc.com/ns/doap#>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+	];
+	
+	my $ver			= $Attean::VERSION;
+	my $release		= 'urn:uuid:' . uc(uuid_to_string(create_uuid(UUID_V5, "${subj}-${ver}")));
+	my $ttl		= $prefixes . <<"END";
+<${subj}> a doap:Project ;
+	doap:name "Attean" ;
+	doap:homepage <https://github.com/kasei/attean> ;
+    rdfs:seeAlso <irc://irc.perl.org/perlrdf> ;
+    doap:license <http://opensource.org/licenses/Artistic>;
+    doap:programming-language "Perl" ;
+	doap:developer <http://kasei.us/about/#greg> ;
+	doap:release <${release}> ;
+	.
+
+<${release}>
+		a doap:Release ;
+		doap:revision "${ver}" ;
+	.
+
+<http://kasei.us/about/#greg>
+	a foaf:Person ;
+    foaf:name "Gregory Todd Williams" ;
+    foaf:mbox_sha1sum "f80a0f19d2a0897b89f48647b2fb5ca1f0bc1cb8" ;
+    foaf:homepage <http://kasei.us/> ;
+    rdfs:seeAlso <http://kasei.us/about/foaf.ttl> ;
+    foaf:account [
+        a foaf:OnlineAccount ;
+        foaf:accountName "kasei" ;
+        foaf:accountServiceHomepage <http://github.com/>
+    ] ;
+	.
+END
+	my $parser	= Attean->get_parser('Turtle')->new();
+	my $iter = $parser->parse_iter_from_bytes(encode_utf8($ttl));
+	return $iter->elements;
+}
+
 sub DESTROY {
 	my $self	= shift;
 	my $count	= 0;
@@ -1319,14 +1431,14 @@ sub DESTROY {
 		}
 		$count	+= scalar(@$failures);
 	}
-	my $timestamp	= scalar(time);
+	my $timestamp	= $self->timestamp;
 	if ($self->run_query_tests and ($count or $todo)) {
 		my $d	= Data::Dumper->new([$self->failures], [qw(tests)]);
 		$d->Sortkeys(1)->Indent(2);
 		my $msg	= "Failing and/or TODO tests: " . $d->Dump;
 		warn $msg;
 		unless ($self->pattern) {
-			open(my $fh, '>', sprintf('.sparql-test-suite-%d', $timestamp));
+			open(my $fh, '>', sprintf('.sparql-test-suite-%d', $timestamp)) or die $!;
 			while (my ($type, $failures) = each(%{ $self->failures })) {
 				if ($type eq 'TODO') {
 					while (my ($type, $failures) = each(%$failures)) {
@@ -1340,9 +1452,8 @@ sub DESTROY {
 			}
 		}
 	}
-	if (my $earl = $self->earl) {
-		my $filename	= sprintf('.sparql-test-suite-%d.ttl', $timestamp);
-		open(my $fh, '>', $filename);
+	if (my $earl = $self->earl and my $filename = $self->earl_filename) {
+		open(my $fh, '>', $filename) or die $!;
 		my $model	= $earl->model;
 		my $iter	= $model->get_quads()->as_triples();
 		my $rdf		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
@@ -1350,7 +1461,6 @@ sub DESTROY {
 		my $map		= URI::NamespaceMap->new( { earl => iri($EARL), rdf => iri($rdf) } );
 		my $ser		= Attean->get_serializer('Turtle')->new(namespaces => $map);
 		$ser->serialize_iter_to_io($fh, $iter);
-		warn "EARL results: $filename\n" if ($self->debug);
 	}
 }
 

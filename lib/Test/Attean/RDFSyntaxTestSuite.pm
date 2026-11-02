@@ -2,6 +2,7 @@ package Test::Attean::RDFSyntaxTestSuite;
 
 use v5.14;
 use warnings;
+use Test::Roo::Role;
 
 use Attean;
 use Attean::RDF;
@@ -16,11 +17,11 @@ use HTTP::Message::PSGI;
 use Data::Dumper;
 use Encode qw(encode encode_utf8);
 use Getopt::Long;
+use Module::Load::Conditional qw(can_load);
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
-use List::MoreUtils qw(all);
-use Test::Modern;
-use Test::Roo::Role;
+use List::Util qw(all);
+use Test::More;
 use Text::CSV;
 use Try::Tiny;
 use URI::file;
@@ -50,7 +51,7 @@ sub manifest_paths {
 	
 	unless (-d $dir and -r $dir) {
 		plan skip_all => "Manifest directory not readable: $dir";
-		exit(0);
+		exit(1);
 	}
 	
 	my $manifest	= File::Spec->catfile($dir, 'manifest.ttl');
@@ -69,24 +70,20 @@ Test::Roo::top_test 'RDF Concrete Syntax tests' => sub {
 	my $model		= $self->model;
 	foreach my $m (@manifests) {
 # 		warn "Manifest: " . $m->as_string . "\n" if ($self->debug);
-
-# 		{
-# 			my $iter	= $model->get_quads($m);
-# 			my $ser		= Attean->get_serializer('NTriples');
-# 			warn $ser->serialize_iter_to_bytes($iter);
-# 		}
-
-		my ($list)	= $model->objects( $m, iri("${MF}entries") )->elements;
-		unless (blessed($list)) {
-			if ($self->debug) {
-				warn "No mf:entries found for manifest " . $m->as_string . "\n";
-				my @manifests	= $model->subjects( iri("${RDF}type"), iri("${MF}Manifest") )->elements;
-				warn "Manifests:\n";
-				foreach my $m (@manifests) {
-					warn "- " . $m->value . "\n";
-				}
+		my $specVersion	= '1.1';
+		my ($sv)	= $model->objects( $m, iri("${MF}specVersion") )->elements;
+		if ($sv) {
+			my $v	= $sv->value;
+			if ($v =~ m<http://www.w3.org/ns/sparql#version-(.*)>) {
+				$specVersion	= $1;
+			} else {
+				warn "*** Unexpected specVersion $v\n";
 			}
 		}
+		my ($list)		= $model->objects( $m, iri("${MF}entries") )->elements;
+# 		unless (blessed($list)) {
+# 			warn "No mf:entries found for manifest " . $m->as_string . "\n" if ($self->debug);
+# 		}
 		my @tests	= $model->get_list( $self->default_graph, $list )->elements;
 		foreach my $test (@tests) {
 			unless ($test->value =~ /$PATTERN/) {
