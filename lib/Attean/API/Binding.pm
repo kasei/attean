@@ -500,6 +500,15 @@ package Attean::API::TriplePattern 0.040 {
 		die "Unrecognized binding name '$key'";
 	}
 	
+	sub values {
+		my $self	= shift;
+		return (
+			$self->subject,
+			$self->predicate,
+			$self->object
+		);
+	}
+	
 	sub as_quad_pattern {
 		my $self	= shift;
 		my $graph	= shift;
@@ -607,6 +616,15 @@ package Attean::API::Triple 0.040 {
 		return $self;
 	}
 	
+	sub values {
+		my $self	= shift;
+		return (
+			$self->subject,
+			$self->predicate,
+			$self->object
+		);
+	}
+
 	sub as_quad {
 		my $self	= shift;
 		my $graph	= shift;
@@ -685,6 +703,16 @@ package Attean::API::QuadPattern 0.040 {
 		my $key		= shift;
 		return $self->$key() if (defined($key) and $key =~ /^(subject|predicate|object|graph)$/);
 		die "Unrecognized binding name '$key'";
+	}
+	
+	sub values {
+		my $self	= shift;
+		return (
+			$self->subject,
+			$self->predicate,
+			$self->object,
+			$self->graph
+		);
 	}
 	
 	sub as_quad {
@@ -786,6 +814,16 @@ package Attean::API::Quad 0.040 {
 			}
 		}
 		return $self;
+	}
+
+	sub values {
+		my $self	= shift;
+		return (
+			$self->subject,
+			$self->predicate,
+			$self->object,
+			$self->graph
+		);
 	}
 
 	sub as_triple {
