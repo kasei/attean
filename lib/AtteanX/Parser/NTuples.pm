@@ -176,12 +176,14 @@ LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 			} else {
 				my ($uri)	= $_[0] =~ m/^<([^>]*)>/;
 				substr($_[0], 0, length($uri)+2)	= '';
+				state $count;
 				state %cache;
 				if (my $i = $cache{$uri}) {
 					return $i;
 				} else {
-					if (rand() < 0.02) {
-						# clear out the cache roughly every 50 IRIs
+					if ($count++ > 50) {
+						# clear out the cache every 50 IRIs
+						$count	= 0;
 						%cache	= ();
 					}
 					my $iri	= $self->new_abs_iri( value => _unescape($uri, $lineno) );
@@ -200,7 +202,8 @@ LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 			return $b;
 		} elsif ($char eq '"') {
 			substr($_[0], 0, 1)	= '';
-			my $value	= decode('utf8', '');
+			my $value	= '';
+			utf8::decode($value);
 			while (length($_[0]) and substr($_[0], 0, 1) ne '"') {
 				while ($_[0] =~ m/^([^"\\]+)/) {
 					$value	.= $1;
