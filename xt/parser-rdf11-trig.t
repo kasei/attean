@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 
+use utf8;
 use v5.14;
 use strict;
 use warnings;
@@ -13,6 +14,8 @@ use autodie;
 use Test::Roo;
 use List::Util qw(all);
 use FindBin qw($Bin);
+use Attean;
+use namespace::clean;
 
 with 'Test::Attean::RDFSyntaxTestSuite';
 
@@ -21,8 +24,8 @@ sub BUILD {
 	my $env_path	= $ENV{'W3C_RDF_TESTS_PATH'};
 	my $base		= (defined($env_path) and -d $env_path) ? $env_path : File::Spec->catfile( $Bin, 'data', 'rdf-tests' );
 	my $path		= File::Spec->catfile( $base, 'rdf', 'rdf11', 'rdf-trig' );
-# 	$self->debug(0);
 	$self->tests_dir($path);
+	$self->enable_earl(filename => 'attean-rdf11-trig.ttl');
 	plan skip_all => "No such W3C tests directory: " . $path unless (-d $path);
 }
 
