@@ -20,7 +20,7 @@ use Encode qw(encode encode_utf8 decode_utf8);
 use Getopt::Long;
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
-use List::Util qw(all);
+use List::Util qw(all any);
 use Test::Modern;
 use Test::Roo::Role;
 use Text::CSV;
@@ -28,6 +28,8 @@ use Text::Table;
 use Try::Tiny;
 use URI::file;
 use File::Spec;
+use File::Slurp;
+use FindBin qw($Bin);
 use UUID::Tiny ':std';
 use Types::Standard qw(Str Bool Int ArrayRef HashRef InstanceOf ConsumerOf);
 require XML::Simple;
@@ -41,6 +43,7 @@ my $MF		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#';
 my $UT		= 'http://www.w3.org/2009/sparql/tests/test-update#';
 my $RQ		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-query#';
 my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
+my $FORMATS	= 'http://www.w3.org/ns/formats/';
 
 requires 'test_model';
 requires 'manifest_paths';
@@ -66,14 +69,24 @@ has timestamp			=> (is => 'rw', isa => Int, default => sub { scalar(time) });
 has earl				=> (is => 'rw', isa => InstanceOf['RDF::EARL']);
 has earl_filename		=> (is => 'rw', isa => Str);
 
-sub BUILD {
+has load_ontology_files	=> (is => 'rw', isa => ArrayRef[Str]);
+
+after 'BUILD' => sub {
 	my $self	= shift;
 	if ($self->pattern) {
 		$self->results(1);
 	}
 	
 	$self->earl_filename(sprintf('.sparql-test-suite-%d', $self->timestamp));
-}
+	my @files	= @{ $self->load_ontology_files || [] };
+	unless (scalar(@files)) {
+		my $env_path	= $ENV{'ATTEAN_LOAD_PATH'};
+		my $base		= (defined($env_path) and -d $env_path) ? $env_path : File::Spec->catfile( $Bin, 'data', 'test-rdf' );
+		push(@files, glob("${base}/*.ttl"));
+		$self->load_ontology_files(\@files);
+	}
+
+};
 
 sub memory_model {
 	my $self	= shift;
@@ -95,6 +108,15 @@ sub setup {
 	}
 
 	my $model	= $self->memory_model();
+	foreach my $f (@{ $self->load_ontology_files }) {
+		my $url	= "file://$f";
+		try {
+			$model->load_urls_into_graph($self->default_graph, $url);
+		} catch {
+			warn "Failed to load $url\n";
+		};
+	}
+	
 	$self->model($model);
 	my $class	= Attean->get_parser("turtle") || die "Failed to load parser for 'turtle'";
 
@@ -173,7 +195,12 @@ sub sparql_syntax_test {
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
 # 	warn "Loading SPARQL query from file $filename" if ($self->debug);
-	my $sparql				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
+	my $sparql				= eval { read_file($filename, { binmode => ':utf8' }) };
+	if ($@) {
+		warn("$!: $filename; " . $test->as_string);
+		$self->record_result('syntax', 0, $test->as_string, $TODO);
+		return;
+	}
 	my $bytes	= encode_utf8($sparql);
 
 	if ($self->debug) {
@@ -220,12 +247,54 @@ sub sparql_syntax_test {
 	
 }
 
+# Look up the test in the model, and determine:
+# 
+# * the media type of the syntax being tested
+# * whether the test is an eval test (compared against a base nt/nq file)
+# * whether the test is a syntax test
+# * whether the test is a canonicalization test
+# * whether the test is a negative test (implies a syntax test)
+# * whether the syntax being tested is a triples-based format (being false implies that the format is a quad-based format)
+#
+# Not all of these pieces of information are derivable from the RDF data,
+# so some of it is heuristics based on the naming of the test type.
+#
+# If the test is not a recognized type, this method dies. Calling code is responsible
+# for catching that error and properly recording a test failure.
+sub syntax_test_type {
+	my $self		= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my @types		= $model->objects( $test, iri("${RDF}type") )->elements;
+	my @formats		= $model->objects( \@types, iri("${RDFT}syntaxFormat") )->elements;
+	my @mediatypes	= $model->objects( \@formats, iri("${FORMATS}media_type") )->elements;
+	unless (scalar(@mediatypes) == 1) {
+		my $types	= join(',', map { $_->value } @types);
+		my $formats	= join(',', map { $_->value } @formats);
+		die "No syntax test type for " . $test->value . " ; types=$types ; formats=$formats";
+	}
+	my $mediatype	= $mediatypes[0]->value;
+
+	my $is_eval		= $model->count_quads( \@types, iri("${RDFS}subClassOf"), iri("${RDFT}TestEval") );
+	my $is_syntax	= $model->count_quads( \@types, iri("${RDFS}subClassOf"), iri("${RDFT}TestSyntax") );
+	my $is_c14n		= $model->count_quads( \@types, iri("${RDFS}subClassOf"), iri("${RDFT}TestC14N") );
+	my $is_neg		= $model->count_quads( \@types, iri("${RDFS}subClassOf"), iri("${RDFT}TestNegativeSyntax") );
+	$is_syntax++	if ($is_neg); # to avoid having to do multiple subClassOf hops on these tests to find rdft:TextSyntax
+	
+	my $triples		= 0;
+	$triples++ if ($mediatype eq 'text/turtle');
+	$triples++ if ($mediatype eq 'application/n-triples');
+	$triples++ if ($mediatype eq 'application/rdf+xml');
+	
+	return ($mediatype, $is_eval, $is_syntax, $is_c14n, $is_neg, $triples);
+}
+
 sub data_syntax_eval_test {
 	my $self		= shift;
 	my $model		= shift;
 	my $test		= shift;
 	my $count		= shift // 1;
-	
+
 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
 	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
@@ -246,82 +315,15 @@ sub data_syntax_eval_test {
 		}
 	}
 
-	my $is_eval_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
-	my $is_pos_ttl			= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
-	my $is_neg_ttl			= ($model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeEval")));
-	my $is_pos_c14n_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveC14N"));
-
-	my $is_eval_trig		= $model->count_quads($test, $type, iri("${RDFT}TestTrigEval"));
-	my $is_pos_trig			= $model->count_quads($test, $type, iri("${RDFT}TestTrigPositiveSyntax"));
-	my $is_neg_trig			= ($model->count_quads($test, $type, iri("${RDFT}TestTrigNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestTrigNegativeEval")));
-	my $is_pos_c14n_trig	= $model->count_quads($test, $type, iri("${RDFT}TestTrigPositiveC14N"));
-
-	my $is_eval_xml			= $model->count_quads($test, $type, iri("${RDFT}TestXMLEval"));
-	my $is_pos_xml			= $model->count_quads($test, $type, iri("${RDFT}TestXMLPositiveSyntax"));
-	my $is_neg_xml			= ($model->count_quads($test, $type, iri("${RDFT}TestXMLNegativeSyntax")) + $model->count_quads($test, $type, iri("${RDFT}TestXMLNegativeEval")));
-	my $is_pos_c14n_xml		= $model->count_quads($test, $type, iri("${RDFT}TestXMLPositiveC14N"));
-
-	my $is_eval_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
-	my $is_pos_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
-	my $is_neg_nt			= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
-	my $is_pos_c14n_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveC14N"));
-
-	my $is_eval_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsEval"));
-	my $is_pos_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveSyntax"));
-	my $is_neg_nq			= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsNegativeSyntax"));
-	my $is_pos_c14n_nq		= $model->count_quads($test, $type, iri("${RDFT}TestNQuadsPositiveC14N"));
-
-	my $is_eval				= ($is_eval_ttl or $is_eval_nt or $is_eval_xml or $is_eval_trig or $is_eval_nq);
-	my $is_eval_triples		= ($is_eval_ttl or $is_eval_nt or $is_eval_xml);
-	my $is_pos_triples		= ($is_pos_ttl or $is_pos_nt or $is_pos_xml);
-	my $is_eval_quads		= ($is_eval_trig or $is_eval_nq);
-	my $is_pos_quads		= ($is_pos_trig or $is_pos_nq);
-	my $is_pos				= ($is_pos_ttl or $is_pos_trig or $is_pos_xml or $is_pos_nt or $is_pos_nq);
-	my $is_neg				= ($is_neg_ttl or $is_neg_trig or $is_neg_xml or $is_neg_nt or $is_neg_nq);
-	my $is_pos_c14n			= ($is_pos_c14n_ttl or $is_pos_c14n_nt or $is_pos_c14n_nq);
-
-	my $is_ttl				= ($is_eval_ttl or $is_pos_ttl or $is_neg_ttl or $is_pos_c14n_ttl);
-	my $is_trig				= ($is_eval_trig or $is_pos_trig or $is_neg_trig or $is_pos_c14n_trig);
-	my $is_xml				= ($is_eval_xml or $is_pos_xml or $is_neg_xml or $is_pos_c14n_xml);
-	my $is_nt				= ($is_eval_nt or $is_pos_nt or $is_neg_nt or $is_pos_c14n_nt);
-	my $is_nq				= ($is_eval_nq or $is_pos_nq or $is_neg_nq or $is_pos_c14n_nq);
-	
-	my $parser_name;
-	if ($is_ttl) {
-		$parser_name	= 'Turtle';
-	} elsif ($is_trig) {
-		$parser_name	= 'Trig';
-	} elsif ($is_xml) {
-		$parser_name	= 'RDFXML';
-	} elsif ($is_nq) {
-		$parser_name	= 'NQuads';
-	} elsif ($is_nt) {
-		$parser_name	= 'NTriples';
-	} else {
-		die "Unexpected format";
+	my ($mediatype, $is_eval, $is_syntax, $is_c14n, $is_neg, $is_triples)	= eval { $self->syntax_test_type($model, $test) };
+	if ($@) {
+		$self->record_result('syntax', 0, $test->as_string, $TODO);
+		fail("$testname - Unexpected format for test: $@");
+		return;
 	}
+	my $is_quads	= not($is_triples);
 
-# 	my @types		= $model->objects( $test, $type )->elements();
-# 	warn Dumper([map {$_->value} @types]);
-	
-	
-# warn "is_eval_ttl		= $is_eval_ttl\n";
-# warn "is_pos_ttl		= $is_pos_ttl\n";
-# warn "is_neg_ttl		= $is_neg_ttl\n";
-# warn "\n";
-# warn "is_eval_nt		= $is_eval_nt\n";
-# warn "is_pos_nt			= $is_pos_nt\n";
-# warn "is_neg_nt			= $is_neg_nt\n";
-# warn "\n";
-# warn "is_eval			= $is_eval\n";
-# warn "is_ttl			= $is_ttl\n";
-# warn "is_nt				= $is_nt\n";
-	
-	
-	
-	
 	my $base;
-	
 	my ($result_filename, $expected_bytes, $nt_content);
 	if ($is_eval) {
 		my $result_uri			= URI->new( $resultd->value );
@@ -329,7 +331,12 @@ sub data_syntax_eval_test {
 		(undef,$base,undef)	= File::Spec->splitpath( $result_filename );
 		$base					= "file://${base}";
 		warn "Loading expected RDF data from file $result_filename\n" if ($self->debug);
-		$nt_content			= do { local($/) = undef; open(my $fh, '<:utf8', $result_filename) or do { warn("$!: $result_filename; " . $test->as_string); return }; <$fh> };
+		$nt_content				= eval { read_file($result_filename, { binmode => ':utf8' }) };
+		if ($@) {
+			warn("$!: $result_filename; " . $test->as_string);
+			$self->record_result('evaluation', 0, $test->as_string, $TODO);
+			return;
+		}
 		unless (defined($nt_content)) {
 			warn "*** Undefined expected data from $result_filename...\n";
 		}
@@ -341,7 +348,12 @@ sub data_syntax_eval_test {
 	(undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
 	warn "Loading test RDF data from file $filename\n" if ($self->debug);
-	my $content				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
+	my $content				= eval { read_file($filename, { binmode => ':utf8' }) };
+	if ($@) {
+		warn("$!: $filename; " . $test->as_string);
+		$self->record_result('syntax', 0, $test->as_string, $TODO);
+		return;
+	}
 	my $bytes				= encode_utf8($content);
 
 	if ($self->debug) {
@@ -364,83 +376,16 @@ sub data_syntax_eval_test {
 	$test_base		= $self->fix_local_to_w3c($test_base);
 	warn "Test base: " . $test_base . "\n" if ($self->debug);
 	
-	my $test_parser	= Attean->get_parser($parser_name)->new(base => $test_base);
+	my $pclass		= Attean->get_parser(media_type => $mediatype);
+	unless ($pclass) {
+		die "No parser found for type $mediatype";
+	}
+	my $test_parser	= $pclass->new(base => $test_base);
 	my $nt_parser	= Attean->get_parser('NTriples')->new();
 	my $nq_parser	= Attean->get_parser('NQuads')->new();
 	SKIP: {
-		if ($is_pos_triples or $is_eval_triples) {
-			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
-			my $parse_error	= $@;
-			if ($is_eval) {
-				my $ser			= Attean->get_serializer('NTriples')->new();
-				my @nt_triples	= eval { $nt_parser->parse_list_from_bytes($expected_bytes) };
-				if ($@) {
-					fail("Failed to parse expected data from $result_filename: $@");
-					return;
-				}
-				my $expected_iter		= Attean::ListIterator->new( values => \@nt_triples, item_type => 'Attean::API::Triple' );
-
-				my $eq_test	= Attean::BindingEqualityTest->new();
-				my $actual_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::Triple' );
-				my $ok		= $eq_test->equals($actual_iter, $expected_iter);
-				ok($ok, "$testname - $filename");
-				$self->record_result('evaluation', $ok, $test->as_string, $TODO);
-				if (not $ok) {
-					warn "Expecting " . scalar(@nt_triples) . " triples:\n";
-					if (scalar(@nt_triples)) {
-						warn $ser->serialize_list_to_bytes(@nt_triples);
-					}
-					warn "But found " . scalar(@triples) . " triples:\n";
-					my $bytes	= $ser->serialize_list_to_bytes(@triples);
-					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
-				}
-			} else {
-				my $ok	= scalar(not $parse_error);
-				$self->record_result('syntax', $ok, $test->as_string, $TODO);
-				if ($ok) {
-					pass("$testname - $filename");
-				} else {
-					fail("$testname - $filename: $@");
-				}
-			}
-		} elsif ($is_pos_quads or $is_eval_quads) {
-			my (@triples)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
-			my $err			= $@;
-			if ($is_eval) {
-				my $ser			= Attean->get_serializer('NQuads')->new();
-				my $nq_parser	= Attean->get_parser('NQuads')->new();
-				my @nq_quads	= eval { $nq_parser->parse_iter_from_bytes($expected_bytes)->uniq()->elements() };
-				$err			||= $@;
-				if ($err) {
-					fail("$testname - Failed to parse expected data from $result_filename: $err");
-					return;
-				}
-				my $nq_iter		= Attean::ListIterator->new( values => \@nq_quads, item_type => 'Attean::API::TripleOrQuad' );
-
-				my $eq_test	= Attean::BindingEqualityTest->new();
-				my $trig_iter	= Attean::ListIterator->new( values => \@triples, item_type => 'Attean::API::TripleOrQuad' );
-				my $ok		= $eq_test->equals($trig_iter, $nq_iter);
-				$self->record_result('syntax', $ok, $test->as_string, $TODO);
-				ok($ok, "$testname - $filename");
-				if (not $ok) {
-					warn "BindingEqualityTest failures: " . $eq_test->error();
-					warn "Expecting " . scalar(@nq_quads) . " triples:\n";
-					if (scalar(@nq_quads)) {
-						warn $ser->serialize_list_to_bytes(@nq_quads);
-					}
-					warn "But found " . scalar(@triples) . " triples:\n";
-					my $bytes	= $ser->serialize_list_to_bytes(@triples);
-					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
-				}
-			} else {
-				my $ok	= not($err);
-				$self->record_result('syntax', $ok, $test->as_string, $TODO);
-				if ($ok) {
-					pass("$testname - $filename");
-				} else {
-					fail("$testname - $filename: $err");
-				}
-			}
+		if ($is_c14n) {
+			skip("$testname - C14N tests not supported");
 		} elsif ($is_neg) {
 			my (@triples)	= eval { $test_parser->parse_list_from_bytes($bytes) };
 			my $ok	= $@ ? 1 : 0;
@@ -453,121 +398,50 @@ sub data_syntax_eval_test {
 				}
 				fail("$testname - $filename (unexpected successful parse)");
 			}
-		} elsif ($is_pos_c14n) {
-			skip("$testname - C14N tests not supported");
 		} else {
-			my @types		= $model->objects( $test, $type )->elements();
-			my $types		= join(',', map {$_->value} @types);
-			fail("$testname - unrecognized test type(s): $types");
+			my (@actual_statements)	= eval { $test_parser->parse_iter_from_bytes($bytes)->uniq()->elements() };
+			my $parse_error	= $@;
+			my $ser			= Attean->get_serializer($is_triples ? 'NTriples' : 'NQuads')->new();
+			my $nq_parser	= Attean->get_parser('NQuads')->new();
+			my $expected_parser	= $is_triples ? $nt_parser : $nq_parser;
+			my $role			= $is_triples ? 'Attean::API::Triple' : 'Attean::API::TripleOrQuad';
+			my $eq_test	= Attean::BindingEqualityTest->new();
+			if ($is_eval) {
+				my @expected_statements	= eval { $expected_parser->parse_iter_from_bytes($expected_bytes)->uniq()->elements() };
+				$parse_error			||= $@;
+				if ($parse_error) {
+					$self->record_result('evaluation', 0, $test->as_string, $TODO);
+					fail("$testname - Failed to parse expected data from $result_filename: $parse_error");
+					return;
+				}
+				my $expected_iter		= Attean::ListIterator->new( values => \@expected_statements, item_type => $role );
+
+				my $actual_iter	= Attean::ListIterator->new( values => \@actual_statements, item_type => $role );
+				my $ok		= $eq_test->equals($actual_iter, $expected_iter);
+				$self->record_result('evaluation', $ok, $test->as_string, $TODO);
+				ok($ok, "$testname - $filename");
+				if (not $ok) {
+					warn "BindingEqualityTest failures: " . $eq_test->error();
+					warn "Expecting " . scalar(@expected_statements) . " statements:\n";
+					if (scalar(@expected_statements)) {
+						warn $ser->serialize_list_to_bytes(@expected_statements);
+					}
+					warn "But found " . scalar(@actual_statements) . " statements:\n";
+					my $bytes	= $ser->serialize_list_to_bytes(@actual_statements);
+					warn((length($bytes)) ? decode_utf8($bytes) : '(empty content)');
+				}
+			} else {
+				my $ok	= scalar(not $parse_error);
+				$self->record_result('syntax', $ok, $test->as_string, $TODO);
+				if ($ok) {
+					pass("$testname - $filename");
+				} else {
+					fail("$testname - $filename: $parse_error");
+				}
+			}
 		}
 	}
 }
-
-# sub data_syntax_test {
-# 	my $self		= shift;
-# 	my $model		= shift;
-# 	my $test		= shift;
-# 	my $count		= shift // 1;
-# 	
-# 	my $type		= iri( "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" );
-# 	my $mfname		= iri( "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" );
-# 	my ($queryd)	= $model->objects( $test, iri("${MF}action") )->elements;
-# 	my ($resultd)	= $model->objects( $test, iri("${MF}result") )->elements;
-# 	my ($approved)	= $model->objects( $test, iri("${DAWGT}approval") )->elements;
-# 	my ($name)		= $model->objects( $test, $mfname )->elements;
-# 	
-# 	if ($self->strict_approval) {
-# 		unless ($approved) {
-# 			warn "- skipping test because it isn't approved\n" if ($self->debug);
-# 			return;
-# 		}
-# 		if ($approved->equal("${DAWGT}NotClassified")) {
-# 			warn "- skipping test because its approval is dawgt:NotClassified\n" if ($self->debug);
-# 			return;
-# 		}
-# 	}
-# 
-# 	my $is_eval_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtleEval"));
-# 	my $is_pos_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtlePositiveSyntax"));
-# 	my $is_neg_ttl		= $model->count_quads($test, $type, iri("${RDFT}TestTurtleNegativeSyntax"));
-# 
-# 	my $is_eval_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesEval"));
-# 	my $is_pos_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesPositiveSyntax"));
-# 	my $is_neg_nt		= $model->count_quads($test, $type, iri("${RDFT}TestNTriplesNegativeSyntax"));
-# 
-# 
-# # 	my @types		= $model->objects( $test, $type )->elements();
-# # 	warn Dumper([map {$_->value} @types]);
-# 	
-# 	my $base;
-# 	
-# 	my $uri					= URI->new( $queryd->value );
-# 	my $filename			= $uri->file;
-# 	(undef,$base,undef)	= File::Spec->splitpath( $filename );
-# 	$base					= "file://${base}";
-# 	warn "Loading test RDF data from file $filename\n" if ($self->debug);
-# 	my $content				= do { local($/) = undef; open(my $fh, '<:utf8', $filename) or do { warn("$!: $filename; " . $test->as_string); return }; <$fh> };
-# 	my $bytes	= encode_utf8($content);
-# 
-# # 	if ($self->debug) {
-# # 		my $q			= $content;
-# # 		$q				=~ s/\s+/ /g;
-# # 		warn "### test     : " . $test->as_string . "\n";
-# # 		warn "# file       : $filename\n";
-# # 		warn "# content    : $q\n";
-# # 	}
-# 	
-# 	if ($is_pos_ttl or $is_neg_ttl or $is_eval_ttl) {
-# 		my $test_base	= $uri->as_string;
-# 		$test_base		=~ s{^.*/rdf-tests/}{https://w3c.github.io/rdf-tests/}; # XXX hack
-# 		
-# 		my $ttl_parser	= Attean->get_parser('Turtle')->new(base => $test_base);
-# 		my $nt_parser	= Attean->get_parser('NTriples')->new();
-# 		if ($is_pos_ttl or $is_eval_ttl) {
-# 			my (@triples)	= eval { $ttl_parser->parse_list_from_bytes($bytes) };
-# 			my $ok	= scalar(@triples);
-# 			$self->record_result('syntax', $ok, $test->as_string);
-# 			if ($ok) {
-# 				pass("$testname - $filename");
-# 			} else {
-# 				fail("$testname - $filename: $@");
-# 			}
-# 		} elsif ($is_pos_nt or $is_eval_nt) {
-# 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
-# 			my $ok	= scalar(@triples);
-# 			$self->record_result('syntax', $ok, $test->as_string);
-# 			if ($ok) {
-# 				pass("$testname - $filename");
-# 			} else {
-# 				fail("$testname - $filename: $@");
-# 			}
-# 		} elsif ($is_neg_ttl) {
-# 			my (@triples)	= eval { $ttl_parser->parse_list_from_bytes($bytes) };
-# 			my $ok	= $@ ? 1 : 0;
-# 			$self->record_result('syntax', $ok, $test->as_string);
-# 			if ($ok) {
-# 				pass("$testname - $filename");
-# 			} else {
-# # 				if ($self->debug) {
-# # 					warn $query->as_string;
-# # 				}
-# 				fail("$testname - $filename (unexpected successful parse)");
-# 			}
-# 		} elsif ($is_neg_nt) {
-# 			my (@triples)	= eval { $nt_parser->parse_list_from_bytes($bytes) };
-# 			my $ok	= $@ ? 1 : 0;
-# 			$self->record_result('syntax', $ok, $test->as_string);
-# 			if ($ok) {
-# 				pass("$testname - $filename");
-# 			} else {
-# # 				if ($self->debug) {
-# # 					warn $query->as_string;
-# # 				}
-# 				fail("$testname - $filename (unexpected successful parse)");
-# 			}
-# 		}
-# 	}
-# }
 
 sub update_eval_test {
 	my $self		= shift;
@@ -600,7 +474,12 @@ sub update_eval_test {
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
 	warn "Loading SPARQL query from file $filename" if ($self->debug);
-	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { fail("$!: $filename; " . $test->as_string); return }; binmode($fh, ':utf8'); <$fh> };
+	my $sparql				= eval { read_file($filename, { binmode => ':utf8' }) };
+	if ($@) {
+		warn("$!: $filename; " . $test->as_string);
+		$self->record_result('update', 0, $test->as_string, $TODO);
+		return;
+	}
 
 	my $q			= $sparql;
 	$q				=~ s/\s+/ /g;
@@ -795,7 +674,11 @@ sub construct_data {
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
 	$base					= "file://${base}";
 	warn "Loading SPARQL query from file $filename" if ($self->debug);
-	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename"); return }; binmode($fh, ':utf8'); <$fh> };
+	my $sparql				= eval { read_file($filename, { binmode => ':utf8' }) };
+	if ($@) {
+		warn "$!: $filename";
+		return;
+	}
 	
 	my $test_model	= $self->test_model();
 	foreach my $data (@data) {
@@ -877,7 +760,12 @@ sub query_eval_test {
 	my $test_base	= $base;
 	$test_base		= $self->fix_local_to_w3c($test_base);
 
-	my $sparql				= do { local($/) = undef; open(my $fh, '<', $filename) or do { warn("$!: $filename; " . $test->value); return }; binmode($fh, ':utf8'); <$fh> };
+	my $sparql				= eval { read_file($filename, { binmode => ':utf8' }) };
+	if ($@) {
+		warn("$!: $filename; " . $test->as_string);
+		$self->record_result('evaluation', 0, $test->as_string, $TODO);
+		return;
+	}
 	
 	my $q			= $sparql;
 	$q				=~ s/\s+/ /g;
@@ -951,7 +839,13 @@ sub query_eval_test {
 			{
 				local($::DEBUG)	= 1;
 				print STDERR "getting actual results...\n" if ($self->debug);
-				($actual, $type)		= $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args );
+				($actual, $type)		= eval { $self->get_actual_results( $filename, $test_model, $sparql, $test_base, $model, \@sdata, %args ) };
+				if ($@) {
+					warn $@;
+					fail($test->value);
+					$self->record_result('evaluation', 0, $test->value, $TODO);
+					return;
+				}
 				print STDERR "ok\n" if ($self->debug);
 			}
 		

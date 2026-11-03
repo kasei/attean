@@ -1,0 +1,24 @@
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix formats: <http://www.w3.org/ns/formats/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+formats:SPARQL_Results_JSON a formats:Format ;
+    dcterms:created "2010-05-03" ;
+    dcterms:creator <http://www.ivan-herman.net/foaf#me> ;
+    dcterms:description "Unique identifier for the SPARQL Results in JSON file format" ;
+    dcterms:modified "2013-03-25" ;
+    rdfs:comment "SPARQL Results in JSON is defined by the “SPARQL 1.1 Query Results JSON Format” W3C Recommendation." ;
+    rdfs:isDefinedBy <http://www.w3.org/TR/sparql11-results-json/> ;
+    rdfs:seeAlso <http://www.w3.org/TR/sparql11-results-json/#content-type> ;
+    formats:media_type "application/sparql-results+json" ;
+    formats:preferred_suffix ".srj" .
+
+<http://www.ivan-herman.net/foaf#me> a foaf:Person ;
+    rdfs:seeAlso <http://www.ivan-herman.net/foaf> ;
+    foaf:mbox <mailto:ivan@w3.org> ;
+    foaf:name "Ivan Herman" ;
+    foaf:title "Semantic Web Activity Lead" ;
+    foaf:workplaceHomepage <http://www.w3.org> .
+
+

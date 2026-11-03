@@ -1,0 +1,27 @@
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix formats: <http://www.w3.org/ns/formats/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+formats:TriG a formats:Format ;
+    dc:created "2013-10-28" ;
+    dc:creator <http://www.ivan-herman.net/foaf#me> ;
+    dc:description "Unique identifier for the RDF Dataset Serialization in TriG" ;
+    dc:modified "2014-13-23" ;
+    rdfs:comment "TriG is defined by the TriG - RDF Dataset Language” W3C Recommendation." ;
+    rdfs:isDefinedBy <http://www.w3.org/TR/trig/> ;
+    rdfs:seeAlso <http://www.w3.org/TR/trig/#sec-mediaReg> ;
+    formats:media_type "application/trig" ;
+    formats:preferred_suffix ".trig" .
+
+<http://www.ivan-herman.net/foaf#me> a foaf:Person ;
+    rdfs:seeAlso <http://www.ivan-herman.net/foaf> ;
+    foaf:mbox <mailto:ivan@w3.org> ;
+    foaf:name "Ivan Herman" ;
+    foaf:title "Semantic Web Activity Lead" ;
+    foaf:workplaceHomepage <http://www.w3.org> .
+
+

@@ -94,59 +94,69 @@ Test::Roo::top_test 'SPARQL tests' => sub {
 # 			if ($LIST_TESTS) {
 # 				say $test->value;
 # 			}
-			if ($self->run_query_tests) {
-				{
-					# Evaluation Tests
-					my $et	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}QueryEvaluationTest"));
-					my $ct	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}CSVResultFormatTest"));
-					if ($et + $ct) {
+
+			my $is_query_eval_test	= do {
+				my $et	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}QueryEvaluationTest"));
+				my $ct	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}CSVResultFormatTest"));
+				(($et + $ct) > 0);
+			};
+			
+			my $is_query_syntax_test	= do {
+				my $syntax_total	= 0;
+				foreach my $type (qw(PositiveSyntaxTest PositiveSyntaxTest11 NegativeSyntaxTest NegativeSyntaxTest11)) {
+					$syntax_total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
+				}
+				($syntax_total > 0);
+			};
+
+			my $is_update_eval_test	= do {
+				my $utc	= $model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest"));
+				my $mfc	= $model->count_quads($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"));
+				($utc + $mfc);
+			};
+			
+			my $is_update_syntax_test	= do {
+				my $syntax_total	= 0;
+				foreach my $type (qw(PositiveUpdateSyntaxTest PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest NegativeUpdateSyntaxTest11)) {
+					$syntax_total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
+				}
+				($syntax_total > 0);
+			};
+			
+			my $is_query_test	= ($is_query_eval_test || $is_query_syntax_test);
+			my $is_update_test	= ($is_update_eval_test || $is_update_syntax_test);
+			
+			if ($is_query_test) {
+				if ($self->run_query_tests) {
+					if ($is_query_eval_test) {
+						# Evaluation Tests
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->query_eval_test( $model, $test, specVersion => $specVersion );
-					}
-				}
-				
-				{
-					# Syntax Tests
-					my $total	= 0;
-					foreach my $type (qw(PositiveSyntaxTest PositiveSyntaxTest11 NegativeSyntaxTest NegativeSyntaxTest11)) {
-						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
-					}
-
-					if ($total) {
+					} elsif ($is_query_syntax_test) {
+						# Syntax Tests
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->sparql_syntax_test( 'query', $model, $test, specVersion => $specVersion );
 					}
 				}
-			}
-			
-			if ($self->run_update_tests) {
-				{
-					# Evaluation Tests
-					if ($model->count_quads($test, iri("${RDF}type"), iri("${UT}UpdateEvaluationTest")) or $model->count_quads($test, iri("${RDF}type"), iri("${MF}UpdateEvaluationTest"))) {
+			} elsif ($is_update_test) {
+				if ($self->run_update_tests) {
+					if ($is_update_eval_test) {
+						# Evaluation Tests
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
-						unless ($test->value =~ /$PATTERN/) {
-							next;
-						}
 						warn "### update eval test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->update_eval_test( $model, $test, specVersion => $specVersion );
-					}
-				}
-				
-				{
-					# Syntax Tests
-					my $total	= 0;
-					foreach my $type (qw(PositiveUpdateSyntaxTest PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest NegativeUpdateSyntaxTest11)) {
-						$total	+= $model->count_quads($test, iri("${RDF}type"), iri("${MF}$type"));
-					}
-
-					if ($total) {
+					} elsif ($is_update_syntax_test) {
+						# Syntax Tests
 						my ($name)	= $model->objects( $test, iri("${MF}name") )->elements;
 						warn "### query syntax test: " . $test->as_string . " >>> " . $name->value . "\n" if ($self->debug);
 						$self->sparql_syntax_test( 'update', $model, $test, specVersion => $specVersion );
 					}
 				}
+			} else {
+				diag("Test is not handled as a Query or Update test: " . $test->value);
+				$self->record_result('unhandled', 0, $test->as_string);
 			}
 		}
 	}

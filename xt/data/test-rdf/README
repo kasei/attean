@@ -1,0 +1,4 @@
+This directory contains RDF data that is loaded by the Test::Attean::W3CManifestTestSuite
+code to support running W3C manifest-based tests. It contains the RDF schema used in
+the test manifests (rdftest.ttl, copied from w3c/rdf-tests/) as well as data on
+RDF and SPARQL concrete syntaxes (copied from w3c/ns/formats/).

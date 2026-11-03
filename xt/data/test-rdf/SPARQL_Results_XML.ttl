@@ -1,0 +1,27 @@
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix formats: <http://www.w3.org/ns/formats/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xhv: <http://www.w3.org/1999/xhtml/vocab#> .
+
+
+formats:SPARQL_Results_XML a formats:Format ;
+     dcterms:creator <http://www.ivan-herman.net/foaf#me> ;
+     dcterms:date "2010-05-03" ;
+     dcterms:description "Unique identifier for the SPARQL Results in XML file format" ;
+     rdfs:comment "SPARQL Results in XML is defined by the “SPARQL Query Results XML Format” W3C Recommendation." ;
+     rdfs:isDefinedBy <http://www.w3.org/TR/rdf-sparql-XMLres/> ;
+     rdfs:seeAlso <http://www.w3.org/TR/rdf-sparql-XMLres/#mime> ;
+     formats:media_type "application/sparql-results+xml" ;
+     formats:preferred_suffix ".srx" . 
+
+<http://www.w3.org/ns/formats/data/SPARQL_Results_XML.html> dc:title "Information Resource for the SPARQL Results File Format in XML" ;
+     xhv:stylesheet <http://www.w3.org/StyleSheets/TR/base> . 
+
+<http://www.ivan-herman.net/foaf#me> a foaf:Person ;
+     rdfs:seeAlso <http://www.ivan-herman.net/foaf> ;
+     foaf:mbox <mailto:ivan@w3.org> ;
+     foaf:name "Ivan Herman" ;
+     foaf:title "Semantic Web Activity Lead" ;
+     foaf:workplaceHomepage <http://www.w3.org> . 

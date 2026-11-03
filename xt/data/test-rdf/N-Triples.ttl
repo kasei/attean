@@ -1,0 +1,26 @@
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix formats: <http://www.w3.org/ns/formats/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+formats:N-Triples a formats:Format ;
+    dc:created "2010-05-04" ;
+    dc:creator <http://www.ivan-herman.net/foaf#me> ;
+    dc:description "Unique identifier for the RDF serialization in N-Triples" ;
+    dc:modified "2013-12-23" ;
+    rdfs:comment "N-Triples is defined  the “N-Triples” W3C Recommendation. It uses the general media type: ‘application/n-triples’ and a preferred suffix: ‘.nt’." ;
+    rdfs:isDefinedBy <http://www.w3.org/TR/n-triples/> ;
+    formats:media_type "application/n-triples" ;
+    formats:preferred_suffix ".nt" .
+
+<http://www.ivan-herman.net/foaf#me> a foaf:Person ;
+    rdfs:seeAlso <http://www.ivan-herman.net/foaf> ;
+    foaf:mbox <mailto:ivan@w3.org> ;
+    foaf:name "Ivan Herman" ;
+    foaf:title "Semantic Web Activity Lead" ;
+    foaf:workplaceHomepage <http://www.w3.org> .
+
+
