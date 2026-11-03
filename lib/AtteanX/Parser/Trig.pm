@@ -75,10 +75,10 @@ package AtteanX::Parser::Trig 0.040 {
 	
 	extends 'AtteanX::Parser::Turtle';
 
-	sub canonical_media_type { return "text/trig" }
+	sub canonical_media_type { return "application/trig" }
 
 	sub media_types {
-		return [qw(text/trig)];
+		return [qw(text/trig application/trig)];
 	}
 
 	sub file_extensions { return [qw(trig)] }
