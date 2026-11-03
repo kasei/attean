@@ -104,9 +104,23 @@ Constructs and returns a new L<Attean::Literal> object.
 	sub new_literal {
 		my $self	= shift;
 		my %args	= @_;
-		if (exists $args{'language'} and $args{'language'} =~ m/^(.*)--(rtl|ltr)$/) {
-			$args{'language'}	= $1;
-			$args{'base_dir'}	= $2;
+		if (exists $args{'language'}) {
+			my $lang	= $args{'language'};
+			if ($lang =~ m/^(.*)--(rtl|ltr)$/) {
+				($lang, my $dir)	= ($1, $2);
+				$args{'language'}	= $lang;
+				$args{'base_dir'}	= $dir;
+			}
+			unless ($lang =~ /^([A-Za-z]{2,3}|x|i)\b/) {
+				die "Invalid language tag syntax '$lang'";
+			}
+		} elsif (my $dt = $args{'datatype'}) {
+			my $d	= ref($dt) ? $dt->value : $dt;
+			if ($d eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString') {
+				die 'Literal without a language tag cannot decalre rdf:langString as a datatype';
+			} elsif ($d eq 'http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString') {
+				die 'Literal without a language tag cannot decalre rdf:dirLangString as a datatype';
+			}
 		}
 		return Attean::Literal->new(%args);
 	}
