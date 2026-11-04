@@ -48,7 +48,7 @@ package Attean::QueryPlanner 0.040 {
 	use Scalar::Util qw(blessed reftype);
 	use List::Util qw(reduce);
 	use List::Util qw(all any);
-	use Types::Standard qw(Int ConsumerOf InstanceOf);
+	use Types::Standard qw(Int Bool ConsumerOf InstanceOf);
 	use URI::Escape;
 	use Algorithm::Combinatorics qw(subsets);
 	use List::Util qw(min);
@@ -58,6 +58,9 @@ package Attean::QueryPlanner 0.040 {
 	with 'Attean::API::QueryPlanner', 'MooX::Log::Any';
 	has 'counter' => (is => 'rw', isa => Int, default => 0);
 	has 'table_threshold'	=> (is => 'rw', isa => Int, default => 10);
+	
+	# use this to suppress the use of the query-defined dataset (e.g. in cases where the dataset is defined via protocol and implemented via a Model-layer wrapper)
+	has 'suppress_dataset'	=> (is => 'rw', isa => Bool, default => 0);
 
 =back
 
@@ -130,7 +133,7 @@ the supplied C<< $active_graph >>.
 			my @active_graphs	= @$active_graphs;
 			my @default_graphs	= @$default_graphs;
 			
-			if ($algebra->can('dataset')) {
+			if ($algebra->can('dataset') and not $self->suppress_dataset) {
 				my $dataset	= $algebra->dataset;
 				my @default	= @{ $dataset->{'default'} || [] };
 				my $named	= $dataset->{'named'};
