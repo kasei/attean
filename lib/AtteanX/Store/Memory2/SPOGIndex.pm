@@ -136,6 +136,10 @@ sub _populate_walk {
 	my $self	= shift;
 	my $trie	= shift;
 	my $list	= shift;
+	if (blessed($trie) and $trie->does('Attean::API::Quad')) {
+		push(@$list, $trie);
+		return;
+	}
 	return unless (defined($trie));
 	foreach my $k (sort keys %$trie) {
 		my $o	= $trie->{$k};
