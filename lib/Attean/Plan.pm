@@ -2753,13 +2753,14 @@ package Attean::Plan::Load 0.040 {
 			my $resp	= $ua->get( $url );
 			if ($resp->is_success) {
 				my $ct		= $resp->header('Content-Type');
-				if (my $pclass = Attean->get_parser( media_type => $ct )) {
-					my $p		= $pclass->new();
-					my $str		= $resp->decoded_content;
-					my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
-					my $iter	= $p->parse_iter_from_bytes( $bytes );
-					return $iter;
-				}
+				my $pclass	= Attean->get_parser( media_type => $ct );
+				$pclass		= Attean->get_parser( filename => $url ) unless ($pclass);
+				$pclass	= Attean->get_parser( 'Turtle' ) unless ($pclass); # default to Turtle if no media type is provided
+				my $p		= $pclass->new();
+				my $str		= $resp->decoded_content;
+				my $bytes	= encode('UTF-8', $str, Encode::FB_CROAK);
+				my $iter	= $p->parse_iter_from_bytes( $bytes );
+				return $iter;
 			}
 			
 			if ($silent) {
