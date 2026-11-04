@@ -11,28 +11,30 @@ use Test::Attean::TestSimpleQueryEvaluator;
 use Test::Attean::TestIDPQueryPlanner;
 use Module::Load::Conditional qw[can_load];
 
+require XML::Simple;
 use Carp;
-use HTTP::Request;
-use HTTP::Response;
-use HTTP::Message::PSGI;
 use Data::Dumper;
 use Encode qw(encode encode_utf8 decode_utf8);
+use File::Slurp;
+use File::Spec;
+use FindBin qw($Bin);
 use Getopt::Long;
+use HTTP::Message::PSGI;
+use HTTP::Request;
+use HTTP::Response;
+use HTTP::Status;
+use JSON qw(decode_json);
+use List::Util qw(all any);
 use Regexp::Common qw /URI/;
 use Scalar::Util qw(blessed reftype);
-use List::Util qw(all any);
 use Test::Modern;
 use Test::Roo::Role;
 use Text::CSV;
 use Text::Table;
 use Try::Tiny;
-use URI::file;
-use File::Spec;
-use File::Slurp;
-use FindBin qw($Bin);
-use UUID::Tiny ':std';
 use Types::Standard qw(Str Bool Int ArrayRef HashRef InstanceOf ConsumerOf);
-require XML::Simple;
+use URI::file;
+use UUID::Tiny ':std';
 
 my $XSD		= 'http://www.w3.org/2001/XMLSchema#';
 my $RDF		= 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
@@ -42,8 +44,34 @@ my $RS		= 'http://www.w3.org/2001/sw/DataAccess/tests/result-set#';
 my $MF		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#';
 my $UT		= 'http://www.w3.org/2009/sparql/tests/test-update#';
 my $RQ		= 'http://www.w3.org/2001/sw/DataAccess/tests/test-query#';
+my $SD		= 'http://www.w3.org/ns/sparql-service-description#';
 my $DAWGT	= 'http://www.w3.org/2001/sw/DataAccess/tests/test-dawg#';
 my $FORMATS	= 'http://www.w3.org/ns/formats/';
+
+my $absolutePath	= iri('http://www.w3.org/2011/http#absolutePath');
+my $authority		= iri('http://www.w3.org/2011/http#connectionAuthority');
+my $cnt_chars		= iri('http://www.w3.org/2011/content#chars');
+my $cnt_encoding	= iri('http://www.w3.org/2011/content#characterEncoding');
+my $entries			= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries');
+my $expectedBoolean	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedBoolean');
+my $expectedFormat	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedFormat');
+my $expectedLocation= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedLocation');
+my $expectedStatus	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedStatus');
+my $ht_body			= iri('http://www.w3.org/2011/http#body');
+my $ht_fieldName	= iri('http://www.w3.org/2011/http#fieldName');
+my $ht_fieldValue	= iri('http://www.w3.org/2011/http#fieldValue');
+my $ht_headers		= iri('http://www.w3.org/2011/http#headers');
+my $ht_resp			= iri('http://www.w3.org/2011/http#resp');
+my $Manifest		= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#Manifest');
+my $methodName		= iri('http://www.w3.org/2011/http#methodName');
+my $mf_action		= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action');
+my $mf_expectation	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectation');
+my $mf_name			= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name');
+my $rdf_type		= iri('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+my $rdfs_label		= iri('http://www.w3.org/2000/01/rdf-schema#label');
+my $requests		= iri('http://www.w3.org/2011/http#requests');
+my $ut_graph		= iri('http://www.w3.org/2009/sparql/tests/test-update#graph');
+my $ut_graphData	= iri('http://www.w3.org/2009/sparql/tests/test-update#graphData');
 
 requires 'test_model';
 requires 'manifest_paths';
@@ -51,6 +79,11 @@ requires 'manifest_paths';
 has run_update_tests	=> (is => 'rw', isa => Bool, default => 1);
 has run_query_tests		=> (is => 'rw', isa => Bool, default => 1);
 has run_syntax_tests	=> (is => 'rw', isa => Bool, default => 1);
+has run_gsp_direct		=> (is => 'rw', isa => Bool, default => 1);
+has run_gsp_indirect	=> (is => 'rw', isa => Bool, default => 1);
+has run_gsp_postcreate	=> (is => 'rw', isa => Bool, default => 1);
+
+
 
 has debug				=> (is => 'rw', isa => Bool, default => 0);
 has results				=> (is => 'rw', isa => Bool, default => 0);
@@ -111,6 +144,7 @@ sub setup {
 	foreach my $f (@{ $self->load_ontology_files }) {
 		my $url	= "file://$f";
 		try {
+			warn "Loading $url\n" if ($self->debug);
 			$model->load_urls_into_graph($self->default_graph, $url);
 		} catch {
 			warn "Failed to load $url\n";
@@ -154,6 +188,394 @@ sub setup {
 		}
 	}
 	$self->manifests(\@manifests);
+}
+
+sub sparql_protocol_test {
+	my $self		= shift;
+	my $test_type	= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+	
+	my $testname	= $test->value;
+	my $config	= {
+		store => 'Memory2',
+		endpoint  => {
+			service_description => {
+				named_graphs => 1,
+				default => 1,
+			},
+			load_data => 0,
+			update => 1,
+		}
+	};
+	my $end		= AtteanX::Endpoint->new( $config );
+	my $app	= sub {
+		my $env 	= shift;
+		my $req 	= Plack::Request->new($env);
+		my $resp	= $end->run( $req );
+		return $resp->finalize;
+	};
+
+	my $host		= 'localhost:3000';
+	LWP::Protocol::PSGI->register($app, host => $host);
+
+	my $sparql_endpoint	= "http://${host}/sparql";
+	my $gsp_endpoint	= "http://${host}/gsp";
+
+	my $ua		= LWP::UserAgent->new();
+	if ($test_type eq 'prot') {
+		eval { $self->run_protocol_test($test_type, $ua, $model, $test, $sparql_endpoint) };
+		if ($@) {
+			warn "*** protocol test failed: $@";
+			$self->record_result('unhandled', 0, $test->as_string);
+			fail($testname);
+		}
+	} else {
+		eval { $self->run_gsp_test($test_type, $ua, $model, $test, $sparql_endpoint, $gsp_endpoint) };
+		if ($@) {
+			warn "*** protocol test failed: $@";
+			$self->record_result('unhandled', 0, $test->as_string);
+			fail($testname);
+		}
+	}
+}
+
+sub setup_protocol_dataset {
+	my $self		= shift;
+	my $ua			= shift;
+	my $endpoint	= shift;
+	my $model		= shift;
+	my $test		= shift;
+	warn "Clearing dataset ...\n" if ($self->debug);
+	warn "REQUEST: POST $endpoint update=DROP ALL\n" if ($self->debug);
+	my $resp	= $ua->post($endpoint, {update => 'DROP ALL'});
+	warn "RESPONSE:\n" . $resp->as_string . "\n" if ($self->debug);
+	die $resp->status_line unless ($resp->is_success);
+
+	my (@graphs)	= $model->objects($test, $ut_graphData)->elements;
+	if (scalar(@graphs)) {
+		foreach my $graph (@graphs) {
+			# loading contents of $uri into graph named $name
+			my ($name)	= map { $_->value } $model->objects($graph, $rdfs_label)->elements;
+			my ($uri)	= map { $_->value } $model->objects($graph, $ut_graph)->elements;
+			my $update	= "LOAD <$uri> INTO GRAPH <$name>";
+			warn "Loading data <$name> ...\n" if ($self->debug);
+			my $resp	= $ua->post($endpoint, {update => $update});
+			die $resp->status_line unless ($resp->is_success);
+		}
+	}
+}
+
+sub run_gsp_test {
+	my $self		= shift;
+	my $test_type	= shift;
+	my $ua			= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my $prot_endpoint	= shift;
+	my $endpoint	= shift;
+	say '# ' . $test->value if ($self->debug);
+	my ($action)	= $model->objects($test, $mf_action)->elements;
+	unless ($action) {
+		return fail('no action data for test');
+	}
+	my ($reqs)		= $model->objects($action, $requests)->elements;
+	my @reqs		= $model->get_list($self->default_graph, $reqs)->elements;
+	my ($auth)		= $model->objects($action, $authority)->elements;
+	my $auth_v		= $auth->value;
+	my $uri			= new URI($endpoint);
+	my $real_auth	= $uri->authority;
+	
+	$ua->get("$prot_endpoint?================================================================NEWTEST");
+	$self->setup_protocol_dataset($ua, $prot_endpoint, $model, $test);
+	
+	say scalar(@reqs) . ' request(s) in test' if ($self->debug);
+	my $req_number	= 1;
+	my $templates	= {};
+	foreach my $req (@reqs) {
+		my $name	= "Request " . $req_number++;
+		subtest $name => sub {
+			say "--------------------------------- $name ---------------------------------" if ($self->debug);
+			my $m	= $self->make_protocol_request($test_type, $endpoint, $model, $req, $auth_v, $real_auth, $templates);
+			say "Request [[" . $m->method . " " . $m->uri . "]]\n" if ($self->debug);
+	# 		next unless ($m->method eq 'GET');
+			say "REQUEST:\n" . $m->as_string if ($self->debug);
+			my $resp	= $ua->request($m);
+			say "RESPONSE:\n" . $resp->as_string if ($self->debug);
+			diag(sprintf('%s %s', $m->method, $m->uri));
+			$self->validate_protocol_response($test_type, $endpoint, $model, $test, $req, $resp, $auth_v, $real_auth, $templates);
+		};
+		last;
+	}
+}
+
+sub run_protocol_test {
+	my $self		= shift;
+	my $test_type	= shift;
+	my $ua			= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my $prot_endpoint	= shift;
+	my ($action)	= $model->objects($test, $mf_action)->elements;
+	unless ($action) {
+		return fail('no action data for test');
+	}
+	my ($reqs)		= $model->objects($action, $requests)->elements;
+	my @reqs		= $model->get_list($self->default_graph, $reqs)->elements;
+	my ($auth)		= $model->objects($action, $authority)->elements;
+	my $auth_v		= $auth->value;
+	my $uri			= new URI($prot_endpoint);
+	my $real_auth	= $uri->authority;
+	
+	$self->setup_protocol_dataset($ua, $prot_endpoint, $model, $test);
+	
+	say scalar(@reqs) . ' request(s) in test' if ($self->debug);
+	my $req_number	= 0;
+	foreach my $req (@reqs) {
+		$req_number++;
+		my $m	= $self->make_protocol_request($test_type, $prot_endpoint, $model, $req, $auth_v, $real_auth);
+# 		next unless ($m->method eq 'GET');
+		warn "REQUEST:\n" . $m->as_string . "\n" if ($self->debug);
+		my $resp	= $ua->request($m);
+		warn "RESPONSE:\n" . $resp->as_string if ($self->debug);
+		diag(sprintf('%s %s', $m->method, $m->uri));
+		$self->validate_protocol_response($test_type, $prot_endpoint, $model, $test, $req, $resp, $auth_v, $real_auth);
+		if ($self->debug) {
+			warn "--------------------------------- after request:\n";
+			$self->dump_protocol_dataset($prot_endpoint, $ua);
+			warn "---------------------------------\n";
+		}
+	}
+}
+
+sub dump_protocol_dataset {
+	my $self		= shift;
+	my $endpoint	= shift;
+	my $ua			= shift;
+	my $resp		= $ua->post($endpoint, {query => 'SELECT * WHERE { { GRAPH ?g { ?s ?p ?o } } UNION { ?s ?p ?o } }'}, 'Accept' => 'application/sparql-results+json');
+	my $body		= $resp->decoded_content;
+	my $j			= decode_json($body);
+	my $r			= $j->{results}{bindings};
+	my $tb			= Text::Table->new(qw(s p o g));
+	my @rows;
+	foreach my $r (@$r) {
+		push(@rows, [map { $r->{$_}{'value'} } qw(s p o g)]);
+	}
+	$tb->load(@rows);
+	say $tb;
+}
+
+sub make_protocol_request {
+	my $self		= shift;
+	my $test_type	= shift;
+	my $endpoint	= shift;
+	my $model		= shift;
+	my $req			= shift;
+	my $auth_v		= shift;
+	my $real_auth	= shift;
+	my $templates	= shift;
+	my ($path)		= $model->objects($req, $absolutePath)->elements;
+	my ($method)	= $model->objects($req, $methodName)->elements;
+	my ($body)		= $model->objects($req, $ht_body)->elements;
+	my ($headers)	= $model->objects($req, $ht_headers)->elements;
+	my $path_v		= $path->value;
+	foreach my $t (keys %$templates) {
+		my $v	= $templates->{$t};
+		my $i	= index($path_v, $t);
+		if ($i >= 0) {
+			substr($path_v, $i, length($t), $v);
+		}
+	}
+	
+	my $pathuri		= new URI($path_v);
+
+	my $m			= HTTP::Request->new();
+	$m->method($method->value);
+	my $uri	= new URI($endpoint);
+
+	if ($test_type eq 'gsp') {
+		my $test_path	= $pathuri->path;
+		$test_path		=~ s#/gsp#$uri->path#e;
+		$uri->path($test_path);
+	}
+	$uri->query($pathuri->query);
+	
+	my $uri_v	= $uri->as_string;
+	
+	# fixup
+	$uri_v	=~ s/$auth_v/$real_auth/e;
+
+	
+	$m->uri(URI->new($uri_v));
+	if ($body) {
+		my ($content)		= $model->objects($body, $cnt_chars)->elements;
+		my ($encoding)		= $model->objects($body, $cnt_encoding)->elements;
+
+		# fixup
+		$content	=~ s/$auth_v/$real_auth/ge;
+		######### TODO CONTINUE HERE ##############
+		
+		my $bytes			= encode($encoding->value, $content->value);
+		$m->content($bytes);
+	}
+	
+	my @headers	= $model->get_list($self->default_graph, $headers)->elements;
+	foreach my $h (@headers) {
+		my ($key)		= $model->objects($h, $ht_fieldName)->elements;
+		my ($value)		= $model->objects($h, $ht_fieldValue)->elements;
+		$m->header($key->value => $value->value);
+	}
+	return $m;
+}
+
+sub validate_protocol_response {
+	my $self		= shift;
+	my $test_type	= shift;
+	my $endpoint	= shift;
+	my $model	= shift;
+	my $test	= shift;
+	my $name	= $test->value;
+	my $req		= shift;
+	my $m		= shift;
+	my $auth_v		= shift;
+	my $real_auth	= shift;
+	my $templates	= shift;
+	
+	warn "Validating response..." if ($self->debug);
+	
+	my ($resp)	= $model->objects($req, $ht_resp)->elements;
+	unless ($resp) {
+		return fail('No expected response data for test');
+	}
+
+	my (@expected_location)	= $model->objects($resp, $expectedLocation)->elements;
+	foreach my $loc (@expected_location) {
+		my $header			= $m->header('Location');
+		ok($header, 'Location header value');
+		my $var				= $loc->value;
+		$templates->{ $var }	= $header;
+	}
+
+	my (@expected_status)	= $model->objects($resp, $expectedStatus)->elements;
+	if (scalar(@expected_status)) {
+		my %ok				= map { $_ => 1 } map { $_->value } @expected_status;
+		my $code			= $m->code;
+		my $digit			= int($code / 100);
+		my $actual_class_iri		= "http://www.w3.org/2011/http-statusCodes#StatusCode${digit}xx";
+		my $message					= status_message($code);
+		$message					=~ s/ //g;
+		my $actual_iri				= ($test_type eq 'gsp')
+									? "http://www.w3.org/2011/http-statusCodes#$message"
+									: "http://www.w3.org/2011/http#$message";
+		if (exists $ok{$actual_class_iri}) {
+			pass("status code matches class ${digit}xx")
+		} elsif (exists $ok{$actual_iri}) {
+			pass("status code matches ($code)")
+		} else {
+			fail("got status code: " . $m->status_line . ' but expecting one of: ' . join(',', keys %ok))
+		}
+	}
+	my ($expected_format)	= $model->objects($resp, $expectedFormat)->elements;
+	if ($expected_format) {
+		my $ct	= $m->header('Content-Type');
+		my $expected	= $expected_format->value;
+		if ($expected eq 'tabular') {
+			like($ct, qr#^application/sparql-results[+](json|xml)|text/csv|text/tab-separated-values#, "expected tabular result but got $ct");
+		} elsif ($expected eq 'boolean') {
+			like($ct, qr#^application/sparql-results[+](json|xml)|text/plain#, "expected boolean result but got $ct");
+		} elsif ($expected eq 'RDF') {
+			like($ct, qr#^(application/(rdf-xml|n-triples))|text/((n-(triples|quads))|turtle)|application/ld[+]json#, "expected RDF result but got $ct")
+		} else {
+			die("Unexpected format value '$expected'");
+		}
+	}
+	my ($expected_bool)		= $model->objects($resp, $expectedBoolean)->elements;
+	if ($expected_bool) {
+		my $ct	= $m->header('Content-Type');
+		my $body	= $m->decoded_content;
+		my $expected	= $expected_bool->value;
+		if ($ct eq 'application/sparql-results+json') {
+			like($body, qr#"boolean"\s*:\s*${expected}#sm, "expected boolean $expected");
+		} elsif ($ct eq 'application/sparql-results+xml') {
+			like($body, qr#<boolean>${expected}</boolean>#sm, "expected boolean $expected");
+		} elsif ($ct =~ 'text/plain') {
+			like($body, qr#${expected}#sm, "expected boolean $expected");
+		} else {
+			die("validate expected boolean for [$ct]: " . $expected_bool->value);
+		}
+	}
+
+	my ($expected_headers)	= $model->objects($resp, $ht_headers)->elements;
+	if ($expected_headers) {
+		my @headers	= $model->get_list($self->default_graph, $expected_headers)->elements;
+		foreach my $h (@headers) {
+			my ($key)				= $model->objects($h, $ht_fieldName)->elements;
+			my ($expected_value_l)	= $model->objects($h, $ht_fieldValue)->elements;
+			my $expected_value		= $expected_value_l->value;
+			my $actual_value		= $m->header($key->value);
+			if ($expected_value =~ m<$actual_value; charset=utf-8>i) {
+				pass('content-type with ignored charset=utf-8');
+			} else {
+				$actual_value	=~ s/ //g;
+				$expected_value	=~ s/ //g;
+				is($actual_value, $expected_value, "expected header: " . $key->value);
+			}
+		}
+	}
+
+	my ($expected_body)	= $model->objects($resp, $ht_body)->elements;
+	if ($expected_body) {
+		my $ct		= $m->header('Content-Type');
+		if (not defined($ct)) {
+			fail('No content-type in response');
+			return;
+		}
+		$ct			=~ s/;.*//;
+		
+		warn "Body content-type: $ct\n";
+		my $pclass		= Attean->get_parser( media_type => $ct );
+		unless ($pclass) {
+			fail("Unrecognized media type for response: $ct");
+			return;
+		}
+		my $parser		= $pclass->new();
+		my ($chars)		= $model->objects($expected_body, $cnt_chars)->elements;
+		my $actual		= $m->decoded_content;
+		my $expected	= $chars->value;
+		
+		# fixup
+		$actual		=~ s/$auth_v/$real_auth/ge;
+		$expected	=~ s/$auth_v/$real_auth/ge;
+
+		warn "Actual response body: " . Dumper($actual) if ($self->debug);
+		warn "Expected response body: " . Dumper($expected) if ($self->debug);
+		
+		my $actual_iter		= $parser->parse_iter_from_bytes(encode_utf8($actual));
+		my $expected_iter	= $parser->parse_iter_from_bytes(encode_utf8($expected));
+		my $eqtest	= Attean::BindingEqualityTest->new();
+		my $ok		= eval { ok( $eqtest->equals( $actual_iter, $expected_iter ), 'expected triples' ) or diag($eqtest->error) };
+# 		unless ($ok) {
+# 			warn Dumper({expected => $expected, actual => $actual});
+# 		}
+		if ($@) {
+			diag($@);
+		}
+		unless ($ok) {
+			$self->record_result('protocol', $ok, $test->as_string);
+			fail($test->value);
+			return;
+		}
+	}
+
+	my ($expectation)		= $model->objects($resp, $mf_expectation)->elements;
+	if ($expectation) {
+		$self->record_result('protocol', 0, $test->as_string);
+		fail($test->value . " - validate expectation: " . $expectation->value);
+		return;
+	}
+	pass($test->value);
 }
 
 sub sparql_syntax_test {
@@ -667,6 +1089,7 @@ sub construct_data {
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
 	my @cdata		= $model->objects( $action, iri("${RQ}constructDataFile") )->elements;
 	my ($fnode)		= $model->objects( $action, iri("${RQ}format") )->elements;
+
 	my $format		= blessed($fnode) ? $fnode->value : 'text/turtle';
 
 	my $uri					= URI->new( $queryd->value );
@@ -727,6 +1150,7 @@ sub query_eval_test {
 	my $test		= shift;
 	my %args		= @_;
 	my $specVersion	= $args{'specVersion'} // '1.1';
+	my $testname	= $test->value;
 	
 	my ($action)	= $model->objects( $test, iri("${MF}action") )->elements;
 	my ($result)	= $model->objects( $test, iri("${MF}result") )->elements;
@@ -738,6 +1162,7 @@ sub query_eval_test {
 	my @gdata		= $model->objects( $action, iri("${RQ}graphData") )->elements;
 	my @sdata		= $model->objects( $action, iri("${RQ}serviceData") )->elements;
 	my @cdata		= $model->objects( $action, iri("${RQ}constructDataFile") )->elements;
+	my @entailment	= $model->objects( $action, [iri("${SD}entailmentRegime"), iri("${SD}EntailmentProfile")] )->elements;
 	my $reduced_mode	= (defined($res_card) and $res_card->value eq "${MF}LaxCardinality");
 	
 	if ($self->strict_approval) {
@@ -751,6 +1176,11 @@ sub query_eval_test {
 		}
 	}
 	
+	if (scalar(@entailment)) {
+		$self->record_result('unhandled', 0, $test->as_string, $TODO);
+		return;
+	}
+
 	my $uri					= URI->new( $queryd->value );
 	my $filename			= $uri->file;
 	my (undef,$base,undef)	= File::Spec->splitpath( $filename );
