@@ -172,7 +172,7 @@ Test::Roo::top_test 'SPARQL tests' => sub {
 					unless (can_load( modules => { 'AtteanX::Endpoint' => 0, 'LWP::Protocol::PSGI' => 0 })) {
 						$self->record_result('unhandled', 0, $test->as_string);
 						my $type	= ($test_type eq 'prot') ? 'Protocol' : 'GSP';
-						skip("${type} test is not handled (cannot load necessary modules)");
+						skip("${type} test is not handled (cannot load necessary modules; ensure AtteanX::Endpoint and LWP::Protocol::PSGI are available)");
 						next;
 					}
 					
