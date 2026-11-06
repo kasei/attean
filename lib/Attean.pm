@@ -469,6 +469,11 @@ currently undefined.
 			}
 		}
 
+		sub get_functions {
+			my $class	= shift;
+			return keys %global_functions;
+		}
+
 =item C<< get_global_function( $uri ) >>
 
 =cut
@@ -497,6 +502,11 @@ currently undefined.
 			}
 		}
 
+		sub get_functional_forms {
+			my $class	= shift;
+			return keys %global_functional_forms;
+		}
+
 =item C<< get_global_functional_form( $uri ) >>
 
 =cut
@@ -521,6 +531,12 @@ currently undefined.
 				my $funcs	= $args{ $uri };
 				$global_aggregates{ $uri }	= $funcs;
 			}
+		}
+
+
+		sub get_aggregates {
+			my $class	= shift;
+			return keys %global_aggregates;
 		}
 
 =item C<< get_global_aggregate( $uri ) >>
