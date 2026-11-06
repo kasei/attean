@@ -129,7 +129,8 @@ iterator. Otherwise raises an error via C<< die >>.
 			my $b	= Attean::Result->new( bindings => {} );
 			return Attean::ListIterator->new(variables => [], values => [$b], item_type => 'Attean::API::Result');
 		} else {
-			die "SPARQL Protocol error: " . $response->status_line;
+			my $endpoint	= $self->endpoint->value;
+			die "SPARQL Protocol error on endpoint <${endpoint}>: " . $response->status_line;
 		}
 	}
 }
