@@ -457,6 +457,14 @@ package Attean::API::BooleanLiteral 0.040 {
 
 	use Moo::Role;
 
+	sub boolean_value {
+		my $self	= shift;
+		my $value	= $self->value;
+		return $value if ($value =~ m/^(0|1)$/);
+		return 1 if ($value =~ m/^true$/);
+		return  0;
+	}
+
 	sub canonicalized_term_strict {
 		my $self	= shift;
 		my $value	= $self->value;
