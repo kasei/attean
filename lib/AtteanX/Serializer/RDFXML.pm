@@ -51,6 +51,7 @@ package AtteanX::Serializer::RDFXML 0.040 {
 	use List::Util qw(any);
 	use namespace::clean;
 
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/RDF_XML' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/rdf+xml');
 	has '_rev' => (is => 'rw', isa => HashRef, init_arg => undef, default => sub { +{} });
 	has 'scoped_namespaces' => (is => 'rw', init_arg => undef);

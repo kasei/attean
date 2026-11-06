@@ -44,6 +44,7 @@ package AtteanX::Serializer::SPARQLJSON 0.040 {
 	use JSON; 
 	use namespace::clean;
 
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/SPARQL_Results_JSON' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str,  init_arg => undef, default => 'application/sparql-results+json');
 
 =item C<< media_types >>

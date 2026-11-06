@@ -45,6 +45,7 @@ package AtteanX::Serializer::SPARQLCSV 0.040 {
 	use Text::CSV;
 	use namespace::clean;
 
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/SPARQL_Results_CSV' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/csv');
 
 =item C<< media_types >>

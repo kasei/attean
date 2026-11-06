@@ -48,6 +48,7 @@ package AtteanX::Serializer::NQuads 0.040 {
 	use namespace::clean;
 
 	extends 'AtteanX::Serializer::NTuples';
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/N-Quads' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/n-quads');
 
 =item C<< media_types >>

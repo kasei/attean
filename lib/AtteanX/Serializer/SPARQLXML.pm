@@ -44,6 +44,7 @@ package AtteanX::Serializer::SPARQLXML 0.040 {
 	use List::Util qw(any);
 	use namespace::clean;
 
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/SPARQL_Results_XML' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/sparql-results+xml');
 
 =item C<< media_types >>

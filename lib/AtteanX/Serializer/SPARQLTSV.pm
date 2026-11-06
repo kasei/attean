@@ -44,6 +44,7 @@ package AtteanX::Serializer::SPARQLTSV 0.040 {
 	use List::Util qw(any);
 	use namespace::clean;
 
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/SPARQL_Results_TSV' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'text/tab-separated-values');
 
 =item C<< media_types >>

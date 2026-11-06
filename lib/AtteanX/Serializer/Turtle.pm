@@ -54,6 +54,7 @@ package AtteanX::Serializer::Turtle 0.040 {
 	with 'Attean::API::AppendableSerializer';
 	with 'Attean::API::TripleSerializer';
 	
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/Turtle' }
 	sub canonical_media_type { return "text/turtle" }
 
 	sub media_types {

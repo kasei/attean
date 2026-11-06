@@ -48,6 +48,7 @@ package AtteanX::Serializer::NTriples 0.040 {
 	use namespace::clean;
 
 	extends 'AtteanX::Serializer::NTuples';
+	sub canonical_iri { return 'http://www.w3.org/ns/formats/N-Triples' }
 	has 'canonical_media_type' => (is => 'ro', isa => Str, init_arg => undef, default => 'application/n-triples');
 
 =item C<< media_types >>
