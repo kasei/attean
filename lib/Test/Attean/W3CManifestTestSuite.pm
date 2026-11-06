@@ -55,8 +55,11 @@ my $cnt_encoding	= iri('http://www.w3.org/2011/content#characterEncoding');
 my $entries			= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries');
 my $expectedBoolean	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedBoolean');
 my $expectedFormat	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedFormat');
+my $expectedSchemaConformance	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedSchemaConformance');
+my $expectedSPARQLMatch	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedSPARQLMatch');
 my $expectedLocation= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedLocation');
 my $expectedStatus	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedStatus');
+my $expectedStatusClass	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#expectedStatusClass');
 my $ht_body			= iri('http://www.w3.org/2011/http#body');
 my $ht_fieldName	= iri('http://www.w3.org/2011/http#fieldName');
 my $ht_fieldValue	= iri('http://www.w3.org/2011/http#fieldValue');
@@ -190,16 +193,9 @@ sub setup {
 	$self->manifests(\@manifests);
 }
 
-sub sparql_protocol_test {
-	my $self		= shift;
-	my $test_type	= shift;
-	my $model		= shift;
-	my $test		= shift;
-	my %args		= @_;
-	my $specVersion	= $args{'specVersion'} // '1.1';
-	
-	my $testname	= $test->value;
-	my $config	= {
+sub setup_endpoint {
+	my $self	= shift;
+	my $config	= shift // {
 		store => 'Memory2',
 		endpoint  => {
 			service_description => {
@@ -223,23 +219,82 @@ sub sparql_protocol_test {
 
 	my $sparql_endpoint	= "http://${host}/sparql";
 	my $gsp_endpoint	= "http://${host}/gsp";
+	return ($sparql_endpoint, $gsp_endpoint);
+}
 
+sub sparql_service_description_test {
+	my $self		= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+
+	my $testname	= $test->value;
+	my ($sparql_endpoint, $gsp_endpoint)	= $self->setup_endpoint();
 	my $ua		= LWP::UserAgent->new();
-	if ($test_type eq 'prot') {
-		eval { $self->run_protocol_test($test_type, $ua, $model, $test, $sparql_endpoint) };
-		if ($@) {
-			warn "*** protocol test failed: $@";
-			$self->record_result('unhandled', 0, $test->as_string);
-			fail($testname);
-		}
-	} else {
-		eval { $self->run_gsp_test($test_type, $ua, $model, $test, $sparql_endpoint, $gsp_endpoint) };
-		if ($@) {
-			warn "*** protocol test failed: $@";
-			$self->record_result('unhandled', 0, $test->as_string);
-			fail($testname);
+# 	fail("$testname - TODO");
+
+	my ($action)	= $model->objects($test, $mf_action)->elements;
+	unless ($action) {
+		return fail('no action data for test');
+	}
+	my ($reqs)		= $model->objects($action, $requests)->elements;
+	my @reqs		= $model->get_list($self->default_graph, $reqs)->elements;
+	my ($auth)		= $model->objects($action, $authority)->elements;
+	my $auth_v		= $auth->value;
+	my $uri			= new URI($sparql_endpoint);
+	my $real_auth	= $uri->authority;
+	
+	say scalar(@reqs) . ' request(s) in test' if ($self->debug);
+	my $req_number	= 0;
+	foreach my $req (@reqs) {
+		$req_number++;
+		my $m	= $self->make_protocol_request('sd', $sparql_endpoint, $model, $req, $auth_v, $real_auth);
+# 		next unless ($m->method eq 'GET');
+		warn "REQUEST:\n" . $m->as_string . "\n" if ($self->debug);
+		my $resp	= $ua->request($m);
+		warn "RESPONSE:\n" . $resp->as_string if ($self->debug);
+		diag(sprintf('%s %s', $m->method, $m->uri));
+		subtest $testname => sub {
+			$self->validate_protocol_response('sd', $sparql_endpoint, $model, $test, $req, $resp, $auth_v, $real_auth);
+			if ($self->debug) {
+				warn "--------------------------------- after request:\n";
+				$self->dump_protocol_dataset($sparql_endpoint, $ua);
+				warn "---------------------------------\n";
+			}
 		}
 	}
+
+}
+
+sub sparql_protocol_test {
+	my $self		= shift;
+	my $test_type	= shift;
+	my $model		= shift;
+	my $test		= shift;
+	my %args		= @_;
+	my $specVersion	= $args{'specVersion'} // '1.1';
+	
+	my $testname	= $test->value;
+	my ($sparql_endpoint, $gsp_endpoint)	= $self->setup_endpoint();
+	my $ua		= LWP::UserAgent->new();
+	subtest $testname => sub {
+		if ($test_type eq 'prot') {
+			eval { $self->run_protocol_test($test_type, $ua, $model, $test, $sparql_endpoint) };
+			if ($@) {
+				warn "*** protocol test failed: $@";
+				$self->record_result('unhandled', 0, $test->as_string);
+				fail($testname);
+			}
+		} else {
+			eval { $self->run_gsp_test($test_type, $ua, $model, $test, $sparql_endpoint, $gsp_endpoint) };
+			if ($@) {
+				warn "*** protocol test failed: $@";
+				$self->record_result('unhandled', 0, $test->as_string);
+				fail($testname);
+			}
+		}
+	};
 }
 
 sub setup_protocol_dataset {
@@ -436,7 +491,6 @@ sub validate_protocol_response {
 	my $endpoint	= shift;
 	my $model	= shift;
 	my $test	= shift;
-	my $name	= $test->value;
 	my $req		= shift;
 	my $m		= shift;
 	my $auth_v		= shift;
@@ -463,34 +517,78 @@ sub validate_protocol_response {
 		my %ok				= map { $_ => 1 } map { $_->value } @expected_status;
 		my $code			= $m->code;
 		my $digit			= int($code / 100);
-		my $actual_class_iri		= "http://www.w3.org/2011/http-statusCodes#StatusCode${digit}xx";
 		my $message					= status_message($code);
 		$message					=~ s/ //g;
-		my $actual_iri				= ($test_type eq 'gsp')
-									? "http://www.w3.org/2011/http-statusCodes#$message"
-									: "http://www.w3.org/2011/http#$message";
-		if (exists $ok{$actual_class_iri}) {
-			pass("status code matches class ${digit}xx")
-		} elsif (exists $ok{$actual_iri}) {
+		my $actual_iri				= "http://www.w3.org/2011/http-statusCodes#$message";
+		if (exists $ok{$actual_iri}) {
 			pass("status code matches ($code)")
 		} else {
 			fail("got status code: " . $m->status_line . ' but expecting one of: ' . join(',', keys %ok))
 		}
 	}
+
+	my (@expected_status_class)	= $model->objects($resp, $expectedStatusClass)->elements;
+	if (scalar(@expected_status_class)) {
+		my %ok					= map { $_ => 1 } map { $_->value } @expected_status_class;
+		my $code				= $m->code;
+		my $digit				= int($code / 100);
+		my $actual_class_iri	= "http://www.w3.org/2011/http-statusCodes#StatusCode${digit}xx";
+		if (exists $ok{$actual_class_iri}) {
+			pass("status code matches class ${digit}xx")
+		} else {
+			fail("got status code: " . $m->status_line . ' but expecting one of: ' . join(',', keys %ok))
+		}
+	}
+
 	my ($expected_format)	= $model->objects($resp, $expectedFormat)->elements;
 	if ($expected_format) {
 		my $ct	= $m->header('Content-Type');
 		my $expected	= $expected_format->value;
 		if ($expected eq 'tabular') {
-			like($ct, qr#^application/sparql-results[+](json|xml)|text/csv|text/tab-separated-values#, "expected tabular result but got $ct");
+			like($ct, qr#^application/sparql-results[+](json|xml)|text/csv|text/tab-separated-values#, "expected tabular result; got $ct");
 		} elsif ($expected eq 'boolean') {
-			like($ct, qr#^application/sparql-results[+](json|xml)|text/plain#, "expected boolean result but got $ct");
+			like($ct, qr#^application/sparql-results[+](json|xml)|text/plain#, "expected boolean result; got $ct");
 		} elsif ($expected eq 'RDF') {
-			like($ct, qr#^(application/(rdf-xml|n-triples))|text/((n-(triples|quads))|turtle)|application/ld[+]json#, "expected RDF result but got $ct")
+			like($ct, qr#^(application/(rdf-xml|n-triples))|text/((n-(triples|quads))|turtle)|application/ld[+]json#, "expected RDF result; got $ct")
 		} else {
 			die("Unexpected format value '$expected'");
 		}
 	}
+
+	my ($schema)	= $model->objects($resp, $expectedSchemaConformance)->elements;
+	if ($schema) {
+		pass('Schema conformance (no-op)');
+	}
+	
+	my ($expected_ask)	= $model->objects($resp, $expectedSPARQLMatch)->elements;
+	if ($expected_ask) {
+		### Need to replace the test endpoint with the real endpoint in the query string
+		my $sparql	= $expected_ask->value;
+		$sparql		=~ s/$auth_v/$real_auth/ge;
+		
+		my $ct		= $m->header('Content-Type');
+		my $pclass	= Attean->get_parser(media_type => $ct);
+		die 'no suitable parser found for SD RDF' unless ($pclass);
+		my $parser	= $pclass->new();
+		my $store	= Attean->get_store('Memory')->new();
+		my $body	= $m->decoded_content;
+		my $iter	= $parser->parse_iter_from_bytes(encode_utf8($body));
+		my $graph	= iri('http://graph-name/');
+		my $quads	= $iter->as_quads($graph);
+		$store->add_iter($quads);
+		my $model	= Attean::QuadModel->new( store => $store );
+		my $s		= Attean->get_parser('SPARQL')->new();
+		my ($algebra)	= $s->parse($sparql);
+		my $results	= $model->evaluate($algebra, $graph);
+		my $result	= $results->next;
+		fail('expectedSPARQLMatch') unless ($result);
+		my $ok	= $result->boolean_value;
+		unless ($ok) {
+			diag("RDF content did not match query `${sparql}`: [[${body}]]")
+		}
+		ok($ok, 'expectedSPARQLMatch');
+	}
+
 	my ($expected_bool)		= $model->objects($resp, $expectedBoolean)->elements;
 	if ($expected_bool) {
 		my $ct	= $m->header('Content-Type');
@@ -575,7 +673,8 @@ sub validate_protocol_response {
 		fail($test->value . " - validate expectation: " . $expectation->value);
 		return;
 	}
-	pass($test->value);
+
+# 	pass($test->value);
 }
 
 sub sparql_syntax_test {
@@ -1301,10 +1400,10 @@ sub query_eval_test {
 }
 
 sub mock_endpoints {
-	my $self			= shift;
-	my $mock			= shift;
+	my $self	= shift;
+	my $mock	= shift;
 	my $model	= shift;
-	my $sdata			= shift;
+	my $sdata	= shift;
 	
 	foreach my $sd (@$sdata) {
 		my ($e)		= $model->objects( $sd, iri("${RQ}endpoint") )->elements;

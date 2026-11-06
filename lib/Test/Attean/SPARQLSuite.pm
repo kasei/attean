@@ -168,7 +168,7 @@ Test::Roo::top_test 'SPARQL tests' => sub {
 						}
 					}
 					next;
-				} elsif ($test_type eq 'prot' or $test_type eq 'gsp') {
+				} elsif ($test_type eq 'prot' or $test_type eq 'gsp' or $test_type eq 'sd') {
 					unless (can_load( modules => { 'AtteanX::Endpoint' => 0, 'LWP::Protocol::PSGI' => 0 })) {
 						$self->record_result('unhandled', 0, $test->as_string);
 						my $type	= ($test_type eq 'prot') ? 'Protocol' : 'GSP';
@@ -176,23 +176,26 @@ Test::Roo::top_test 'SPARQL tests' => sub {
 						next;
 					}
 					
-					if ($test_type eq 'gsp') {
-						my (@requirements)		= $model->objects($test, iri("${MF}requires"))->elements;
-						foreach my $r (@requirements) {
-							skip("Not configured to run GSP direct-identification tests") if ($direct->equals($r) and not($self->run_gsp_direct));
-							skip("Not configured to run GSP indirect-identification tests") if ($indirect->equals($r) and not($self->run_gsp_indirect));
-							skip("Not configured to run GSP tests requiring POST to create fresh graph names") if ($post_creation->equals($r) and not($self->run_gsp_postcreate));
+					if ($test_type eq 'sd') {
+# 						$self->record_result('unhandled', 0, $test->as_string);
+# 						skip("Service Description test is not handled");
+						$self->sparql_service_description_test($model, $test, specVersion => $specVersion);
+					} else {
+						if ($test_type eq 'gsp') {
+							my (@requirements)		= $model->objects($test, iri("${MF}requires"))->elements;
+							foreach my $r (@requirements) {
+								skip("Not configured to run GSP direct-identification tests") if ($direct->equals($r) and not($self->run_gsp_direct));
+								skip("Not configured to run GSP indirect-identification tests") if ($indirect->equals($r) and not($self->run_gsp_indirect));
+								skip("Not configured to run GSP tests requiring POST to create fresh graph names") if ($post_creation->equals($r) and not($self->run_gsp_postcreate));
+							}
+						
 						}
-					
+						
+						subtest $test->value => sub {
+							$self->sparql_protocol_test($test_type, $model, $test, specVersion => $specVersion);
+						};
 					}
-					
-					subtest $test->value => sub {
-						$self->sparql_protocol_test($test_type, $model, $test, specVersion => $specVersion);
-					};
 					next;
-				} elsif ($test_type eq 'sd') {
-					$self->record_result('unhandled', 0, $test->as_string);
-					skip("Service Description test is not handled");
 				}
 	
 				diag("Test is not handled: " . $test->value);
