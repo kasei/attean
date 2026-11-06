@@ -90,6 +90,7 @@ has run_gsp_postcreate	=> (is => 'rw', isa => Bool, default => 1);
 
 has debug				=> (is => 'rw', isa => Bool, default => 0);
 has results				=> (is => 'rw', isa => Bool, default => 0);
+has summary				=> (is => 'rw', isa => Bool, default => 0);
 has strict_approval		=> (is => 'rw', isa => Bool, default => 0);
 has use_idp_planner		=> (is => 'rw', isa => Bool, default => 1);
 has pattern				=> (is => 'rw', isa => Str, default => '');
@@ -1855,23 +1856,25 @@ sub DESTROY {
 		$count	+= scalar(@$failures);
 	}
 	my $timestamp	= $self->timestamp;
-	if ($self->run_query_tests and ($count or $todo)) {
-		my $d	= Data::Dumper->new([$self->failures], [qw(tests)]);
-		$d->Sortkeys(1)->Indent(2);
-		my $msg	= "Failing and/or TODO tests: " . $d->Dump;
-		warn $msg;
-		unless ($self->pattern) {
-			open(my $fh, '>', sprintf('.sparql-test-suite-%d', $timestamp)) or die $!;
-			while (my ($type, $failures) = each(%{ $self->failures })) {
-				if ($type eq 'TODO') {
-					while (my ($type, $failures) = each(%$failures)) {
-						say $fh "$type - TODO";
-						say $fh join("\n", sort @$failures);
+	if ($self->summary or $self->debug) {
+		if ($self->run_query_tests and ($count or $todo)) {
+			my $d	= Data::Dumper->new([$self->failures], [qw(tests)]);
+			$d->Sortkeys(1)->Indent(2);
+			my $msg	= "Failing and/or TODO tests: " . $d->Dump;
+			warn $msg;
+			unless ($self->pattern) {
+				open(my $fh, '>', sprintf('.sparql-test-suite-%d', $timestamp)) or die $!;
+				while (my ($type, $failures) = each(%{ $self->failures })) {
+					if ($type eq 'TODO') {
+						while (my ($type, $failures) = each(%$failures)) {
+							say $fh "$type - TODO";
+							say $fh join("\n", sort @$failures);
+						}
+						next;
 					}
-					next;
+					say $fh $type;
+					say $fh join("\n", sort @$failures);
 				}
-				say $fh $type;
-				say $fh join("\n", sort @$failures);
 			}
 		}
 	}

@@ -33,6 +33,11 @@ my %args	= (run_update_tests => 0, use_idp_planner => 0);
 while (defined(my $opt = shift)) {
 	if ($opt eq '-v') {
 		$args{debug}++;
+		$args{results}++;
+	} elsif ($opt eq '-r') {
+		$args{results}++;
+	} elsif ($opt eq '-s') { # summary
+		$args{summary}++;
 	} else {
 		$args{pattern}	= $opt;
 	}
