@@ -755,6 +755,21 @@ package Attean::Plan::Extend 0.040 {
 	}
 	sub tree_attributes { return qw(variable expression) };
 	
+# 	around 'evaluate_expression' => sub {
+# 		my $orig	= shift;
+# 		my $self	= shift;
+# 		my $model	= shift;
+# 		my $expr	= shift;
+# 		my $r		= shift;
+# 
+# 		my $debug	= 1;
+# 		my $value	= $orig->($self, $model, $expr, $r, @_);
+# 		if ($debug) {
+# 			print STDERR sprintf("[TRACE] %-60s <- %s\n", $value->as_string, $expr->as_string);
+# 		}
+# 		return $value;
+# 	};
+	
 	sub BUILDARGS {
 		my $class		= shift;
 		my %args		= @_;
@@ -989,7 +1004,7 @@ package Attean::Plan::Extend 0.040 {
 					my @operands	= map { $self->evaluate_expression($model, $_, $r) } @children;
 					my $rr	= eval { $func->($model, $self->active_graphs, @operands) };
 					if ($@) {
-						warn "INVOKE error: $@" if $@;
+# 						warn "INVOKE error <$furi>: $@" if $@;
 						return;
 					}
 					return $rr;
@@ -997,7 +1012,7 @@ package Attean::Plan::Extend 0.040 {
 					my @operands	= map { eval { $self->evaluate_expression($model, $_, $r) } || undef } @children;
 					my $rr	= eval { $fform->($model, $self->active_graphs, @operands) };
 					if ($@) {
-						warn "INVOKE error: $@" if $@;
+# 						warn "INVOKE error <$furi>: $@" if $@;
 						return $r;
 					}
 					return $rr;
