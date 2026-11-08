@@ -203,6 +203,13 @@ package AtteanX::Functions::CompositeLists 0.040 {
 		}
 	}
 
+=item C<< map_terms ( $map ) >>
+
+Map the terms contained in this CDT value using the supplied L<Attean::TermMap>
+map, returning a new CDT value.
+
+=cut
+
 	sub map_terms {
 		my $self			= shift;
 		my $map				= shift;

@@ -85,6 +85,12 @@ sub BUILD {
 	$self->gpso(AtteanX::Store::Memory2::SPOGIndex->new(order => [qw(graph predicate subject object)]));
 }
 
+=item C<< indexes >>
+
+Returns a list of available L<AtteanX::Store::Memory2::SPOGIndex> indexes.
+
+=cut
+
 sub indexes {
 	my $self	= shift;
 	my @i;

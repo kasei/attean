@@ -656,6 +656,14 @@ the supplied C<< $active_graph >>.
 		die "Unimplemented algebra evaluation for: " . $algebra->as_string;
 	}
 	
+=item C<< replace_blanks_with_variables ( \%blanks, \@triples ) >>
+
+For each of the triples in the supplied arrayref, replace (in-place) any
+blank nodes with fresh variables, using C<%blanks> as a cache of blank node
+label to variable mappings.
+
+=cut
+
 	sub replace_blanks_with_variables {
 		my $self	= shift;
 		my $blanks	= shift;

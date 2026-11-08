@@ -30,6 +30,10 @@ Serializes triples and quads into the RDF 1.1 N-Quads format.
 
 =over 4
 
+=item C<< canonical_iri >>
+
+Returns the canonical IRI of this format.
+
 =item C<< serialize_iter_to_io( $fh, $iterator ) >>
 
 =item C<< serialize_iter_to_bytes( $fh ) >>

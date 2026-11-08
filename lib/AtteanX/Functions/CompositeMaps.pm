@@ -260,6 +260,13 @@ Returns true if $value is a valid map key (is an IRI or a literal), false otherw
 		return $key_string;
 	}
 
+=item C<< map_terms ( $map ) >>
+
+Map the terms contained in this CDT value using the supplied L<Attean::TermMap>
+map, returning a new CDT value.
+
+=cut
+
 	sub map_terms {
 		my $self			= shift;
 		my $map				= shift;

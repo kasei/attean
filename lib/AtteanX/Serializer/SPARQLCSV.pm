@@ -30,6 +30,10 @@ This document describes AtteanX::Serializer::SPARQLCSV version 0.040
 
 =over 4
 
+=item C<< canonical_iri >>
+
+Returns the canonical IRI of this format.
+
 =cut
 
 use v5.14;

@@ -237,11 +237,11 @@ LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 							substr($_[0],0,2)	= '';
 						} elsif ($1 eq 'u') {
 							$_[0] =~ m/^\\u([0-9A-Fa-f]{4})/ or die qq[Bad N-Triples \\u escape at line $lineno, near "$_[0]"];
-							$value	.= $self->unescape_hex($1);
+							$value	.= $self->_unescape_hex($1);
 							substr($_[0],0,6)	= '';
 						} elsif ($1 eq 'U') {
 							$_[0] =~ m/^\\U([0-9A-Fa-f]{8})/ or die qq[Bad N-Triples \\U escape at line $lineno, near "$_[0]"];
-							$value	.= $self->unescape_hex($1);
+							$value	.= $self->_unescape_hex($1);
 							substr($_[0],0,10)	= '';
 						} else {
 							die qq[Not valid N-Triples escape character '\\$1' at line $lineno, near "$_[0]"];
@@ -278,7 +278,7 @@ LINE:			($line, my @extra)	= split(/\r\n|\r|\n/, $line, 2);
 		}
 	}
 
-	sub unescape_hex {
+	sub _unescape_hex {
 		my $self		= shift;
 		my $codepoint	= shift;
 		my $cp			= hex($codepoint);

@@ -469,6 +469,13 @@ currently undefined.
 			}
 		}
 
+=item C<< get_functions () >>
+
+Returns a list of IRI strings for all functions having been registered
+with L<register_global_function>.
+
+=cut
+
 		sub get_functions {
 			my $class	= shift;
 			return keys %global_functions;
@@ -502,6 +509,13 @@ currently undefined.
 			}
 		}
 
+=item C<< get_functional_forms () >>
+
+Returns a list of IRI strings for all functional forms having been registered
+with L<register_global_functional_form>.
+
+=cut
+
 		sub get_functional_forms {
 			my $class	= shift;
 			return keys %global_functional_forms;
@@ -533,6 +547,13 @@ currently undefined.
 			}
 		}
 
+
+=item C<< get_aggregates () >>
+
+Returns a list of IRI strings for all aggregate functions having been registered
+with L<register_global_aggregate>.
+
+=cut
 
 		sub get_aggregates {
 			my $class	= shift;

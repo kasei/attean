@@ -132,6 +132,12 @@ L<Attean::API::QuadIterator>.
 		}
 	}
 
+=item C<< count_quads ( $s, $p, $o, $g ) >>
+
+Returns the count of quads matching the supplied pattern.
+
+=cut
+
 	sub count_quads {
 		my $self	= shift;
 		my $iter	= $self->get_quads(@_);
@@ -142,17 +148,36 @@ L<Attean::API::QuadIterator>.
 		return $count;
 	}
 	
+=item C<< count_quads_estimate ( $s, $p, $o, $g ) >>
+
+Returns an estimated count of the quads matching the supplied pattern.
+
+=cut
+
 	sub count_quads_estimate {
 		my $self	= shift;
 		return $self->count_quads(@_);
 	}
 	
+=item C<< get_graphs >>
+
+Returns an L<Attean::API::Iterator> of L<Attean::API::Term> objects for all
+the graphs defined in the dataset.
+
+=cut
+
 	sub get_graphs {
 		my $self	= shift;
 		my @graphs	= values %{ $self->dataset_graphs };
 		return Attean::ListIterator->new( values => \@graphs, item_type => 'Attean::API::Term' );
 	}
 	
+=item C<< size >>
+
+Returns the number of quads in the dataset.
+
+=cut
+
 	sub size {
 		my $self	= shift;
 		return $self->count_quads();

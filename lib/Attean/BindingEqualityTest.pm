@@ -402,6 +402,19 @@ solutions, the solution returned is arbitrary.
 		return 0;
 	}
 
+=item C<< count_bindings_by_blank ( \@bindings ) >>
+
+For each blank node appearing in the bindings in C<@bindings>, counts
+how many bindings the blank node appears in.
+
+Returns a list C<< ( \%counts, $should_use ) >> with C<%counts> mapping each
+blank node label to the count, and C<$should_use> being a flag indicating
+whether this is a suitable heuristic to use to pre-filter possible blank
+node mapping permutations (e.g. a C<%count> where every blank node maps to
+the same number of bindings will not be useful to pre-filter permutations).
+
+=cut
+
 	sub count_bindings_by_blank {
 		my $self		= shift;
 		my $bindings	= shift;
@@ -422,7 +435,8 @@ solutions, the solution returned is arbitrary.
 		my $should_use	= (scalar(@distinct_counts) > 1);
 		return (\%counts, $should_use);
 	}
-=item C<< split_blank_statements( $iter ) >>
+
+=item C<< split_blank_statements ( $iter ) >>
 
 Returns two array refs containing bindings from C<< $iter >>, with bindings
 containing blank nodes and bindings without any blank nodes, respectively.
