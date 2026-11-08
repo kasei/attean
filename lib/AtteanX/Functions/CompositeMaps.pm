@@ -116,6 +116,9 @@ package AtteanX::Functions::CompositeMaps 0.032 {
 				} elsif ($t->type == LBRACKET) {
 					my $subnodes	= _recursive_lexer_parse_cdt($p, $lexer);
 					push(@nodes, AtteanX::Functions::CompositeLists::list_to_lex(@$subnodes));
+				} elsif ($t->type == ANON) {
+					my $subnodes	= [];
+					push(@nodes, AtteanX::Functions::CompositeLists::list_to_lex(@$subnodes));
 				} elsif ($t->type == RBRACKET) {
 					return \@nodes;
 				} else {
@@ -137,7 +140,7 @@ in which the keys are also term objects.
 =cut
 	sub lex_to_map {
 		my $l	= shift;
-		die 'TypeError' unless ($l->does('Attean::API::Literal'));
+		Carp::confess 'TypeError: Cannot parse non-literal to cdt:Map: ' . $l->as_string unless ($l->does('Attean::API::Literal'));
 		my $dt	= $l->datatype;
 		die 'TypeError: not a datatype literal' unless ($dt);
 		die 'TypeError: Expecting a Map but found '  . $dt->value unless ($dt->value eq $MAP_TYPE_IRI);
@@ -255,6 +258,20 @@ Returns true if $value is a valid map key (is an IRI or a literal), false otherw
 		my $bytes	= $s->serialize_iter_to_bytes($iter);
 		my $key_string	= decode_utf8($bytes);
 		return $key_string;
+	}
+
+	sub map_terms {
+		my $self			= shift;
+		my $map				= shift;
+		my $l				= shift;
+		return $l unless ($l->does('Attean::API::Literal'));
+		my $dt	= $l->datatype;
+		return $l unless ($dt->value eq $MAP_TYPE_IRI);
+		my %nodes	= lex_to_map($l);
+		my @mapped	= map { $_ => ($map->map($nodes{$_}) || $_) } keys %nodes;
+		my $literal			= eval { map_to_lex(@mapped) };
+		warn "cdt:Map term-mapping error: $@" if $@;
+		return $literal;
 	}
 
 =item C<< mapGet($list, $key) >>

@@ -92,4 +92,55 @@ subtest 'canonicalize literal' => sub {
 		is($new_i->ntriples_string, '"12"^^<http://www.w3.org/2001/XMLSchema#integer>');
 };
 
+subtest 'UUID blank node label mapping over CDTs' => sub {
+		my $b	= Attean::Blank->new( value => 'xxx' );
+		my $l	= Attean::Literal->new(value => '[_:abc, _:xxx, { "a": _:xxx }]', datatype => "http://w3id.org/awslabs/neptune/SPARQL-CDTs/List");
+		my $m	= Attean::TermMap->uuid_blank_map;
+
+		my $new_l	= $m->map($l);
+		my $new_b	= $m->map($b);
+		
+		my $new_b_label	= $new_b->value;
+		my $label		= quotemeta($new_b_label);
+		like($new_l->value, qr/_:$label,.*_:$label\s*[}].*\]/);
+		unlike($new_l->value, qr/_:abc\b/);
+};
+
+subtest 'short blank node label mapping over CDTs' => sub {
+		my $b	= Attean::Blank->new( value => 'xxx' );
+		my $l	= Attean::Literal->new(value => '[_:abc, _:xxx, { "a": _:xxx }]', datatype => "http://w3id.org/awslabs/neptune/SPARQL-CDTs/List");
+		my $m			= Attean::TermMap->short_blank_map;
+
+		my $new_l	= $m->map($l);
+		my $new_b	= $m->map($b);
+
+		my $new_b_label	= $new_b->value;
+		my $label		= quotemeta($new_b_label);
+		like($new_l->value, qr/_:$label,.*_:$label\s*[}].*\]/);
+		unlike($new_l->value, qr/_:abc\b/);
+};
+
+subtest 'rewrite mapping over CDTs' => sub {
+		my $b	= Attean::Blank->new( value => 'xxx' );
+		my $bb	= Attean::Blank->new( value => 'newlabel' );
+		my $l	= Attean::Literal->new(value => '[_:abc, _:xxx, { "a": _:xxx }]', datatype => "http://w3id.org/awslabs/neptune/SPARQL-CDTs/List");
+		my $m			= Attean::TermMap->rewrite_map({ $b->as_string => $bb });
+
+		my $new_l	= $m->map($l);
+		my $new_b	= $m->map($b);
+
+		my $new_b_label	= $new_b->value;
+		my $label		= quotemeta($new_b_label);
+		like($new_l->value, qr/_:$label,.*_:$label\s*[}].*\]/);
+		like($new_l->value, qr/_:abc\b/);
+};
+
+subtest 'canonicalization mapping over CDTs' => sub {
+		my $l	= Attean::Literal->new(value => '[_:abc, "+12"^^<http://www.w3.org/2001/XMLSchema#integer>, _:xxx]', datatype => "http://w3id.org/awslabs/neptune/SPARQL-CDTs/List");
+		my $m			= Attean::TermMap->canonicalization_map;
+
+		my $new_l	= $m->map($l);
+		is($new_l->value, '[_:abc,12,_:xxx]');
+};
+
 done_testing();

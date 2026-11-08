@@ -47,6 +47,7 @@ package Attean::TermMap 0.040 {
 	use Types::Standard qw(CodeRef);
 	use Attean::API::Binding;
 	use UUID::Tiny ':std';
+	use Scalar::Util qw(blessed);
 	use namespace::clean;
 	
 	with 'Attean::Mapper';
@@ -71,17 +72,44 @@ L<Attean::API::Literal> values.
 	sub canonicalization_map {
 		my $class	= shift;
 		my %map;
-		return $class->new(mapper => sub {
+		
+		my $code;
+		$code	= sub {
 			my $term	= shift;
+			if (my $mapped = $class->_cdt_recursive_handler($code, $term)) {
+				return $mapped;
+			}
 			return $term unless ($term->does('Attean::API::Literal'));
-			
 			if ($term->does('Attean::API::CanonicalizingLiteral')) {
 				my $c	= eval { $term->canonicalized_term };
 				return ($@) ? undef : $c;
 			}
 			
 			return $term;
-		});
+		};
+		return $class->new(mapper => $code);
+	}
+
+
+	sub _cdt_recursive_handler {
+		my $class	= shift;
+		my $code	= shift;
+		my $term	= shift;
+		if ($term->does('Attean::API::Literal') and my $dt = $term->datatype) {
+			my $dturi	= $dt->value;
+			if ($dturi eq "$AtteanX::Functions::CompositeLists::LIST_TYPE_IRI") {
+				my $mapper	= $class->new( mapper => $code );
+				my $mapped	= eval { AtteanX::Functions::CompositeLists->map_terms($mapper, $term) };
+				warn $@ if ($@);
+				return $mapped;
+			} elsif ($dturi eq "$AtteanX::Functions::CompositeMaps::MAP_TYPE_IRI") {
+				my $mapper	= $class->new( mapper => $code );
+				my $mapped	= eval { AtteanX::Functions::CompositeMaps->map_terms($mapper, $term) };
+				warn $@ if ($@);
+				return $mapped;
+			}
+		}
+		return;
 	}
 
 =item C<< uuid_blank_map >>
@@ -93,8 +121,13 @@ Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.
 	sub uuid_blank_map {
 		my $class	= shift;
 		my %map;
-		return $class->new(mapper => sub {
+		
+		my $code;
+		$code	= sub {
 			my $term	= shift;
+			if (my $mapped = $class->_cdt_recursive_handler($code, $term)) {
+				return $mapped;
+			}
 			return $term unless ($term->does('Attean::API::Blank'));
 			my $id		= $term->value;
 			return $map{$id} if (defined($map{$id}));
@@ -103,7 +136,9 @@ Returns a new L<Attean::TermMap> that renames blank nodes with UUID values.
 			my $new		= Attean::Blank->new( 'b' . $uuid );
 			$map{$id}	= $new;
 			return $new;
-		});
+		};
+		
+		return $class->new(mapper => $code);
 	}
 
 =item C<< short_blank_map >>
@@ -117,8 +152,13 @@ alphabetic names (e.g. _:a, _:b).
 		my $class	= shift;
 		my %map;
 		my $next	= 'a';
-		return $class->new(mapper => sub {
+		
+		my $code;
+		$code	= sub {
 			my $term	= shift;
+			if (my $mapped = $class->_cdt_recursive_handler($code, $term)) {
+				return $mapped;
+			}
 			return $term unless ($term->does('Attean::API::Blank'));
 			my $id		= $term->value;
 			if (defined(my $t = $map{$id})) {
@@ -128,7 +168,9 @@ alphabetic names (e.g. _:a, _:b).
 				$map{$id}	= $new;
 				return $new;
 			}
-		});
+		};
+
+		return $class->new(mapper => $code);
 	}
 
 =item C<< rewrite_map( \%map ) >>
@@ -142,11 +184,18 @@ maps terms matching entries in C<< %map >>, and all other terms to themselves.
 	sub rewrite_map {
 		my $class	= shift;
 		my $map		= shift;
-		return $class->new(mapper => sub {
+		
+		my $code;
+		$code	= sub {
 			my $term	= shift;
+			if (my $mapped = $class->_cdt_recursive_handler($code, $term)) {
+				return $mapped;
+			}
 			return $map->{ $term->as_string } if (exists $map->{ $term->as_string });
 			return $term;
-		});
+		};
+		
+		return $class->new(mapper => $code);
 	}
 
 =back
