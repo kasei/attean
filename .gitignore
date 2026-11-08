@@ -3,3 +3,8 @@ META.yml
 MYMETA.*
 Makefile
 inc/
+
+xt-conformance/data/cdt
+xt-conformance/data/rdf-tests
+xt-conformance/sparql-exists-dev.t-disabled
+xt/disabled/
