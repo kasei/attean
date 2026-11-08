@@ -129,7 +129,6 @@ lib/Test/Attean/MutableQuadStore.pm
 lib/Test/Attean/MutableTimeCacheableQuadStore.pm
 lib/Test/Attean/MutableTripleStore.pm
 lib/Test/Attean/QuadStore.pm
-lib/Test/Attean/SPARQLStarSuite.pm
 lib/Test/Attean/SPARQLSuite.pm
 lib/Test/Attean/StoreCleanup.pm
 lib/Test/Attean/TestIDPQueryPlanner.pm
