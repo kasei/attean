@@ -41,7 +41,7 @@ package Attean::SimpleQueryEvaluator 0.041 {
 	use AtteanX::Functions::CompositeLists;
 	use AtteanX::Functions::CompositeMaps;
 	use LWP::UserAgent;
-	use Scalar::Util qw(blessed);
+	use Scalar::Util qw(blessed refaddr);
 	use List::Util qw(all any reduce);
 	use Types::Standard qw(ConsumerOf InstanceOf Bool Object);
 	use URI::Escape;
@@ -68,6 +68,8 @@ features such as C<< GRAPH ?g {} >>.
 
 	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent'], default => sub { my $ua = LWP::UserAgent->new(); $ua->agent("Attean/$Attean::VERSION " . $ua->_agent); $ua });
 	
+	has 'trace_results'	=> (is => 'rw', isa => Bool, default => 0);
+
 =item C<< request_signer >>
 
 If set, used to modify HTTP::Request objects used in evaluating SERVICE calls
@@ -82,11 +84,34 @@ C<< $request_signer->sign( $request ) >>.
 	has 'ground_blanks' => (is => 'rw', isa => Bool, default => 0);
 	
 	sub BUILD {
+		my $self	= shift;
 		# Ensure that the CT extensions are registered
 		AtteanX::Functions::CompositeLists->register();
 		AtteanX::Functions::CompositeMaps->register();
 	}
-	
+
+	# If tracing is enabled and the algebra is associated with SPARQL syntax tokens,
+	# cache the intermediate results of each evaluate() call associated with its algebra,
+	# to allow explain code to visually associate the results with the relevant parts
+	# of the query syntax.
+	sub _record_results {
+		my $self	= shift;
+		my $algebra	= shift;
+		my $iter	= shift;
+		return $iter unless ($self->trace_results);
+		my $results	= ($self->{trace_cache} ||= {});
+		my $tokens	= $algebra->tokens;
+		$results->{ refaddr($algebra) }	= [];
+		if (scalar(@$tokens)) {
+			$iter	= $iter->map(sub {
+				my $r	= shift;
+				push( @{ $results->{ refaddr($algebra) } }, $r );
+				return $r;
+			});
+		}
+		return $iter;
+	}
+
 =back
 
 =head1 METHODS
@@ -102,6 +127,16 @@ supplied C<< $active_graph >>.
 =cut
 
 	sub evaluate {
+		my $self			= shift;
+		my $algebra			= shift;
+		my $active_graph	= shift || Carp::confess "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
+		my %args			= @_;
+		my $iter			= $self->_evaluate($algebra, $active_graph, %args);
+		$iter				= $self->_record_results($algebra, $iter);
+		return $iter;
+	}
+
+	sub _evaluate {
 		my $self			= shift;
 		my $algebra			= shift;
 		my $active_graph	= shift || Carp::confess "No active-graph passed to Attean::SimpleQueryEvaluator->evaluate";
