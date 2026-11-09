@@ -2130,7 +2130,7 @@ sub _GroupOrUnionGraphPattern {
 			my $start	= $self->_lex_counter - 1;
 			$self->_GroupGraphPattern;
 			my $rhs	= $self->_remove_pattern;
-			my @tokens	= @{ $ggp->tokens };
+			my @tokens	= @{ $ggp->tokens }; # TODO: is this what a union should track? Or should it just be the UNION keyword, so that each GGP can track their own stuff.
 			$ggp	= Attean::Algebra::Union->new( children => [$ggp, $rhs] );
 			my $end	= $self->_lex_counter - 1;
 			$ggp->add_tokens(@tokens);
