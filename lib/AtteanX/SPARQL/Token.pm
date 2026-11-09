@@ -58,10 +58,9 @@ An array of values associated with the token (e.g. the integer value of an INT t
 package AtteanX::SPARQL::Token 0.040;
 
 use Moo;
-use Types::Standard qw(ArrayRef Str);
+use Types::Standard qw(ArrayRef Int Str);
 use List::Util qw(mesh);
 use Sub::Util qw(set_subname);
-use Types::Standard qw(Int);
 use AtteanX::SPARQL::Constants;
 use namespace::clean;
 
@@ -71,6 +70,7 @@ has start_column => ( is => 'ro', isa => Int, required => 1 );
 has line => ( is => 'ro', isa => Int, required => 1 );
 has column => ( is => 'ro', isa => Int, required => 1 );
 has args => ( is => 'ro', isa => ArrayRef[Str]);
+has id => ( is => 'ro', isa => Int, default => -1 );
 
 extends 'AtteanX::Parser::Turtle::Token';
 
@@ -86,15 +86,18 @@ sub value {
 	return $args->[0];
 }
 
-=item C<< fast_constructor ( $type, $start_line, $start_col, $line, $col, \@args ) >>
+=item C<< fast_constructor ( $type, $start_line, $start_col, $line, $col, \@args, $id ) >>
 
 Returns a new token object.
 
 =cut
 
-my @KEYS	= qw(type start_line start_column line column args);
+my @KEYS	= qw(type start_line start_column line column args id);
 sub fast_constructor {
 	my $class = shift;
+	if (scalar(@_) == 6) {
+		push(@_, -1); # default id
+	}
 	return $class->new(
 		mesh \@KEYS, \@_
 	);

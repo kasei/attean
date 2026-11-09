@@ -66,7 +66,7 @@ Returns a string serialization of the expression object.
 =cut
 
 package Attean::API::Expression 0.040 {
-	use Types::Standard qw(Str);
+	use Types::Standard qw(Str ArrayRef Int);
 
 	use Moo::Role;
 
@@ -77,6 +77,12 @@ package Attean::API::Expression 0.040 {
 	requires 'unaggregated_variables';
 	requires 'as_string';
 	requires 'as_sparql';
+	has tokens => (is => 'rw', isa => ArrayRef[Int], default => sub { [] }); # if this expression came from the SPARQL parser, this links the algebra to a set of token numbers from the original query string
+	
+	sub add_tokens {
+		my $self	= shift;
+		push(@{ $self->tokens }, grep { defined($_) } @_);
+	}
 	
 	sub BUILD {}
 	if ($ENV{ATTEAN_TYPECHECK}) {

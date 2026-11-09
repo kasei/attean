@@ -45,7 +45,7 @@ package AtteanX::Parser::SPARQLLex 0.040 {
 	use Attean;
 	use Encode;
 	use Encode qw(decode);
-	use Types::Standard qw(ArrayRef Bool Str);
+	use Types::Standard qw(ArrayRef Bool Int Str);
 	use namespace::clean;
 
 	sub canonical_media_type { return "application/x-sparql-query-tokens" }
@@ -124,6 +124,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.040 {
 	has token_buffer			=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
 	has 'version'				=> (is => 'rw', isa => Str, default => '1.2');
 	has include_ws	=> (is => 'rw', isa => Bool, default => 0);
+	has counter		=> (is => 'rw', isa => Int, default => 0);
 	
 	with 'AtteanX::API::Lexer';
 	
@@ -226,6 +227,16 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.040 {
 		return $t;
 	}
 	
+	sub next_id {
+		my $self	= shift;
+		my $b		= $self->token_buffer;
+		if (scalar(@$b)) {
+			return $b->[0]->id;
+		} else {
+			return $self->counter;
+		}
+	}
+
 	sub next {
 		my $self	= shift;
 		my $b		= $self->token_buffer;
@@ -276,7 +287,9 @@ AGAIN:
 		my $start_col	= shift;
 		my $line		= $self->line;
 		my $col			= $self->column;
-		return AtteanX::SPARQL::Token->fast_constructor( $type, $start_line, $start_col, $line, $col, \@_ );
+		my $cur_id		= $self->counter;
+		$self->counter(1+$cur_id);
+		return AtteanX::SPARQL::Token->fast_constructor( $type, $start_line, $start_col, $line, $col, \@_, $cur_id );
 	}
 
 	sub add_regex_rule {
@@ -310,8 +323,9 @@ AGAIN:
 			if ($self->buffer =~ /^[ \r\n\t]+/o) {
 				my $ws	= $self->read_length($+[0]);
 				# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
+				my $ws_token	= $self->new_token(WS, $start_line, $start_column, $ws);
 				if ($self->include_ws) {
-					return $self->new_token(WS, $start_line, $start_column, $ws);
+					return $ws_token;
 				}
 				next;
 			}
