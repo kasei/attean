@@ -45,7 +45,7 @@ package AtteanX::Parser::SPARQLLex 0.040 {
 	use Attean;
 	use Encode;
 	use Encode qw(decode);
-	use Types::Standard qw(ArrayRef Str);
+	use Types::Standard qw(ArrayRef Bool Str);
 	use namespace::clean;
 
 	sub canonical_media_type { return "application/x-sparql-query-tokens" }
@@ -53,6 +53,7 @@ package AtteanX::Parser::SPARQLLex 0.040 {
 	# these pass through to the lexer iterator
 	has extend		=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
 	has 'version'	=> (is => 'rw', isa => Str, default => '1.2');
+	has include_ws	=> (is => 'rw', isa => Bool, default => 0);
 
 	sub media_types {
 		return [qw(application/x-sparql-query-tokens)];
@@ -101,6 +102,7 @@ the SPARQL query/update read from the L<IO::Handle> object C<< $fh >>.
 			extend		=> $self->extend,
 			file		=> $fh,
 			version		=> $self->version,
+			include_ws	=> $self->include_ws,
 		);
 	}
 }
@@ -113,7 +115,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.040 {
 	use Encode qw(decode);
 	use AtteanX::SPARQL::Token;
 	use AtteanX::SPARQL::Constants;
-	use Types::Standard qw(FileHandle Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
+	use Types::Standard qw(FileHandle Bool Ref Str Int ArrayRef HashRef ConsumerOf InstanceOf);
 	use namespace::clean;
 	
 	has lookahead_methods		=> ( is => 'ro', isa => HashRef, default => sub { +{} } );
@@ -121,6 +123,7 @@ package AtteanX::Parser::SPARQLLex::Iterator 0.040 {
 	has extend					=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
 	has token_buffer			=> ( is => 'ro', isa => ArrayRef, default => sub { [] } );
 	has 'version'				=> (is => 'rw', isa => Str, default => '1.2');
+	has include_ws	=> (is => 'rw', isa => Bool, default => 0);
 	
 	with 'AtteanX::API::Lexer';
 	
@@ -298,10 +301,18 @@ AGAIN:
 		while (1) {
 			$self->fill_buffer unless (length($self->buffer));
 
+			my $start_column	= $self->column;
+			my $start_line		= $self->line;
+		
+			$self->start_column( $start_column );
+			$self->start_line( $start_line );
+		
 			if ($self->buffer =~ /^[ \r\n\t]+/o) {
-				$self->read_length($+[0]);
+				my $ws	= $self->read_length($+[0]);
 				# we're ignoring whitespace tokens, but we could return them here instead of falling through to the 'next':
-	# 			return $self->new_token(WS);
+				if ($self->include_ws) {
+					return $self->new_token(WS, $start_line, $start_column, $ws);
+				}
 				next;
 			}
 
@@ -310,15 +321,12 @@ AGAIN:
 
 			if ($c eq '#') {
 				# we're ignoring comment tokens, but we could return them here instead of falling through to the 'next':
-				$self->_get_comment();
+				my $c	= $self->_get_comment();
+				if ($self->include_ws) {
+					return $c;
+				}
 				next;
 			}
-		
-			my $start_column	= $self->column;
-			my $start_line		= $self->line;
-		
-			$self->start_column( $start_column );
-			$self->start_line( $start_line );
 		
 			foreach my $e (@{ $self->extend }) {
 				if (my $t = $e->( $self )) {

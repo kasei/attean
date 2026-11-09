@@ -61,14 +61,15 @@ use Moo;
 use Types::Standard qw(ArrayRef Str);
 use List::Util qw(mesh);
 use Sub::Util qw(set_subname);
+use Types::Standard qw(Int);
 use AtteanX::SPARQL::Constants;
 use namespace::clean;
 
-has type => ( is => 'ro', );
-has start_line => ( is => 'ro', );
-has start_column => ( is => 'ro', );
-has line => ( is => 'ro', );
-has column => ( is => 'ro', );
+has type => ( is => 'ro', required => 1 );
+has start_line => ( is => 'ro', required => 1 );
+has start_column => ( is => 'ro', isa => Int, required => 1 );
+has line => ( is => 'ro', isa => Int, required => 1 );
+has column => ( is => 'ro', isa => Int, required => 1 );
 has args => ( is => 'ro', isa => ArrayRef[Str]);
 
 extends 'AtteanX::Parser::Turtle::Token';

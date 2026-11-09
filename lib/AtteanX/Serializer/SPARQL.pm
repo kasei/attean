@@ -107,7 +107,7 @@ L<IO::Handle> object C<< $fh >>.
 				if ($type == RBRACE) {
 					$io->print("\n");
 					$newline	= 1;
-				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE|USING|FROM)$/) {
+				} elsif ($type == KEYWORD and $t->value =~ /^(BASE|PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE|USING|FROM|BIND|FILTER)$/) {
 					$io->print("\n");
 					$newline	= 1;
 				} elsif ($type == KEYWORD and $t->value eq 'WHERE' and blessed($last) and ($last->type == PREFIXNAME or $last->type == IRI)) {
@@ -212,7 +212,7 @@ L<IO::Handle> object C<< $fh >>.
 				$need_space++;
 			} elsif ($type == WS) {
 			} elsif ($type == COMMENT) {
-				$io->print('# ');
+				$io->print('#');
 				$io->print($t->value);
 				$io->print("\n");
 			} elsif ($type == HATHAT) {
