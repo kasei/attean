@@ -10,7 +10,7 @@ This document describes AtteanX::Serializer::SPARQL version 0.041
 
  use Attean;
  my $serializer = Attean->get_serializer('SPARQL')->new();
- $serializer->serialize_iter_to_io( $io, $fh );
+ $serializer->serialize_iter_to_io( $io, $iter );
 
 =head1 DESCRIPTION
 

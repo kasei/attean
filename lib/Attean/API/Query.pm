@@ -423,13 +423,38 @@ package Attean::API::SPARQLQuerySerializable 0.041 {
 
 package Attean::API::Algebra 0.041 {
 	use Moo::Role;
-	use Types::Standard qw(ArrayRef ConsumerOf);
+	use Scalar::Util qw(blessed);
+	use Types::Standard qw(ArrayRef Int ConsumerOf);
 	
 	with 'Attean::API::SPARQLSerializable';
 	has 'hints' => (is => 'rw', isa => ArrayRef[ArrayRef[ConsumerOf['Attean::API::Term']]], default => sub { [] });
 	
 	requires 'as_sparql';
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
+	has tokens => (is => 'rw', isa => ArrayRef[Int], default => sub { [] }); # if this algebra came from the SPARQL parser, this links the algebra to a set of token numbers from the original query string
+	
+=item C<< add_tokens ( @token_ids ) >>
+
+Add a set of token IDs to this algebra to allow tracking the correspondence
+between the SPARQL syntax and the algebra expression.
+
+=cut
+
+	sub add_tokens {
+		my $self	= shift;
+		foreach my $t (@_) {
+			next unless (defined($t));
+			if (blessed($t)) {
+				if ($t->isa('AtteanX::SPARQL::Token')) {
+					push(@{ $self->tokens }, $t->id);
+				} else {
+					push(@{ $self->tokens }, @{ $t->tokens });
+				}
+			} else {
+				push(@{ $self->tokens }, $t);
+			}
+		}
+	}
 	
 	sub unary {
 		my $self	= shift;
