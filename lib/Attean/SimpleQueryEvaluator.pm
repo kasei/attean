@@ -41,7 +41,7 @@ package Attean::SimpleQueryEvaluator 0.040 {
 	use AtteanX::Functions::CompositeLists;
 	use AtteanX::Functions::CompositeMaps;
 	use LWP::UserAgent;
-	use Scalar::Util qw(blessed);
+	use Scalar::Util qw(blessed refaddr);
 	use List::Util qw(all any reduce);
 	use Types::Standard qw(ConsumerOf InstanceOf Bool Object);
 	use URI::Escape;
@@ -68,6 +68,8 @@ features such as C<< GRAPH ?g {} >>.
 
 	has 'user_agent' => (is => 'rw', isa => InstanceOf['LWP::UserAgent'], default => sub { my $ua = LWP::UserAgent->new(); $ua->agent("Attean/$Attean::VERSION " . $ua->_agent); $ua });
 	
+	has 'trace_results'	=> (is => 'rw', isa => Bool, default => 0);
+
 =item C<< request_signer >>
 
 If set, used to modify HTTP::Request objects used in evaluating SERVICE calls
@@ -82,11 +84,32 @@ C<< $request_signer->sign( $request ) >>.
 	has 'ground_blanks' => (is => 'rw', isa => Bool, default => 0);
 	
 	sub BUILD {
+		my $self	= shift;
 		# Ensure that the CT extensions are registered
 		AtteanX::Functions::CompositeLists->register();
 		AtteanX::Functions::CompositeMaps->register();
+		
+		if ($self->trace_results) {
+			my $results	= ($self->{trace_cache} ||= {});
+			around 'evaluate' => sub {
+				warn "*** TRACE RESULTS ***";
+				my $orig	= shift;
+				my $self	= shift;
+				my $algebra	= shift;
+				my $iter	=  $orig->( $self, $algebra, @_ );
+				my $tokens	= $algebra->tokens;
+				if (scalar(@$tokens)) {
+					$iter	= $iter->map(sub {
+						my $r	= shift;
+						push( @{ $results->{ refaddr($algebra) } }, $r );
+						return $r;
+					});
+				}
+				return $iter;
+			};
+		}
 	}
-	
+
 =back
 
 =head1 METHODS
