@@ -1425,6 +1425,7 @@ sub _OrderClause_test {
 
 sub _OrderClause {
 	my $self	= shift;
+	my $start	= $self->_lex_counter;
 	$self->_expected_token(KEYWORD, 'ORDER');
 	$self->_expected_token(KEYWORD, 'BY');
 	my @order;
@@ -1436,7 +1437,10 @@ sub _OrderClause {
 		$self->_OrderCondition;
 		push(@order, splice(@{ $self->{_stack} }));
 	}
-	$self->{build}{options}{orderby}	= \@order;
+	my $end	= $self->_lex_counter - 1;
+	my @span	= $start..$end;
+	$self->{build}{options}{orderby}		= \@order;
+	$self->{build}{options}{orderby_span}	= \@span;
 }
 
 # [17] OrderCondition ::= ( ( 'ASC' | 'DESC' ) BrackettedExpression ) | ( Constraint | Var )
@@ -1694,6 +1698,7 @@ sub _SubSelect {
 		
 		if ($self->{build}{options}{orderby}) {
 			my $order	= delete $self->{build}{options}{orderby};
+			my $span	= delete $self->{build}{options}{orderby_span};
 			my $pattern	= pop(@{ $self->{build}{triples} });
 			
 			my @order	= @$order;
@@ -1704,6 +1709,7 @@ sub _SubSelect {
 				push(@cmps, Attean::Algebra::Comparator->new(ascending => $asc, expression => $expr));
 			}
 			my $sort	= Attean::Algebra::OrderBy->new( children => [$pattern], comparators => \@cmps );
+			$sort->add_tokens(@$span);
 			push(@{ $self->{build}{triples} }, $sort);
 		}
 		
@@ -4191,6 +4197,7 @@ sub __solution_modifiers {
 	
 	if ($self->{build}{options}{orderby}) {
 		my $order	= delete $self->{build}{options}{orderby};
+		my $span	= delete $self->{build}{options}{orderby_span};
 		my $pattern	= pop(@{ $self->{build}{triples} });
 		my @order	= @$order;
 		my @cmps;
@@ -4200,6 +4207,7 @@ sub __solution_modifiers {
 			push(@cmps, Attean::Algebra::Comparator->new(ascending => $asc, expression => $expr));
 		}
 		my $sort	= Attean::Algebra::OrderBy->new( children => [$pattern], comparators => \@cmps );
+		$sort->add_tokens(@$span);
 		push(@{ $self->{build}{triples} }, $sort);
 	}
 
