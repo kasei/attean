@@ -1194,15 +1194,44 @@ package Attean::Plan::Extend 0.040 {
 					my $flags	= blessed($flags_term) ? $flags_term->value : '';
 					die 'REPLACE() called with unsafe ?{} match pattern' if (index($pattern, '(?{') != -1 or index($pattern, '(??{') != -1);
 					die 'REPLACE() called with unsafe ?{} replace pattern' if (index($replace, '(?{') != -1 or index($replace, '(??{') != -1);
+					die "REPLACE() called with unescaped \$ character at the start of replacement string without trailing digits" if ($replace =~ m<^\$(?!\d)>x); # starting with a '$' without following digits
+					die "REPLACE() called with unescaped \$ character in replacement string without trailing digits" if ($replace =~ m<[^\\]\$(?!\d) >x); # a '$' not at the start, without a preceding escape backslash, and without following digits
 
-					$replace	=~ s/\\/\\\\/g;
-					$replace	=~ s/\$(\d+)/\$$1/g;
+					''				=~ /(?:$pattern)|/; # match against an empty string to determine how many capture groups there are
+					my $capture_groups	= $#+;
+					
 					$replace	=~ s/"/\\"/g;
 					$replace	= qq["$replace"];
 					no warnings 'uninitialized';
-
+					
 					if ($flags eq 'i') {
 						$pattern	= '(?i)' . $pattern;
+					}
+
+					# TODO: This only does one round of stripping off trailing digits to find a valid capture group,
+					#       but the F&O semantics say to continue doing that until it works.
+					my $EMPTY	= '';
+					my @group_vars	= ($replace =~ /(?<!\\)\$(\d+)/);
+					foreach my $v (@group_vars) {
+						if ($v == 0) {
+							# $0 as the whole-match variable
+							$replace	=~ s/(?<!\\)\$${v}/\$&/;
+						} elsif ($v > $capture_groups and length($v) > 1) {
+							# If the var is too big to reference a capture group,
+							# strip off the last digit as a literal and try again.
+# 								warn "variable \$${v} does not reference any of the $capture_groups capture groups\n";
+							my ($head, $tail)	= ($v =~ /^(.+)(.)$/);
+							
+							# Insert the $EMPTY variable (to be interpolated during replacement) between
+							# the length-1 prefix and the 1-digit suffix of the variable number, so it may
+							# reference an actual capture group (e.g. replacing "a(b)c" with "$12" in "abc"
+							# should yield "ab2c" since $12 is not a valid capture group var, but $1 is,
+							# and so the trailing 2 becomes a literal '2' in the replacement string).
+							$replace	=~ s/(?<!\\)\$${head}${tail}/\$${head}\${EMPTY}${tail}/;
+						} elsif ($v > $capture_groups) {
+							# for single-digit vars that are larger than the number of capture groups, replace with the empty string
+							$replace	=~ s/(?<!\\)\$${v}//;
+						}
 					}
 
 					$value	=~ s/$pattern/"$replace"/eeg;
@@ -1213,13 +1242,27 @@ package Attean::Plan::Extend 0.040 {
 					my $value	= $term->value;
 					my @nums;
 					foreach my $i (0 .. $#args) {
-						my $argnum	= $i + 2;
 						my $arg		= $args[ $i ];
 						push(@nums, $arg->numeric_value);
 					}
-					$nums[0]--;
-					my $substring	= (scalar(@nums) > 1) ? substr($value, $nums[0], $nums[1]) : substr($value, $nums[0]);
-					return Attean::Literal->new(value => $substring, $term->construct_args);
+					my $start	= $nums[0]-1; # adjust from 1-based API
+					my @len		= scalar(@nums > 1) ? ($nums[1]) : ();
+					if ($start < 0) {
+						if (scalar(@len)) {
+							my $diff	= abs($start);
+							$len[0]		-= $diff;
+						}
+						$start		= 0;
+						
+					}
+					if (scalar(@len) and $len[0] < 0) {
+						# negative length, just produce the empty string
+						$len[0]	= 0;
+					}
+					my $lex		= $term->value;
+					no warnings 'substr';
+					my $v		= scalar(@len) ? substr($lex, $start, $len[0]) : substr($lex, $start);
+					return Attean::Literal->new(value => ($v // ''), $term->construct_args);
 				} elsif ($func eq 'CONTAINS') {
 					my ($term, $pattern)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
 					my $t_key	= $term->lang_dir();
@@ -1232,10 +1275,16 @@ package Attean::Plan::Extend 0.040 {
 					return ($pos >= 0) ? $true : $false;
 				} elsif ($func eq 'STRSTARTS') {
 					my (@terms)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					unless ($terms[0]->argument_compatible($terms[1])) {
+						die "TypeError: ${func} operands are not argument compatible";
+					}
 					my ($string, $pat)	= map { $_->value } @terms;
 					return (substr($string, 0, length($pat)) eq $pat) ? $true : $false;
 				} elsif ($func eq 'STRENDS') {
 					my (@terms)	= map { $self->evaluate_expression($model, $_, $r) } @{ $expr->children };
+					unless ($terms[0]->argument_compatible($terms[1])) {
+						die "TypeError: ${func} operands are not argument compatible";
+					}
 					my ($string, $pat)	= map { $_->value } @terms;
 					return (substr($string, length($string) - length($pat)) eq $pat) ? $true : $false;
 				} elsif ($func eq 'STRAFTER') {
