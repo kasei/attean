@@ -1,3 +1,4 @@
+bin/attean_explain
 bin/attean_parse
 bin/attean_query
 bin/canonicalize_bgp.pl

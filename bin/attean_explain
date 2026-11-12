@@ -1,0 +1,1182 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+attean_explain - Interactive text UI for exploring SPARQL query evaluation
+
+=head1 SYNOPSIS
+
+  perl attean_explain query.rq data.ttl [data2.ttl ...]
+
+=head1 DESCRIPTION
+
+Parses a SPARQL query, evaluates it against the RDF data in the supplied
+file(s) using L<Attean::SimpleQueryEvaluator> with result tracing turned on,
+and then presents a full-screen text interface in which you can move through
+the query algebra and see, for each algebra expression:
+
+=over 4
+
+=item * the span of the original query text that produced it (highlighted in
+the top pane, using the token ids recorded on each algebra node)
+
+=item * the intermediate results it produced during evaluation
+
+=back
+
+The UI is implemented with raw ANSI escape sequences and C<stty>, so it needs
+no CPAN modules beyond what Attean itself requires (neither L<Curses> nor
+L<Curses::UI> is installed in this perl).
+
+=head1 OPTIONS
+
+=over 4
+
+=item * C<--store=CONFIG>
+
+Specify the storage information (e.g. for using persistent RDF storage).
+The format is specified by L<Attean::parse_store_args>.
+
+Examples:
+
+  --store="DBI;type=sqlite,database=test.sqlite"
+  --store="Memory"
+
+=item * C<--reformat>
+
+Reformat the query before doing anything with it, then use that text as the
+query. The original whitespace, line breaks and comments do not survive.
+
+=item * C<--size COLSxROWS>
+
+Force the screen geometry instead of asking the terminal.
+
+=item * C<--results table|compact>
+
+Configure whether the results pane shows results in a fixed-width column table
+or with a compact serialization of each full result.
+
+=back
+
+=head1 KEYS
+
+  up/k down/j    move the selection (algebra focus) or scroll (results focus)
+  left/h right/l scroll horizontally
+  PgUp PgDn      page up/down            g G   first/last
+  Tab            switch focus between the algebra and the results pane
+  + - shift-up/down  make the top pane taller / shorter
+  f              fit the whole query in the top pane, or back to the default
+  0              top pane back to its default height
+  v              top pane: query source <-> SPARQL serialization of selection
+  t              results: table <-> compact one-result-per-line
+  w              warnings captured during evaluation
+  ?              help          q  quit
+
+=cut
+
+use v5.14;
+use warnings;
+use utf8;
+no warnings 'once';
+use open ':std', ':encoding(utf8)';
+
+use Data::Dumper;
+use Encode qw(decode_utf8 encode_utf8);
+use File::Slurp;
+use File::Spec;
+use Getopt::Long;
+use List::Util qw(min max);
+use Scalar::Util qw(blessed refaddr);
+
+use Attean;
+use Attean::RDF;
+use Attean::SimpleQueryEvaluator;
+use AtteanX::Parser::SPARQL;
+use AtteanX::Parser::SPARQLLex;
+use AtteanX::Functions::CompositeMaps;
+use AtteanX::Functions::CompositeLists;
+use AtteanX::SPARQL::Constants;
+
+BEGIN { $Error::TypeTiny::StackTrace = 1; }
+
+###############################################################################
+#mark - CLI ARGUMENTS
+
+## Command line options and input files
+
+my $version			= '1.2';
+my $reformat		= 0;
+my $size			= undef;
+my $rview			= 'table';
+my $store_config	= 'Memory';
+my $default_graph		= 'http://default-graph/';
+GetOptions(
+	'default_graph=s'	=> \$default_graph,
+	'reformat'			=> \$reformat,
+	'rview=s'			=> \$rview,
+	'size=s'			=> \$size,
+	'store=s'			=> \$store_config,
+) or die "Usage: $0 query.rq [data.ttl ...]\n";
+
+###############################################################################
+#mark - CONSTANTS
+
+# my @WARNINGS;
+
+my $TABSTOP = 4;	# tab stop width used when expanding the query text in expand_tabs()
+
+## Terminal and UI state
+
+my ($ROWS, $COLS) = (40, 100);	# screen geometry, re-read on SIGWINCH
+
+## selection, pane views and scroll offsets
+my $sel			= 0;			# selected node index
+my $focus		= 'algebra';	# algebra | results | query
+our $RVIEW		= $rview;		# table | compact
+my $OVER_OFF	= 0;
+my $QFOLLOW		= 1;			# scroll the query pane to the selection on the next frame
+
+
+my $namespaces	= URI::NamespaceMap->new();
+my $graph		= Attean::IRI->new($default_graph);
+
+###############################################################################
+#mark - Attean code
+
+AtteanX::Functions::CompositeMaps->register();
+AtteanX::Functions::CompositeLists->register();
+
+sub setup_model {
+	my $store_config	= shift;
+	my $graph			= shift;
+	my $namespaces		= shift;
+	my @datafiles		= @_;
+	my ($name, $args, $files)	= Attean->parse_store_args($store_config);
+	if (scalar(@$files)) {
+		if (scalar(@datafiles)) {
+			die 'Cannot specify default RDF data in both the --store config and command line arguments';
+		}
+		@datafiles	= @$files;
+	}
+	my $sclass	= Attean->get_store($name);
+	unless ($sclass) {
+		die "No '${sclass}' store found"
+	}
+	my $store	= $sclass->new(%$args);
+	my $model	= Attean::MutableQuadModel->new( store => $store );
+	foreach my $data (@datafiles) {
+		my $base = Attean::IRI->new('file://' . File::Spec->rel2abs($data));
+		open(my $fh, '<:encoding(UTF-8)', $data) or die "$data: $!\n";
+		my $pclass = Attean->get_parser( filename => $data ) // 'AtteanX::Parser::Turtle';
+		my $parser = $pclass->new(base => $base, namespaces => $namespaces);
+		$model->add_iter( $parser->parse_iter_from_io($fh)->as_quads($graph) );
+		close($fh);
+	}
+	return $model;
+}
+
+## --reformat: run the query text through the tokenizer and re-serialize the tokens.
+sub reformat_query {
+	my $parser	= shift;
+	my $version	= shift;
+	my $sparql	= shift;
+	my $lexer	= AtteanX::Parser::SPARQLLex->new( version => $version, include_ws => 0 );
+	my $iter	= $parser->_configure_lexer( $lexer->parse_iter_from_bytes(encode_utf8($sparql)) );
+	my $ser		= Attean->get_serializer('SPARQL')->new();
+	$sparql		= decode_utf8( $ser->serialize_iter_to_bytes($iter) );
+	return $sparql;
+}
+
+## Evaluate the query algebra against the model with default graph, consuming
+## the results iterator so that every intermediate result is actually produced.
+sub evaluate_query {
+	my $model	= shift;
+	my $graph	= shift;
+	my $algebra	= shift;
+	
+	my $simple_eval = Attean::SimpleQueryEvaluator->new(
+		model			=> $model,
+		default_graph	=> $graph,
+		trace_results => 1,
+	);
+	my @FINAL	= $simple_eval->evaluate($algebra, $graph)->elements;
+	my $intermediate	= $simple_eval->{trace_cache};
+	return (\@FINAL, $intermediate);
+}
+
+## Flatten the algebra into a list of selectable nodes
+sub setup_algebra_levels_with_results {
+	my $algebra					= shift;
+	my $final_results			= shift;
+	my $intermediate_results	= shift;
+	my @levels;
+	$algebra->walk( prefix => sub {
+		my $alg		= shift;
+		my $level	= shift;
+		my $label = eval { scalar $alg->algebra_as_string($level) } // ref($alg);
+		$label =~ s/\s*[\r\n]+\s*/ /g;
+		## Attean::Algebra::Query and ::Update are wrappers: the evaluator hands
+		## straight through to the child, and the wrapper carries no tokens of
+		## its own, so the trace never records anything against it beyond an
+		## empty list. Borrow the child's results, which are the very rows the
+		## wrapper passed along.
+		my $results	= $intermediate_results->{ refaddr($alg) };
+		if ($alg->isa('Attean::Algebra::Query') or $alg->isa('Attean::Algebra::Update')) {
+			my $child		= eval { $alg->child };
+			my $inherited	= $child ? $intermediate_results->{ refaddr($child) } : undef;
+			$results		= $inherited if (defined($inherited));
+		}
+		## sorted so that table columns don't move around between runs
+		my @vars	= sort(eval { $alg->in_scope_variables });
+		push(@levels, {
+			algebra	=> $alg,
+			level	=> $level,
+			label	=> $label,
+			type	=> (ref($alg) =~ s/^Attean::(Algebra|Plan):://r),
+			vars	=> \@vars,
+			tokens	=> [ @{ $alg->tokens // [] } ],
+			results	=> $results,
+		});
+	});
+	## every evaluated node gets at least an empty list recorded against it, so
+	## test for rows rather than for definedness before falling back
+	$levels[0]{results} = $final_results unless (scalar(@{ $levels[0]{results} // [] }));
+	$levels[0]{is_root} = 1;
+	return @levels;
+}
+
+## A node's token ids need not be contiguous: OPTIONAL and MINUS, for example,
+## record the keyword and the two braces but nothing in between. So the ids are
+## grouped into maximal runs of consecutive ids, and each run becomes one
+## independently highlighted region. Whitespace and comment tokens are trimmed
+## off the ends of each run, but a run that is *nothing but* whitespace is kept
+## and flagged.
+sub compute_highlights {
+	my $tokens	= shift;
+	my %tokens	= %$tokens;
+	foreach my $n (@_) {
+		my @ids = grep { $tokens{$_} } sort { $a <=> $b } @{ $n->{tokens} };
+		next unless (scalar(@ids));
+	
+		## group into runs of consecutive token ids
+		my @runs;
+		foreach my $id (@ids) {
+			if (scalar(@runs) and $runs[-1][-1] + 1 == $id) {
+				push(@{ $runs[-1] }, $id);
+			} else {
+				push(@runs, [ $id ]);
+			}
+		}
+	
+		my @regions;
+		foreach my $run (@runs) {
+			my @r = @$run;
+			shift(@r) while (scalar(@r) and tok_is_space($tokens, $r[0]));
+			pop(@r) while (scalar(@r) and tok_is_space($tokens, $r[-1]));
+			my $ws_only = 0;
+			unless (scalar(@r)) {
+				@r = @$run;
+				$ws_only = 1;
+			}
+			my ($first, $last) = @tokens{ $r[0], $r[-1] };
+			push(@regions, {
+				ids			=> [ $r[0], $r[-1] ],
+				start_line	=> $first->start_line,
+				start_col	=> $first->start_column,
+				end_line	=> $last->line,
+				end_col		=> $last->column,
+				ws_only		=> $ws_only,
+			});
+		}
+		$n->{regions}	= \@regions;
+		$n->{ids}		= compact_ids(@ids);
+		$n->{ws_only}	= (scalar(grep { $_->{ws_only} } @regions) == scalar(@regions));
+	}
+}
+
+## Returns a HASH ref, mapping token IDs (coming from the SPARQL lexer) to the
+## actual token objects. This is used to do the SPARQL syntax highlighting as
+## algebra objects are selected interactively (the algebra objects contain
+## a list of tokens that led to the algebra's creation).
+sub compute_tokens {
+	my $parser	= shift;
+	my $version	= shift;
+	my $sparql	= shift;
+	my %tokens;
+# 	my @tokens;
+	{
+		my $lexer = AtteanX::Parser::SPARQLLex->new( version => $version, include_ws => 1 );
+		my $iter	= $parser->_configure_lexer( $lexer->parse_iter_from_bytes(encode_utf8($sparql)) );
+		while (defined(my $t = $iter->next)) {
+# 			push(@tokens, $t);
+			$tokens{ $t->id } = $t;
+		}
+	}
+	return \%tokens;
+}
+
+
+###############################################################################
+#mark - Query text and highlighted regions
+
+## Expand the tabs in one line of query text, returning the expanded text and
+## a map from character offset in the line to display column. The lexer counts
+## a tab as a single column, so every highlight offset has to be translated
+## through that map before it can be used to style the rendered line.
+sub expand_tabs {
+	my $s = shift;
+	my $out = '';
+	my @map;
+	foreach my $i (0 .. length($s) - 1) {
+		push(@map, length($out));
+		my $c = substr($s, $i, 1);
+		if ($c eq "\t") {
+			$out .= ' ' x ($TABSTOP - (length($out) % $TABSTOP));
+		} else {
+			$out .= $c;
+		}
+	}
+	push(@map, length($out));
+	return ($out, \@map);
+}
+
+## True if a token id belongs to whitespace or a comment. Used to trim the ends
+## of a run of token ids down to the text the run is really about.
+sub tok_is_space {
+	my $tokens	= shift;
+	my $t = $tokens->{ +shift } or return 0;
+	return ($t->type == WS or $t->type == COMMENT);
+}
+
+## render a set of token ids compactly: "26-41", "42-43,73", ...
+sub compact_ids {
+	my @ids = sort { $a <=> $b } @_;
+	my @out;
+	foreach my $id (@ids) {
+		if (scalar(@out) and $out[-1][1] + 1 == $id) {
+			$out[-1][1] = $id;
+		} else {
+			push(@out, [ $id, $id ]);
+		}
+	}
+	return join(',', map { ($_->[0] == $_->[1]) ? $_->[0] : "$_->[0]-$_->[1]" } @out);
+}
+
+################################################################################
+#mark - Warning capture
+
+
+###############################################################################
+#mark - ExplainWindow
+
+package ExplainWindow {
+	use Encode qw(decode_utf8 encode_utf8);
+	use File::Basename qw(basename);
+	use List::Util qw(min max);
+	use Moo;
+
+	has 'nodes'			=> (is => 'rw', required => 1);
+	has 'warnings'		=> (is => 'rw', default => sub { [] });
+	has 'qfile'			=> (is => 'rw', required => 1);
+	has 'datafiles'		=> (is => 'rw', required => 1);
+	has 'pref_qheight'	=> (is => 'rw'); # query pane height; undef = pick one automatically
+	
+	## styles
+	my $S_RESET			= "\e[0m";
+	my $S_BAR			= "\e[7m";			# title/status bar
+	my $S_SEP			= "\e[2m";			# pane separators
+	my $S_SEL			= "\e[1;7m";		# selected algebra
+	my $S_SPAN			= "\e[30;43m";		# highlighted query region
+	my $S_SPAN_WS		= "\e[97;41m";		# highlighted query region covering only whitespace (visually unique as this may indicate a highlighting bug)
+	my $S_DIM			= "\e[2m";
+	my $S_HEAD			= "\e[1m";
+	
+	my $short_map = Attean::TermMap->short_blank_map->binding_mapper;
+	
+	## result pane renderings, memoized by "node index:view"
+	my %RENDERED;
+
+	## Paint a frame, addressing and clearing each row as it goes so that no part
+	## of the previous frame can show through.
+	sub draw {
+		my $self		= shift;
+		my @out			= $self->frame(@_);
+		my $buf = '';
+		foreach my $i (0 .. $#out) {
+			$buf .= sprintf("\e[%d;1H\e[K%s", $i + 1, $out[$i]);
+		}
+		print $buf;
+		STDOUT->flush;
+	}
+	
+	## Build the whole screen as a list of at most $ROWS strings: title bar, query
+	## pane, the two pane titles, the algebra and results body side by side, and the
+	## status bar -- or, when an overlay is up, the overlay in place of all of that
+	## but the status bar.
+	sub frame {
+		my $self		= shift;
+		my $QMAPS		= shift;
+		my $QLINES		= shift;
+		my $off			= shift;
+		my $OVERLAY		= shift;
+
+		my @out;
+		my $qpane	= [ $self->query_pane_lines($QMAPS, $QLINES) ];
+		my $qcount	= scalar(@$qpane);
+		my $qh		= $self->query_height($qcount, $self->nodes);
+		if ($QFOLLOW) {
+			$QFOLLOW = 0;
+			$self->scroll_query_to_selection($QMAPS, $QLINES, $qh, $qcount, $COLS, $off);
+		}
+		my $bh = max(1, $ROWS - 3 - $qh);
+		my $lw = max(20, min(int($COLS * 0.45), 72));
+		$lw = $COLS - 10 if ($lw > $COLS - 10);
+		my $rw = max(1, $COLS - $lw - 1);
+	
+		my $rlines = $self->result_lines($sel);
+		$self->clamp_offsets($bh, $qh, scalar(@$rlines), $qcount, $off);
+	
+		## title bar
+		my $title = sprintf(' %s  %s', basename($self->qfile), join(' ', map { basename($_) } @{ $self->datafiles }));
+		my $shown = ($qh >= $qcount)
+			? sprintf('all %d lines', $qcount)
+			: sprintf('lines %d-%d of %d', $off->{'q'} + 1, min($off->{'q'} + $qh, $qcount), $qcount);
+		my $qlabel	= sprintf('%s, %s', ($reformat ? 'reformatted query' : 'query source'), $shown);
+		my $right	= sprintf('%s  %s ', $qlabel, '+/-:resize  ?:help  q:quit');
+		my $tbar	= pad(pad($title, max(0, $COLS - length($right))) . $right, $COLS);
+		## the top bar doubles as the query pane's title, so the label swaps to
+		## normal video inside the inverted bar when that pane has the focus -- the
+		## same swap title_bar() makes for the titles of the other two panes
+		if ($focus eq 'query') {
+			my $at = rindex($tbar, $qlabel);
+			$tbar = substr($tbar, 0, $at) . $S_RESET . $S_HEAD . $qlabel . $S_BAR . substr($tbar, $at + length($qlabel)) if ($at >= 0);
+		}
+		push(@out, $S_BAR . $tbar . $S_RESET);
+	
+		## query pane
+		foreach my $r (0 .. $qh - 1) {
+			my $row = $qpane->[ $r + $off->{'q'} ];
+			push(@out, $row ? $self->style_query_line($row, $COLS, $off->{q_h}) : pad('', $COLS));
+		}
+	
+		## separator carrying both pane titles
+		my $count	= $self->result_count($sel);
+		my $ltitle	= sprintf(' algebra (%d/%d) ', $sel + 1, scalar(@{$self->nodes}));
+		my $rtitle	= sprintf(' results %s ', defined($count) ? "($count)" : '(not traced)');
+		my $lsep	= $self->title_bar($ltitle, $lw, ($focus eq 'algebra'));
+		my $rsep	= $self->title_bar($rtitle, $rw, ($focus eq 'results'));
+		push(@out, $lsep . $S_SEP . "\x{252c}" . $S_RESET . $rsep);
+	
+		## body: algebra | results
+		my @algebra = $self->algebra_lines($lw, $off);
+		foreach my $r (0 .. $bh - 1) {
+			my $ti = $r + $off->{algebra};
+			my $row = ($ti <= $#algebra) ? $algebra[$ti] : { text => '' };
+			my $left = pad($row->{text}, $lw);
+			my $lstyled = ($ti == $sel)
+				? ($S_SEL . $left . $S_RESET)
+				: $row->{dim}
+					? ($S_DIM . $left . $S_RESET)
+					: $left;
+			my $ri = $r + $off->{res};
+			my $rtext = ($ri <= $#$rlines) ? $self->hslice($rlines->[$ri], $off->{res_h}, $rw) : pad('', $rw);
+			push(@out, $lstyled . $S_SEP . "\x{2502}" . $S_RESET . $rtext);
+		}
+	
+		## status bar
+		my $n = $self->nodes->[$sel];
+		my @bits = ($n->{type});
+		if (my @regions = @{ $n->{regions} || [] }) {
+			my ($f, $l) = ($regions[0], $regions[-1]);
+			push(@bits, sprintf('%d:%d-%d:%d%s',
+				$f->{start_line}, $self->src_offset($f->{start_line}, $f->{start_col}) + 1,
+				$l->{end_line}, $self->src_offset($l->{end_line}, $l->{end_col}),
+				(scalar(@regions) > 1 ? sprintf(' in %d regions', scalar(@regions)) : '')));
+			push(@bits, sprintf('tokens %s%s', $n->{ids},
+				($n->{ws_only} ? ' (whitespace only!)' : '')));
+		} else {
+			push(@bits, 'no source span');
+		}
+		push(@bits, 'vars: ' . (join(' ', map { "?$_" } @{ $n->{vars} }) || '-'));
+		push(@bits, 'focus: ' . $focus);
+		push(@bits, sprintf('%d warning%s', scalar(@{ $self->warnings }), (scalar(@{ $self->warnings }) == 1 ? '' : 's'))) if (scalar(@{ $self->warnings }));
+		push(@out, $S_BAR . pad(' ' . join('  |  ', @bits), $COLS) . $S_RESET);
+	
+		## overlays replace the whole body
+		if ($OVERLAY) {
+			my @ol = $self->overlay_lines($OVERLAY);
+			my $h = $ROWS - 2;
+			$OVER_OFF = max(0, min($OVER_OFF, max(0, scalar(@ol) - $h)));
+			my $hdr = ($OVERLAY eq 'help') ? ' explain-interactive: keys ' : ' warnings during evaluation ';
+			my @body = ($S_BAR . pad($hdr, $COLS) . $S_RESET);
+			foreach my $r (0 .. $h - 1) {
+				my $l = $ol[ $r + $OVER_OFF ];
+				push(@body, pad(defined($l) ? $l : '', $COLS));
+			}
+			@out = (@body, $out[-1]);
+		}
+	
+		splice(@out, $ROWS) if (scalar(@out) > $ROWS);
+		return @out;
+	}
+	
+	## Hold every pane's scroll offset inside its content, and keep the selected
+	## algebra on screen.
+	sub clamp_offsets {
+		my $self		= shift;
+		my ($bh, $qh, $res_count, $qcount, $off) = @_;
+		my $nodes		= $self->nodes;
+		## keep the selected algebra visible
+		$off->{algebra}	= $sel if ($sel < $off->{algebra});
+		$off->{algebra}	= $sel - $bh + 1 if ($sel > $off->{algebra} + $bh - 1);
+		$off->{algebra}	= max(0, min($off->{algebra}, max(0, scalar(@$nodes) - $bh)));
+		$off->{res}		= max(0, min($off->{res}, max(0, $res_count - $bh)));
+		$off->{'q'}		= max(0, min($off->{'q'}, max(0, $qcount - $qh)));
+	}
+	
+	## The rows of the top pane: either the query text, each line carrying the
+	## highlight ranges of the selected node, or the selection's own SPARQL
+	## serialization.
+	sub query_pane_lines {
+		my $self	= shift;
+		my $QMAPS	= shift;
+		my $QLINES	= shift;
+		my @out;
+		my $node = $self->nodes->[$sel];
+		foreach my $i (0 .. $#{$QLINES}) {
+			push(@out, {
+				gutter	=> sprintf('%3d ', $i + 1),
+				text	=> $QLINES->[$i],
+				ranges	=> [ $self->hl_ranges($node, $QMAPS, $QLINES, $i) ],
+			});
+		}
+		return @out;
+	}
+	
+	## Scroll the query pane so that the selected node's highlighting is on screen.
+	## select_node() asks for this by setting $QFOLLOW, so it happens when the
+	## selection moves and never while the user is scrolling the pane by hand. If
+	## any part of any region is already on screen the pane is left exactly where
+	## it is; otherwise the regions are centered when they fit in the pane, and
+	## started from the top when they do not. The horizontal offset follows the
+	## same rule, so a highlight scrolled off the side comes back as well.
+	sub scroll_query_to_selection {
+		my $self	= shift;
+		my ($QMAPS, $QLINES, $qh, $qcount, $w, $off) = @_;
+		my $node	= $self->nodes->[$sel];
+		my @regions	= @{ $node->{regions} || [] };
+		return unless (scalar(@regions) and $qh > 0);
+	
+		## vertically: lines are 1-based in the regions, 0-based in the pane
+		my ($top, $bot) = ($off->{'q'}, $off->{'q'} + $qh - 1);
+		unless (grep { $_->{end_line} - 1 >= $top and $_->{start_line} - 1 <= $bot } @regions) {
+			my $first	= min(map { $_->{start_line} - 1 } @regions);
+			my $last	= max(map { $_->{end_line} - 1 } @regions);
+			my $span	= $last - $first + 1;
+			my $want	= ($span < $qh) ? $first - int(($qh - $span) / 2) : $first;
+			$off->{'q'}	= max(0, min($want, max(0, $qcount - $qh)));
+		}
+	
+		## horizontally: the highlighted columns of the lines now on screen
+		my $tw = max(1, $w - length(sprintf('%3d ', $qcount)));
+		my ($lo, $hi);
+		foreach my $i ($off->{'q'} .. min($off->{'q'} + $qh - 1, $#{$QLINES})) {
+			foreach my $r ($self->hl_ranges($node, $QMAPS, $QLINES, $i)) {
+				return if ($r->[1] > $off->{q_h} and $r->[0] < $off->{q_h} + $tw);
+				$lo = defined($lo) ? min($lo, $r->[0]) : $r->[0];
+				$hi = defined($hi) ? max($hi, $r->[1]) : $r->[1];
+			}
+		}
+		return unless (defined($lo));
+		$off->{q_h} = ($hi - $lo < $tw) ? max(0, $lo - int(($tw - ($hi - $lo)) / 2)) : $lo;
+	}
+	
+	## Render one top-pane row into $w columns, starting $hoff characters into the
+	## text. The highlight escapes are spliced in from right to left, so that each
+	## splice leaves the offsets to its left still valid.
+	sub style_query_line {
+		my $self	= shift;
+		my ($row, $w, $hoff) = @_;
+		$hoff	//= 0;
+		my $g	= $row->{gutter} // '';
+		my $tw	= max(0, $w - length($g));
+		my $t	= $self->hslice($row->{text}, $hoff, $tw);
+		## right to left, so each splice leaves the offsets to its left valid
+		foreach my $r (reverse @{ $row->{ranges} || [] }) {
+			my ($s, $e, $ws) = @$r;
+			$s	= min(max(0, $s - $hoff), $tw);
+			$e	= min(max(0, $e - $hoff), $tw);
+			next if ($e <= $s);
+			my $style = $ws ? $S_SPAN_WS : $S_SPAN;
+			$t = substr($t, 0, $s) . $style . substr($t, $s, $e - $s) . $S_RESET . substr($t, $e);
+		}
+		## the line-number gutter lights up with the pane, like the algebra pane's
+		## selection marker: a second, unmissable cue that the keys go here
+		return (($focus eq 'query') ? $S_HEAD : $S_DIM) . $g . $S_RESET . $t;
+	}
+	
+	## One row per algebra node for the algebra pane: the indented label, scrolled
+	## horizontally, with the recorded result count right-aligned. Nodes the parser
+	## did not annotate are marked to be drawn dim.
+	sub algebra_lines {
+		my $self	= shift;
+		my $w		= shift; # pane width
+		my $off		= shift;
+		my $numw	= 6;
+		my @lines;
+		foreach my $i (0 .. $#{$self->nodes}) {
+			my $n = $self->nodes->[$i];
+			my $count	= $self->result_count($i);
+			my $mark	= ($i == $sel) ? '>' : ' ';
+			my $text	= ('  ' x $n->{level}) . $n->{label};
+			my $right	= defined($count) ? sprintf('%s%d', ($n->{is_root} ? '=' : ''), $count) : '-';
+			my $line	= $mark . $self->hslice($text, $off->{algebra_h}, $w - $numw - 1) . sprintf('%*s', $numw, $right);
+			push(@lines, { text => $line, dim => (scalar(@{ $n->{regions} || [] }) ? 0 : 1) });
+		}
+		return @lines;
+	}
+	
+	## How many intermediate results were recorded for node $i, or undef if the
+	## evaluator never traced it (which is what the algebra pane shows as "-").
+	sub result_count {
+		my $self	= shift;
+		my $i		= shift;
+		my $r		= $self->nodes->[$i]{results};
+		return defined($r) ? scalar(@$r) : undef;
+	}
+
+	## A $w-wide window onto $s starting $off characters in: how the panes scroll
+	## horizontally.
+	sub hslice {
+		my $self	= shift;
+		my ($s, $off, $w) = @_;
+		$s = '' unless (defined $s);
+		$s = ($off < length($s)) ? substr($s, $off) : '';
+		return pad($s, $w);
+	}
+	
+	## The body lines of whichever overlay is up: the key help, or the warnings
+	## collected while evaluating.
+	sub overlay_lines {
+		my $self	= shift;
+		my $OVERLAY	= shift;
+		if ($OVERLAY eq 'help') {
+			return (
+				'',
+				'  Navigation',
+				'    up / k, down / j     move the selection (algebra) or scroll (results)',
+				'    left / h, right / l  scroll the focused pane horizontally',
+				'    PgUp / PgDn          page up / down in the focused pane',
+				'    g / G                jump to the first / last line',
+				'    Tab                  cycle the focus: algebra, results, query text',
+				'    ^U / ^D              scroll the results pane without changing focus',
+				'',
+				'  Top pane',
+				'    By default it shows the whole query when the query and the algebra',
+				'    both fit on screen, and about a third of the screen otherwise.',
+				'    + / - (or shift-up / shift-down)   taller / shorter',
+				'    f                    fit the whole query, or back to the default height',
+				'    0                    back to the default height',
+				'    Tab to it to scroll it by hand with the arrow keys; it also scrolls',
+				'    itself when a newly selected algebra would have none of its',
+				'    highlighting on screen.',
+				'',
+				'  Views',
+				'    v                    top pane: query source <-> SPARQL for selection',
+				'    t                    results: table <-> compact one-per-line',
+				'    w                    warnings captured while evaluating (' . scalar(@{ $self->warnings }) . ')',
+				'    ?                    this help',
+				'    q                    quit',
+				'',
+				'  Tree pane',
+				'    The right-hand number is the count of intermediate results recorded',
+				'    for that algebra expression; "-" means nothing was recorded and "="',
+				'    marks the final result set. Dimmed rows are algebra nodes the parser',
+				'    did not annotate with SPARQL token ids: they have no source span, and',
+				'    the evaluator does not trace them.',
+				'',
+				'  Any key to dismiss.',
+			);
+		}
+		if ($OVERLAY eq 'warnings') {
+			return ('', '  (no warnings)') unless (scalar(@{ $self->warnings }));
+			my @l = ('');
+			foreach my $w (@{ $self->warnings }) {
+				my $t = $w;
+				$t =~ s/\s+$//;
+				push(@l, map { '  ' . $_ } split(/\n/, $t));
+			}
+			return @l;
+		}
+		return;
+	}
+	
+	## Height of the top pane. Without an explicit pref_qheight, it shows the text in full
+	## whenever that still leaves the algebra room to be shown in full as well
+	## (the body rows are shared with the results pane, so the algebra is what sets
+	## the floor); failing that it takes about a third of the screen. Either way the
+	## result is clamped so that it never asks for more lines than the text has, and
+	## always leaves the title, separator, status bar and two body rows their space.
+	sub query_height {
+		my $self	= shift;
+		my $qcount	= shift;
+		my $room	= max(1, $ROWS - 5);
+		my $auto;
+		
+		my $algebra_height	= scalar(@{$self->nodes});
+		if ($qcount + $algebra_height + 3 <= $ROWS) {
+			# query and algebra will fit fully on the screen, so query height should be the number of lines of the query string
+			$auto = $qcount;
+		} else {
+			# query and algebra won't fit fully, so make the query ~40% of the window height
+			$auto = max(2, min($qcount, int(($ROWS - 4) * 0.4)));
+			$auto = 1 if ($ROWS < 8);
+		}
+		
+		# having computed the height we think it should be, defer to any explicit pref_qheight value (and clamp)
+		return max(1, min((defined($self->pref_qheight) ? $self->pref_qheight : $auto), $qcount, $room));
+	}
+	
+	## Grow/shrink the top pane, starting from whatever height is on screen now.
+	sub resize_query_pane {
+		my $self	= shift;
+		my $delta	= shift;
+		my $qcount	= shift;
+		$self->pref_qheight($self->query_height($qcount, $self->nodes) + $delta);
+		$self->pref_qheight(undef) if ($delta == 0);
+	}
+	
+	## A pane title, bold or inverted depending on whether the pane has the focus,
+	## padded out to $w columns with a horizontal rule.
+	sub title_bar {
+		my $self	= shift;
+		my ($title, $w, $focused) = @_;
+		$title = substr($title, 0, $w);
+		my $rest = "\x{2500}" x max(0, $w - length($title));
+		return ($focused ? $S_BAR . $title . $S_RESET : $S_HEAD . $title . $S_RESET) . $S_SEP . $rest . $S_RESET;
+	}
+	
+	## The lines of the results pane for node $i: a rendered table in 'table' view,
+	## one result per line in 'compact' view, or a note explaining the emptiness for
+	## a node the evaluator never traced. Memoized in %RENDERED, since re-rendering
+	## a table on every keystroke is wasteful.
+	sub result_lines {
+		my $self	= shift;
+		my $i		= shift;
+		my $key		= "$i:$main::RVIEW";
+		return $RENDERED{$key} if (exists $RENDERED{$key});
+		my $n		= $self->nodes->[$i];
+		my $rows	= $n->{results};
+		my @lines;
+		if (not defined $rows) {
+			@lines = (
+				'(no intermediate results recorded for this algebra expression)',
+				'',
+				'Only algebra nodes carrying SPARQL token ids are traced by',
+				'Attean::SimpleQueryEvaluator, so nodes the parser has not yet',
+				'annotated show up empty here.',
+			);
+		} elsif (not scalar(@$rows)) {
+			@lines = ('(0 results)');
+		} else {
+			my $is_result = eval { $rows->[0]->does('Attean::API::Result') };
+			my @vals = map { ($is_result and $short_map) ? $short_map->($_) : $_ } @$rows;
+			if ($main::RVIEW eq 'table' and $is_result) {
+				my $iter = Attean::ListIterator->new(
+					variables => [ @{ $n->{vars} } ],
+					values		=> \@vals,
+					item_type	=> 'Attean::API::Result',
+				);
+				my $s = Attean->get_serializer('texttable')->new(namespaces => $namespaces);
+				my $bytes = eval { $s->serialize_iter_to_bytes($iter) };
+				if (defined $bytes) {
+					@lines = split(/\n/, decode_utf8($bytes), -1);
+					pop(@lines) while (scalar(@lines) and $lines[-1] !~ /\S/);
+				} else {
+					@lines = ("(unable to render a table: $@)");
+				}
+			} else {
+				my $c = 0;
+				@lines = map { sprintf('%4d  %s', ++$c, eval { $_->as_string } // "$_") } @vals;
+			}
+		}
+		return $RENDERED{$key} = \@lines;
+	}
+	
+	# Highlight ranges on 0-based display line $i for $node, as a list of
+	# [start_col, end_col, ws_only] triples in left-to-right order. One node can
+	# contribute several ranges to a single line ("OPTIONAL {"), and one region can
+	# contribute a range to each of several lines.
+	sub hl_ranges {
+		my $self	= shift;
+		my ($node, $QMAPS, $QLINES, $i) = @_;
+		my $map = $QMAPS->[$i] or return;
+		my $len = length($QLINES->[$i]);
+		my @ranges;
+		foreach my $region (@{ $node->{regions} || [] }) {
+			my ($sl, $el) = ($region->{start_line} - 1, $region->{end_line} - 1);
+			next if ($i < $sl or $i > $el);
+			my $s = ($i == $sl)
+				? $map->[ min($self->src_offset($region->{start_line}, $region->{start_col}), $#$map) ]
+				## a continuation line of a multi-line region: from its indentation
+				: ($QLINES->[$i] =~ /\S/ ? $-[0] : 0);
+			my $e = ($i == $el)
+				? $map->[ min($self->src_offset($region->{end_line}, $region->{end_col}), $#$map) ]
+				: $len;
+			$e = $len if ($e > $len);
+			$e = $s + 1 if ($e <= $s); # always show something
+			push(@ranges, [ $s, $e, $region->{ws_only} ]);
+		}
+		## merge ranges that touch or overlap, so the escape splicing can't nest
+		my @merged;
+		foreach my $r (sort { $a->[0] <=> $b->[0] } @ranges) {
+			if (scalar(@merged) and $r->[0] <= $merged[-1][1]) {
+				$merged[-1][1] = max($merged[-1][1], $r->[1]);
+				$merged[-1][2] &&= $r->[2];
+			} else {
+				push(@merged, [ @$r ]);
+			}
+		}
+		return @merged;
+	}
+	
+	## Convert a 1-based lexer column into a 0-based character offset in its line.
+	sub src_offset {
+		my $self	= shift;
+		my ($line, $col) = @_;
+		my $off = $col - 1;
+		return ($off < 0) ? 0 : $off;
+	}
+	
+	## Truncate or space-pad $s to exactly $w columns.
+	sub pad {
+		my ($s, $w) = @_;
+		$s = '' unless (defined $s);
+		$w = 0 if ($w < 0);
+		my $l = length($s);
+		return ($l >= $w) ? substr($s, 0, $w) : $s . (' ' x ($w - $l));
+	}
+	
+}
+
+#mark - ExplainWindowController
+
+package ExplainWindowController {
+	use List::Util qw(min max);
+	use Moo;
+
+	my $TTY;						# keystrokes are read from here, not STDIN
+	my $SAVED_STTY;					# terminal settings to restore on the way out
+	
+	has 'nodes'			=> (is => 'rw');
+	has 'window'		=> (is => 'rw');
+	has 'qlines'		=> (is => 'rw');
+	has 'qmaps'			=> (is => 'rw');
+	has 'overlay_mode'	=> (is => 'rw'); # undef | help | warnings
+	has 'started'		=> (is => 'rw', default => 0);
+	has 'needs_resize'	=> (is => 'rw', default => 0);
+	has 'off'			=> (is => 'rw', default => sub { +{
+		algebra		=> 0,
+		algebra_h	=> 0,
+		res			=> 0,
+		res_h		=> 0,
+		'q'			=> 0,
+		q_h			=> 0,
+	} });
+
+	## escape sequences read_key() knows, by the bytes following "\e[" or "\eO"
+	my %ESCAPES = (
+		'A' => 'up',
+		'B' => 'down',
+		'C' => 'right',
+		'D' => 'left',
+		'H' => 'home',
+		'F' => 'end',
+		'Z' => 'btab',
+		'1;2A' => 'sup', '1;2B' => 'sdown', # shift-up / shift-down
+		'5~' => 'pgup',
+		'6~' => 'pgdn',
+		'1~' => 'home',
+		'7~' => 'home',
+		'4~' => 'end',
+		'8~' => 'end',
+	);
+	
+	sub run {
+		my $self	= shift;
+		$self->tui_start();
+		($ROWS, $COLS) = $self->term_size();
+		while (1) {
+			if ($self->needs_resize) {
+				($ROWS, $COLS) = $self->term_size();
+				$self->needs_resize(0);
+			}
+			$self->window->draw($self->qmaps, $self->qlines, $self->off, $self->overlay_mode);
+			my $k = $self->read_key();
+			next unless (defined($k) and length($k));
+			last unless ($self->handle_key($k));
+		}
+		$self->tui_stop();
+		
+	}
+
+	## The screen geometry as ($rows, $cols): --size if it was given, otherwise the
+	## terminal's own, falling back to $LINES/$COLUMNS when there is no window size
+	## to ask for (a pty with no controlling terminal, for instance).
+	sub term_size {
+		my $self	= shift;
+		if ($size and $size =~ /^(\d+)\s*[xX,]\s*(\d+)$/) {
+			return ($2, $1);
+		}
+		my $s = `stty size < /dev/tty 2>/dev/null`;
+		if (defined($s) and $s =~ /^(\d+)\s+(\d+)/ and $1 >= 6 and $2 >= 20) {
+			return ($1, $2);
+		}
+		## no window size available (e.g. a pty with no controlling terminal)
+		return (max(6, $ENV{LINES} || 40), max(20, $ENV{COLUMNS} || 100));
+	}
+	
+	## Take the terminal over: raw mode, alternate screen, cursor hidden, and
+	## /dev/tty opened for reading keys.
+	sub tui_start {
+		my $self	= shift;
+		## :raw matters: sysread() refuses to work on a :utf8 handle, and the
+		## 'use open' pragma above would otherwise give this one an encoding layer.
+		open($TTY, '<:raw', '/dev/tty') or die "Cannot open /dev/tty: $!\n";
+		chomp($SAVED_STTY = `stty -g < /dev/tty 2>/dev/null` // '');
+		system('stty raw -echo < /dev/tty');
+		$self->started(1);
+		print "\e[?1049h\e[?25l";
+		STDOUT->flush;
+	}
+	
+	## Give the terminal back, undoing tui_start(). Called from END and from the
+	## INT/TERM handlers as well as at the end of the main loop, so it has to be
+	## safe to call more than once and when the UI never started.
+	sub tui_stop {
+		my $self	= shift;
+# 		warn Dumper($self->window->warnings);
+		return unless ($self->started);
+		$self->started(0);
+		print "\e[?25h\e[?1049l";
+		STDOUT->flush;
+		if (length($SAVED_STTY)) {
+			system("stty $SAVED_STTY < /dev/tty");
+		} else {
+			system('stty sane < /dev/tty');
+		}
+	}
+
+	## Read a single byte, waiting at most $timeout seconds for it (undef waits
+	## indefinitely). Returns nothing on timeout or at end of input.
+	sub getch {
+		my $self	= shift;
+		my $timeout = shift;
+		my $rin = '';
+		vec($rin, fileno($TTY), 1) = 1;
+		my $n = select(my $rout = $rin, undef, undef, $timeout);
+		return unless ($n and $n > 0);
+		my $c;
+		return unless (sysread($TTY, $c, 1));
+		return $c;
+	}
+	
+	## Read one keystroke and name it: a bare character as itself, the control keys
+	## this UI uses under names ('tab', 'enter', 'resup' for ^U, and 'q' for ^C,
+	## which raw mode no longer turns into a signal), and escape sequences through
+	## %ESCAPES. An unrecognized sequence comes back as the empty string.
+	sub read_key {
+		my $self	= shift;
+		my $c = $self->getch(undef);
+		return unless (defined $c);
+		return 'q' if ($c eq "\x03");		# ^C (raw mode: no SIGINT)
+		return 'resdown' if ($c eq "\x04");	# ^D
+		return 'resup' if ($c eq "\x15");	# ^U
+		return 'tab' if ($c eq "\t");
+		return 'enter' if ($c eq "\r" or $c eq "\n");
+		if ($c eq "\e") {
+			my $c2 = $self->getch(0.05);
+			return 'esc' unless (defined $c2);
+			if ($c2 eq '[' or $c2 eq 'O') {
+				my $seq = '';
+				while (defined(my $c3 = $self->getch(0.05))) {
+					$seq .= $c3;
+					last if ($c3 =~ /[A-Za-z~]/);
+				}
+				return $ESCAPES{$seq} // '';
+			}
+			return '';
+		}
+		return $c;
+	}
+	
+	## Act on one key input (with the key value being a named string returned by read_key()),
+	## returning false if the key indicates the program should exit, true otherwise.
+	sub handle_key {
+		my $self		= shift;
+		my $k			= shift;
+		my $QLINES		= $self->qlines;
+		my $page_size	= max(1, $ROWS - 6);
+		my $window		= $self->window;
+	
+		if ($self->overlay_mode) {
+			if    ($k eq 'down' or $k eq 'j') { $OVER_OFF++ }
+			elsif ($k eq 'up'   or $k eq 'k') { $OVER_OFF = max(0, $OVER_OFF - 1) }
+			elsif ($k eq 'pgdn')              { $OVER_OFF += $page_size }
+			elsif ($k eq 'pgup')              { $OVER_OFF = max(0, $OVER_OFF - $page_size) }
+			else                              { $self->overlay_mode(undef); $OVER_OFF = 0 }
+			return 1;
+		}
+	
+		my $query_line_count	= scalar(@$QLINES);
+		if ($k eq 'q') { return 0 }
+		if ($k eq '?') { $self->overlay_mode('help');     $OVER_OFF = 0; return 1 }
+		if ($k eq 'w') { $self->overlay_mode('warnings'); $OVER_OFF = 0; return 1 }
+		if ($k eq 'tab' or $k eq 'btab') {
+			my @panes	= qw(algebra results query);
+			my ($i)		= grep { $panes[$_] eq $focus } (0 .. $#panes);
+			$focus		= $panes[ (($i // 0) + ($k eq 'tab' ? 1 : -1)) % scalar(@panes) ];
+			return 1;
+		}
+		if ($k eq 't') { $RVIEW = ($RVIEW eq 'table') ? 'compact' : 'table'; @{$self->off}{qw(res res_h)} = (0,0); return 1 }
+		if ($k eq '+' or $k eq '=' or $k eq 'sup')   { $window->resize_query_pane(1, $query_line_count); return 1 }
+		if ($k eq '-' or $k eq '_' or $k eq 'sdown') { $window->resize_query_pane(-1, $query_line_count); return 1 }
+		if ($k eq '0') { $window->resize_query_pane(0, $query_line_count); return 1 }
+		if ($k eq 'f') {
+			## toggle between showing as much of the query as will fit and the
+			## automatic height
+			my $count = $query_line_count;
+			my $qh	= $self->window->query_height;
+			$qh		= (defined($qh) && $qh >= min($count, max(1, $ROWS - 5))) ? undef : $count;
+			$self->window->query_height($qh);
+			return 1;
+		}
+		if ($k eq 'resdown') { $self->off->{res} += $page_size; return 1 }
+		if ($k eq 'resup')   { $self->off->{res} = max(0, $self->off->{res} - $page_size); return 1 }
+	
+		if ($focus eq 'query') {
+			if    ($k eq 'down'  or $k eq 'j') { $self->off->{'q'}++ }
+			elsif ($k eq 'up'    or $k eq 'k') { $self->off->{'q'} = max(0, $self->off->{'q'} - 1) }
+			elsif ($k eq 'pgdn')               { $self->off->{'q'} += $page_size }
+			elsif ($k eq 'pgup')               { $self->off->{'q'} = max(0, $self->off->{'q'} - $page_size) }
+			elsif ($k eq 'g' or $k eq 'home')  { @{$self->off}{qw(q q_h)} = (0, 0) }
+			elsif ($k eq 'G' or $k eq 'end')   { $self->off->{'q'} = $query_line_count }
+			elsif ($k eq 'right' or $k eq 'l') { $self->off->{q_h} += 8 }
+			elsif ($k eq 'left'  or $k eq 'h') { $self->off->{q_h} = max(0, $self->off->{q_h} - 8) }
+		} elsif ($focus eq 'algebra') {
+			if    ($k eq 'down'  or $k eq 'j') { $self->select_node($sel + 1) }
+			elsif ($k eq 'up'    or $k eq 'k') { $self->select_node($sel - 1) }
+			elsif ($k eq 'pgdn')               { $self->select_node($sel + $page_size) }
+			elsif ($k eq 'pgup')               { $self->select_node($sel - $page_size) }
+			elsif ($k eq 'g' or $k eq 'home')  { $self->select_node(0) }
+			elsif ($k eq 'G' or $k eq 'end')   { $self->select_node($#{ $self->nodes }) }
+			elsif ($k eq 'right' or $k eq 'l') { $self->off->{algebra_h} += 8 }
+			elsif ($k eq 'left'  or $k eq 'h') { $self->off->{algebra_h} = max(0, $self->off->{algebra_h} - 8) }
+		} else {
+			if    ($k eq 'down'  or $k eq 'j') { $self->off->{res}++ }
+			elsif ($k eq 'up'    or $k eq 'k') { $self->off->{res} = max(0, $self->off->{res} - 1) }
+			elsif ($k eq 'pgdn')               { $self->off->{res} += $page_size }
+			elsif ($k eq 'pgup')               { $self->off->{res} = max(0, $self->off->{res} - $page_size) }
+			elsif ($k eq 'g' or $k eq 'home')  { $self->off->{res} = 0 }
+			elsif ($k eq 'G' or $k eq 'end')   { $self->off->{res} = scalar(@{ $window->result_lines($sel) }) }
+			elsif ($k eq 'right' or $k eq 'l') { $self->off->{res_h} += 8 }
+			elsif ($k eq 'left'  or $k eq 'h') { $self->off->{res_h} = max(0, $self->off->{res_h} - 8) }
+		}
+		return 1;
+	}
+	
+	## Move the selection to node $i, clamped to the algebra, and start the results
+	## pane for the newly selected node from the top.
+	sub select_node {
+		my $self	= shift;
+		my $i		= shift;
+		$i = max(0, min($i, $#{ $self->nodes }));
+		return if ($i == $sel);
+		$sel = $i;
+		@{$self->off}{qw(res res_h)} = (0, 0);
+		$QFOLLOW = 1;
+	}
+	
+	sub init {
+		my $self	= shift;
+		## The evaluator warns loudly while tracing; stash warnings for the 'w' pane
+		## instead of letting them scribble over the UI.
+		$SIG{__WARN__}	= sub { push(@{ $self->window->warnings }, $_[0]) };
+		$SIG{INT}		= sub { $self->tui_stop(); exit(0) };
+		$SIG{TERM}		= sub { $self->tui_stop(); exit(0) };
+		$SIG{WINCH}		= sub { $self->needs_resize(1) };
+	}
+	
+	sub DESTROY {
+		my $self	= shift;
+		delete $SIG{__WARN__}; # allow warnings while stopping
+	}
+}
+
+################################################################################
+#mark -
+
+my $qfile = shift(@ARGV);
+unless (defined($qfile)) {
+	print STDERR <<"END";
+Usage: $0 query.rq [data.ttl ...]
+
+Interactively explore the algebra and the intermediate results of a SPARQL
+query evaluated by Attean::SimpleQueryEvaluator.
+END
+	exit(1);
+}
+my @datafiles = @ARGV;
+
+my $model	= setup_model($store_config, $graph, $namespaces, @datafiles);
+my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($qfile));
+my $parser	= Attean->get_parser('SPARQL')->new(base => $base, namespaces => $namespaces, version => $version);
+$parser->update(1); # allow updates
+
+die "File is not readable: $qfile\n" unless (-r $qfile);
+my $sparql	= read_file($qfile, {binmode => ':utf8'});
+$sparql		= reformat_query($parser, $version, $sparql) if ($reformat);
+
+my ($algebra) = $parser->parse_list_from_bytes(encode_utf8($sparql));
+die "Failed to parse a query from $qfile\n" unless (blessed($algebra));
+
+my %TOKENS	= %{ compute_tokens($parser, $version, $sparql) };
+my ($final_results, $intermediate_results)	= evaluate_query($model, $graph, $algebra);
+
+my @NODES	= setup_algebra_levels_with_results($algebra, $final_results, $intermediate_results);
+compute_highlights(\%TOKENS, @NODES);
+
+#mark - Main
+
+################################################################################
+## The query text as display lines
+##
+## @QLINES holds the query line by line with tabs expanded, and @QMAPS the
+## matching offset-to-column maps that expand_tabs() builds alongside them.
+## Trailing blank lines go, so that the pane's line count is the query's.
+
+my (@QLINES, @QMAPS);
+foreach my $line (split(/\r\n|\n|\r/, $sparql, -1)) {
+	my ($text, $map) = expand_tabs($line);
+	push(@QLINES, $text);
+	push(@QMAPS, $map);
+}
+pop(@QLINES), pop(@QMAPS) while (scalar(@QLINES) > 1 and $QLINES[-1] !~ /\S/);
+
+
+my $window	= ExplainWindow->new(
+	nodes		=> \@NODES,
+	qfile		=> $qfile,
+	datafiles	=> \@datafiles,	
+);
+my $control	= ExplainWindowController->new(
+	window	=> $window,
+	nodes	=> \@NODES,
+	qlines	=> \@QLINES,
+	qmaps	=> \@QMAPS,
+);
+$control->init();
+$control->run();
+END {
+	$control->tui_stop();
+}
