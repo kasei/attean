@@ -158,7 +158,8 @@ Throw an error if C<< $word >> is not at the start of the buffer.
 		my $cols	= length($word) - $lastnl - 1;
 		$self->{line}	+= $lines;
 		if ($lines) {
-			$self->{column}	= $cols;
+			# columns are 1-based, so the first character after the last newline is col 1
+			$self->{column}	= 1 + $cols;
 		} else {
 			$self->{column}	+= $cols;
 		}
@@ -186,7 +187,8 @@ Consume and return C<< $length >> characters  from the start of the buffer.
 		my $cols	= length($word) - $lastnl - 1;
 		$self->{line}	+= $lines;
 		if ($lines) {
-			$self->{column}	= $cols;
+			# columns are 1-based, so the first character after the last newline is col 1
+			$self->{column}	= 1 + $cols;
 		} else {
 			$self->{column}	+= $cols;
 		}

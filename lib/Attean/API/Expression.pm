@@ -79,6 +79,14 @@ package Attean::API::Expression 0.040 {
 	requires 'as_sparql';
 	has tokens => (is => 'rw', isa => ArrayRef[Int], default => sub { [] }); # if this expression came from the SPARQL parser, this links the algebra to a set of token numbers from the original query string
 	
+=item C<< add_tokens ( @token_ids ) >>
+
+Add a set of token IDs to this expression to allow tracking the correspondence
+between the SPARQL syntax and an L<Attean::API::Algebra> object that uses this
+expression (e.g. L<Attean::Algebra::Filter>).
+
+=cut
+
 	sub add_tokens {
 		my $self	= shift;
 		push(@{ $self->tokens }, grep { defined($_) } @_);

@@ -92,7 +92,6 @@ C<< $request_signer->sign( $request ) >>.
 		if ($self->trace_results) {
 			my $results	= ($self->{trace_cache} ||= {});
 			around 'evaluate' => sub {
-				warn "*** TRACE RESULTS ***";
 				my $orig	= shift;
 				my $self	= shift;
 				my $algebra	= shift;

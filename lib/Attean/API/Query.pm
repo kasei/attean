@@ -433,6 +433,13 @@ package Attean::API::Algebra 0.040 {
 	requires 'in_scope_variables';			# variables that will be in-scope after this operation is evaluated
 	has tokens => (is => 'rw', isa => ArrayRef[Int], default => sub { [] }); # if this algebra came from the SPARQL parser, this links the algebra to a set of token numbers from the original query string
 	
+=item C<< add_tokens ( @token_ids ) >>
+
+Add a set of token IDs to this algebra to allow tracking the correspondence
+between the SPARQL syntax and the algebra expression.
+
+=cut
+
 	sub add_tokens {
 		my $self	= shift;
 		foreach my $t (@_) {

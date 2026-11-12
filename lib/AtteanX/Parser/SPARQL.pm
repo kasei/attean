@@ -289,17 +289,17 @@ sub _RW_Query {
 	my $read_query	= 0;
 	my $update		= 0;
 	while (1) {
-		if ($self->_optional_token(KEYWORD, 'SELECT')) {
-			$self->_SelectQuery();
+		if (my $select = $self->_optional_token(KEYWORD, 'SELECT')) {
+			$self->_SelectQuery($select);
 			$read_query++;
-		} elsif ($self->_optional_token(KEYWORD, 'CONSTRUCT')) {
-			$self->_ConstructQuery();
+		} elsif (my $construct = $self->_optional_token(KEYWORD, 'CONSTRUCT')) {
+			$self->_ConstructQuery($construct);
 			$read_query++;
-		} elsif ($self->_optional_token(KEYWORD, 'DESCRIBE')) {
-			$self->_DescribeQuery();
+		} elsif (my $describe = $self->_optional_token(KEYWORD, 'DESCRIBE')) {
+			$self->_DescribeQuery($describe);
 			$read_query++;
-		} elsif ($self->_optional_token(KEYWORD, 'ASK')) {
-			$self->_AskQuery();
+		} elsif (my $ask = $self->_optional_token(KEYWORD, 'ASK')) {
+			$self->_AskQuery($ask);
 			$read_query++;
 		} elsif ($self->_test_token(KEYWORD, 'CREATE')) {
 			unless ($self->update) {
@@ -876,13 +876,22 @@ sub _AddCopyMoveUpdate {
 # [5] SelectQuery ::= 'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( Var+ | '*' ) DatasetClause* WhereClause SolutionModifier
 sub _SelectQuery {
 	my $self	= shift;
-	if ($self->_optional_token(KEYWORD, qr/^(DISTINCT)/)) {
-		$self->{build}{options}{distinct}	= 1;
-	} elsif ($self->_optional_token(KEYWORD, qr/^(REDUCED)/)) {
-		$self->{build}{options}{distinct}	= 2;
-	}
+	my $t		= shift;
+	my $start	= $t->id;
 	
-	my ($star, $exprs, $vars)	= $self->__SelectVars;
+	if (my $d = $self->_optional_token(KEYWORD, qr/^(DISTINCT)/)) {
+		$self->{build}{options}{distinct}	= 1;
+		$self->{build}{options}{distinct_token}	= $d->id;
+	} elsif (my $r = $self->_optional_token(KEYWORD, qr/^(REDUCED)/)) {
+		$self->{build}{options}{distinct}	= 2;
+		$self->{build}{options}{distinct_token}	= $r->id;
+	}
+
+	my ($star, $exprs, $vars, $proj_tokens)	= $self->__SelectVars;
+	my @proj_tokens;
+	push(@proj_tokens, @$proj_tokens);
+	unshift(@proj_tokens, ($start .. shift(@proj_tokens)));
+	
 	my @exprs	= @$exprs;
 	
 	$self->_DatasetClause();
@@ -891,7 +900,7 @@ sub _SelectQuery {
 	$self->_SolutionModifier($vars);
 	$self->_ValuesClause();
 
-	my %projected	= map { $_ => 1 } $self->__solution_modifiers( $star, @exprs );
+	my %projected	= map { $_ => 1 } $self->__solution_modifiers( $star, \@exprs, \@proj_tokens );
 	delete $self->{build}{options};
 	$self->{build}{method}		= 'SELECT';
 }
@@ -902,10 +911,13 @@ sub __SelectVars {
 	my @vars;
 	my $count	= 0;
 	my @exprs;
+	my @project_tokens;
+	my $start	= $self->_lex_counter;
 	while ($self->_test_token(STAR) or $self->__SelectVar_test) {
 		if ($self->_test_token(STAR)) {
 			$self->{build}{star}++;
-			$self->_expected_token(STAR);
+			my $t	= $self->_expected_token(STAR);
+			push(@project_tokens, $t->id);
 			$star	= 1;
 			$count++;
 			last;
@@ -922,6 +934,8 @@ sub __SelectVars {
 			$count++;
 		}
 	}
+	my $end	= $self->_lex_counter - 1;
+	push(@project_tokens, $start..$end);
 	
 	my %seen;
 	foreach my $v (@vars) {
@@ -937,15 +951,18 @@ sub __SelectVars {
 	if ($count == 0) {
 		croak "Syntax error: No select variable or expression specified";
 	}
-	return $star, \@exprs, \@vars;
+	return $star, \@exprs, \@vars, \@project_tokens;
 }
 
 sub _BrackettedAliasExpression {
 	my $self				= shift;
 	my $allow_multiple_vars	= shift || 0;
 	$self->_expected_token(LPAREN);
-	$self->_Expression;
-	my ($expr)	= splice(@{ $self->{_stack} });
+	my ($expr, @span)	= $self->_count_lex_tokens(sub {
+		$self->_Expression;
+		my ($expr)	= splice(@{ $self->{_stack} });
+		return $expr;
+	});
 	$self->_expected_token(KEYWORD, 'AS');
 	$self->_Var;
 	my ($var)	= splice(@{ $self->{_stack} });
@@ -988,11 +1005,22 @@ sub __SelectVar {
 # [6] ConstructQuery ::= 'CONSTRUCT' ConstructTemplate DatasetClause* WhereClause SolutionModifier
 sub _ConstructQuery {
 	my $self	= shift;
+	my $t		= shift;
+
 	my $shortcut	= 1;
-	if ($self->_test_token(LBRACE)) {
+	my @tokens;
+	if (my $t = $self->_test_token(LBRACE)) {
+		push(@tokens, $t->id);
 		$shortcut	= 0;
-		$self->_ConstructTemplate;
+		my ($start, $end)	= $self->_ConstructTemplate;
+		push(@tokens, $start..$end);
 	}
+	if (scalar(@tokens)) {
+		unshift(@tokens, ($t->id .. shift(@tokens)));
+	} else {
+		push(@tokens, $t->id);
+	}
+
 	$self->_DatasetClause();
 	if ($shortcut) {
 		$self->_TriplesWhereClause;
@@ -1003,7 +1031,7 @@ sub _ConstructQuery {
 	$self->_SolutionModifier();
 	$self->_ValuesClause();
 	
-	$self->__solution_modifiers();
+	$self->__solution_modifiers( 0, [], [] );
 
 	my $pattern		= $self->{build}{triples}[0];
 	my $triples		= delete $self->{build}{construct_triples};
@@ -1020,6 +1048,7 @@ sub _ConstructQuery {
 # 		}
 # 	}
 	my $construct	= Attean::Algebra::Construct->new( children => [$pattern], triples => $triples );
+	$construct->add_tokens(@tokens);
 	$self->{build}{triples}[0]	= $construct;
 	$self->{build}{method}		= 'CONSTRUCT';
 }
@@ -1027,6 +1056,7 @@ sub _ConstructQuery {
 # [7] DescribeQuery ::= 'DESCRIBE' ( VarOrIRIref+ | '*' ) DatasetClause* WhereClause? SolutionModifier
 sub _DescribeQuery {
 	my $self	= shift;
+	my $t		= shift;
 	
 	my $star	= 0;
 	if ($self->_optional_token(STAR)) {
@@ -1060,20 +1090,23 @@ sub _DescribeQuery {
 # [8] AskQuery ::= 'ASK' DatasetClause* WhereClause
 sub _AskQuery {
 	my $self	= shift;
+	my $t		= shift;
 	
 	$self->_DatasetClause();
 	
 	$self->_WhereClause;
 	$self->_ValuesClause();
 
-	$self->__solution_modifiers();
+	$self->__solution_modifiers( 0, [], [] );
 	
 	$self->{build}{variables}	= [];
 	$self->{build}{method}		= 'ASK';
 	
 	
 	my $pattern	= $self->{build}{triples}[0];
-	$self->{build}{triples}[0]	= Attean::Algebra::Ask->new( children => [$pattern] );
+	my $ask		= Attean::Algebra::Ask->new( children => [$pattern] );
+	$ask->add_tokens($t->id);
+	$self->{build}{triples}[0]	= $ask;
 }
 
 # sub _DatasetClause_test {
@@ -1274,6 +1307,8 @@ sub _SolutionModifier {
 	my $self	= shift;
 	my $vars	= shift // [];
 	
+	$self->{build}{__aggregate_tokens}	||= [];
+	$self->{build}{__aggregate_having_tokens}	||= [];
 	if ($self->_test_token(KEYWORD, 'GROUP')) {
 		$self->_GroupClause($vars);
 	}
@@ -1298,7 +1333,7 @@ sub _SolutionModifier {
 sub _GroupClause {
 	my $self	= shift;
 	my $vars	= shift;
-	$self->_expected_token(KEYWORD, 'GROUP');
+	my $group	= $self->_expected_token(KEYWORD, 'GROUP');
 	$self->_expected_token(KEYWORD, 'BY');
 	
 	if ($self->{build}{star}) {
@@ -1336,6 +1371,8 @@ sub _GroupClause {
 # 		}
 # 	}
 	
+	my $end	= $self->_lex_counter - 1;
+	push( @{ $self->{build}{__aggregate_tokens} }, ($group->id .. $end) );
 	$self->{build}{__group_by}	= \@vars;
 }
 
@@ -1377,7 +1414,7 @@ sub _RankClause {
 
 sub _HavingClause {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'HAVING');
+	my $having	= $self->_expected_token(KEYWORD, 'HAVING');
 	$self->{build}{__aggregate}	||= {};
 	local($self->{__aggregate_call_ok})	= 1;
 	my $expr;
@@ -1390,6 +1427,9 @@ sub _HavingClause {
 			$expr	= $_expr;
 		}
 	} while ($self->_Constraint_test);
+
+	my $end	= $self->_lex_counter - 1;
+	push( @{ $self->{build}{__aggregate_having_tokens} }, ($having->id .. $end) );
 	$self->{build}{__having}	= $expr;
 }
 
@@ -1425,9 +1465,8 @@ sub _OrderClause_test {
 
 sub _OrderClause {
 	my $self	= shift;
-	my $start	= $self->_lex_counter;
-	$self->_expected_token(KEYWORD, 'ORDER');
-	$self->_expected_token(KEYWORD, 'BY');
+	my $order	= $self->_expected_token(KEYWORD, 'ORDER');
+	my $by		= $self->_expected_token(KEYWORD, 'BY');
 	my @order;
 	$self->{build}{__aggregate}	||= {};
 	local($self->{__aggregate_call_ok})	= 1;
@@ -1438,7 +1477,7 @@ sub _OrderClause {
 		push(@order, splice(@{ $self->{_stack} }));
 	}
 	my $end	= $self->_lex_counter - 1;
-	my @span	= $start..$end;
+	my @span	= ($order->id .. $end);
 	$self->{build}{options}{orderby}		= \@order;
 	$self->{build}{options}{orderby_span}	= \@span;
 }
@@ -1479,9 +1518,10 @@ sub _LimitClause_test {
 
 sub _LimitClause {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'LIMIT');
-	my $t		= $self->_expected_token(INTEGER);
-	$self->{build}{options}{limit}	= $t->value;
+	my $t		= $self->_expected_token(KEYWORD, 'LIMIT');
+	my $i		= $self->_expected_token(INTEGER);
+	$self->{build}{options}{limit}	= $i->value;
+	push( @{ $self->{build}{options}{slice_tokens} ||= [] }, $t->id, $i->id );
 }
 
 # [19] OffsetClause ::= 'OFFSET' INTEGER
@@ -1492,16 +1532,19 @@ sub _OffsetClause_test {
 
 sub _OffsetClause {
 	my $self	= shift;
-	$self->_expected_token(KEYWORD, 'OFFSET');
-	my $t		= $self->_expected_token(INTEGER);
-	$self->{build}{options}{offset}	= $t->value;
+	my $t		= $self->_expected_token(KEYWORD, 'OFFSET');
+	my $i		= $self->_expected_token(INTEGER);
+	$self->{build}{options}{offset}	= $i->value;
+	push( @{ $self->{build}{options}{slice_tokens} ||= [] }, $t->id, $i->id );
 }
 
 # [20] GroupGraphPattern ::= '{' TriplesBlock? ( ( GraphPatternNotTriples | Filter ) '.'? TriplesBlock? )* '}'
 sub _GroupGraphPattern {
 	my $self	= shift;
 	
-	$self->_expected_token(LBRACE);
+	$self->_peek_token;
+	my $lbrace	= $self->_expected_token(LBRACE);
+	my $lbrace_token	= $lbrace->id;
 	
 	if ($self->_SubSelect_test) {
 		$self->_SubSelect;
@@ -1509,7 +1552,10 @@ sub _GroupGraphPattern {
 		$self->_GroupGraphPatternSub;
 	}
 
-	$self->_expected_token(RBRACE);
+	$self->_peek_token;
+	my $rbrace			= $self->_expected_token(RBRACE);
+	my $rbrace_token	= $rbrace->id;
+	return ($lbrace_token, $rbrace_token);
 }
 
 sub _GroupGraphPatternSub {
@@ -1600,9 +1646,9 @@ sub __handle_GraphPatternNotTriples {
 			$ggp	= Attean::Algebra::BGP->new();
 		}
 		
-		my ($rhs, $kw_token)	= @args;
+		my ($rhs, @tokens)	= @args;
 		my $opt	= $class->new( children => [$ggp, $rhs] );
-		$opt->add_tokens($kw_token);
+		$opt->add_tokens(@tokens);
 		$self->_add_patterns( $opt );
 	} elsif ($class eq 'Attean::Algebra::Table') {
  		my ($table)	= @args;
@@ -1690,7 +1736,7 @@ sub _SubSelect {
 			$self->{build}{options}{lc($mod)}	= 1;
 		}
 		
-		my ($star, $exprs, $vars)	= $self->__SelectVars;
+		my ($star, $exprs, $vars, $proj_tokens)	= $self->__SelectVars;
 		my @exprs	= @$exprs;
 		
 		$self->_WhereClause;
@@ -1780,7 +1826,7 @@ sub _SubSelect {
 			push(@{ $self->{build}{triples} }, $self->_new_join($pattern, $table));
 		}
 		
-		$self->__solution_modifiers( $star, @exprs );
+		$self->__solution_modifiers( $star, \@exprs, $proj_tokens );
 		
 		delete $self->{build}{options};
 		my $data	= delete $self->{build};
@@ -1831,6 +1877,7 @@ sub _test_literal_token {
 sub _count_lex_tokens {
 	my $self	= shift;
 	my $code	= shift;
+	my $t		= $self->_peek_token; # consume any WS tokens to ensure the right token ID
 	my $start	= $self->_lex_counter;
 	my $r	= $code->();
 	my $end	= $self->_lex_counter - 1;
@@ -2071,25 +2118,30 @@ sub __close_bgp_with_filters {
 
 sub _OptionalGraphPattern {
 	my $self	= shift;
-	my $kw_token	= $self->_lex_counter - 1;
-	$self->_expected_token(KEYWORD, 'OPTIONAL');
+	my $kw	= $self->_expected_token(KEYWORD, 'OPTIONAL');
+	my $kw_token	= $kw->id;
 	$self->__close_bgp_with_filters;
 	
-	$self->_GroupGraphPattern;
+	$self->_peek_token;
+	my ($lbrace_token, $rbrace_token)	= $self->_GroupGraphPattern;
+
 	my $ggp	= $self->_remove_pattern;
-	my $opt		= ['Attean::Algebra::LeftJoin', $ggp, $kw_token];
+	my $opt		= ['Attean::Algebra::LeftJoin', $ggp, $kw_token, $lbrace_token, $rbrace_token];
 	$self->_add_stack( $opt );
 }
 
 sub _MinusGraphPattern {
 	my $self	= shift;
-	my $kw_token	= $self->_lex_counter - 1;
-	$self->_expected_token(KEYWORD, 'MINUS');
+
+	my $kw			= $self->_expected_token(KEYWORD, 'MINUS');
+	my $kw_token	= $kw->id;
 	$self->__close_bgp_with_filters;
 	
-	$self->_GroupGraphPattern;
+	$self->_peek_token;
+	my ($lbrace_token, $rbrace_token)	= $self->_GroupGraphPattern;
+
 	my $ggp	= $self->_remove_pattern;
-	my $opt		= ['Attean::Algebra::Minus', $ggp, $kw_token];
+	my $opt		= ['Attean::Algebra::Minus', $ggp, $kw_token, $lbrace_token, $rbrace_token];
 	$self->_add_stack( $opt );
 }
 
@@ -2102,14 +2154,12 @@ sub _GraphGraphPattern {
 		}
 	}
 	
-	$self->_expected_token(KEYWORD, 'GRAPH');
+	my $kw			= $self->_expected_token(KEYWORD, 'GRAPH');
+	my $kw_token	= $kw->id;
 	$self->_VarOrIRIref;
 	my ($graph)	= splice(@{ $self->{_stack} });
-	if ($graph->does('Attean::API::IRI')) {
-		$self->_GroupGraphPattern;
-	} else {
-		$self->_GroupGraphPattern;
-	}
+	my @tokens	= $self->_GroupGraphPattern;
+	push(@tokens, $kw_token);
 
 	if ($self->{__data_pattern}) {
 		$self->{__graph_nesting_level}--;
@@ -2117,6 +2167,7 @@ sub _GraphGraphPattern {
 	
 	my $ggp	= $self->_remove_pattern;
 	my $pattern	= Attean::Algebra::Graph->new( children => [$ggp], graph => $graph );
+	$pattern->add_tokens(@tokens);
 	$self->_add_patterns( $pattern );
 	$self->_add_stack( [ 'Attean::Algebra::Graph' ] );
 }
@@ -2128,19 +2179,17 @@ sub _GraphGraphPattern {
 # }
 
 sub _GroupOrUnionGraphPattern {
-	my $self	= shift;
-	$self->_GroupGraphPattern;
+	my $self		= shift;
+	my @lhs_braces	= $self->_GroupGraphPattern;
 	my $ggp	= $self->_remove_pattern;
+	my @braces		= @lhs_braces;
 	if ($self->_test_token(KEYWORD, 'UNION')) {
-		while ($self->_optional_token(KEYWORD, 'UNION')) {
-			my $start	= $self->_lex_counter - 1;
-			$self->_GroupGraphPattern;
+		while (my $u = $self->_optional_token(KEYWORD, 'UNION')) {
+			my @rhs_braces	= $self->_GroupGraphPattern;
+			push(@braces, @rhs_braces);
 			my $rhs	= $self->_remove_pattern;
-			my @tokens	= @{ $ggp->tokens }; # TODO: is this what a union should track? Or should it just be the UNION keyword, so that each GGP can track their own stuff.
 			$ggp	= Attean::Algebra::Union->new( children => [$ggp, $rhs] );
-			my $end	= $self->_lex_counter - 1;
-			$ggp->add_tokens(@tokens);
-			$ggp->add_tokens($start..$end);
+			$ggp->add_tokens($u->id, @braces);
 		}
 		$self->_add_patterns( $ggp );
 		$self->_add_stack( [ 'Attean::Algebra::Union' ] );
@@ -2308,15 +2357,16 @@ sub _ArgList {
 sub _ConstructTemplate {
 	my $self	= shift;
 	$self->_push_pattern_container;
-	$self->_expected_token(LBRACE);
+	my $lbrace	= $self->_expected_token(LBRACE);
 	
 	if ($self->_ConstructTriples_test) {
 		$self->_ConstructTriples;
 	}
 
-	$self->_expected_token(RBRACE);
+	my $rbrace	= $self->_expected_token(RBRACE);
 	(my $cont, undef)	= $self->_pop_pattern_container; # ignore hints in a construct template
 	$self->{build}{construct_triples}	= $cont;
+	return ($lbrace->id, $rbrace->id);
 }
 
 # [31] ConstructTriples ::= TriplesSameSubject ( '.' ConstructTriples? )?
@@ -3218,11 +3268,15 @@ sub _Aggregate {
 
 	my $op;
 	my $custom_agg_iri;
+	my $start;
 	if (scalar(@_)) {
+		# TODO: we don't correctly handle token tracking here
 		$custom_agg_iri		= shift->value;
 		$op	= 'CUSTOM';
+		$start	= $self->_lex_counter - 1;
 	} else {
 		my $t	= $self->_expected_token(KEYWORD);
+		$start	= $t->id;
 		$op		= $t->value;
 	}
 	$self->_expected_token(LPAREN);
@@ -3265,7 +3319,11 @@ sub _Aggregate {
 			}
 		}
 	}
-	$self->_expected_token(RPAREN);
+
+	my $close	= $self->_expected_token(RPAREN);
+	my $end		= $close->id;
+	my @tokens	= ($start .. $end);
+	push( @{ $self->{build}{__aggregate_tokens} ||= [] }, @tokens );
 
 	my $arg	= join(',', map { blessed($_) ? $_->as_string : $_ } @expr);
 	if ($distinct) {
@@ -4085,7 +4143,9 @@ sub _ExprTripleTermObject {
 sub __solution_modifiers {
 	my $self	= shift;
 	my $star	= shift;
-	my @exprs	= @_;
+	my $exprs	= shift;
+	my $project_tokens	= shift;
+	my @exprs	= @{ $exprs };
 	
 	if (my $computed_group_vars = delete( $self->{build}{__group_vars} )) {
 		my $pattern	= $self->{build}{triples}[0];
@@ -4115,6 +4175,7 @@ sub __solution_modifiers {
 			$having_expr	= $having;
 		}
 		my $agg		= Attean::Algebra::Group->new( children => [$ggp], groupby => $groupby, aggregates => \@aggs );
+		$agg->add_tokens( @{ $self->{build}{__aggregate_tokens} || [] } );
 		push(@{ $self->{build}{triples} }, $agg);
 	}
 	
@@ -4185,6 +4246,7 @@ sub __solution_modifiers {
 			}
 			my $var		= Attean::Variable->new( value => $name );
 			$pattern	= Attean::Algebra::Extend->new(children => [$pattern], variable => $var, expression => $expr);
+			$pattern->add_tokens( $expr );
 		}
 		push(@{ $self->{build}{triples} }, $pattern);
 	}
@@ -4192,6 +4254,7 @@ sub __solution_modifiers {
 	if ($having_expr) {
 		my $pattern	= pop(@{ $self->{build}{triples} });
 		my $filter	= Attean::Algebra::Filter->new( children => [$pattern], expression => $having_expr );
+		$filter->add_tokens(@{ $self->{build}{__aggregate_having_tokens} });
 		push(@{ $self->{build}{triples} }, $filter);
 	}
 	
@@ -4216,6 +4279,7 @@ sub __solution_modifiers {
 		my $vars	= [map { Attean::Variable->new(value => $_) } @project];
 		if (scalar(@$vars)) {
 			$pattern	= Attean::Algebra::Project->new( children => [$pattern], variables => $vars);
+			$pattern->add_tokens(@$project_tokens);
 		}
 		push(@{ $self->{build}{triples} }, $pattern);
 	}
@@ -4226,6 +4290,7 @@ sub __solution_modifiers {
 		my $sort	= ($level == 1)
 					? Attean::Algebra::Distinct->new( children => [$pattern] )
 					: Attean::Algebra::Reduced->new( children => [$pattern] );
+		$sort->add_tokens($self->{build}{options}{distinct_token});
 		push(@{ $self->{build}{triples} }, $sort);
 	}
 	
@@ -4234,16 +4299,19 @@ sub __solution_modifiers {
 		my $offset	= delete $self->{build}{options}{offset};
 		my $pattern	= pop(@{ $self->{build}{triples} });
 		my $sliced	= Attean::Algebra::Slice->new( children => [$pattern], limit => $limit, offset => $offset );
+		$sliced->add_tokens( @{ $self->{build}{options}{slice_tokens} || [] } );
 		push(@{ $self->{build}{triples} }, $sliced);
 	} elsif (exists $self->{build}{options}{offset}) {
 		my $offset		= delete $self->{build}{options}{offset};
 		my $pattern		= pop(@{ $self->{build}{triples} });
 		my $sliced	= Attean::Algebra::Slice->new( children => [$pattern], offset => $offset );
+		$sliced->add_tokens( @{ $self->{build}{options}{slice_tokens} || [] } );
 		push(@{ $self->{build}{triples} }, $sliced);
 	} elsif (exists $self->{build}{options}{limit}) {
 		my $limit	= delete $self->{build}{options}{limit};
 		my $pattern	= pop(@{ $self->{build}{triples} });
 		my $sliced	= Attean::Algebra::Slice->new( children => [$pattern], limit => $limit );
+		$sliced->add_tokens( @{ $self->{build}{options}{slice_tokens} || [] } );
 		push(@{ $self->{build}{triples} }, $sliced);
 	}
 	
@@ -4482,7 +4550,15 @@ sub _new_join {
 	} elsif (1 == scalar(@parts)) {
 		return shift(@parts);
 	} else {
-		return Attean::Algebra::Join->new( children => \@parts );
+		my $j	= Attean::Algebra::Join->new( children => \@parts );
+		# Add the tokens for all the parts of the join (not just the top-level algebras, but their children, too).
+		foreach my $p (@parts) {
+			$p->walk( prefix => sub {
+				my $a		= shift;
+				$j->add_tokens($a);
+			});
+		}
+		return $j;
 	}
 }
 
@@ -4518,7 +4594,7 @@ sub _test_token {
 			return unless ($t->value eq $value);
 		}
 	}
-	return 1;
+	return $t;
 }
 
 sub _optional_token {
