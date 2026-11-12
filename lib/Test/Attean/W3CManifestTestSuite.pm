@@ -110,7 +110,7 @@ has load_ontology_files	=> (is => 'rw', isa => ArrayRef[Str]);
 
 after 'BUILD' => sub {
 	my $self	= shift;
-	if ($self->pattern) {
+	if ($self->debug) {
 		$self->results(1);
 	}
 	
@@ -237,7 +237,7 @@ sub sparql_service_description_test {
 
 	my ($action)	= $model->objects($test, $mf_action)->elements;
 	unless ($action) {
-		return fail('no action data for test');
+		return fail('no action data for test ' . $testname);
 	}
 	my ($reqs)		= $model->objects($action, $requests)->elements;
 	my @reqs		= $model->get_list($self->default_graph, $reqs)->elements;
@@ -332,10 +332,11 @@ sub run_gsp_test {
 	my $test		= shift;
 	my $prot_endpoint	= shift;
 	my $endpoint	= shift;
-	say '# ' . $test->value if ($self->debug);
+	my $testname	= $test->value;
+	say "# $testname" if ($self->debug);
 	my ($action)	= $model->objects($test, $mf_action)->elements;
 	unless ($action) {
-		return fail('no action data for test');
+		return fail('no action data for test ' . $testname);
 	}
 	my ($reqs)		= $model->objects($action, $requests)->elements;
 	my @reqs		= $model->get_list($self->default_graph, $reqs)->elements;
@@ -374,9 +375,10 @@ sub run_protocol_test {
 	my $model		= shift;
 	my $test		= shift;
 	my $prot_endpoint	= shift;
+	my $testname	= $test->value;
 	my ($action)	= $model->objects($test, $mf_action)->elements;
 	unless ($action) {
-		return fail('no action data for test');
+		return fail('no action data for test ' . $testname);
 	}
 	my ($reqs)		= $model->objects($action, $requests)->elements;
 	my @reqs		= $model->get_list($self->default_graph, $reqs)->elements;
