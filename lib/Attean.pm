@@ -121,6 +121,39 @@ returns undef.
 		return $self->_get_plugin('stores', shift);
 	}
 
+=item C<< parse_store_args ( $string ) >>
+
+Parses the configure C<$string> and returns a list C<($type, \%args, \@files)>
+containing the store type (suitable for passing to C<get_store>) and constructor
+arguments for creating an L<Attean::API::Store> object. This string configuration
+format is suitable for use when only a single scalar value can be used to indicate
+what store is to be used.
+
+The format is comprised of between one and three components joined by ';':
+
+* The name of the store type
+* A list of key=value pairs (joined by ',')
+* A list of filenames joined by ',' (this can be used by callers to load
+  initial data into the store, but the specific format and use is unspecified)
+
+Examples:
+
+* Memory;foo=bar,baz=quux;file1,file2
+* DBI;type=mysql,database=db,user=test,password=pw,host=127.0.0.1,port=3306
+* DBI;type=sqlite,database=test.sqlite
+
+=cut
+
+	sub parse_store_args {
+		my $class	= shift;
+		my $conf	= shift;
+		my ($name, $args, $files)	= split(';', $conf, 3);
+		my @files	= defined($files) ? split(',', $files) : ();
+		my @args	= defined($args) ? split(',', $args) : ();
+		my %args	= map { split(/=/, $_, 2) } @args;
+		return ($name, \%args, \@files);
+	}
+
 =item C<< temporary_model >> 
 
 Returns a temporary, mutable quad model based on a L<AtteanX::Store::Memory> store.
