@@ -104,7 +104,7 @@ L<IO::Handle> object C<< $fh >>.
 		my @rows;
 		my $row	= 1;
 		while (my $t = $iter->next()) {
-			my @strings	= map { blessed($_) ? $_->as_string : '' } map { eval { $t->value($_) } } @vars;
+			my @strings	= map { $self->_serialize_value($_) } map { eval { $t->value($_) } } @vars;
 			if ($self->number_rows) {
 				unshift(@strings, $row++);
 			}
@@ -119,6 +119,41 @@ L<IO::Handle> object C<< $fh >>.
 				map({ $table->body($_) } 0 .. @rows),
 				$table->rule(@rule)
 			);
+	}
+
+	sub _serialize_value {
+		my $self	= shift;
+		my $value	= shift;
+		return '' unless (blessed($value));
+		my $lex		= $value->value;
+		if ($value->does('Attean::API::IRI')) {
+			# this shortening to something like a prefixed name is a heuristic
+			# suitable for texttable, but not for cases where the value must
+			# be able to round-tripl through a parser
+			if (my $ns = $self->namespaces) {
+				my $qname;
+				my $len;
+				while (my ($prefix, $nsURI) = $ns->each_map) {
+					my $base	= $nsURI->iri->value;
+					if (substr($lex, 0, length($base)) eq $base) {
+						my $local	= substr($lex, length($base));
+						if (not(defined($qname)) or length($local) < $len) {
+							$qname	= join(':', $prefix, $local);
+							$len	= length($local);
+						}
+					}
+				}
+				return $qname if (defined($qname));
+			}
+			return $value->ntriples_string;
+		} elsif ($value->does('Attean::API::Literal') and my $dt = $value->datatype) {
+			if ($dt->value eq 'http://www.w3.org/2001/XMLSchema#string') {
+				return qq["$lex"];
+			}
+			my $dts	= $self->_serialize_value($dt);
+			return '"' . $lex . '"^^' . $dts;
+		}
+		return $value->ntriples_string;
 	}
 	
 =item C<< serialize_iter_to_bytes( $iterator ) >>
@@ -148,7 +183,7 @@ and returns the serialization as a UTF-8 encoded byte string.
 		my @rows;
 		my $row	= 1;
 		while (my $t = $iter->next()) {
-			my @strings	= map { blessed($_) ? $_->ntriples_string : '' } map { $t->value($_) } @vars;
+			my @strings	= map { $self->_serialize_value($_) } map { $t->value($_) } @vars;
 			if ($self->number_rows) {
 				unshift(@strings, $row++);
 			}
@@ -167,6 +202,7 @@ and returns the serialization as a UTF-8 encoded byte string.
 	}
 
 	with 'Attean::API::ResultSerializer';
+	with 'Attean::API::AbbreviatingSerializer';
 }
 
 1;
