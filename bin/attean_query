@@ -107,34 +107,98 @@ my $print_algebra	= 0;
 my $update			= 0;
 my $simple_eval		= 0;
 my $out_format		= '';
+my $store_config	= '';
 my $short			= 0;
+my $help			= 0;
 my $version			= '1.2';
 my $result			= GetOptions(
-	"verbose"	=> \$verbose,
-	"debug"		=> \$debug,
-	"update"	=> \$update,
-	"benchmark"	=> \$benchmark,
-	'algebra'	=> \$print_algebra,
+	"help"			=> \$help,
+	"verbose"		=> \$verbose,
+	"debug"			=> \$debug,
+	"update"		=> \$update,
+	"benchmark"		=> \$benchmark,
+	'algebra'		=> \$print_algebra,
 	'simpleeval'	=> \$simple_eval,
-	'plan'		=> \$print_plan,
-	"q"			=> \$print_sparql,
-	'n'			=> \$dryrun,
-	'c'			=> \$check_syntax,
-	'short'		=> \$short,
-	'output=s'	=> \$out_format,
+	'plan'			=> \$print_plan,
+	"q"				=> \$print_sparql,
+	'n'				=> \$dryrun,
+	'c'				=> \$check_syntax,
+	'short'			=> \$short,
+	'store=s'		=> \$store_config,
+	'output=s'		=> \$out_format,
 	'specVersion=s'	=> \$version,
 );
+
+if ($help) {
+	print <<"END";
+Usage: $0 [OPTIONS] query.rq [data.ttl ...]
+
+OPTIONS:
+
+  --help                  Display this usage information.
+  --store=CONFIG          Specify the storage information (e.g. for using persistent RDF storage).
+  --algebra               Display the parsed query algebra.
+  --plan                  Display the query plan structure.
+  --simpleeval            Use Attean::SimpleQueryEvaluator to evaluate the query.
+  --short                 Shorten blank node labels in the result serialization.
+  --update                Allow SPARQL updates to be evaluated.
+  --output=SERIALIZER     Specify the format to use for serializing results.
+  --specVersion=VERSION   Specify the SPARQL version number to use (default=1.2).
+
+END
+
+	print "Stores:\n";
+	foreach my $p (Attean->stores()) {
+		$p	=~ s/^.*:://;
+		print "  $p\n";
+	}
+	print "\n";
+
+	print "Data Parsers:\n";
+	foreach my $p (Attean->parsers()) {
+		$p	=~ s/^.*:://;
+		print "  $p\n";
+	}
+	print "\n";
+
+	print "Serializers:\n";
+	foreach my $p (Attean->serializers()) {
+		$p	=~ s/^.*:://;
+		print "  $p\n";
+	}
+	print "\n";
+	exit(0);
+}
 
 my $qfile	= shift;
 
 try {
 	warn "Constructing model...\n" if ($verbose);
-	my $store	= Attean->get_store('Memory')->new();
+	my $store;
+	my @datafiles;
+	if ($store_config) {
+		my ($name, $args, $files)	= Attean->parse_store_args($store_config);
+		if (scalar(@$files)) {
+			@datafiles	= @$files;
+			if (scalar(@ARGV)) {
+				die 'Cannot specify default RDF data in both the --store config and command line arguments';
+			}
+		}
+		my $sclass	= Attean->get_store($name);
+		unless ($sclass) {
+			die "No '${sclass}' store found"
+		}
+		$store		= $sclass->new(%$args);
+		
+	} else {
+		$store		= Attean->get_store('Memory')->new();
+		@datafiles	= @ARGV;
+	}
+
 	my $model	= Attean::MutableQuadModel->new( store => $store );
 	my $graph	= Attean::IRI->new('http://default-graph/');
-
 	my $map		= URI::NamespaceMap->new();
-	while (my $data = shift(@ARGV)) {
+	while (my $data = shift(@datafiles)) {
 		my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($data));
 		open(my $fh, '<:encoding(UTF-8)', $data);
 		warn "Parsing data from $data...\n" if ($verbose);
