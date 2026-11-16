@@ -96,37 +96,39 @@ END
 AtteanX::Functions::CompositeMaps->register();
 AtteanX::Functions::CompositeLists->register();
 
-my $dryrun			= 0;
-my $check_syntax	= 0;
-my $verbose			= 0;
-my $debug			= 0;
-my $benchmark		= 0;
-my $print_sparql	= 0;
-my $print_plan		= 0;
-my $print_algebra	= 0;
-my $update			= 0;
-my $simple_eval		= 0;
-my $out_format		= '';
-my $store_config	= '';
-my $short			= 0;
-my $help			= 0;
-my $version			= '1.2';
-my $result			= GetOptions(
-	"help"			=> \$help,
-	"verbose"		=> \$verbose,
-	"debug"			=> \$debug,
-	"update"		=> \$update,
-	"benchmark"		=> \$benchmark,
-	'algebra'		=> \$print_algebra,
-	'simpleeval'	=> \$simple_eval,
-	'plan'			=> \$print_plan,
-	"q"				=> \$print_sparql,
-	'n'				=> \$dryrun,
-	'c'				=> \$check_syntax,
-	'short'			=> \$short,
-	'store=s'		=> \$store_config,
-	'output=s'		=> \$out_format,
-	'specVersion=s'	=> \$version,
+my $dryrun				= 0;
+my $check_syntax		= 0;
+my $verbose				= 0;
+my $debug				= 0;
+my $benchmark			= 0;
+my $print_sparql		= 0;
+my $print_plan			= 0;
+my $print_algebra		= 0;
+my $update				= 0;
+my $simple_eval			= 0;
+my $out_format			= '';
+my $store_config		= '';
+my $short				= 0;
+my $help				= 0;
+my $version				= '1.2';
+my $default_graph		= 'http://default-graph/';
+my $result				= GetOptions(
+	'algebra'			=> \$print_algebra,
+	'c'					=> \$check_syntax,
+	'default_graph=s'	=> \$default_graph,
+	'n'					=> \$dryrun,
+	'output=s'			=> \$out_format,
+	'plan'				=> \$print_plan,
+	'short'				=> \$short,
+	'simpleeval'		=> \$simple_eval,
+	'specVersion=s'		=> \$version,
+	'store=s'			=> \$store_config,
+	"benchmark"			=> \$benchmark,
+	"debug"				=> \$debug,
+	"help"				=> \$help,
+	"q"					=> \$print_sparql,
+	"update"			=> \$update,
+	"verbose"			=> \$verbose,
 );
 
 if ($help) {
@@ -138,6 +140,7 @@ OPTIONS:
   --help                  Display this usage information.
   --store=CONFIG          Specify the storage information (e.g. for using persistent RDF storage).
   --algebra               Display the parsed query algebra.
+  --default_graph=IRI     Specify the IRI to use as the default graph.
   --plan                  Display the query plan structure.
   --simpleeval            Use Attean::SimpleQueryEvaluator to evaluate the query.
   --short                 Shorten blank node labels in the result serialization.
@@ -196,7 +199,7 @@ try {
 	}
 
 	my $model	= Attean::MutableQuadModel->new( store => $store );
-	my $graph	= Attean::IRI->new('http://default-graph/');
+	my $graph	= Attean::IRI->new($default_graph);
 	my $map		= URI::NamespaceMap->new();
 	while (my $data = shift(@datafiles)) {
 		my $base	= Attean::IRI->new('file://' . File::Spec->rel2abs($data));
