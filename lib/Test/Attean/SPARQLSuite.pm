@@ -91,7 +91,7 @@ sub query_test_type {
 	my $is_gsp		= $types{ "${MF}GraphStoreProtocolTest" };
 	my $is_sd		= $types{ "${MF}ServiceDescriptionTest" };
 	
-	my $is_query	= any { $types{ "${MF}$_" } or $types{ "${UT}$_" } } qw(QueryEvaluationTest PositiveSyntaxTest PositiveSyntaxTest11 NegativeSyntaxTest NegativeSyntaxTest11);
+	my $is_query	= any { $types{ "${MF}$_" } or $types{ "${UT}$_" } } qw(QueryEvaluationTest PositiveSyntaxTest PositiveSyntaxTest11 NegativeSyntaxTest NegativeSyntaxTest11 CSVResultFormatTest);
 	my $is_update	= any { $types{ "${MF}$_" } or $types{ "${UT}$_" } } qw(UpdateEvaluationTest PositiveUpdateSyntaxTest PositiveUpdateSyntaxTest11 NegativeUpdateSyntaxTest NegativeUpdateSyntaxTest11);
 	
 	my $is_neg		= any { /Negative/ } keys %types;
