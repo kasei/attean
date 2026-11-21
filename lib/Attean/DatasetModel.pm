@@ -38,6 +38,17 @@ named graphs that can be queried.
 
 =back
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item dataset_graphs
+
+A hash mapping the string C<value> of each C<Attean::API::IRI> graph name in
+the dataset to that IRI object.
+
+=back
+
 =head1 METHODS
 
 =over 4
