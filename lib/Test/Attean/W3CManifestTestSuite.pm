@@ -75,6 +75,7 @@ my $rdfs_label		= iri('http://www.w3.org/2000/01/rdf-schema#label');
 my $requests		= iri('http://www.w3.org/2011/http#requests');
 my $ut_graph		= iri('http://www.w3.org/2009/sparql/tests/test-update#graph');
 my $ut_graphData	= iri('http://www.w3.org/2009/sparql/tests/test-update#graphData');
+my $followLinkType	= iri('http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#followLinkTypeRedirect');
 
 requires 'test_model';
 requires 'manifest_paths';
@@ -250,13 +251,33 @@ sub sparql_service_description_test {
 	my $req_number	= 0;
 	foreach my $req (@reqs) {
 		$req_number++;
-		my $m	= $self->make_protocol_request('sd', $sparql_endpoint, $model, $req, $auth_v, $real_auth);
-# 		next unless ($m->method eq 'GET');
-		warn "REQUEST:\n" . $m->as_string . "\n" if ($self->debug);
-		my $resp	= $ua->request($m);
-		warn "RESPONSE:\n" . $resp->as_string if ($self->debug);
-		diag(sprintf('%s %s', $m->method, $m->uri));
+		my ($follow)		= $model->objects($req, $followLinkType)->elements;
+		my $follow_type		= ($follow) ? $follow->value : undef;
 		subtest $testname => sub {
+			my $m	= $self->make_protocol_request('sd', $sparql_endpoint, $model, $req, $auth_v, $real_auth);
+# 			next unless ($m->method eq 'GET');
+			warn "REQUEST:\n" . $m->as_string . "\n" if ($self->debug);
+			my $resp	= $ua->request($m);
+			warn "RESPONSE:\n" . $resp->as_string if ($self->debug);
+			diag(sprintf('%s %s', $m->method, $m->uri));
+	
+			if ($follow_type) {
+				# Redirect if the endpoint returns a Link header pointing to the service description
+				diag("FOLLOW TYPE: ${follow_type}");
+				my $type	= quotemeta($follow_type);
+				if (my $link = $resp->header('Link')) {
+					if ($link =~ m/^<([^>]+)>[ \t]*;[ \t]*rel[ \t]*=[ \t]*(${type}|\"${type}\")$/) {
+						my ($url)	= $1;
+						my $base	= $m->uri->as_string;
+						my $uri		= URI->new_abs($url, $base);
+						my $uri_s	= $uri->as_string;
+						my $m		= HTTP::Request->new(GET => $uri_s);
+						diag("Redirected to Service Description via Link header: ${uri_s}");
+						$resp	= $ua->request($m);
+					}
+				}
+			}
+			
 			$self->validate_protocol_response('sd', $sparql_endpoint, $model, $test, $req, $resp, $auth_v, $real_auth);
 			if ($self->debug) {
 				warn "--------------------------------- after request:\n";
