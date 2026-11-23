@@ -31,7 +31,7 @@ jobs:
       min-perl-version: ${{ steps.build-dist.outputs.min-perl-version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - id: build-dist
         uses: perlrdf/devops/github-actions/build-dist@main
         with:
@@ -40,6 +40,7 @@ jobs:
     needs: [ 'dist', 'notify' ]
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
         perl: ['5']
@@ -54,7 +55,7 @@ jobs:
 
     steps:
       - name: Get dist artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
 
