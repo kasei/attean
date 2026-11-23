@@ -35,8 +35,48 @@ my:project
 								my:v_0-021 , my:v_0-022 , my:v_0-023 , my:v_0-024 , my:v_0-025 ,
 								my:v_0-026 , my:v_0-027 , my:v_0-028 , my:v_0-029 , my:v_0-030 ,
 								my:v_0-031 , my:v_0-032 , my:v_0-033 , my:v_0-034 , my:v_0-035 ,
-								my:v_0-036 , my:v_0-037 , my:v_0-038 , my:v_0-039 , my:v_0-040 ;
+								my:v_0-036 , my:v_0-037 , my:v_0-038 , my:v_0-039 , my:v_0-040 ,
+								my:v_0-041 ;
 	.
+
+my:v_0-041
+	a					:Version ;
+	dc:issued			"2026-11-XX"^^xsd:date ;
+	:revision			"0.041" ;
+	dcterms:replaces	my:v_0-040 ;
+	dcs:changeset [
+		dcs:item
+			[ a dcs:Addition ; rdfs:label "Add Attean->parse_store_args." ],
+			[ a dcs:Addition ; rdfs:label "Add canonical_iri class method to serializers." ],
+			[ a dcs:Addition ; rdfs:label "Add Attean::API::BooleanLiteral->boolean_value method." ],
+			[ a dcs:Addition ; rdfs:label "Add Attean->get_functions, Attean->get_functional_forms, and Attean->get_aggregates class methods." ],
+			[ a dcs:Addition ; rdfs:label "Add Attean::QueryPlanner->suppress_dataset flag to allow protocol-supplied dataset to override query." ],
+			[ a dcs:Addition ; rdfs:label "Add Attean::API::Model->type_hierarchy method." ],
+			[ a dcs:Update ; rdfs:label "Add --default_graph=GRAPH CLI argument to attean_query." ],
+			[ a dcs:Update ; rdfs:label "Update bin/attean_query to allow specifying a store config using new parse_store_args() format." ],
+			[ a dcs:Update ; rdfs:label "Update TextTable serializer to consume Attean::API::AbbreviatingSerializer." ],
+			[ a dcs:Update ; rdfs:label "Fix bugs in SPARQL (XPath F&O) string functions." ],
+			[ a dcs:Update ; rdfs:label "Minor improvements to SPARQL lexer and serializer." ],
+			[ a dcs:Update ; rdfs:label "Fix broken and add missing POD." ],
+			[ a dcs:Update ; rdfs:label "Fix recursive term mapping of CDT types." ],
+			[ a dcs:Update ; rdfs:label "Fix Test::Attean::TestSimpleQueryEvaluator for recursive federation to use mock endpoints." ],
+			[ a dcs:Update ; rdfs:label "Improve error message in Attean::SPARQLClient." ],
+			[ a dcs:Update ; rdfs:label "Fix bug in AtteanX::Store::Memory2::SPOGIndex trie walk code." ],
+			[ a dcs:Update ; rdfs:label "Improve Attean::Plan::Load handling in cases where response does not provide a media type." ],
+			[ a dcs:Update ; rdfs:label "Update media type of TriG parser." ],
+			[ a dcs:Update ; rdfs:label "Add validation to literal construction in parser code." ],
+			[ a dcs:Update ; rdfs:label "Update RDF in meta/changes.ttl." ],
+			[ a dcs:Update ; rdfs:label "Performance improvements to NTuples parser." ],
+			[ a dcs:Update ; rdfs:label "Cache the as_string value of Attean::IRI." ],
+			[ a dcs:Update ; rdfs:label "Re-use datatype IRIs in Attean::Literal constructors." ],
+			[ a dcs:Update ; rdfs:label "Performance improvements to Attean::API::Binding classes." ],
+			[ a dcs:Update ; rdfs:label "Improve W3C developer testing framework." ],
+			[ a dcs:Update ; rdfs:label "Add support for W3C developer tests: Service Description, Protocol, Graph Store Protocol." ],
+			[ a dcs:Update ; rdfs:label "Re-organize developer tests." ],
+			[ a dcs:Update ; rdfs:label "Update required version of Moo and add Devel::STDERR::Indent requirement." ]
+	]
+	.
+
 
 my:v_0-040
 	a					:Version ;

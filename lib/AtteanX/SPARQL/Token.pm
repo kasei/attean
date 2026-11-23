@@ -7,7 +7,7 @@ AtteanX::SPARQL::Token - Token objects used for parsing and serializing SPARQL
 
 =head1 VERSION
 
-This document describes AtteanX::SPARQL::Token version 0.040
+This document describes AtteanX::SPARQL::Token version 0.041
 
 =head1 SYNOPSIS
 
@@ -55,7 +55,7 @@ An array of values associated with the token (e.g. the integer value of an INT t
 
 =cut
 
-package AtteanX::SPARQL::Token 0.040;
+package AtteanX::SPARQL::Token 0.041;
 
 use Moo;
 use Types::Standard qw(ArrayRef Str);
