@@ -4,7 +4,7 @@ Attean::RDF - Utility package for exporting shorthand functions for constructing
 
 =head1 VERSION
 
-This document describes Attean::RDF version 0.040
+This document describes Attean::RDF version 0.041
 
 =head1 SYNOPSIS
 
@@ -31,7 +31,7 @@ by default).
 
 =cut
 
-package Attean::RDF 0.040 {
+package Attean::RDF 0.041 {
 	use v5.14;
 	use warnings;
 

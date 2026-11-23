@@ -7,7 +7,7 @@ Attean::DatasetModel - RDF model that restricts the dataset of a sub-model
 
 =head1 VERSION
 
-This document describes Attean::DatasetModel version 0.040
+This document describes Attean::DatasetModel version 0.041
 
 =head1 SYNOPSIS
 
@@ -38,13 +38,24 @@ named graphs that can be queried.
 
 =back
 
+=head1 ATTRIBUTES
+
+=over 4
+
+=item dataset_graphs
+
+A hash mapping the string C<value> of each C<Attean::API::IRI> graph name in
+the dataset to that IRI object.
+
+=back
+
 =head1 METHODS
 
 =over 4
 
 =cut
 
-package Attean::DatasetModel 0.040 {
+package Attean::DatasetModel 0.041 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf HashRef);
@@ -186,7 +197,7 @@ Returns the number of quads in the dataset.
 	with 'Attean::API::Model';
 }
 
-package Attean::MutableDatasetModel 0.040 {
+package Attean::MutableDatasetModel 0.041 {
 	use Moo;
 	use Scalar::Util qw(blessed reftype);
 	use Types::Standard qw(ConsumerOf HashRef);

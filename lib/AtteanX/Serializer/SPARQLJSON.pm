@@ -4,7 +4,7 @@ AtteanX::Serializer::SPARQLJSON - SPARQL Results JSON Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::SPARQLJSON version 0.040
+This document describes AtteanX::Serializer::SPARQLJSON version 0.041
 
 =head1 SYNOPSIS
 
@@ -39,7 +39,7 @@ Returns the canonical IRI of this format.
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::SPARQLJSON 0.040 {
+package AtteanX::Serializer::SPARQLJSON 0.041 {
 	use Moo;
 	use Types::Standard qw(Str);
 	use Encode qw(encode);

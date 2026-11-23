@@ -4,7 +4,7 @@ AtteanX::Serializer::NQuads - N-Triples Serializer
 
 =head1 VERSION
 
-This document describes AtteanX::Serializer::NQuads version 0.040
+This document describes AtteanX::Serializer::NQuads version 0.041
 
 =head1 SYNOPSIS
 
@@ -43,7 +43,7 @@ Returns the canonical IRI of this format.
 use v5.14;
 use warnings;
 
-package AtteanX::Serializer::NQuads 0.040 {
+package AtteanX::Serializer::NQuads 0.041 {
 	use Moo;
 	use Types::Standard qw(Str ArrayRef);
 	use Encode qw(encode);

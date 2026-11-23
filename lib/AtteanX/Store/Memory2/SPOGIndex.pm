@@ -4,7 +4,7 @@ AtteanX::Store::Memory2::SPOGIndex - A trie-based index for SPOG quad data
 
 =head1 VERSION
 
-This document describes AtteanX::Store::Memory2::SPOGIndex version 0.040
+This document describes AtteanX::Store::Memory2::SPOGIndex version 0.041
 
 =head1 SYNOPSIS
 
@@ -20,7 +20,7 @@ that can be used to provide efficient access to indexed quad data.
 use v5.14;
 use warnings;
 
-package AtteanX::Store::Memory2::SPOGIndex 0.040 {
+package AtteanX::Store::Memory2::SPOGIndex 0.041 {
 use Moo;
 use Type::Tiny::Role;
 use Types::Standard qw(Str Int ArrayRef HashRef ConsumerOf InstanceOf);

@@ -7,7 +7,7 @@ Attean::Literal - RDF Literals
 
 =head1 VERSION
 
-This document describes Attean::Literal version 0.040
+This document describes Attean::Literal version 0.041
 
 =head1 SYNOPSIS
 
@@ -54,7 +54,7 @@ Returns true if the literal has a base diredction, false otherwise.
 
 =cut
 
-package Attean::Literal 0.040 {
+package Attean::Literal 0.041 {
 	use Moo;
 	use Types::Standard qw(Str Maybe InstanceOf);
 	use Attean::API::Term;
